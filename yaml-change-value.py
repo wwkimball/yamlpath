@@ -26,6 +26,7 @@ from ruamel.yaml import YAML
 from ruamel.yaml.parser import ParserError
 
 import ruamelpatches
+from yamlexceptions import YAMLPathException
 from consoleprinter import ConsolePrinter
 from eyamlhelpers import EYAMLHelpers
 from yamlhelpers import YAMLValueFormats
@@ -51,7 +52,7 @@ def processcli():
     required_group.add_argument(
         "-k", "--key",
         required=True,
-        metavar="change_path",
+        metavar="YAML_PATH",
         help="YAML Path where the target value is found"
     )
 
@@ -78,8 +79,8 @@ def processcli():
     )
     parser.add_argument("-c", "--check",
         help="check the value before replacing it")
-    parser.add_argument("-s", "--saveto", metavar="change_path",
-        help="save the old value to change_path before replacing it")
+    parser.add_argument("-s", "--saveto", metavar="YAML_PATH",
+        help="save the old value to YAML_PATH before replacing it")
     parser.add_argument("-b", "--backup", action="store_true",
         help="save a backup YAML_FILE with an extra .bak file-extension")
 
@@ -179,7 +180,12 @@ except ParserError as e:
 
 # Load the present value at th specified YAML Path
 change_path = yh.str_path(args.key)
-old_value = yh.get_eyaml_value(yaml_data, change_path)
+
+try:
+    old_value = yh.get_eyaml_value(yaml_data, change_path)
+except YAMLPathException as ex:
+    log.error(ex, 1)
+
 log.verbose("Got '" + (old_value if old_value is not None else "<None>") + "' from " + change_path)
 
 # Check the value, if desired
@@ -218,7 +224,10 @@ if args.saveto:
         copy_value = yh.clone_node(old_value)
         save_path = yh.str_path(args.saveto)
         log.verbose("Saving the old value to " + save_path)
-        yh.set_value(yaml_data, save_path, copy_value, False)
+        try:
+            yh.set_value(yaml_data, save_path, copy_value, False)
+        except YAMLPathException as ex:
+            log.error(ex, 1)
 
 # Set the requested value
 log.verbose("Setting " + change_path + " to: " + new_value)
@@ -227,9 +236,15 @@ if args.eyamlcrypt:
     format_type = YAMLValueFormats.from_str(args.format)
     if format_type in [YAMLValueFormats.FOLDED, YAMLValueFormats.LITERAL]:
         output_type = "block"
-    yh.set_eyaml_value(yaml_data, change_path, new_value, output_type, False)
+    try:
+        yh.set_eyaml_value(yaml_data, change_path, new_value, output_type, False)
+    except YAMLPathException as ex:
+        log.error(ex, 1)
 else:
-    yh.set_value(yaml_data, change_path, new_value, False, args.format)
+    try:
+        yh.set_value(yaml_data, change_path, new_value, False, args.format)
+    except YAMLPathException as ex:
+        log.error(ex, 1)
 
 # Save a backup of the original file, if requested
 if args.backup:

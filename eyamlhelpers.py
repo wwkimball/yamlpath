@@ -197,7 +197,7 @@ class EYAMLHelpers(YAMLHelpers):
         Returns:  (object) The YAML node after its value has been set
 
         Raises:
-            AttributeError when YAML Path is invalid
+            YAMLPathException when YAML Path is invalid
         """
         self.log.verbose("Encrypting value for " + self.str_path(yaml_path))
         encval = self.encrypt_eyaml(value, output)
@@ -228,7 +228,7 @@ class EYAMLHelpers(YAMLHelpers):
         non-existant node.
 
         Raises:
-            AttributeError when YAML Path is invalid
+            YAMLPathException when YAML Path is invalid
         """
         self.log.verbose("Decrypting value at " + self.str_path(yaml_path))
         rawval = self.get_value(data, yaml_path, mustexist)

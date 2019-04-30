@@ -20,6 +20,8 @@ from ruamel.yaml.scalarbool import ScalarBoolean
 from ruamel.yaml.scalarfloat import ScalarFloat
 from ruamel.yaml.scalarint import ScalarInt
 
+from yamlexceptions import YAMLPathException
+
 class YAMLValueFormats(Enum):
     """Supported representation formats for YAML values."""
     BARE = auto()
@@ -138,7 +140,7 @@ class YAMLHelpers:
         exist
 
         Raises:
-            AttributeError when YAML Path is invalid
+            YAMLPathException when YAML Path is invalid
         """
         if data is None or yaml_path is None:
             return None
@@ -147,7 +149,10 @@ class YAMLHelpers:
         path = self._parse_path(yaml_path)
         node = self._get_node(data, path)
         if node is None and mustexist:
-            raise AttributeError("Required path does not exist, " + self.str_path(path))
+            raise YAMLPathException(
+                "Required path does not exist",
+                self.str_path(path)
+            )
         return node
 
     def set_value(self, data, yaml_path, value, mustexist=False,
@@ -181,7 +186,10 @@ class YAMLHelpers:
             node = self._get_node(data, path)
 
             if node is None:
-                raise AttributeError("Required path does not exist, " + self.str_path(path))
+                raise YAMLPathException(
+                    "Required path does not exist",
+                    self.str_path(path)
+                )
         else:
             self.log.debug("YAMLHelpers::set_value:  Seeking optional node at " + self.str_path(path))
             node = self._ensure_path(data, path, value)
@@ -284,7 +292,10 @@ class YAMLHelpers:
             self.log.debug("YAMLHelpers::_parse_path:  Sending deque(list) back.")
             return deque(yaml_path)
         elif isinstance(yaml_path, dict):
-            raise AttributeError("YAML paths must be strings, queues, or lists.")
+            raise YAMLPathException(
+                "YAML paths must be strings, queues, or lists",
+                yaml_path
+            )
 
         # Check for empty paths
         if not str(yaml_path).strip():
@@ -456,7 +467,10 @@ class YAMLHelpers:
 
         # Check for mismatched demarcations
         if 0 < demarc_count:
-            raise AttributeError("YAML path contains unmatched demarcation marks, " + yaml_path)
+            raise YAMLPathException(
+                "YAML path contains at least one unmatched demarcation mark",
+                yaml_path
+            )
 
         # Store the final element_id
         if 0 < len(element_id):
@@ -505,7 +519,7 @@ class YAMLHelpers:
                     return None
             elif YAMLHelpers.ElementTypes.INDEX == typ:
                 self.log.debug("YAMLHelpers::_get_node:  Drilling into the present list INDEX...")
-                if len(data) < ele:
+                if ele < len(data):
                     return self._get_node(data[ele], yaml_path)
                 else:
                     return None
@@ -865,9 +879,6 @@ class YAMLHelpers:
                 if isinstance(data, list):
                     self.log.debug("YAMLHelpers::_ensure_path:  Dealing with a list...")
                     if curtyp is YAMLHelpers.ElementTypes.ANCHOR:
-                        # TODO:  Is the anchor already defined elsewhere?
-                        # If so, replace THAT value
-                        # If not, add it here
                         new_val = self._default_for_child(path, value)
                         new_ele = self._append_list_element(data, new_val, curele)
                         return self._ensure_path(new_ele, path, value)
@@ -876,22 +887,65 @@ class YAMLHelpers:
                             new_val = self._default_for_child(path, value)
                             self._append_list_element(data, new_val)
                         return self._ensure_path(data[curele], path, value)
+                    elif curtyp is YAMLHelpers.ElementTypes.SEARCH:
+                        restore_path = path.copy()
+                        restore_path.appendleft(curref)
+                        restore_path = self.str_path(restore_path)
+                        throw_element = deque()
+                        throw_element.append(curref)
+                        throw_element = self.str_path(throw_element)
+                        raise YAMLPathException(
+                            "Search criteria cannot be used to create missing YAML data",
+                            restore_path,
+                            throw_element
+                        )
                     else:
-                        raise AttributeError("Cannot add " + str(curtyp) +  " subreference, " + str(curele) + ", to lists.")
+                        restore_path = path.copy()
+                        restore_path.appendleft(curref)
+                        restore_path = self.str_path(restore_path)
+                        throw_element = deque()
+                        throw_element.append(curref)
+                        throw_element = self.str_path(throw_element)
+                        raise YAMLPathException(
+                            "Cannot add {} subreference to lists".format(str(curtyp)),
+                            restore_path,
+                            throw_element
+                        )
                 elif isinstance(data, dict):
                     self.log.debug("YAMLHelpers::_ensure_path:  Dealing with a dictionary...")
                     if curtyp is YAMLHelpers.ElementTypes.ANCHOR:
-                        # TODO:  Is the anchor already defined elsewhere?
-                        # If so, replace THAT value
-                        # If not, add it here
                         raise NotImplementedError
                     elif curtyp is YAMLHelpers.ElementTypes.KEY:
                         data[curele] = self._default_for_child(path, value)
                         return self._ensure_path(data[curele], path, value)
                     else:
-                        raise AttributeError("Cannot add " + str(curtyp) +  " subreference, " + str(curele) + ", to dictionaries.")
+                        restore_path = path.copy()
+                        restore_path.appendleft(curref)
+                        restore_path = self.str_path(restore_path)
+                        throw_element = deque()
+                        throw_element.append(curref)
+                        throw_element = self.str_path(throw_element)
+                        raise YAMLPathException(
+                            "Cannot add {} subreference to dictionaries".format(
+                                str(curtyp)
+                            ),
+                            restore_path,
+                            throw_element
+                        )
                 else:
-                    raise AttributeError("Cannot add " + str(curtyp) +  " subreference, " + str(curele) + ", to scalar values.")
+                    restore_path = path.copy()
+                    restore_path.appendleft(curref)
+                    restore_path = self.str_path(restore_path)
+                    throw_element = deque()
+                    throw_element.append(curref)
+                    throw_element = self.str_path(throw_element)
+                    raise YAMLPathException(
+                        "Cannot add {} subreference to scalars".format(
+                            str(curtyp)
+                        ),
+                        restore_path,
+                        throw_element
+                    )
 
         self.log.debug("YAMLHelpers::_ensure_path:  Returning data of type [" + str(type(data)) + "]:")
         self.log.debug(data)
