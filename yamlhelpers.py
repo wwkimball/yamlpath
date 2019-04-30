@@ -71,6 +71,18 @@ class YAMLHelpers:
         ANCHOR = auto()
         INDEX = auto()
         KEY = auto()
+        SEARCH = auto()
+
+    class ElementSearchMethods(Enum):
+        """Supported YAML Path Array-of-Hashes element search methods"""
+        CONTAINS = auto()
+        ENDS_WITH = auto()
+        EQUALS = auto()
+        STARTS_WITH = auto()
+        # TODO:  GREATER_THAN = auto()
+        # TODO:  LESS_THAN = auto()
+        # TODO:  EQUAL_OR_GREATER_THAN = auto()
+        # TODO:  EQUAL_OR_LESS_THAN = auto()
 
     # Cache parsed YAML Path results across instances to avoid repeated parsing
     _static_parsings = {}
@@ -105,6 +117,7 @@ class YAMLHelpers:
         Raises:
             AttributeError when YAML Path is invalid
         """
+        self.log.debug("YAMLHelpers::get_node:  Getting parsed version of " + str(yaml_path))
         path = self._parse_path(yaml_path)
         if mustexist:
             return self._get_node(data, path)
@@ -130,38 +143,12 @@ class YAMLHelpers:
         if data is None or yaml_path is None:
             return None
 
+        self.log.debug("YAMLHelpers::get_value:  Getting parsed version of " + str(yaml_path))
         path = self._parse_path(yaml_path)
-        if 0 < len(path):
-            (typ, ele) = path.popleft()
-            if typ == YAMLHelpers.ElementTypes.ANCHOR:
-                if isinstance(data, list):
-                    for e in data:
-                        if hasattr(e, "anchor") and ele == e.anchor.value:
-                            return self.get_value(e, path, mustexist)
-                elif isinstance(data, dict):
-                    for _,v in data:
-                        if hasattr(v, "anchor") and ele == v.anchor.value:
-                            return self.get_value(v, path, mustexist)
-                else:
-                    raise AttributeError("Cannot subscript a scalar at " + str(ele))
-
-                if mustexist:
-                    raise AttributeError("No such anchor, " + str(ele))
-            else:
-                try:
-                    return self.get_value(data[ele], path, mustexist)
-                except IndexError:
-                    if mustexist:
-                        raise AttributeError("No such index, " + str(ele))
-                    else:
-                        return None
-                except KeyError:
-                    if mustexist:
-                        raise AttributeError("No such key, " + str(ele))
-                    else:
-                        return None
-
-        return data
+        node = self._get_node(data, path)
+        if node is None and mustexist:
+            raise AttributeError("Required path does not exist, " + self.str_path(path))
+        return node
 
     def set_value(self, data, yaml_path, value, mustexist=False,
                   format=YAMLValueFormats.DEFAULT
@@ -187,6 +174,7 @@ class YAMLHelpers:
         if data is None or yaml_path is None:
             return None
 
+        self.log.debug("YAMLHelpers::set_value:  Getting parsed version of " + str(yaml_path))
         path = self._parse_path(yaml_path)
         if mustexist:
             self.log.debug("YAMLHelpers::set_value:  Seeking required node at " + self.str_path(path))
@@ -212,6 +200,7 @@ class YAMLHelpers:
 
         Raises:  N/A
         """
+        self.log.debug("YAMLHelpers::str_path:  Getting parsed version of " + str(yaml_path))
         parsed_path = self._parse_path(yaml_path)
         add_dot = False
         ppath = ""
@@ -225,6 +214,28 @@ class YAMLHelpers:
                 ppath += "[" + str(element_id) + "]"
             elif ptype == YAMLHelpers.ElementTypes.ANCHOR:
                 ppath += "[&" + element_id + "]"
+            elif ptype == YAMLHelpers.ElementTypes.SEARCH:
+                invert, method, attr, term = element_id
+                pmethod = "???"
+                if method == YAMLHelpers.ElementSearchMethods.EQUALS:
+                    pmethod = "="
+                elif method == YAMLHelpers.ElementSearchMethods.STARTS_WITH:
+                    pmethod = "^"
+                elif method == YAMLHelpers.ElementSearchMethods.ENDS_WITH:
+                    pmethod = "$"
+                elif method == YAMLHelpers.ElementSearchMethods.CONTAINS:
+                    pmethod = "%"
+                else:
+                    raise NotImplementedError
+
+                ppath += (
+                    "["
+                    + str(attr)
+                    + ("!" if invert else "")
+                    + pmethod
+                    + str(term).replace(" ", "\\ ")
+                    + "]"
+                )
 
             add_dot = True
 
@@ -259,13 +270,18 @@ class YAMLHelpers:
         Raises:
           AttributeError when yaml_path is invalid
         """
+        self.log.debug("YAMLHelpers::_parse_path:  Evaluating \"" + str(yaml_path) + "\"...")
+
         path_elements = deque()
 
         if yaml_path is None:
+            self.log.debug("YAMLHelpers::_parse_path:  None path begets empty deque.")
             return path_elements
         elif isinstance(yaml_path, deque):
+            self.log.debug("YAMLHelpers::_parse_path:  Sending deque back as-is.")
             return yaml_path
         elif isinstance(yaml_path, list):
+            self.log.debug("YAMLHelpers::_parse_path:  Sending deque(list) back.")
             return deque(yaml_path)
         elif isinstance(yaml_path, dict):
             raise AttributeError("YAML paths must be strings, queues, or lists.")
@@ -284,6 +300,9 @@ class YAMLHelpers:
         seeking_anchor_mark = "&" == yaml_path[0]
         escape_next = False
         element_type = YAMLHelpers.ElementTypes.KEY
+        search_inverted = False
+        search_method = YAMLHelpers.ElementSearchMethods.EQUALS
+        search_attr = ""
 
         for c in yaml_path:
             demarc_count = len(demarc_stack)
@@ -291,6 +310,14 @@ class YAMLHelpers:
             if not escape_next and "\\" == c:
                 # Escape the next character
                 escape_next = True
+                continue
+
+            elif (
+                not escape_next
+                and " " == c
+                and ((1 > demarc_count) or (not demarc_stack[-1] in ["'", '"']))
+            ):
+                # Ignore unescaped, non-demarcated whitespace
                 continue
 
             elif not escape_next and seeking_anchor_mark and "&" == c:
@@ -334,7 +361,54 @@ class YAMLHelpers:
                 demarc_count += 1
                 element_type = YAMLHelpers.ElementTypes.INDEX
                 seeking_anchor_mark = True
+                search_inverted = False
+                search_method = YAMLHelpers.ElementSearchMethods.EQUALS
+                search_attr = ""
                 continue
+
+            elif (
+                not escape_next
+                and 0 < demarc_count
+                and "[" == demarc_stack[-1]
+                and c in ["=", "^", "$", "%", "!"]
+            ):
+                # Hash attribute search
+                if "=" == c:
+                    # Exact value match
+                    element_type = YAMLHelpers.ElementTypes.SEARCH
+                    search_method = YAMLHelpers.ElementSearchMethods.EQUALS
+                    search_attr = element_id
+                    element_id = ""
+                    continue
+
+                elif "^" == c:
+                    # Value starts with
+                    element_type = YAMLHelpers.ElementTypes.SEARCH
+                    search_method = YAMLHelpers.ElementSearchMethods.STARTS_WITH
+                    search_attr = element_id
+                    element_id = ""
+                    continue
+
+                elif "$" == c:
+                    # Value ends with
+                    element_type = YAMLHelpers.ElementTypes.SEARCH
+                    search_method = YAMLHelpers.ElementSearchMethods.ENDS_WITH
+                    search_attr = element_id
+                    element_id = ""
+                    continue
+
+                elif "%" == c:
+                    # Value contains
+                    element_type = YAMLHelpers.ElementTypes.SEARCH
+                    search_method = YAMLHelpers.ElementSearchMethods.CONTAINS
+                    search_attr = element_id
+                    element_id = ""
+                    continue
+
+                elif "!" == c:
+                    # Invert the search
+                    search_inverted = True
+                    continue
 
             elif (
                 not escape_next
@@ -342,9 +416,23 @@ class YAMLHelpers:
                 and "[" == demarc_stack[-1]
                 and "]" == c
             ):
-                # Store the INDEX
+                # Store the INDEX or SEARCH parameters
                 if element_type is YAMLHelpers.ElementTypes.INDEX:
                     path_elements.append((element_type, int(element_id)))
+                elif element_type is YAMLHelpers.ElementTypes.SEARCH:
+                    # Undemarcate the search term, if it is so
+                    if 0 < len(element_id) and element_id[0] in ["'", '"']:
+                        leading_mark = element_id[0]
+                        if element_id[-1] == leading_mark:
+                            element_id = element_id[1:-1]
+
+                    path_elements.append((
+                        element_type,
+                        [search_inverted,
+                         search_method,
+                         search_attr,
+                         element_id]
+                    ))
                 else:
                     path_elements.append((element_type, element_id))
 
@@ -366,23 +454,30 @@ class YAMLHelpers:
             seeking_anchor_mark = False
             escape_next = False
 
-        # Store the final element_id
-        if 0 < len(element_id):
-            path_elements.append((element_type, element_id))
-
         # Check for mismatched demarcations
         if 0 < demarc_count:
             raise AttributeError("YAML path contains unmatched demarcation marks, " + yaml_path)
 
+        # Store the final element_id
+        if 0 < len(element_id):
+            path_elements.append((element_type, element_id))
+
         self.log.debug("YAMLHelpers::_parse_path:  Parsed \"" + str(yaml_path) + "\" into:")
         self.log.debug(path_elements)
 
-        YAMLHelpers._static_parsings[yaml_path] = path_elements.copy()
-        return path_elements
+        # Cache the parsed results
+        YAMLHelpers._static_parsings[yaml_path] = path_elements
+        str_path = self.str_path(path_elements)
+        if not str_path == yaml_path:
+            # The stringified YAML Path differs from the user version but has
+            # exactly the same parsed result, so cache it, too
+            YAMLHelpers._static_parsings[str_path] = path_elements
+
+        return path_elements.copy()
 
     def _get_node(self, data, yaml_path):
-        """Returns a pre-existing node from a YAML stream or None if the given
-        YAML Path fails to lead to a node.
+        """Returns a pre-existing node from YAML data or None if the given YAML
+        Path fails to lead to a node.
 
         Positional Parameters:
           1. data (ruamel.yaml data) The parsed YAML data to process
@@ -390,8 +485,7 @@ class YAMLHelpers:
 
         Returns:  (object) The requested YAML node or None
 
-        Raises:
-            AttributeError when yaml_path is invalid
+        Raises:  N/A
         """
         if data is None or yaml_path is None:
             return None
@@ -399,25 +493,45 @@ class YAMLHelpers:
         if 0 < len(yaml_path):
             (typ, ele) = yaml_path.popleft()
 
-            self.log.debug("YAMLHelpers::_get_node:  Peeking at element [" + ele + "] of type [" + str(typ) + "] in data of type[" + str(type(data)) + "]:")
+            self.log.debug("YAMLHelpers::_get_node:  Peeking at element [" + str(ele) + "] of type [" + str(typ) + "] in data of type[" + str(type(data)) + "]:")
             self.log.debug(data)
             self.log.debug("")
 
-            if typ == YAMLHelpers.ElementTypes.ANCHOR:
+            if YAMLHelpers.ElementTypes.KEY == typ:
+                self.log.debug("YAMLHelpers::_get_node:  Drilling into the present dictionary KEY...")
+                if ele in data:
+                    return self._get_node(data[ele], yaml_path)
+                else:
+                    return None
+            elif YAMLHelpers.ElementTypes.INDEX == typ:
+                self.log.debug("YAMLHelpers::_get_node:  Drilling into the present list INDEX...")
+                if len(data) < ele:
+                    return self._get_node(data[ele], yaml_path)
+                else:
+                    return None
+            elif YAMLHelpers.ElementTypes.ANCHOR == typ:
                 if isinstance(data, list):
+                    self.log.debug("YAMLHelpers::_get_node:  Searching for an ANCHOR in a list...")
                     for e in data:
                         if hasattr(e, "anchor") and ele == e.anchor.value:
                             return self._get_node(e, yaml_path)
                 elif isinstance(data, dict):
+                    self.log.debug("YAMLHelpers::_get_node:  Searching for an ANCHOR in a dictionary...")
                     for _,v in data:
                         if hasattr(v, "anchor") and ele == v.anchor.value:
                             return self._get_node(v, yaml_path)
                 return None
+            elif YAMLHelpers.ElementTypes.SEARCH == typ:
+                self.log.debug("YAMLHelpers::_get_node:  Performing an attribute SEARCH...")
+                # Return only the first match
+                for match in self._search(data, ele):
+                    if match is None:
+                        continue
+                    else:
+                        return self._get_node(match, yaml_path)
+                return None
             else:
-                try:
-                    return self._get_node(data[ele], yaml_path)
-                except:
-                    return None
+                raise NotImplementedError
 
         self.log.debug("YAMLHelpers::_get_node:  Finally returning data of type [" + str(type(data)) + "]:")
         self.log.debug(data)
@@ -584,6 +698,14 @@ class YAMLHelpers:
                 return data[refele]
             else:
                 return None
+        elif reftyp == YAMLHelpers.ElementTypes.SEARCH:
+            # Return only the first match
+            for match in self._search(data, refele):
+                if match is None:
+                    continue
+                else:
+                    return match
+            return None
         else:
             raise NotImplementedError
 
@@ -640,9 +762,74 @@ class YAMLHelpers:
 
         return new_element
 
+    def _search(self, data, terms):
+        """Searches the top level of given YAML data for all matching dictionary
+        entries.
+
+        Positional Parameters:
+          1. data (ruamel.yaml data) The parsed YAML data to process
+          2. terms (list) A list with these elements:
+             0 = invert result (Boolean) true = Return a NON-matching node
+             1 = search method (YAMLHelpers.ElementSearchMethods) the search
+                 method
+             2 = attribute name (str) the dictionary key to the value to check
+             3 = search phrase (any) the value to match
+        """
+
+        def search_matches(method, needle, haystack):
+            self.log.debug("Searching for '" + str(needle) + "' in:")
+            self.log.debug(haystack)
+            matches = None
+
+            if YAMLHelpers.ElementSearchMethods.EQUALS == method:
+                matches = haystack == needle
+            elif YAMLHelpers.ElementSearchMethods.STARTS_WITH == method:
+                matches = str(haystack).startswith(needle)
+            elif YAMLHelpers.ElementSearchMethods.ENDS_WITH == method:
+                matches = str(haystack).endswith(needle)
+            elif YAMLHelpers.ElementSearchMethods.CONTAINS == method:
+                matches = needle in str(haystack)
+            else:
+                raise NotImplementedError
+
+            return matches
+
+        self.log.debug("-\n--\n---")
+        self.log.debug(terms)
+        invert, method, attr, term = terms
+        if isinstance(data, list):
+            # Select only the first element which is a dict and matches
+            # the search terms.
+            self.log.debug("------ searching a list...")
+            for e in data:
+                if isinstance(e, dict) and attr in e:
+                    matches = search_matches(method, term, e[attr])
+                    if (matches and not invert) or (invert and not matches):
+                        yield e
+
+        elif isinstance(data, dict):
+            # Select only the first value which is a dict and matches
+            # the search terms.
+            self.log.debug("------ searching a dictionary...")
+            for _,v in data:
+                if isinstance(v, dict) and attr in v:
+                    matches = search_matches(method, term, v[attr])
+                    if (matches and not invert) or (invert and not matches):
+                        yield v
+
+        else:
+            # Check the passed data itself for a match
+            self.log.debug("------ searching literal data...")
+            matches = search_matches(method, term, data)
+            if (matches and not invert) or (invert and not matches):
+                yield v
+
+        self.log.debug("---\n--\n-")
+        yield None
+
     def _ensure_path(self, data, path, value=None):
         """Returns the YAML node at the end of a YAML Path, having created it if
-        necessary.
+        necessary and possible.
 
         Positional Parameters:
           1. data (ruamel.yaml data) The parsed YAML data to process
