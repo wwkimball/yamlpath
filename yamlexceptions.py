@@ -11,7 +11,7 @@ class YAMLPathException(Exception):
     def __init__(self, user_message, yaml_path, segment=None):
         self.user_message = user_message
         self.yaml_path = str(yaml_path)
-        self.segment = str(segment)
+        self.segment = str(segment) if segment is not None else None
 
         super(YAMLPathException, self).__init__(
             "user_message: {}, yaml_path: {}, segment: {}"
@@ -26,14 +26,14 @@ class YAMLPathException(Exception):
         )
 
     def __str__(self):
-        if self.segment is not None:
-            return "{} at {} in {}".format(
+        if self.segment is None:
+            return "{} in {}".format(
                 self.user_message,
-                self.segment,
                 self.yaml_path
             )
         else:
-            return "{} in {}".format(
+            return "{} at {} in {}".format(
                 self.user_message,
+                self.segment,
                 self.yaml_path
             )

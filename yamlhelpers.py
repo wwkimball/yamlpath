@@ -703,8 +703,16 @@ class YAMLHelpers:
             else:
                 return None
         elif reftyp == YAMLHelpers.ElementTypes.INDEX:
-            if isinstance(data, list) and len(data) > refele:
-                return data[refele]
+            try:
+                intele = int(refele)
+            except ValueError:
+                raise YAMLPathException(
+                    "{} is not an integer array index".format(str(refele))
+                    , str(ref)
+                )
+
+            if isinstance(data, list) and len(data) > intele:
+                return data[intele]
             else:
                 return None
         elif reftyp == YAMLHelpers.ElementTypes.KEY:
