@@ -193,10 +193,17 @@ class YAMLHelpers:
 
         Returns: (object) Clone of the given node
         """
+        # Clone str values lest the new node change whenever the original node
+        # changes, which defeates the intention of preserving the present,
+        # pre-change value to an entirely new node.
+        clone_value = node
+        if isinstance(clone_value, str):
+            clone_value = ''.join(node)
+
         if hasattr(node, "anchor"):
-            return type(node)(node, anchor=node.anchor.value)
+            return type(node)(clone_value, anchor=node.anchor.value)
         else:
-            return type(node)(node)
+            return type(node)(clone_value)
 
     def str_path(self, yaml_path):
         """Returns the printable, user-friendly version of a YAML Path.
@@ -756,10 +763,14 @@ class YAMLHelpers:
         new_element = data[-1]
 
         if anchor is not None and new_element is not None:
-            new_element.yaml_set_anchor(anchor)
+            self.log.debug("YAMLHelpers::_append_list_element:  Ensuring {}{} is a PlainScalarString.".format(type(new_element), new_element))
+            if type(new_element) is str:
+                new_element = PlainScalarString(new_element, anchor=anchor)
+            new_element.yaml_set_anchor(anchor, True)
 
         if hasattr(data, "ca") and old_tail_pos in data.ca.items:
             old_comment = data.ca.items[old_tail_pos][0]
+            self.log.debug("YAMLHelpers::_append_list_element:  Moving tail comment, {}, to the list end.".format(old_comment))
             if old_comment is not None:
                 data.ca.items[old_tail_pos][0] = None
                 data.ca.items[old_tail_pos + 1] = [
@@ -891,18 +902,6 @@ class YAMLHelpers:
                                 continue
                             matched_nodes += 1
                             yield node
-                    elif curtyp is YAMLHelpers.ElementTypes.SEARCH:
-                        restore_path = path.copy()
-                        restore_path.appendleft(curref)
-                        restore_path = self.str_path(restore_path)
-                        throw_element = deque()
-                        throw_element.append(curref)
-                        throw_element = self.str_path(throw_element)
-                        raise YAMLPathException(
-                            "Search criteria cannot be used to create missing YAML data",
-                            restore_path,
-                            throw_element
-                        )
                     else:
                         restore_path = path.copy()
                         restore_path.appendleft(curref)
