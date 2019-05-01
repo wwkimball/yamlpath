@@ -81,10 +81,10 @@ class YAMLHelpers:
         ENDS_WITH = auto()
         EQUALS = auto()
         STARTS_WITH = auto()
-        # TODO:  GREATER_THAN = auto()
-        # TODO:  LESS_THAN = auto()
-        # TODO:  EQUAL_OR_GREATER_THAN = auto()
-        # TODO:  EQUAL_OR_LESS_THAN = auto()
+        GREATER_THAN = auto()
+        LESS_THAN = auto()
+        EQUAL_OR_GREATER_THAN = auto()
+        EQUAL_OR_LESS_THAN = auto()
 
     # Cache parsed YAML Path results across instances to avoid repeated parsing
     _static_parsings = {}
@@ -239,6 +239,14 @@ class YAMLHelpers:
                     pmethod = "$"
                 elif method == YAMLHelpers.ElementSearchMethods.CONTAINS:
                     pmethod = "%"
+                elif method == YAMLHelpers.ElementSearchMethods.LESS_THAN:
+                    pmethod = "<"
+                elif method == YAMLHelpers.ElementSearchMethods.GREATER_THAN:
+                    pmethod = ">"
+                elif method == YAMLHelpers.ElementSearchMethods.EQUAL_OR_LESS_THAN:
+                    pmethod = "<="
+                elif method == YAMLHelpers.ElementSearchMethods.EQUAL_OR_GREATER_THAN:
+                    pmethod = ">="
                 else:
                     raise NotImplementedError
 
@@ -271,6 +279,15 @@ class YAMLHelpers:
            9. dictionary."with.dotted.subkey"
           10. dictionary.with\.dottet\.subkey
           11. complex.structures.with[&many].nested."elements.in.any"[form]
+          12. sensitive::accounts.application.db.users[name=admin].password.encrypted
+          13. sensitive::accounts.application.db.users[name^adm].password.encrypted
+          14. sensitive::accounts.application.db.users[name$in].password.encrypted
+          15. sensitive::accounts.application.db.users[name%dmi].password.encrypted
+          16. sensitive::accounts.application.db.users[name!=admin].password.encrypted
+          17. sensitive::accounts.application.db.users[access_level>3].password.enabled
+          18. sensitive::accounts.application.db.users[access_level<6].password.enabled
+          19. sensitive::accounts.application.db.users[access_level<=5].password.enabled
+          20. sensitive::accounts.application.db.users[access_level<=5].password.[encrypted!^ENC\[]
 
         Positional Parameters:
           1. yaml_path (any) The stringified YAML Path to parse
@@ -379,7 +396,7 @@ class YAMLHelpers:
                 element_type = YAMLHelpers.ElementTypes.INDEX
                 seeking_anchor_mark = True
                 search_inverted = False
-                search_method = YAMLHelpers.ElementSearchMethods.EQUALS
+                search_method = None
                 search_attr = ""
                 continue
 
@@ -387,15 +404,22 @@ class YAMLHelpers:
                 not escape_next
                 and 0 < demarc_count
                 and "[" == demarc_stack[-1]
-                and c in ["=", "^", "$", "%", "!"]
+                and c in ["=", "^", "$", "%", "!", ">", "<"]
             ):
                 # Hash attribute search
                 if "=" == c:
                     # Exact value match
                     element_type = YAMLHelpers.ElementTypes.SEARCH
-                    search_method = YAMLHelpers.ElementSearchMethods.EQUALS
-                    search_attr = element_id
-                    element_id = ""
+
+                    if search_method is YAMLHelpers.ElementSearchMethods.LESS_THAN:
+                        search_method = YAMLHelpers.ElementSearchMethods.EQUAL_OR_LESS_THAN
+                    elif search_method is YAMLHelpers.ElementSearchMethods.GREATER_THAN:
+                        search_method = YAMLHelpers.ElementSearchMethods.EQUAL_OR_GREATER_THAN
+                    else:
+                        search_method = YAMLHelpers.ElementSearchMethods.EQUALS
+                        search_attr = element_id
+                        element_id = ""
+
                     continue
 
                 elif "^" == c:
@@ -418,6 +442,22 @@ class YAMLHelpers:
                     # Value contains
                     element_type = YAMLHelpers.ElementTypes.SEARCH
                     search_method = YAMLHelpers.ElementSearchMethods.CONTAINS
+                    search_attr = element_id
+                    element_id = ""
+                    continue
+
+                elif ">" == c:
+                    # Value contains
+                    element_type = YAMLHelpers.ElementTypes.SEARCH
+                    search_method = YAMLHelpers.ElementSearchMethods.GREATER_THAN
+                    search_attr = element_id
+                    element_id = ""
+                    continue
+
+                elif "<" == c:
+                    # Value contains
+                    element_type = YAMLHelpers.ElementTypes.SEARCH
+                    search_method = YAMLHelpers.ElementSearchMethods.LESS_THAN
                     search_attr = element_id
                     element_id = ""
                     continue
@@ -802,14 +842,66 @@ class YAMLHelpers:
             self.log.debug(haystack)
             matches = None
 
-            if YAMLHelpers.ElementSearchMethods.EQUALS == method:
+            if method is YAMLHelpers.ElementSearchMethods.EQUALS:
                 matches = haystack == needle
-            elif YAMLHelpers.ElementSearchMethods.STARTS_WITH == method:
+            elif method is YAMLHelpers.ElementSearchMethods.STARTS_WITH:
                 matches = str(haystack).startswith(needle)
-            elif YAMLHelpers.ElementSearchMethods.ENDS_WITH == method:
+            elif method is YAMLHelpers.ElementSearchMethods.ENDS_WITH:
                 matches = str(haystack).endswith(needle)
-            elif YAMLHelpers.ElementSearchMethods.CONTAINS == method:
+            elif method is YAMLHelpers.ElementSearchMethods.CONTAINS:
                 matches = needle in str(haystack)
+            elif method is YAMLHelpers.ElementSearchMethods.GREATER_THAN:
+                if isinstance(haystack, int):
+                    try:
+                        matches = haystack > int(needle)
+                    except:
+                        matches = False
+                elif isinstance(haystack, float):
+                    try:
+                        matches = haystack > float(needle)
+                    except:
+                        matches = False
+                else:
+                    matches = haystack > needle
+            elif method is YAMLHelpers.ElementSearchMethods.LESS_THAN:
+                if isinstance(haystack, int):
+                    try:
+                        matches = haystack < int(needle)
+                    except:
+                        matches = False
+                elif isinstance(haystack, float):
+                    try:
+                        matches = haystack < float(needle)
+                    except:
+                        matches = False
+                else:
+                    matches = haystack < needle
+            elif method is YAMLHelpers.ElementSearchMethods.EQUAL_OR_GREATER_THAN:
+                if isinstance(haystack, int):
+                    try:
+                        matches = haystack >= int(needle)
+                    except:
+                        matches = False
+                elif isinstance(haystack, float):
+                    try:
+                        matches = haystack >= float(needle)
+                    except:
+                        matches = False
+                else:
+                    matches = haystack >= needle
+            elif method is YAMLHelpers.ElementSearchMethods.EQUAL_OR_LESS_THAN:
+                if isinstance(haystack, int):
+                    try:
+                        matches = haystack <= int(needle)
+                    except:
+                        matches = False
+                elif isinstance(haystack, float):
+                    try:
+                        matches = haystack <= float(needle)
+                    except:
+                        matches = False
+                else:
+                    matches = haystack <= needle
             else:
                 raise NotImplementedError
 
