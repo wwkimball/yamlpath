@@ -10,6 +10,18 @@ in ruamel.yaml.  As such, you should note which specific versions of ruamel.yaml
 which this code is compatible with.  Failing to do so will probably lead to some
 incompatbility.
 
+## Compatible ruamel.yaml Versions
+
+This list will not be aggressively updated but rather, from time to time as
+in/compatibility reports come it from users of this project.  At present, known
+compatible versions include:
+
+YAML Tools Version | ruamel.yaml Min | Max
+-------------------|-----------------|---------
+1.0.x              | 0.15.92         | 0.15.95
+
+You may find other compatible versions outside these ranges.
+
 ## YAML Path
 
 This project presents and utilizes YAML Paths, which are a human-friendly means
@@ -40,8 +52,10 @@ sensitive::accounts:
       users:
         - name: admin
           pass: 1s0L@73d @cC0u|\|7
+          access_level: 0
         - name: *commonUsername
           pass: *commonPassword
+          access_level: 500
 ```
 
 Contains these sample YAML Paths:
@@ -56,19 +70,33 @@ Contains these sample YAML Paths:
 8. `sensitive::accounts.database.app_pass`
 9. `sensitive::accounts.application.db.users[0].name`
 10. `sensitive::accounts.application.db.users[0].pass`
-11. `sensitive::accounts.application.db.users[1].name`
-12. `sensitive::accounts.application.db.users[2].pass`
+11. `sensitive::accounts.application.db.users[0].access_level`
+12. `sensitive::accounts.application.db.users[1].name`
+13. `sensitive::accounts.application.db.users[1].pass`
+14. `sensitive::accounts.application.db.users[1].access_level`
 
-### Some Notable Notations
+### Some Notable YAML Path Notations
 
-These examples illustrate some YAML Path representations of:
+YAML Path understands these forms:
 
 * Anchor lookups in Arrays:  `aliases[&anchor_name]`
 * Dot notation for Hash data structure sub-keys:  `hash.child.key`
 * Demarcation for dotted Hash keys:  `hash.'dotted.child.key'`
 * Escape symbol recognition:  `keys_with_\\slashes`
 * Array element selection:  `array[element#]`
-* Array-of-Hashes unique key lookups:  `sensitive::accounts.application.db.users[name=admin].pass`
+* Hash key lookups (which can return zero or more matches):
+  * Exact match:  `sensitive::accounts.application.db.users[name=admin].pass`
+  * Starts With match:  `sensitive::accounts.application.db.users[name^adm].pass`
+  * Ends With match:  `sensitive::accounts.application.db.users[name$min].pass`
+  * Contains match:  `sensitive::accounts.application.db.users[name%dmi].pass`
+  * Less Than match: `sensitive::accounts.application.db.users[access_level<500].pass`
+  * Greater Than match: `sensitive::accounts.application.db.users[access_level>0].pass`
+  * Less Than or Equal match: `sensitive::accounts.application.db.users[access_level<=100].pass`
+  * Greater Than or Equal match: `sensitive::accounts.application.db.users[access_level>=0].pass`
+  * Invert any match with `!`, like: `sensitive::accounts.application.db.users[name!=admin].pass`
+  * Demarcate expression values, like: `sensitive::accounts.application.db.users[full_name="Some User\'s Name"].pass`
+  * Multi-level matching: `sensitive::accounts.application.db.users[name%admin].pass[encrypted!^ENC\[]`
+* Complex combinations: `[2].some::complex.structure[with!=""].any[&valid].[yaml=data]`
 
 ## The Files of This Project
 
@@ -95,8 +123,9 @@ own projects and which you may also find use for:
 * rotate-eyaml-keys.py -- Rotates the encryption keys used for all EYAML values
   within a set of YAML files, decrypting with old keys and re-encrypting using
   replacement keys.
-* yaml-change-value.py -- Changes a value in a YAML file at a specified YAML
-  Path.  The value can be checked before it is replaced to mitigate accidental
-  changes.  The value can also be archived to another key before it is replaced.
-  EYAML can also be employed to encrypt the new value and/or decrypt the old
-  value before checking it.
+* yaml-change-value.py -- Changes one or more values in a YAML file at a
+  specified YAML Path.  Matched values can be checked before they are replaced
+  to mitigate accidental change. When matching singular results, the value can
+  be archived to another key before it is replaced.  Further, EYAML can be
+  employed to encrypt the new values and/or decrypt an old value before checking
+  them.

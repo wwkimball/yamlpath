@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 ################################################################################
-# Changes one or more values in a YAML file at a specified YAML Path.  When
-# singular, a value can be checked before it is replaced to mitigate accidental
-# change.  Also when singular, the value can be archived to another key before
-# it is replaced.  Further, EYAML can be employed to encrypt the new values
-# and/or decrypt an old value before checking it.
+# Changes one or more values in a YAML file at a specified YAML Path.  Matched
+# values can be checked before they are replaced to mitigate accidental change.
+# When matching singular results, the value can be archived to another key
+# before it is replaced.  Further, EYAML can be employed to encrypt the new
+# values and/or decrypt an old value before checking them.
 #
 # Requirements:
 # 1. Python >= 3.6
@@ -37,13 +37,15 @@ MY_VERSION = "1.0.0"
 def processcli():
     # Process command-line arguments
     parser = argparse.ArgumentParser(
-        description="Changes a value in a YAML file at a specified YAML\
-            Path.  The value can be checked before it is replaced to mitigate\
-            accidental changes.  The value can also be archived to another key\
-            before it is replaced.  EYAML can also be employed to encrypt the\
-            new value and/or decrypt the old value before checking it.",
+        description="Changes one or more values in a YAML file at a specified\
+            YAML Path.  Matched values can be checked before they are replaced\
+            to mitigate accidental change. When matching singular results, the\
+            value can be archived to another key before it is replaced.\
+            Further, EYAML can be employed to encrypt the new values and/or\
+            decrypt an old value before checking them.",
         epilog="When no changes are made, no backup is created, even when\
-            -b/--backup is specified."
+            -b/--backup is specified.  For more information about YAML Paths,\
+            please visit https://github.com/wwkimball/yaml-tools."
     )
     parser.add_argument("-V", "--version", action="version",
                         version="%(prog)s " + MY_VERSION)

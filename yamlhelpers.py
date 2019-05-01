@@ -83,8 +83,8 @@ class YAMLHelpers:
         STARTS_WITH = auto()
         GREATER_THAN = auto()
         LESS_THAN = auto()
-        EQUAL_OR_GREATER_THAN = auto()
-        EQUAL_OR_LESS_THAN = auto()
+        GREATER_THAN_OR_EQUAL = auto()
+        LESS_THAN_OR_EQUAL = auto()
 
     # Cache parsed YAML Path results across instances to avoid repeated parsing
     _static_parsings = {}
@@ -119,7 +119,6 @@ class YAMLHelpers:
         Raises:
             YAMLPathException when YAML Path is invalid
         """
-        self.log.debug("YAMLHelpers::get_nodes:  Getting parsed version of {}".format(yaml_path))
         path = self._parse_path(yaml_path)
         if mustexist:
             for node in self._get_nodes(data, path):
@@ -130,8 +129,6 @@ class YAMLHelpers:
                     )
                 yield node
         else:
-            self.log.debug("YAMLHelpers::get_nodes:  Returning nodes from ::_ensure_path()...")
-            # return self._ensure_path(data, path, default_value)
             for node in self._ensure_path(data, path, default_value):
                 if node is None:
                     continue
@@ -161,7 +158,6 @@ class YAMLHelpers:
         if data is None or yaml_path is None:
             return
 
-        # self.log.debug("YAMLHelpers::set_value:  Getting parsed version of " + str(yaml_path))
         path = self._parse_path(yaml_path)
         if mustexist:
             self.log.debug("YAMLHelpers::set_value:  Seeking required node at " + self.str_path(path))
@@ -243,9 +239,9 @@ class YAMLHelpers:
                     pmethod = "<"
                 elif method == YAMLHelpers.ElementSearchMethods.GREATER_THAN:
                     pmethod = ">"
-                elif method == YAMLHelpers.ElementSearchMethods.EQUAL_OR_LESS_THAN:
+                elif method == YAMLHelpers.ElementSearchMethods.LESS_THAN_OR_EQUAL:
                     pmethod = "<="
-                elif method == YAMLHelpers.ElementSearchMethods.EQUAL_OR_GREATER_THAN:
+                elif method == YAMLHelpers.ElementSearchMethods.GREATER_THAN_OR_EQUAL:
                     pmethod = ">="
                 else:
                     raise NotImplementedError
@@ -301,18 +297,15 @@ class YAMLHelpers:
         Raises:
           YAMLPathException when yaml_path is invalid
         """
-        # self.log.debug("YAMLHelpers::_parse_path:  Evaluating \"" + str(yaml_path) + "\"...")
+        self.log.debug("YAMLHelpers::_parse_path:  Evaluating {}...".format(yaml_path))
 
         path_elements = deque()
 
         if yaml_path is None:
-            # self.log.debug("YAMLHelpers::_parse_path:  None path begets empty deque.")
             return path_elements
         elif isinstance(yaml_path, deque):
-            # self.log.debug("YAMLHelpers::_parse_path:  Sending deque back as-is.")
             return yaml_path
         elif isinstance(yaml_path, list):
-            # self.log.debug("YAMLHelpers::_parse_path:  Sending deque(list) back.")
             return deque(yaml_path)
         elif isinstance(yaml_path, dict):
             raise YAMLPathException(
@@ -326,7 +319,6 @@ class YAMLHelpers:
 
         # Don't parse a path that has already been seen
         if yaml_path in YAMLHelpers._static_parsings:
-            # self.log.debug("YAMLHelpers::_parse_path:  Returning cached copy of pre-parsed path \"" + yaml_path + "\".")
             return YAMLHelpers._static_parsings[yaml_path].copy()
 
         element_id = ""
@@ -408,13 +400,13 @@ class YAMLHelpers:
             ):
                 # Hash attribute search
                 if "=" == c:
-                    # Exact value match
+                    # Exact value match OR >=|<=
                     element_type = YAMLHelpers.ElementTypes.SEARCH
 
                     if search_method is YAMLHelpers.ElementSearchMethods.LESS_THAN:
-                        search_method = YAMLHelpers.ElementSearchMethods.EQUAL_OR_LESS_THAN
+                        search_method = YAMLHelpers.ElementSearchMethods.LESS_THAN_OR_EQUAL
                     elif search_method is YAMLHelpers.ElementSearchMethods.GREATER_THAN:
-                        search_method = YAMLHelpers.ElementSearchMethods.EQUAL_OR_GREATER_THAN
+                        search_method = YAMLHelpers.ElementSearchMethods.GREATER_THAN_OR_EQUAL
                     else:
                         search_method = YAMLHelpers.ElementSearchMethods.EQUALS
                         search_attr = element_id
@@ -447,7 +439,7 @@ class YAMLHelpers:
                     continue
 
                 elif ">" == c:
-                    # Value contains
+                    # Value greater than
                     element_type = YAMLHelpers.ElementTypes.SEARCH
                     search_method = YAMLHelpers.ElementSearchMethods.GREATER_THAN
                     search_attr = element_id
@@ -455,7 +447,7 @@ class YAMLHelpers:
                     continue
 
                 elif "<" == c:
-                    # Value contains
+                    # Value less than
                     element_type = YAMLHelpers.ElementTypes.SEARCH
                     search_method = YAMLHelpers.ElementSearchMethods.LESS_THAN
                     search_attr = element_id
@@ -522,8 +514,8 @@ class YAMLHelpers:
         if 0 < len(element_id):
             path_elements.append((element_type, element_id))
 
-        # self.log.debug("YAMLHelpers::_parse_path:  Parsed \"" + str(yaml_path) + "\" into:")
-        # self.log.debug(path_elements)
+        self.log.debug("YAMLHelpers::_parse_path:  Parsed {} into:".format(yaml_path))
+        self.log.debug(path_elements)
 
         # Cache the parsed results
         YAMLHelpers._static_parsings[yaml_path] = path_elements
@@ -814,7 +806,6 @@ class YAMLHelpers:
         # uncontrollable, from here.
         if hasattr(data, "ca") and old_tail_pos in data.ca.items:
             old_comment = data.ca.items[old_tail_pos][0]
-            self.log.debug("YAMLHelpers::_append_list_element:  Moving tail comment, {}, to the list end.".format(old_comment))
             if old_comment is not None:
                 data.ca.items[old_tail_pos][0] = None
                 data.ca.items[old_tail_pos + 1] = [
@@ -838,7 +829,7 @@ class YAMLHelpers:
         """
 
         def search_matches(method, needle, haystack):
-            self.log.debug("Searching for '" + str(needle) + "' in:")
+            self.log.debug("YAMLHelpers::_search::search_matches:  Searching for {} using {} against:".format(needle, method))
             self.log.debug(haystack)
             matches = None
 
@@ -876,7 +867,7 @@ class YAMLHelpers:
                         matches = False
                 else:
                     matches = haystack < needle
-            elif method is YAMLHelpers.ElementSearchMethods.EQUAL_OR_GREATER_THAN:
+            elif method is YAMLHelpers.ElementSearchMethods.GREATER_THAN_OR_EQUAL:
                 if isinstance(haystack, int):
                     try:
                         matches = haystack >= int(needle)
@@ -889,7 +880,7 @@ class YAMLHelpers:
                         matches = False
                 else:
                     matches = haystack >= needle
-            elif method is YAMLHelpers.ElementSearchMethods.EQUAL_OR_LESS_THAN:
+            elif method is YAMLHelpers.ElementSearchMethods.LESS_THAN_OR_EQUAL:
                 if isinstance(haystack, int):
                     try:
                         matches = haystack <= int(needle)
@@ -907,11 +898,8 @@ class YAMLHelpers:
 
             return matches
 
-        self.log.debug("-\n--\n---")
-        self.log.debug(terms)
         invert, method, attr, term = terms
         if isinstance(data, list):
-            self.log.debug("------ searching a list...")
             for e in data:
                 if isinstance(e, dict) and attr in e:
                     matches = search_matches(method, term, e[attr])
@@ -919,7 +907,6 @@ class YAMLHelpers:
                         yield e
 
         elif isinstance(data, dict):
-            self.log.debug("------ searching a dictionary...")
             if attr in data:
                 value = data[attr]
                 matches = search_matches(method, term, value)
@@ -928,12 +915,10 @@ class YAMLHelpers:
 
         else:
             # Check the passed data itself for a match
-            self.log.debug("------ searching literal data...")
             matches = search_matches(method, term, data)
             if (matches and not invert) or (invert and not matches):
                 yield data
 
-        self.log.debug("---\n--\n-")
         yield None
 
     def _ensure_path(self, data, path, value=None):
@@ -960,7 +945,7 @@ class YAMLHelpers:
         if 0 < len(path):
             (curtyp, curele) = curref = path.popleft()
 
-            self.log.debug("YAMLHelpers::_ensure_path:  Seeking element [" + str(curele) + "] of type [" + str(curtyp) + "] in data of type [" + str(type(data)) + "]:")
+            self.log.debug("YAMLHelpers::_ensure_path:  Seeking element {} of type {} in data of type {}:".format(curele, curtyp, type(data)))
             self.log.debug(data)
             self.log.debug("")
 
@@ -970,7 +955,7 @@ class YAMLHelpers:
                 if node is None:
                     continue
                 matched_nodes += 1
-                self.log.debug("YAMLHelpers::_ensure_path:  Found element [" + str(curele) + "] in the data; recursing into it...")
+                self.log.debug("YAMLHelpers::_ensure_path:  Found element {} in the data; recursing into it...".format(curele))
                 for node in self._ensure_path(node, path.copy(), value):
                     if node is None:
                         continue
@@ -978,7 +963,7 @@ class YAMLHelpers:
 
             if 1 > matched_nodes and curtyp is not YAMLHelpers.ElementTypes.SEARCH:
                 # Add the missing element
-                self.log.debug("YAMLHelpers::_ensure_path:  Element [" + str(curele) + "] is unknown in the data!")
+                self.log.debug("YAMLHelpers::_ensure_path:  Element {} is unknown in the data!".format(curele))
                 if isinstance(data, list):
                     self.log.debug("YAMLHelpers::_ensure_path:  Dealing with a list...")
                     if curtyp is YAMLHelpers.ElementTypes.ANCHOR:
