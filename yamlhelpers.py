@@ -758,16 +758,20 @@ class YAMLHelpers:
 
         Raises:  N/A
         """
+
+        if anchor is not None and value is not None:
+            self.log.debug("YAMLHelpers::_append_list_element:  Ensuring {}{} is a PlainScalarString.".format(type(value), value))
+            if type(value) is str:
+                value = PlainScalarString(value)
+            value.yaml_set_anchor(anchor)
+
         old_tail_pos = len(data) - 1
         data.append(value)
         new_element = data[-1]
 
-        if anchor is not None and new_element is not None:
-            self.log.debug("YAMLHelpers::_append_list_element:  Ensuring {}{} is a PlainScalarString.".format(type(new_element), new_element))
-            if type(new_element) is str:
-                new_element = PlainScalarString(new_element, anchor=anchor)
-            new_element.yaml_set_anchor(anchor, True)
-
+        # Note that ruamel.yaml will inexplicably add a newline before the tail
+        # element irrespective of this ca handling.  This issue appears to be
+        # uncontrollable, from here.
         if hasattr(data, "ca") and old_tail_pos in data.ca.items:
             old_comment = data.ca.items[old_tail_pos][0]
             self.log.debug("YAMLHelpers::_append_list_element:  Moving tail comment, {}, to the list end.".format(old_comment))
