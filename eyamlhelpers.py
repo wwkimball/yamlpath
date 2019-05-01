@@ -213,7 +213,7 @@ class EYAMLHelpers(YAMLHelpers):
             emit_format
         )
 
-    def get_eyaml_values(self, data, yaml_path, mustexist=False):
+    def get_eyaml_values(self, data, yaml_path, mustexist=False, default_value=None):
         """Retrieves and decrypts zero or more EYAML nodes from YAML data at a
         YAML Path.
 
@@ -221,8 +221,10 @@ class EYAMLHelpers(YAMLHelpers):
           1. data (ruamel.yaml data) The parsed YAML data to process
           2. yaml_path (any) The YAML Path specifying which node to
              decrypt
-          5. mustexist (Boolean) Indicates whether YAML Path must
+          3. mustexist (Boolean) Indicates whether YAML Path must
              specify a pre-existing node
+          4. default_value (any) The default value to add to the YAML data when
+             mustexist=False and yaml_path points to a non-existent node
 
         Returns:  (str) The decrypted value or None when YAML Path specifies a
         non-existant node.
@@ -230,8 +232,8 @@ class EYAMLHelpers(YAMLHelpers):
         Raises:
             YAMLPathException when YAML Path is invalid
         """
-        self.log.verbose("Decrypting value(s) at " + self.str_path(yaml_path))
-        for node in self.get_nodes(data, yaml_path, mustexist):
+        self.log.verbose("Decrypting value(s) at {}.".format(self.str_path(yaml_path)))
+        for node in self.get_nodes(data, yaml_path, mustexist, default_value):
             if node is None:
                 continue
             plain_text = self.decrypt_eyaml(node)

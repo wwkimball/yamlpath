@@ -83,6 +83,8 @@ def processcli():
         help="check the value before replacing it")
     parser.add_argument("-s", "--saveto", metavar="YAML_PATH",
         help="save the old value to YAML_PATH before replacing it")
+    parser.add_argument("-m", "--mustexist", action="store_true",
+        help="require that the --key YAML_PATH already exist in YAML_FILE")
     parser.add_argument("-b", "--backup", action="store_true",
         help="save a backup YAML_FILE with an extra .bak file-extension")
 
@@ -202,15 +204,15 @@ change_path = yh.str_path(args.key)
 change_nodes = []
 
 try:
-    for node in yh.get_eyaml_values(yaml_data, change_path):
+    for node in yh.get_eyaml_values(yaml_data, change_path, args.mustexist, new_value):
         if node is None:
             continue
 
         log.verbose("Got {} from {}.".format(node, change_path))
 
-        # Do nothing if the value will not be changing, unless we can infer that
-        # this is an EYAML recrypt attempt.
-        if new_value == node and not args.eyamlcrypt:
+        # Do nothing if the value will not be changing, unless this is an EYAML
+        # recrypt attempt (same value, encrypted or even re-encrypted).
+        if new_value is not node and new_value == node and not args.eyamlcrypt:
             log.warning("New and old values are identical.")
             continue
 

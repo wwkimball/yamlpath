@@ -4,6 +4,7 @@
 #
 # Copyright 2018, 2019 William W. Kimball, Jr. MBA MSIS
 ################################################################################
+from sys import maxsize
 from enum import Enum, auto
 from collections import deque
 from distutils.util import strtobool
@@ -121,18 +122,22 @@ class YAMLHelpers:
         """
         path = self._parse_path(yaml_path)
         if mustexist:
+            matched_nodes = 0
             for node in self._get_nodes(data, path):
-                if node is None:
-                    raise YAMLPathException(
-                        "Required path does not exist",
-                        self.str_path(path)
-                    )
-                yield node
+                if node is not None:
+                    matched_nodes += 1
+                    yield node
+
+            if 1 > matched_nodes:
+                raise YAMLPathException(
+                    "Required YAML Path does not match any nodes",
+                    self.str_path(yaml_path),
+                    self.str_path(path)
+                )
         else:
             for node in self._ensure_path(data, path, default_value):
-                if node is None:
-                    continue
-                yield node
+                if node is not None:
+                    yield node
 
     def set_value(self, data, yaml_path, value, mustexist=False,
                   format=YAMLValueFormats.DEFAULT
@@ -775,7 +780,15 @@ class YAMLHelpers:
         elif typ == YAMLHelpers.ElementTypes.KEY:
             return CommentedMap()
         else:
-            return value
+            self.log.error("Boop!", 77)
+            if isinstance(value, str):
+                return PlainScalarString("")
+            elif isinstance(value, int):
+                return ScalarInt(maxsize)
+            elif isinstance(value, float):
+                return ScalarFloat("inf")
+            else:
+                return value
 
     def _append_list_element(self, data, value=None, anchor=None):
         """Appends a new element to an ruamel.yaml presented list, preserving
@@ -931,7 +944,7 @@ class YAMLHelpers:
           2. path (deque) The pre-parsed YAML Path to follow
           3. value (any) The value to assign to the element
 
-        Returns:  (object) The specified node
+        Returns:  (object) The specified node(s)
 
         Raises:
           YAMLPathException when the YAML Path is invalid.
@@ -940,6 +953,7 @@ class YAMLHelpers:
             yet prepared to add it.
         """
         if data is None or path is None:
+            self.log.debug("YAMLHelpers::_ensure_path:  Bailing out on None data/path!")
             return data
 
         if 0 < len(path):
@@ -954,12 +968,12 @@ class YAMLHelpers:
             for node in self._get_elements_by_ref(data, curref):
                 if node is None:
                     continue
+
                 matched_nodes += 1
                 self.log.debug("YAMLHelpers::_ensure_path:  Found element {} in the data; recursing into it...".format(curele))
                 for node in self._ensure_path(node, path.copy(), value):
-                    if node is None:
-                        continue
-                    yield node
+                    if node is not None:
+                        yield node
 
             if 1 > matched_nodes and curtyp is not YAMLHelpers.ElementTypes.SEARCH:
                 # Add the missing element
@@ -1036,7 +1050,7 @@ class YAMLHelpers:
                     )
 
         else:
-            self.log.debug("YAMLHelpers::_ensure_path:  Finally returning data of type [" + str(type(data)) + "]:")
+            self.log.debug("YAMLHelpers::_ensure_path:  Finally returning data of type {}:".format(type(data)))
             self.log.debug(data)
 
             yield data
