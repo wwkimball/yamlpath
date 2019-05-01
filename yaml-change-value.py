@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 ################################################################################
-# Changes a value in a YAML file at a specified YAML Path.  The value can be
-# checked before it is replaced to mitigate accidental changes.  The value can
-# also be archived to another key before it is replaced.  EYAML can also be
-# employed to encrypt the new value and/or decrypt the old value before checking
-# it.
+# Changes one or more values in a YAML file at a specified YAML Path.  When
+# singular, a value can be checked before it is replaced to mitigate accidental
+# change.  Also when singular, the value can be archived to another key before
+# it is replaced.  Further, EYAML can be employed to encrypt the new values
+# and/or decrypt an old value before checking it.
 #
 # Requirements:
 # 1. Python >= 3.6
@@ -164,35 +164,6 @@ yh = EYAMLHelpers(
 )
 backup_file = args.yaml_file + ".bak"
 
-# Prep the YAML parser
-yaml = YAML()
-yaml.indent(mapping=2, sequence=4, offset=2)
-yaml.explicit_start = True
-yaml.preserve_quotes = True
-yaml.width = sys.maxsize
-
-# Attempt to open the YAML file; check for parsing errors
-try:
-    with open(args.yaml_file, 'r') as f:
-        yaml_data = yaml.load(f)
-except ParserError as e:
-    log.error("YAML parsing error " + str(e.problem_mark).lstrip() + ": " + e.problem)
-
-# Load the present value at th specified YAML Path
-change_path = yh.str_path(args.key)
-
-try:
-    old_value = yh.get_eyaml_value(yaml_data, change_path)
-except YAMLPathException as ex:
-    log.error(ex, 1)
-
-log.verbose("Got '" + (old_value if old_value is not None else "<None>") + "' from " + change_path)
-
-# Check the value, if desired
-if args.check:
-    if not args.check == old_value:
-        log.error("The present value does not match the check value.", 20)
-
 # Obtain the replacement value
 if args.value:
     new_value = args.value
@@ -210,27 +181,75 @@ elif args.random is not None:
 else:
     log.error("Unsupported input method.", 1)
 
-# Do nothing if the value will not be changing, unless we can infer that this is
-# an EYAML recrypt attempt.
-if new_value == old_value and not args.eyamlcrypt:
-    log.warning("New and old values are identical; nothing to do!")
+# Prep the YAML parser
+yaml = YAML()
+yaml.indent(mapping=2, sequence=4, offset=2)
+yaml.explicit_start = True
+yaml.preserve_quotes = True
+yaml.width = sys.maxsize
+
+# Attempt to open the YAML file; check for parsing errors
+try:
+    with open(args.yaml_file, 'r') as f:
+        yaml_data = yaml.load(f)
+except ParserError as e:
+    log.error("YAML parsing error " + str(e.problem_mark).lstrip() + ": " + e.problem)
+
+# Load the present value at the specified YAML Path
+change_path = yh.str_path(args.key)
+change_nodes = []
+
+try:
+    for node in yh.get_eyaml_values(yaml_data, change_path):
+        if node is None:
+            continue
+
+        log.verbose("Got {} from {}.".format(node, change_path))
+
+        # Do nothing if the value will not be changing, unless we can infer that
+        # this is an EYAML recrypt attempt.
+        if new_value == node and not args.eyamlcrypt:
+            log.warning("New and old values are identical.")
+            continue
+
+        change_nodes.append(node)
+except YAMLPathException as ex:
+    log.error(ex, 1)
+
+log.debug("Collected nodes:")
+log.debug(change_nodes)
+
+if 1 > len(change_nodes):
+    log.warning("Nothing to do!")
     exit(0)
 
-# Save the old value, if desired
+# Check the value(s), if desired
+for node in change_nodes:
+    if args.check:
+        if not args.check == node:
+            log.error("{} does not match the check value.".format(node), 20)
+
+# Save the old value, if desired and possible
 if args.saveto:
-    if old_value is None:
-        log.error("There is no value to save at " + change_path, 1)
-    else:
-        copy_value = yh.clone_node(old_value)
-        save_path = yh.str_path(args.saveto)
-        log.verbose("Saving the old value to " + save_path)
-        try:
-            yh.set_value(yaml_data, save_path, copy_value, False)
-        except YAMLPathException as ex:
-            log.error(ex, 1)
+    # Only one can be saved; otherwise it is impossible to meaningfully convey
+    # to the end-user from exactly which other YAML node each saved value came.
+    if 1 < len(change_nodes):
+        log.error(
+            "It is impossible to meaningly save more than one matched value."
+            + "  Please omit --saveto or set --key to affect exactly one value."
+            , 1
+        )
+
+    log.verbose("Saving the old value to {}.".format(args.saveto))
+    try:
+        log.verbose("Writing a single value...")
+        yh.set_value(yaml_data, args.saveto, yh.clone_node(change_nodes[0]))
+        log.verbose("DONE writing a single value...")
+    except YAMLPathException as ex:
+        log.error(ex, 1)
 
 # Set the requested value
-log.verbose("Setting " + change_path + " to: " + new_value)
+log.verbose("Setting {} to {}.".format(change_path, new_value))
 if args.eyamlcrypt:
     output_type = "string"
     format_type = YAMLValueFormats.from_str(args.format)
@@ -242,6 +261,7 @@ if args.eyamlcrypt:
         log.error(ex, 1)
 else:
     try:
+        log.verbose("Overwriting a single value...")
         yh.set_value(yaml_data, change_path, new_value, False, args.format)
     except YAMLPathException as ex:
         log.error(ex, 1)

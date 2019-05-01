@@ -101,8 +101,8 @@ class YAMLHelpers:
         """
         self.log = logger
 
-    def get_node(self, data, yaml_path, mustexist=False, default_value=None):
-        """Retrieves a node at YAML Path from YAML data.
+    def get_nodes(self, data, yaml_path, mustexist=False, default_value=None):
+        """Retrieves zero or more node at YAML Path in YAML data.
 
         Positional Parameters:
           1. data (ruamel.yaml data) The parsed YAML data to process
@@ -114,51 +114,33 @@ class YAMLHelpers:
              it not already exist in data and mustexist is False;
              default=None
 
-        Returns:  (object) The requested YAML node
-
-        Raises:
-            AttributeError when YAML Path is invalid
-        """
-        self.log.debug("YAMLHelpers::get_node:  Getting parsed version of " + str(yaml_path))
-        path = self._parse_path(yaml_path)
-        if mustexist:
-            return self._get_node(data, path)
-        else:
-            return self._ensure_path(data, path, default_value)
-
-    def get_value(self, data, yaml_path, mustexist=False):
-        """Retrieves the value of a node at YAML Path from YAML data.
-
-        Positional Parameters:
-          1. data (ruamel.yaml data) The parsed YAML data to process
-          2. yaml_path (any) The YAML Path to evaluate
-          3. mustexist (Boolean) Indicate whether yaml_path must exist
-             in data prior to this query (lest an Exception be raised);
-             default=False
-
-        Returns:  (any) The value at YAML Path or None if YAML Path did not
-        exist
+        Returns:  (object) The requested YAML nodes as they are matched
 
         Raises:
             YAMLPathException when YAML Path is invalid
         """
-        if data is None or yaml_path is None:
-            return None
-
-        self.log.debug("YAMLHelpers::get_value:  Getting parsed version of " + str(yaml_path))
+        self.log.debug("YAMLHelpers::get_nodes:  Getting parsed version of {}".format(yaml_path))
         path = self._parse_path(yaml_path)
-        node = self._get_node(data, path)
-        if node is None and mustexist:
-            raise YAMLPathException(
-                "Required path does not exist",
-                self.str_path(path)
-            )
-        return node
+        if mustexist:
+            for node in self._get_nodes(data, path):
+                if node is None:
+                    raise YAMLPathException(
+                        "Required path does not exist",
+                        self.str_path(path)
+                    )
+                yield node
+        else:
+            self.log.debug("YAMLHelpers::get_nodes:  Returning nodes from ::_ensure_path()...")
+            # return self._ensure_path(data, path, default_value)
+            for node in self._ensure_path(data, path, default_value):
+                if node is None:
+                    continue
+                yield node
 
     def set_value(self, data, yaml_path, value, mustexist=False,
                   format=YAMLValueFormats.DEFAULT
     ):
-        """Sets a value for a specific node at YAML Path in YAML data.
+        """Sets the value of zero or more nodes at YAML Path in YAML data.
 
         Positional Parameters:
           1. data (ruamel.yaml data) The parsed YAML data to process
@@ -171,32 +153,50 @@ class YAMLHelpers:
              representation to use when writing the data;
              default=YAMLValueFormats.DEFAULT
 
-        Returns:  (object) The YAML node after its value has been set
+        Returns:  N/A
 
         Raises:
-            AttributeError when YAML Path is invalid
+            YAMLPathException when YAML Path is invalid
         """
         if data is None or yaml_path is None:
-            return None
+            return
 
-        self.log.debug("YAMLHelpers::set_value:  Getting parsed version of " + str(yaml_path))
+        # self.log.debug("YAMLHelpers::set_value:  Getting parsed version of " + str(yaml_path))
         path = self._parse_path(yaml_path)
         if mustexist:
             self.log.debug("YAMLHelpers::set_value:  Seeking required node at " + self.str_path(path))
-            node = self._get_node(data, path)
+            found_nodes = 0
+            for node in self._get_nodes(data, path):
+                if node is None:
+                    continue
 
-            if node is None:
+                found_nodes += 1
+                self._update_value(data, node, value, format)
+
+            if 1 > found_nodes:
                 raise YAMLPathException(
-                    "Required path does not exist",
+                    "No nodes matched required YAML Path",
                     self.str_path(path)
                 )
         else:
             self.log.debug("YAMLHelpers::set_value:  Seeking optional node at " + self.str_path(path))
-            node = self._ensure_path(data, path, value)
+            for node in self._ensure_path(data, path, value):
+                if node is None:
+                    continue
+                self._update_value(data, node, value, format)
 
-        self._update_value(data, node, value, format)
+    def clone_node(self, node):
+        """Duplicates a YAML Data node.
 
-        return node
+        Positional Parameters:
+          1. node (object) The node to clone.
+
+        Returns: (object) Clone of the given node
+        """
+        if hasattr(node, "anchor"):
+            return type(node)(node, anchor=node.anchor.value)
+        else:
+            return type(node)(node)
 
     def str_path(self, yaml_path):
         """Returns the printable, user-friendly version of a YAML Path.
@@ -208,7 +208,6 @@ class YAMLHelpers:
 
         Raises:  N/A
         """
-        self.log.debug("YAMLHelpers::str_path:  Getting parsed version of " + str(yaml_path))
         parsed_path = self._parse_path(yaml_path)
         add_dot = False
         ppath = ""
@@ -276,20 +275,20 @@ class YAMLHelpers:
         as-is.
 
         Raises:
-          AttributeError when yaml_path is invalid
+          YAMLPathException when yaml_path is invalid
         """
-        self.log.debug("YAMLHelpers::_parse_path:  Evaluating \"" + str(yaml_path) + "\"...")
+        # self.log.debug("YAMLHelpers::_parse_path:  Evaluating \"" + str(yaml_path) + "\"...")
 
         path_elements = deque()
 
         if yaml_path is None:
-            self.log.debug("YAMLHelpers::_parse_path:  None path begets empty deque.")
+            # self.log.debug("YAMLHelpers::_parse_path:  None path begets empty deque.")
             return path_elements
         elif isinstance(yaml_path, deque):
-            self.log.debug("YAMLHelpers::_parse_path:  Sending deque back as-is.")
+            # self.log.debug("YAMLHelpers::_parse_path:  Sending deque back as-is.")
             return yaml_path
         elif isinstance(yaml_path, list):
-            self.log.debug("YAMLHelpers::_parse_path:  Sending deque(list) back.")
+            # self.log.debug("YAMLHelpers::_parse_path:  Sending deque(list) back.")
             return deque(yaml_path)
         elif isinstance(yaml_path, dict):
             raise YAMLPathException(
@@ -303,7 +302,7 @@ class YAMLHelpers:
 
         # Don't parse a path that has already been seen
         if yaml_path in YAMLHelpers._static_parsings:
-            self.log.debug("YAMLHelpers::_parse_path:  Returning cached copy of pre-parsed path \"" + yaml_path + "\".")
+            # self.log.debug("YAMLHelpers::_parse_path:  Returning cached copy of pre-parsed path \"" + yaml_path + "\".")
             return YAMLHelpers._static_parsings[yaml_path].copy()
 
         element_id = ""
@@ -476,8 +475,8 @@ class YAMLHelpers:
         if 0 < len(element_id):
             path_elements.append((element_type, element_id))
 
-        self.log.debug("YAMLHelpers::_parse_path:  Parsed \"" + str(yaml_path) + "\" into:")
-        self.log.debug(path_elements)
+        # self.log.debug("YAMLHelpers::_parse_path:  Parsed \"" + str(yaml_path) + "\" into:")
+        # self.log.debug(path_elements)
 
         # Cache the parsed results
         YAMLHelpers._static_parsings[yaml_path] = path_elements
@@ -489,15 +488,15 @@ class YAMLHelpers:
 
         return path_elements.copy()
 
-    def _get_node(self, data, yaml_path):
-        """Returns a pre-existing node from YAML data or None if the given YAML
-        Path fails to lead to a node.
+    def _get_nodes(self, data, yaml_path):
+        """Generates zero or more matching, pre-existing nodes from YAML data
+        matching a YAML Path.
 
         Positional Parameters:
           1. data (ruamel.yaml data) The parsed YAML data to process
           2. yaml_path (deque) The pre-parsed YAML Path to follow
 
-        Returns:  (object) The requested YAML node or None
+        Returns:  (object) The requested YAML nodes as they are matched or None
 
         Raises:  N/A
         """
@@ -507,64 +506,50 @@ class YAMLHelpers:
         if 0 < len(yaml_path):
             (typ, ele) = yaml_path.popleft()
 
-            self.log.debug("YAMLHelpers::_get_node:  Peeking at element [" + str(ele) + "] of type [" + str(typ) + "] in data of type[" + str(type(data)) + "]:")
+            self.log.debug("YAMLHelpers::_get_nodes:  Peeking at element [" + str(ele) + "] of type [" + str(typ) + "] in data of type[" + str(type(data)) + "]:")
             self.log.debug(data)
             self.log.debug("")
 
             if YAMLHelpers.ElementTypes.KEY == typ:
-                self.log.debug("YAMLHelpers::_get_node:  Drilling into the present dictionary KEY...")
+                self.log.debug("YAMLHelpers::_get_nodes:  Drilling into the present dictionary KEY...")
                 if ele in data:
-                    return self._get_node(data[ele], yaml_path)
+                    yield self._get_nodes(data[ele], yaml_path)
                 else:
                     return None
             elif YAMLHelpers.ElementTypes.INDEX == typ:
-                self.log.debug("YAMLHelpers::_get_node:  Drilling into the present list INDEX...")
+                self.log.debug("YAMLHelpers::_get_nodes:  Drilling into the present list INDEX...")
                 if ele < len(data):
-                    return self._get_node(data[ele], yaml_path)
+                    yield self._get_nodes(data[ele], yaml_path)
                 else:
                     return None
             elif YAMLHelpers.ElementTypes.ANCHOR == typ:
                 if isinstance(data, list):
-                    self.log.debug("YAMLHelpers::_get_node:  Searching for an ANCHOR in a list...")
+                    self.log.debug("YAMLHelpers::_get_nodes:  Searching for an ANCHOR in a list...")
                     for e in data:
                         if hasattr(e, "anchor") and ele == e.anchor.value:
-                            return self._get_node(e, yaml_path)
+                            yield self._get_nodes(e, yaml_path)
                 elif isinstance(data, dict):
-                    self.log.debug("YAMLHelpers::_get_node:  Searching for an ANCHOR in a dictionary...")
+                    self.log.debug("YAMLHelpers::_get_nodes:  Searching for an ANCHOR in a dictionary...")
                     for _,v in data:
                         if hasattr(v, "anchor") and ele == v.anchor.value:
-                            return self._get_node(v, yaml_path)
+                            yield self._get_nodes(v, yaml_path)
                 return None
             elif YAMLHelpers.ElementTypes.SEARCH == typ:
-                self.log.debug("YAMLHelpers::_get_node:  Performing an attribute SEARCH...")
-                # Return only the first match
+                self.log.debug("YAMLHelpers::_get_nodes:  Performing an attribute SEARCH...")
                 for match in self._search(data, ele):
                     if match is None:
                         continue
                     else:
-                        return self._get_node(match, yaml_path)
+                        yield self._get_nodes(match, yaml_path)
                 return None
             else:
                 raise NotImplementedError
 
-        self.log.debug("YAMLHelpers::_get_node:  Finally returning data of type [" + str(type(data)) + "]:")
+        self.log.debug("YAMLHelpers::_get_nodes:  Finally returning data of type [" + str(type(data)) + "]:")
         self.log.debug(data)
         self.log.debug("")
 
-        return data
-
-    def clone_node(self, node):
-        """Duplicates a YAML Data node.
-
-        Positional Parameters:
-          1. node (object) The node to clone.
-
-        Returns: (object) Clone of the given node
-        """
-        if hasattr(node, "anchor"):
-            return type(node)(node, anchor=node.anchor.value)
-        else:
-            return type(node)(node)
+        yield data
 
     def _update_value(self, data, source_node, value, format):
         """Recursively updates the value of a YAML Node and any references to it
@@ -671,15 +656,15 @@ class YAMLHelpers:
 
         update_references(data, source_node, new_node)
 
-    def _get_element_by_ref(self, data, ref):
-        """Returns the referenced YALM Node or None when the given reference
-        points nowhere.
+    def _get_elements_by_ref(self, data, ref):
+        """Returns zero or more referenced YALM Nodes or None when the given
+        reference points nowhere.
 
         Positional Parameters:
           1. data (ruamel.yaml data) The parsed YAML data to process
           2. ref (tuple(YAMLHelpers.ElementTypes,any)) A YAML Path segment
 
-        Returns:  (object) A YAML Node or None
+        Returns:  (object) At least one YAML Node or None
 
         Raises:
           NotImplementedError when ref indicates an unknown
@@ -695,11 +680,11 @@ class YAMLHelpers:
             if isinstance(data, list):
                 for e in data:
                     if hasattr(e, "anchor") and refele == e.anchor.value:
-                        return e
+                        yield e
             elif isinstance(data, dict):
                 for _,v in data:
                     if hasattr(v, "anchor") and refele == v.anchor.value:
-                        return v
+                        yield v
             else:
                 return None
         elif reftyp == YAMLHelpers.ElementTypes.INDEX:
@@ -712,21 +697,20 @@ class YAMLHelpers:
                 )
 
             if isinstance(data, list) and len(data) > intele:
-                return data[intele]
+                yield data[intele]
             else:
                 return None
         elif reftyp == YAMLHelpers.ElementTypes.KEY:
             if isinstance(data, dict) and refele in data:
-                return data[refele]
+                yield data[refele]
             else:
                 return None
         elif reftyp == YAMLHelpers.ElementTypes.SEARCH:
-            # Return only the first match
             for match in self._search(data, refele):
                 if match is None:
                     continue
                 else:
-                    return match
+                    yield match
             return None
         else:
             raise NotImplementedError
@@ -771,7 +755,7 @@ class YAMLHelpers:
         data.append(value)
         new_element = data[-1]
 
-        if anchor is not None:
+        if anchor is not None and new_element is not None:
             new_element.yaml_set_anchor(anchor)
 
         if hasattr(data, "ca") and old_tail_pos in data.ca.items:
@@ -820,8 +804,6 @@ class YAMLHelpers:
         self.log.debug(terms)
         invert, method, attr, term = terms
         if isinstance(data, list):
-            # Select only the first element which is a dict and matches
-            # the search terms.
             self.log.debug("------ searching a list...")
             for e in data:
                 if isinstance(e, dict) and attr in e:
@@ -830,28 +812,27 @@ class YAMLHelpers:
                         yield e
 
         elif isinstance(data, dict):
-            # Select only the first value which is a dict and matches
-            # the search terms.
             self.log.debug("------ searching a dictionary...")
-            for _,v in data:
-                if isinstance(v, dict) and attr in v:
-                    matches = search_matches(method, term, v[attr])
-                    if (matches and not invert) or (invert and not matches):
-                        yield v
+            if attr in data:
+                value = data[attr]
+                matches = search_matches(method, term, value)
+                if (matches and not invert) or (invert and not matches):
+                    yield value
 
         else:
             # Check the passed data itself for a match
             self.log.debug("------ searching literal data...")
             matches = search_matches(method, term, data)
             if (matches and not invert) or (invert and not matches):
-                yield v
+                yield data
 
         self.log.debug("---\n--\n-")
         yield None
 
     def _ensure_path(self, data, path, value=None):
-        """Returns the YAML node at the end of a YAML Path, having created it if
-        necessary and possible.
+        """Returns zero or more pre-existing nodes matching a YAML Path, or
+        exactly one new node at the end of the YAML Path if it had to be
+        created.
 
         Positional Parameters:
           1. data (ruamel.yaml data) The parsed YAML data to process
@@ -861,7 +842,7 @@ class YAMLHelpers:
         Returns:  (object) The specified node
 
         Raises:
-          AttributeError when the YAML Path is invalid.
+          YAMLPathException when the YAML Path is invalid.
           NotImplementedError when a segment of the YAML Path indicates
             an element that does not exist in data and this code isn't
             yet prepared to add it.
@@ -877,11 +858,18 @@ class YAMLHelpers:
             self.log.debug("")
 
             # The next element may not exist; this method ensures that it does
-            node = self._get_element_by_ref(data, curref)
-            if node is not None:
+            matched_nodes = 0
+            for node in self._get_elements_by_ref(data, curref):
+                if node is None:
+                    continue
+                matched_nodes += 1
                 self.log.debug("YAMLHelpers::_ensure_path:  Found element [" + str(curele) + "] in the data; recursing into it...")
-                return self._ensure_path(node, path, value)
-            else:
+                for node in self._ensure_path(node, path.copy(), value):
+                    if node is None:
+                        continue
+                    yield node
+
+            if 1 > matched_nodes and curtyp is not YAMLHelpers.ElementTypes.SEARCH:
                 # Add the missing element
                 self.log.debug("YAMLHelpers::_ensure_path:  Element [" + str(curele) + "] is unknown in the data!")
                 if isinstance(data, list):
@@ -889,12 +877,20 @@ class YAMLHelpers:
                     if curtyp is YAMLHelpers.ElementTypes.ANCHOR:
                         new_val = self._default_for_child(path, value)
                         new_ele = self._append_list_element(data, new_val, curele)
-                        return self._ensure_path(new_ele, path, value)
+                        for node in self._ensure_path(new_ele, path, value):
+                            if node is None:
+                                continue
+                            matched_nodes += 1
+                            yield node
                     elif curtyp is YAMLHelpers.ElementTypes.INDEX:
                         for _ in range(len(data) - 1, curele):
                             new_val = self._default_for_child(path, value)
                             self._append_list_element(data, new_val)
-                        return self._ensure_path(data[curele], path, value)
+                        for node in self._ensure_path(data[curele], path, value):
+                            if node is None:
+                                continue
+                            matched_nodes += 1
+                            yield node
                     elif curtyp is YAMLHelpers.ElementTypes.SEARCH:
                         restore_path = path.copy()
                         restore_path.appendleft(curref)
@@ -925,7 +921,11 @@ class YAMLHelpers:
                         raise NotImplementedError
                     elif curtyp is YAMLHelpers.ElementTypes.KEY:
                         data[curele] = self._default_for_child(path, value)
-                        return self._ensure_path(data[curele], path, value)
+                        for node in self._ensure_path(data[curele], path, value):
+                            if node is None:
+                                continue
+                            matched_nodes += 1
+                            yield node
                     else:
                         restore_path = path.copy()
                         restore_path.appendleft(curref)
@@ -955,7 +955,8 @@ class YAMLHelpers:
                         throw_element
                     )
 
-        self.log.debug("YAMLHelpers::_ensure_path:  Returning data of type [" + str(type(data)) + "]:")
-        self.log.debug(data)
+        else:
+            self.log.debug("YAMLHelpers::_ensure_path:  Finally returning data of type [" + str(type(data)) + "]:")
+            self.log.debug(data)
 
-        return data
+            yield data

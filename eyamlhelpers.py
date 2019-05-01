@@ -180,8 +180,8 @@ class EYAMLHelpers(YAMLHelpers):
 
     def set_eyaml_value(self, data, yaml_path, value,
                         output="string", mustexist=False):
-        """Encrypts a value and stores the result to a node specified via YAML
-        Path.
+        """Encrypts a value and stores the result to zero or more nodes
+        specified via YAML Path.
 
         Positional Parameters:
           1. data (ruamel.yaml data) The parsed YAML data to process
@@ -194,18 +194,18 @@ class EYAMLHelpers(YAMLHelpers):
           5. mustexist (Boolean) Indicates whether YAML Path must
              specify a pre-existing node
 
-        Returns:  (object) The YAML node after its value has been set
+        Returns:  N/A
 
         Raises:
             YAMLPathException when YAML Path is invalid
         """
-        self.log.verbose("Encrypting value for " + self.str_path(yaml_path))
+        self.log.verbose("Encrypting value(s) for " + self.str_path(yaml_path))
         encval = self.encrypt_eyaml(value, output)
         emit_format = YAMLValueFormats.FOLDED
         if output == "string":
             emit_format = YAMLValueFormats.DEFAULT
 
-        return self.set_value(
+        self.set_value(
             data,
             yaml_path,
             encval,
@@ -213,8 +213,8 @@ class EYAMLHelpers(YAMLHelpers):
             emit_format
         )
 
-    def get_eyaml_value(self, data, yaml_path, mustexist=False):
-        """Retrieves and decrypts an EYAML value from YAML data at a specific
+    def get_eyaml_values(self, data, yaml_path, mustexist=False):
+        """Retrieves and decrypts zero or more EYAML nodes from YAML data at a
         YAML Path.
 
         Positional Parameters:
@@ -230,9 +230,12 @@ class EYAMLHelpers(YAMLHelpers):
         Raises:
             YAMLPathException when YAML Path is invalid
         """
-        self.log.verbose("Decrypting value at " + self.str_path(yaml_path))
-        rawval = self.get_value(data, yaml_path, mustexist)
-        return self.decrypt_eyaml(rawval)
+        self.log.verbose("Decrypting value(s) at " + self.str_path(yaml_path))
+        for node in self.get_nodes(data, yaml_path, mustexist):
+            if node is None:
+                continue
+            plain_text = self.decrypt_eyaml(node)
+            yield plain_text
 
     def is_eyaml_value(self, value):
         """Indicates whether a value is EYAML-encrypted.

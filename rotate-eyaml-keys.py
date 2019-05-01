@@ -121,7 +121,7 @@ for yaml_file in args.yaml_files:
 		if yaml_path is None:
 			continue
 
-		node = yh.get_node(yaml_data, yaml_path)
+		node = yh.get_nodes(yaml_data, yaml_path)
 		anchor_name = node.anchor.value if hasattr(node, "anchor") else None
 		if anchor_name is not None:
 			if anchor_name in seen_anchors:
@@ -131,7 +131,7 @@ for yaml_file in args.yaml_files:
 
 		yh.publickey = args.oldpublickey
 		yh.privatekey = args.oldprivatekey
-		txtval = yh.get_eyaml_value(yaml_data, yaml_path, True)
+		txtval = yh.get_eyaml_values(yaml_data, yaml_path, True)
 		if txtval is None:
 			continue
 
