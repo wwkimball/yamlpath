@@ -5,7 +5,7 @@
 # Copyright 2018, 2019 William W. Kimball, Jr. MBA MSIS
 ################################################################################
 import re
-import subprocess
+from subprocess import run, PIPE, CalledProcessError
 from os import access, sep, X_OK
 from distutils.spawn import find_executable
 
@@ -107,23 +107,24 @@ class EYAMLHelpers(YAMLHelpers):
         cmd = cmdstr.split()
         cleanval = str(value).replace("\n", "").replace(" ", "").rstrip()
         bval = (cleanval + "\n").encode("ascii")
-        self.log.debug("About to execute:  " + cmdstr + " against:\n" + cleanval)
+        self.log.debug("About to execute {} against:\n{}".format(cmdstr, cleanval))
 
         try:
-            retval = subprocess.run(
+            retval = run(
                 cmd,
-                stdout=subprocess.PIPE,
+                stdout=PIPE,
                 input=bval
             ).stdout.decode('ascii').rstrip()
         except FileNotFoundError:
-            self.log.error("The " + self.eyaml + " command could not be found.")
-            exit(2)
+            self.log.error("The {} command could not be found.".format(self.eyaml), 2)
+        except CalledProcessError as ex:
+            self.log.error("The {} command cannot be run due to exit code:  {}".format(self.eyaml, ex.returncode), 1)
 
         # Check for bad decryptions
-        self.log.debug("Decrypted result:  [" + retval + "]")
+        self.log.debug("Decrypted result:  {}".format(retval))
         if 1 > len(retval) or retval == cleanval:
             self.log.warning(
-                "Unable to decrypt value!  Please verify you are using the correct old EYAML keys and the value is not corrupt:\n" + cleanval
+                "Unable to decrypt value!  Please verify you are using the correct old EYAML keys and the value is not corrupt:\n{}".format(cleanval)
             )
             retval = None
 
@@ -148,7 +149,7 @@ class EYAMLHelpers(YAMLHelpers):
             return value
 
         if not self.can_run_eyaml():
-            self.log.error("The eyaml binary is not executable at " + self.eyaml + ".", 1)
+            self.log.error("The eyaml binary is not executable at {}.".format(self.eyaml), 1)
             return None
 
         cmdstr = self.eyaml + " encrypt --quiet --stdin --output=" + output
@@ -158,24 +159,28 @@ class EYAMLHelpers(YAMLHelpers):
             cmdstr += " --pkcs7-private-key=" + self.privatekey
 
         cmd = cmdstr.split()
-        self.log.debug("About to execute:  " + " ".join(cmd))
+        self.log.debug("About to execute:  {}".format(" ".join(cmd)))
         bval = (str(value) + "\n").encode("ascii")
 
         try:
             retval = (
-                subprocess.run(cmd, stdout=subprocess.PIPE, input=bval)
+                run(cmd, stdout=PIPE, input=bval, check=True)
                     .stdout
                     .decode('ascii')
                     .rstrip()
             )
         except FileNotFoundError:
-            self.log.error("The " + self.eyaml + " command could not be found.")
-            exit(2)
+            self.log.error("The {} command could not be found.".format(self.eyaml), 2)
+        except CalledProcessError as ex:
+            self.log.error("The {} command cannot be run due to exit code:  {}".format(self.eyaml, ex.returncode), 1)
+
+        if 1 > len(retval):
+            self.log.error("The {} command was unable to encrypt your value.  Please verify this process can run that command and read your EYAML keys.".format(self.eyaml), 1)
 
         if output == "block":
             retval = re.sub(r" +", "", retval) + "\n"
 
-        self.log.debug("Encrypted result:\n" + retval)
+        self.log.debug("Encrypted result:\n{}".format(retval))
         return retval
 
     def set_eyaml_value(self, data, yaml_path, value,
@@ -199,7 +204,7 @@ class EYAMLHelpers(YAMLHelpers):
         Raises:
             YAMLPathException when YAML Path is invalid
         """
-        self.log.verbose("Encrypting value(s) for " + self.str_path(yaml_path))
+        self.log.verbose("Encrypting value(s) for {}.".format(self.str_path(yaml_path)))
         encval = self.encrypt_eyaml(value, output)
         emit_format = YAMLValueFormats.FOLDED
         if output == "string":
@@ -269,11 +274,11 @@ class EYAMLHelpers(YAMLHelpers):
             return False
 
         if 0 > binary.find(sep):
-            self.log.debug("Finding the real path for:  " + binary)
+            self.log.debug("Finding the real path for:  {}".format(binary))
             binary = find_executable(binary)
             if 1 > len(binary):
                 return False
             self.eyaml = binary
 
-        self.log.debug("Checking whether eyaml is executable at:  " + binary)
+        self.log.debug("Checking whether eyaml is executable at:  {}".format(binary))
         return access(binary, X_OK)
