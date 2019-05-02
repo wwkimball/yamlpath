@@ -107,7 +107,9 @@ class EYAMLHelpers(YAMLHelpers):
         cmd = cmdstr.split()
         cleanval = str(value).replace("\n", "").replace(" ", "").rstrip()
         bval = (cleanval + "\n").encode("ascii")
-        self.log.debug("About to execute {} against:\n{}".format(cmdstr, cleanval))
+        self.log.debug(
+            "About to execute {} against:\n{}".format(cmdstr, cleanval)
+        )
 
         try:
             retval = run(
@@ -116,15 +118,23 @@ class EYAMLHelpers(YAMLHelpers):
                 input=bval
             ).stdout.decode('ascii').rstrip()
         except FileNotFoundError:
-            self.log.error("The {} command could not be found.".format(self.eyaml), 2)
+            self.log.error(
+                "The {} command could not be found.".format(self.eyaml), 2
+            )
         except CalledProcessError as ex:
-            self.log.error("The {} command cannot be run due to exit code:  {}".format(self.eyaml, ex.returncode), 1)
+            self.log.error(
+                "The {} command cannot be run due to exit code:  {}"
+                    .format(self.eyaml, ex.returncode)
+                , 1
+            )
 
         # Check for bad decryptions
         self.log.debug("Decrypted result:  {}".format(retval))
         if 1 > len(retval) or retval == cleanval:
             self.log.warning(
-                "Unable to decrypt value!  Please verify you are using the correct old EYAML keys and the value is not corrupt:\n{}".format(cleanval)
+                "Unable to decrypt value!  Please verify you are using the"
+                + " correct old EYAML keys and the value is not corrupt:\n{}"
+                    .format(cleanval)
             )
             retval = None
 
@@ -149,7 +159,10 @@ class EYAMLHelpers(YAMLHelpers):
             return value
 
         if not self.can_run_eyaml():
-            self.log.error("The eyaml binary is not executable at {}.".format(self.eyaml), 1)
+            self.log.error(
+                "The eyaml binary is not executable at {}.".format(self.eyaml)
+                , 1
+            )
             return None
 
         cmdstr = self.eyaml + " encrypt --quiet --stdin --output=" + output
@@ -170,12 +183,23 @@ class EYAMLHelpers(YAMLHelpers):
                     .rstrip()
             )
         except FileNotFoundError:
-            self.log.error("The {} command could not be found.".format(self.eyaml), 2)
+            self.log.error(
+                "The {} command could not be found.".format(self.eyaml), 2
+            )
         except CalledProcessError as ex:
-            self.log.error("The {} command cannot be run due to exit code:  {}".format(self.eyaml, ex.returncode), 1)
+            self.log.error(
+                "The {} command cannot be run due to exit code:  {}"
+                    .format(self.eyaml, ex.returncode)
+                , 1
+            )
 
         if 1 > len(retval):
-            self.log.error("The {} command was unable to encrypt your value.  Please verify this process can run that command and read your EYAML keys.".format(self.eyaml), 1)
+            self.log.error(
+                ("The {} command was unable to encrypt your value.  Please"
+                    + " verify this process can run that command and read your"
+                    + " EYAML keys.").format(self.eyaml)
+                , 1
+            )
 
         if output == "block":
             retval = re.sub(r" +", "", retval) + "\n"
@@ -204,7 +228,9 @@ class EYAMLHelpers(YAMLHelpers):
         Raises:
             YAMLPathException when YAML Path is invalid
         """
-        self.log.verbose("Encrypting value(s) for {}.".format(self.str_path(yaml_path)))
+        self.log.verbose(
+            "Encrypting value(s) for {}.".format(self.str_path(yaml_path))
+        )
         encval = self.encrypt_eyaml(value, output)
         emit_format = YAMLValueFormats.FOLDED
         if output == "string":
@@ -218,7 +244,9 @@ class EYAMLHelpers(YAMLHelpers):
             emit_format
         )
 
-    def get_eyaml_values(self, data, yaml_path, mustexist=False, default_value=None):
+    def get_eyaml_values(self, data, yaml_path,
+            mustexist=False, default_value=None
+    ):
         """Retrieves and decrypts zero or more EYAML nodes from YAML data at a
         YAML Path.
 
@@ -237,7 +265,9 @@ class EYAMLHelpers(YAMLHelpers):
         Raises:
             YAMLPathException when YAML Path is invalid
         """
-        self.log.verbose("Decrypting value(s) at {}.".format(self.str_path(yaml_path)))
+        self.log.verbose(
+            "Decrypting value(s) at {}.".format(self.str_path(yaml_path))
+        )
         for node in self.get_nodes(data, yaml_path, mustexist, default_value):
             if node is None:
                 continue
@@ -280,5 +310,7 @@ class EYAMLHelpers(YAMLHelpers):
                 return False
             self.eyaml = binary
 
-        self.log.debug("Checking whether eyaml is executable at:  {}".format(binary))
+        self.log.debug(
+            "Checking whether eyaml is executable at:  {}".format(binary)
+        )
         return access(binary, X_OK)
