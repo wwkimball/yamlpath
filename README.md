@@ -164,7 +164,7 @@ For a no-frills change to a YAML file with deeply nested Hash structures:
 
 ```shell
 yaml-change-value.py \
-  --key=see.documentation.above.for.many.samples \
+  --change=see.documentation.above.for.many.samples \
   --value="New Value" \
   my_yaml_file.yaml
 ```
@@ -173,7 +173,7 @@ Save a backup copy of the original YAML_FILE (with a .bak file-extension):
 
 ```shell
 yaml-change-value.py \
-  --key=see.documentation.above.for.many.samples \
+  --change=see.documentation.above.for.many.samples \
   --value="New Value" \
   --backup \
   my_yaml_file.yaml
@@ -184,7 +184,7 @@ apply the new password to your application(s):
 
 ```shell
 yaml-change-value.py \
-  --key=the.new.password \
+  --change=the.new.password \
   --saveto=the.old.password \
   --value="New Password" \
   --backup \
@@ -195,7 +195,7 @@ To check the old password before rotating it, say to be sure you're changing out
 
 ```shell
 yaml-change-value.py \
-  --key=the.new.password \
+  --change=the.new.password \
   --saveto=the.old.password \
   --check="Old Password" \
   --value="New Password" \
@@ -203,15 +203,15 @@ yaml-change-value.py \
   my_yaml_file.yaml
 ```
 
-This tool will create the `--key` within your YAML_FILE if it doesn't already
+This tool will create the `--change` within your YAML_FILE if it doesn't already
 exist.  This may not always be ideal, perhaps when you need to be absolutely
-certain that you're editing the right YAML_FILEs and/or have `--key` set
+certain that you're editing the right YAML_FILEs and/or have `--change` set
 correctly.  In such cases, you can add `--mustexist` to disallow creating
-missing `--key` YAML Paths:
+missing `--change` YAML Paths:
 
 ```shell
 yaml-change-value.py \
-  --key=the.new.password \
+  --change=the.new.password \
   --mustexist \
   --saveto=the.old.password \
   --check="Old Password" \
@@ -229,7 +229,7 @@ new values.
 
 ```shell
 yaml-change-value.py \
-  --key=the.new.password \
+  --change=the.new.password \
   --mustexist \
   --saveto=the.old.password \
   --check="Old Password" \
@@ -244,7 +244,7 @@ You can even tell EYAML which keys to use:
 
 ```shell
 yaml-change-value.py \
-  --key=the.new.password \
+  --change=the.new.password \
   --mustexist \
   --saveto=the.old.password \
   --check="Old Password" \

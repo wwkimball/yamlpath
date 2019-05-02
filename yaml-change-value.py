@@ -52,7 +52,7 @@ def processcli():
 
     required_group = parser.add_argument_group("required settings")
     required_group.add_argument(
-        "-k", "--key",
+        "-g", "--change",
         required=True,
         metavar="YAML_PATH",
         help="YAML Path where the target value is found"
@@ -84,7 +84,7 @@ def processcli():
     parser.add_argument("-s", "--saveto", metavar="YAML_PATH",
         help="save the old value to YAML_PATH before replacing it")
     parser.add_argument("-m", "--mustexist", action="store_true",
-        help="require that the --key YAML_PATH already exist in YAML_FILE")
+        help="require that the --change YAML_PATH already exist in YAML_FILE")
     parser.add_argument("-b", "--backup", action="store_true",
         help="save a backup YAML_FILE with an extra .bak file-extension")
 
@@ -124,8 +124,8 @@ def validateargs(args, log):
             1
         )
 
-    # * When set, --saveto cannot be identical to --key
-    if args.saveto and args.saveto == args.key:
+    # * When set, --saveto cannot be identical to --change
+    if args.saveto and args.saveto == args.change:
         log.error(
             "Impossible to save the old value to the same YAML Path as the new"
                 + " value!",
@@ -200,7 +200,7 @@ except ParserError as e:
     log.error("YAML parsing error " + str(e.problem_mark).lstrip() + ": " + e.problem)
 
 # Load the present value at the specified YAML Path
-change_path = yh.str_path(args.key)
+change_path = yh.str_path(args.change)
 change_nodes = []
 
 try:
@@ -240,7 +240,7 @@ if args.saveto:
     if 1 < len(change_nodes):
         log.error(
             "It is impossible to meaningly save more than one matched value."
-            + "  Please omit --saveto or set --key to affect exactly one value."
+            + "  Please omit --saveto or set --change to affect exactly one value."
             , 1
         )
 

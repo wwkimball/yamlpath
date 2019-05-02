@@ -165,7 +165,7 @@ class YAMLHelpers:
 
         path = self._parse_path(yaml_path)
         if mustexist:
-            self.log.debug("YAMLHelpers::set_value:  Seeking required node at " + self.str_path(path))
+            self.log.debug("YAMLHelpers::set_value:  Seeking required node at {}.".format(self.str_path(path)))
             found_nodes = 0
             for node in self._get_nodes(data, path):
                 if node is None:
@@ -180,7 +180,7 @@ class YAMLHelpers:
                     self.str_path(path)
                 )
         else:
-            self.log.debug("YAMLHelpers::set_value:  Seeking optional node at " + self.str_path(path))
+            self.log.debug("YAMLHelpers::set_value:  Seeking optional node at {}.".format(self.str_path(path)))
             for node in self._ensure_path(data, path, value):
                 if node is None:
                     continue
@@ -550,7 +550,7 @@ class YAMLHelpers:
         if 0 < len(yaml_path):
             (typ, ele) = yaml_path.popleft()
 
-            self.log.debug("YAMLHelpers::_get_nodes:  Peeking at element [" + str(ele) + "] of type [" + str(typ) + "] in data of type[" + str(type(data)) + "]:")
+            self.log.debug("YAMLHelpers::_get_nodes:  Peeking at element {} of type {} in data of type {}:".format(ele, typ, type(data)))
             self.log.debug(data)
             self.log.debug("")
 
@@ -589,7 +589,7 @@ class YAMLHelpers:
             else:
                 raise NotImplementedError
 
-        self.log.debug("YAMLHelpers::_get_nodes:  Finally returning data of type [" + str(type(data)) + "]:")
+        self.log.debug("YAMLHelpers::_get_nodes:  Finally returning data of type {}:".format(type(data)))
         self.log.debug(data)
         self.log.debug("")
 
@@ -647,7 +647,7 @@ class YAMLHelpers:
             try:
                 valform = YAMLValueFormats.from_str(strform)
             except NameError:
-                self.log.error("Unknown YAML value format, " + strform)
+                self.log.error("Unknown YAML value format:  {}".format(strform), 1)
 
         if valform == YAMLValueFormats.BARE:
             newtype = PlainScalarString
@@ -671,7 +671,7 @@ class YAMLHelpers:
             try:
                 newval = float(value)
             except ValueError:
-                self.log.error("Not a floating-point precision number: " + str(value), 1)
+                self.log.error("Not a floating-point precision number:  {}".format(value), 1)
 
             strval = str(value)
             precision = 0
@@ -690,7 +690,7 @@ class YAMLHelpers:
             try:
                 newval = int(value)
             except ValueError:
-                self.log.error("Not an integer: " + str(value), 1)
+                self.log.error("Not an integer:  {}".format(value), 1)
 
         if new_node is None:
             if hasattr(source_node, "anchor"):
@@ -780,7 +780,6 @@ class YAMLHelpers:
         elif typ == YAMLHelpers.PathSegmentTypes.KEY:
             return CommentedMap()
         else:
-            self.log.error("Boop!", 77)
             if isinstance(value, str):
                 return PlainScalarString("")
             elif isinstance(value, int):
@@ -959,7 +958,7 @@ class YAMLHelpers:
         if 0 < len(path):
             (curtyp, curele) = curref = path.popleft()
 
-            self.log.debug("YAMLHelpers::_ensure_path:  Seeking element {} of type {} in data of type {}:".format(curele, curtyp, type(data)))
+            self.log.debug("YAMLHelpers::_ensure_path:  Seeking element <{}>{} in data of type {}:".format(curtyp, curele, type(data)))
             self.log.debug(data)
             self.log.debug("")
 
