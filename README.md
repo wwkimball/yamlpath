@@ -1,14 +1,15 @@
 # YAML Tools
 
-This is a set of generally-useful YAML and EYAML value editing tools.  Today, it
-is based on [ruamel.yaml](https://bitbucket.org/ruamel/yaml/overview) for Python
-3.  At the time of this writing, ruamel.yaml is unstable, presently undergoing a
-refactoring and feature creation effort.  As it is a moving target, this project
-is necessarily bound to limited ranges of compatible versions between it and the
-ruamel.yaml project.  Futher, this project comes with fixes to some notable bugs
-in ruamel.yaml.  As such, you should note which specific versions of ruamel.yaml
-which this code is compatible with.  Failing to do so will probably lead to some
-incompatbility.
+This is a set of generally-useful [YAML](https://yaml.org/) and
+[EYAML](https://github.com/voxpupuli/hiera-eyaml) value editing tools.  Today,
+it is based on [ruamel.yaml](https://bitbucket.org/ruamel/yaml/overview) for
+[Python](https://www.python.org/) 3.  At the time of this writing, ruamel.yaml
+is unstable, presently undergoing a refactoring and feature creation effort.
+As it is a moving target, this project is necessarily bound to limited ranges
+of compatible versions between it and the ruamel.yaml project.  Futher, this
+project comes with fixes to some notable bugs in ruamel.yaml.  As such, you
+should note which specific versions of ruamel.yaml which this code is
+compatible with.  Failing to do so will probably lead to some incompatbility.
 
 ## Compatible ruamel.yaml Versions
 
@@ -25,8 +26,8 @@ You may find other compatible versions outside these ranges.
 ## YAML Path
 
 This project presents and utilizes YAML Paths, which are a human-friendly means
-of expressing a path through the structure of YAML data to a specific key.  For
-example:
+of expressing a path through the structure of YAML data to a specific key or a
+set of keys matching some search criteria.  For example:
 
 ```yaml
 ---
@@ -129,3 +130,100 @@ own projects and which you may also find use for:
   be archived to another key before it is replaced.  Further, EYAML can be
   employed to encrypt the new values and/or decrypt an old value before checking
   them.
+
+## Usage
+
+The files of this project can be used either as command-line scripts to take
+advantage of the existing example implementations or as libraries to supplement
+your own implementations.
+
+The command-line implementations (above) are self-documented.  Simply pass
+--help to them in order to learn their use.
+
+As for the libraries, they are also heavily documented and the example
+implementations may perhaps serve as good copy-paste fodder (provided you give
+credit to the source).  That said, here's a general flow/synopsis.
+
+### Initialize ruamel.yaml and These Helpers
+
+Your preferences may differ, but I use this setup for round-trip YAML parsing
+and editing:
+
+```python
+import sys
+
+from ruamel.yaml import YAML
+from ruamel.yaml.parser import ParserError
+
+import ruamelpatches
+from yamlexceptions import YAMLPathException
+from consoleprinter import ConsolePrinter
+from eyamlhelpers import EYAMLHelpers
+from yamlhelpers import YAMLValueFormats
+
+# My examples use ConsolePrinter to handle STDOUT and STDERR messaging.  You
+# don't have to but some kind of logger must be passed to my libraries so they
+# can write messages _somewhere_.  Your custom message handler or logger must
+# provide the same API as ConsolePrinter; review the header documentation in
+# consoleprinter.py for details.
+args = processcli()
+log = ConsolePrinter(args)
+validateargs(args, log)
+yh = EYAMLHelpers(log)
+
+# Prep the YAML parser
+yaml = YAML()
+yaml.indent(mapping=2, sequence=4, offset=2)
+yaml.explicit_start = True
+yaml.preserve_quotes = True
+yaml.width = sys.maxsize
+
+# At this point, you'd load or parse your YAML file, stream, or string.  When
+# loading from file, I typically follow this pattern:
+try:
+    with open(args.yaml_file, 'r') as f:
+        yaml_data = yaml.load(f)
+except ParserError as e:
+    log.error("YAML parsing error " + str(e.problem_mark).lstrip() + ": " + e.problem)
+```
+
+### Searching for YAML Nodes
+
+These libraries use [Generators](https://wiki.python.org/moin/Generators) to get
+nodes from parsed YAML data.  Identify which node(s) to get via
+[YAML Path](#yaml-path) strings.  You should also catch `YAMLPathException`s
+unless you prefer Python's native stack traces.  Whether you are working with a
+single result or many, you must consume the Generator output with a pattern
+similar to:
+
+```python
+yaml_path = "see.documentation.above.for.many.samples"
+try:
+    for node in yh.get_eyaml_values(yaml_data, yaml_path):
+        # These Generators can return None, which means a node wasn't found but
+        # because searches are recursive and can be multi-tier, the non-matching
+        # leaf nodes can be encountered anywhere during the search, not only at
+        # the very end.
+        if node is None:
+            continue
+
+        log.debug("Got {} from {}.".format(node, yaml_path))
+
+        # Do something with each node...
+except YAMLPathException as ex:
+    log.error(ex, 1)
+```
+
+### Changing Values
+
+At its simplest, you simply need to supply the pre-parsed YAML data, the YAML
+Path to one or more nodes to update, and the value to apply to them.  Catching
+`YAMLPathException` is optional but usually preferred over allowing Python to
+dump the call stack in front of your users.
+
+```python
+try:
+    yh.set_value(yaml_data, yaml_path, new_value)
+except YAMLPathException as ex:
+    log.error(ex, 1)
+```
