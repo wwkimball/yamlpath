@@ -131,23 +131,139 @@ own projects and which you may also find use for:
   employed to encrypt the new values and/or decrypt an old value before checking
   them.
 
-## Usage
+## Basic Usage
 
 The files of this project can be used either as command-line scripts to take
 advantage of the existing example implementations or as libraries to supplement
 your own implementations.
 
+### Basic Usage:  Command-Line Tools
+
 The command-line implementations (above) are self-documented.  Simply pass
---help to them in order to learn their use.
+`--help` to them in order to learn their capabilities.  Here are some simple examples.
+
+#### Rotate Your EYAML Keys
+
+If the eyaml command is already on your PATH:
+
+```shell
+rotate-eyaml-keys.py \
+  --oldprivatekey=~/old-keys/private_key.pkcs7.pem \
+  --oldpublickey=~/old-keys/public_key.pkcs7.pem \
+  --newprivatekey=~/new-keys/private_key.pkcs7.pem \
+  --newpublickey=~/new-keys/public_key.pkcs7.pem \
+  my_1st_yaml_file.yaml my_2nd_yaml_file.eyaml ... my_Nth_yaml_file.yaml
+```
+
+You could combine this with `find` and `xargs` if your E/YAML file are
+dispersed through a directory hierarchy.
+
+#### Change a YAML Value
+
+For a no-frills change to a YAML file with deeply nested Hash structures:
+
+```shell
+yaml-change-value.py \
+  --key=see.documentation.above.for.many.samples \
+  --value="New Value" \
+  my_yaml_file.yaml
+```
+
+To rotate a password, preserving the old password perhaps so your automation can
+apply the new password to your application(s):
+
+```shell
+yaml-change-value.py \
+  --key=the.new.password \
+  --oldkey=the.old.password \
+  --value="New Password" \
+  my_yaml_file.yaml
+```
+
+To check the old password before rotating it, say to be sure you're changing out the right one:
+
+```shell
+yaml-change-value.py \
+  --key=the.new.password \
+  --oldkey=the.old.password \
+  --check="Old Password" \
+  --value="New Password" \
+  my_yaml_file.yaml
+```
+
+This tool will create the `--key` within your YAML_FILE if it doesn't already
+exist.  This may not always be ideal, perhaps when you need to be absolutely
+certain that you're editing the right YAML_FILEs and/or have `--key` set
+correctly.  In such cases, you can add `--mustexist` to disallow creating
+missing `--key` YAML Paths:
+
+```shell
+yaml-change-value.py \
+  --key=the.new.password \
+  --mustexist \
+  --oldkey=the.old.password \
+  --check="Old Password" \
+  --value="New Password" \
+  my_yaml_file.yaml
+```
+
+You can also add EYAML encryption (assuming the `eyaml` command is on your
+PATH).  In this example, I add the optional `--format=folded` for this example
+so that the long EYAML value is broken up into a multi-line value rather than
+one very long string.  This is the preferred format for EYAML consumers like
+Puppet.  Note that `--format` has several other settings and applies only to
+new values.
+
+```shell
+yaml-change-value.py \
+  --key=the.new.password \
+  --mustexist \
+  --oldkey=the.old.password \
+  --check="Old Password" \
+  --value="New Password" \
+  --eyamlcrypt \
+  --format=folded \
+  my_yaml_file.yaml
+```
+
+You can even tell EYAML which keys to use:
+
+```shell
+yaml-change-value.py \
+  --key=the.new.password \
+  --mustexist \
+  --oldkey=the.old.password \
+  --check="Old Password" \
+  --value="New Password" \
+  --eyamlcrypt \
+  --format=folded \
+  --privatekey=/secret/keys/private_key.pkcs7.pem \
+  --publickey=/secret/keys/public_key.pkcs7.pem \
+  my_yaml_file.yaml
+```
+
+Note that for even greater security scenarios, you can keep the new value off of
+your command-line, process list, and command history by swapping out `--value`
+for one of `--stdin`, `--file`, or even `--random LENGTH` (use Python's
+strongest random value generator if you don't need to specify the replacement
+value in advance).
+
+### Basic Usage:  Libraries
 
 As for the libraries, they are also heavily documented and the example
 implementations may perhaps serve as good copy-paste fodder (provided you give
 credit to the source).  That said, here's a general flow/synopsis.
 
-### Initialize ruamel.yaml and These Helpers
+#### Initialize ruamel.yaml and These Helpers
 
 Your preferences may differ, but I use this setup for round-trip YAML parsing
-and editing:
+and editing with ruamel.yaml.  Note that `import ruamelpatches` is entirely
+optional; I wrote and use it to block ruamel.yaml's Emitter from injecting
+unnecessary newlines into folded values (it improperly converts every single
+new-line into two for left-flushed multi-line values, at the time of this
+writing).  Since block output EYAML values are left-flushed multi-line folded
+strings, this fix is necessary when using EYAML features (at the time of this
+writing).
 
 ```python
 import sys
@@ -187,7 +303,7 @@ except ParserError as e:
     log.error("YAML parsing error " + str(e.problem_mark).lstrip() + ": " + e.problem)
 ```
 
-### Searching for YAML Nodes
+#### Searching for YAML Nodes
 
 These libraries use [Generators](https://wiki.python.org/moin/Generators) to get
 nodes from parsed YAML data.  Identify which node(s) to get via
@@ -214,7 +330,7 @@ except YAMLPathException as ex:
     log.error(ex, 1)
 ```
 
-### Changing Values
+#### Changing Values
 
 At its simplest, you simply need to supply the pre-parsed YAML data, the YAML
 Path to one or more nodes to update, and the value to apply to them.  Catching
