@@ -13,7 +13,7 @@ incompatbility.
 ## Compatible ruamel.yaml Versions
 
 This list will not be aggressively updated but rather, from time to time as
-in/compatibility reports come it from users of this project.  At present, known
+in/compatibility reports come in from users of this project.  At present, known
 compatible versions include:
 
 YAML Tools Version | ruamel.yaml Min | Max

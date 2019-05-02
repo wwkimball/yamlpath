@@ -121,28 +121,31 @@ for yaml_file in args.yaml_files:
 		if yaml_path is None:
 			continue
 
-		node = yh.get_nodes(yaml_data, yaml_path)
-		anchor_name = node.anchor.value if hasattr(node, "anchor") else None
-		if anchor_name is not None:
-			if anchor_name in seen_anchors:
+		for node in yh.get_nodes(yaml_data, yaml_path):
+			if node is None:
 				continue
-			else:
-				seen_anchors.append(anchor_name)
 
-		yh.publickey = args.oldpublickey
-		yh.privatekey = args.oldprivatekey
-		txtval = yh.get_eyaml_values(yaml_data, yaml_path, True)
-		if txtval is None:
-			continue
+			anchor_name = node.anchor.value if hasattr(node, "anchor") else None
+			if anchor_name is not None:
+				if anchor_name in seen_anchors:
+					continue
+				else:
+					seen_anchors.append(anchor_name)
 
-		output = "block"
-		if not isinstance(node, FoldedScalarString):
-			output = "string"
+			yh.publickey = args.oldpublickey
+			yh.privatekey = args.oldprivatekey
+			txtval = yh.decrypt_eyaml(node)
+			if txtval is None:
+				continue
 
-		yh.publickey = args.newpublickey
-		yh.privatekey = args.newprivatekey
-		yh.set_eyaml_value(yaml_data, yaml_path, txtval, output)
-		file_changed = True
+			output = "block"
+			if not isinstance(node, FoldedScalarString):
+				output = "string"
+
+			yh.publickey = args.newpublickey
+			yh.privatekey = args.newprivatekey
+			yh.set_eyaml_value(yaml_data, yaml_path, txtval, output)
+			file_changed = True
 
 	if file_changed:
 		log.debug("Updated data:")
