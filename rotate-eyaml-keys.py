@@ -107,9 +107,11 @@ for yaml_file in args.yaml_files:
 		log.error("Not a file:  " + yaml_file)
 		continue
 
+	# Don't bother with the file change update when there's only one input file
 	if 1 < in_file_count:
 		log.info("Processing " + yaml_file + "...")
 
+	# Try to open the file
 	try:
 		with open(yaml_file, 'r') as f:
 			yaml_data = yaml.load(f)
@@ -117,14 +119,18 @@ for yaml_file in args.yaml_files:
 		log.error("YAML parsing error " + str(e.problem_mark).lstrip() + ": " + e.problem)
 		continue
 
+	# Process all EYAML values
 	for yaml_path in yh.find_eyaml_paths(yaml_data):
 		if yaml_path is None:
 			continue
 
+		# Use ::get_nodes() instead of ::get_eyaml_values() here in order to
+		# ignore values that have already been decrypted via their Anchors.
 		for node in yh.get_nodes(yaml_data, yaml_path):
 			if node is None:
 				continue
 
+			# Ignore values which are Aliases for those already decrypted
 			anchor_name = node.anchor.value if hasattr(node, "anchor") else None
 			if anchor_name is not None:
 				if anchor_name in seen_anchors:
@@ -136,22 +142,23 @@ for yaml_file in args.yaml_files:
 			yh.privatekey = args.oldprivatekey
 			txtval = yh.decrypt_eyaml(node)
 			if txtval is None:
+				# A warning about this failure has already been printed
 				continue
 
+			# Prefer block (folded) values unless the original YAML value was
+			# already a massivly long (string) line.
 			output = "block"
 			if not isinstance(node, FoldedScalarString):
 				output = "string"
 
+			# Re-encrypt the value with new EYAML keys
 			yh.publickey = args.newpublickey
 			yh.privatekey = args.newprivatekey
 			yh.set_eyaml_value(yaml_data, yaml_path, txtval, output)
 			file_changed = True
 
+	# Save the changes
 	if file_changed:
-		log.debug("Updated data:")
-		if args.debug:
-			yaml.dump(yaml_data, sys.stdout)
-
 		if args.backup:
 			if exists(backup_file):
 				remove(backup_file)
