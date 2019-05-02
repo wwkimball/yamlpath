@@ -208,7 +208,7 @@ try:
         if node is None:
             continue
 
-        log.verbose("Got {} from {}.".format(node, change_path))
+        log.debug("Got {} from {}.".format(node, change_path))
 
         # Do nothing if the value will not be changing, unless this is an EYAML
         # recrypt attempt (same value, encrypted or even re-encrypted).
@@ -253,7 +253,7 @@ if args.saveto:
         log.error(ex, 1)
 
 # Set the requested value
-log.verbose("Setting {} to {}.".format(change_path, new_value))
+log.verbose("Setting the new value for {}.".format(change_path))
 if args.eyamlcrypt:
     output_type = "string"
     format_type = YAMLValueFormats.from_str(args.format)
@@ -265,7 +265,6 @@ if args.eyamlcrypt:
         log.error(ex, 1)
 else:
     try:
-        log.verbose("Overwriting a single value...")
         yh.set_value(yaml_data, change_path, new_value, False, args.format)
     except YAMLPathException as ex:
         log.error(ex, 1)
