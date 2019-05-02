@@ -128,7 +128,7 @@ own projects and which you may also find use for:
   specified YAML Path.  Matched values can be checked before they are replaced
   to mitigate accidental change. When matching singular results, the value can
   be archived to another key before it is replaced.  Further, EYAML can be
-  employed to encrypt the new values and/or decrypt an old value before checking
+  employed to encrypt the new values and/or decrypt old values before checking
   them.
 
 ## Basic Usage
@@ -169,14 +169,25 @@ yaml-change-value.py \
   my_yaml_file.yaml
 ```
 
+Save a backup copy of the original YAML_FILE (with a .bak file-extension):
+
+```shell
+yaml-change-value.py \
+  --key=see.documentation.above.for.many.samples \
+  --value="New Value" \
+  --backup \
+  my_yaml_file.yaml
+```
+
 To rotate a password, preserving the old password perhaps so your automation can
 apply the new password to your application(s):
 
 ```shell
 yaml-change-value.py \
   --key=the.new.password \
-  --oldkey=the.old.password \
+  --saveto=the.old.password \
   --value="New Password" \
+  --backup \
   my_yaml_file.yaml
 ```
 
@@ -185,9 +196,10 @@ To check the old password before rotating it, say to be sure you're changing out
 ```shell
 yaml-change-value.py \
   --key=the.new.password \
-  --oldkey=the.old.password \
+  --saveto=the.old.password \
   --check="Old Password" \
   --value="New Password" \
+  --backup \
   my_yaml_file.yaml
 ```
 
@@ -201,9 +213,10 @@ missing `--key` YAML Paths:
 yaml-change-value.py \
   --key=the.new.password \
   --mustexist \
-  --oldkey=the.old.password \
+  --saveto=the.old.password \
   --check="Old Password" \
   --value="New Password" \
+  --backup \
   my_yaml_file.yaml
 ```
 
@@ -218,11 +231,12 @@ new values.
 yaml-change-value.py \
   --key=the.new.password \
   --mustexist \
-  --oldkey=the.old.password \
+  --saveto=the.old.password \
   --check="Old Password" \
   --value="New Password" \
   --eyamlcrypt \
   --format=folded \
+  --backup \
   my_yaml_file.yaml
 ```
 
@@ -232,13 +246,14 @@ You can even tell EYAML which keys to use:
 yaml-change-value.py \
   --key=the.new.password \
   --mustexist \
-  --oldkey=the.old.password \
+  --saveto=the.old.password \
   --check="Old Password" \
   --value="New Password" \
   --eyamlcrypt \
   --format=folded \
   --privatekey=/secret/keys/private_key.pkcs7.pem \
   --publickey=/secret/keys/public_key.pkcs7.pem \
+  --backup \
   my_yaml_file.yaml
 ```
 

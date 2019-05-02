@@ -45,7 +45,7 @@ def processcli():
             decrypt an old value before checking them.",
         epilog="When no changes are made, no backup is created, even when\
             -b/--backup is specified.  For more information about YAML Paths,\
-            please visit https://github.com/wwkimball/yaml-tools."
+            please visit https://github.com/wwkimball/yaml-tools#yaml-path."
     )
     parser.add_argument("-V", "--version", action="version",
                         version="%(prog)s " + MY_VERSION)
