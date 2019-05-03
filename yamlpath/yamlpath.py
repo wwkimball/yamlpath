@@ -18,10 +18,12 @@ from ruamel.yaml.scalarbool import ScalarBoolean
 from ruamel.yaml.scalarfloat import ScalarFloat
 from ruamel.yaml.scalarint import ScalarInt
 
-from yamlpath.exceptions.yamlpath import YAMLPathException
-from yamlpath.enums.yamlvalueformats import YAMLValueFormats
-from yamlpath.enums.pathsegmenttypes import PathSegmentTypes
-from yamlpath.enums.pathsearchmethods import PathSearchMethods
+from yamlpath.exceptions import YAMLPathException
+from yamlpath.enums import (
+    YAMLValueFormats,
+    PathSegmentTypes,
+    PathSearchMethods,
+)
 
 class YAMLPath:
     """Query and update YAML data via robust YAML Paths."""
