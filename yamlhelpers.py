@@ -165,9 +165,6 @@ class YAMLHelpers:
                     self.log.debug(
                         "YAMLHelpers::get_nodes:  Relaying required node:"
                     )
-                    self.log.debug("---")
-                    self.log.debug(node)
-                    self.log.debug("---")
                     yield node
 
             if 1 > matched_nodes:
@@ -182,9 +179,6 @@ class YAMLHelpers:
                     self.log.debug(
                         "YAMLHelpers::get_nodes:  Relaying optional node:"
                     )
-                    self.log.debug("---")
-                    self.log.debug(node)
-                    self.log.debug("---")
                     yield node
 
     def set_value(self, data, yaml_path, value, mustexist=False,
