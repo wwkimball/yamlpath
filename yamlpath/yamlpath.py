@@ -43,16 +43,18 @@ class YAMLPath:
         self.log = logger
         self.parser = Parser(logger)
 
-    def get_nodes(self, data, yaml_path, mustexist=False, default_value=None):
+    def get_nodes(self, data, yaml_path, **kwargs):
         """Retrieves zero or more node at YAML Path in YAML data.
 
         Positional Parameters:
           1. data (ruamel.yaml data) The parsed YAML data to process
           2. yaml_path (any) The YAML Path to evaluate
-          3. mustexist (Boolean) Indicate whether yaml_path must exist
+
+        Optional Parameters:
+          1. mustexist (Boolean) Indicate whether yaml_path must exist
              in data prior to this query (lest an Exception be raised);
              default=False
-          4. default_value (any) The value to set at yaml_path should
+          2. default_value (any) The value to set at yaml_path should
              it not already exist in data and mustexist is False;
              default=None
 
@@ -61,6 +63,8 @@ class YAMLPath:
         Raises:
             YAMLPathException when YAML Path is invalid
         """
+        mustexist = kwargs.pop("mustexist", False)
+        default_value = kwargs.pop("default_value", None)
         path = self.parser.parse_path(yaml_path)
         if mustexist:
             matched_nodes = 0
@@ -86,19 +90,19 @@ class YAMLPath:
                     )
                     yield node
 
-    def set_value(self, data, yaml_path, value, mustexist=False,
-                  format=YAMLValueFormats.DEFAULT
-    ):
+    def set_value(self, data, yaml_path, value, **kwargs):
         """Sets the value of zero or more nodes at YAML Path in YAML data.
 
         Positional Parameters:
           1. data (ruamel.yaml data) The parsed YAML data to process
           2. yaml_path (any) The YAML Path to evaluate
           3. value (any) The value to set
-          4. mustexist (Boolean) Indicate whether yaml_path must exist
+
+        Optional Parameters:
+          1. mustexist (Boolean) Indicate whether yaml_path must exist
              in data prior to this query (lest an Exception be raised);
              default=False
-          5. format (YAMLValueFormats) The demarcation or visual
+          2. value_format (YAMLValueFormats) The demarcation or visual
              representation to use when writing the data;
              default=YAMLValueFormats.DEFAULT
 
@@ -110,6 +114,8 @@ class YAMLPath:
         if data is None or yaml_path is None:
             return
 
+        mustexist = kwargs.pop("mustexist", False)
+        value_format = kwargs.pop("value_format", YAMLValueFormats.DEFAULT)
         path = self.parser.parse_path(yaml_path)
         if mustexist:
             self.log.debug(
@@ -122,7 +128,7 @@ class YAMLPath:
                     continue
 
                 found_nodes += 1
-                self._update_value(data, node, value, format)
+                self._update_value(data, node, value, value_format)
 
             if 1 > found_nodes:
                 raise YAMLPathException(
@@ -137,7 +143,7 @@ class YAMLPath:
             for node in self._ensure_path(data, path, value):
                 if node is None:
                     continue
-                self._update_value(data, node, value, format)
+                self._update_value(data, node, value, value_format)
 
     def _get_nodes(self, data, yaml_path):
         """Generates zero or more matching, pre-existing nodes from YAML data
@@ -234,7 +240,7 @@ class YAMLPath:
 
         yield data
 
-    def _update_value(self, data, source_node, value, format):
+    def _update_value(self, data, source_node, value, value_format):
         """Recursively updates the value of a YAML Node and any references to it
         within the entire YAML data structure (Anchors and Aliases, if any).
 
@@ -243,14 +249,14 @@ class YAMLPath:
           2. source_node (object) The YAML Node to update
           3. value (any) The new value to assign to the source_node and
              its references
-          4. format (YAMLValueFormats) the YAML representation of the
+          4. value_format (YAMLValueFormats) the YAML representation of the
              value
 
         Returns: N/A
 
         Raises:
           No Exception but it will terminate the program after printing
-          a console error when format is illegal for the given value or
+          a console error when value_format is illegal for the given value or
           is unknown.
         """
         # Change val has already been made to obj in data.  When obj is either
@@ -282,10 +288,10 @@ class YAMLPath:
         new_node = None
         valform = YAMLValueFormats.DEFAULT
 
-        if isinstance(format, YAMLValueFormats):
-            valform = format
+        if isinstance(value_format, YAMLValueFormats):
+            valform = value_format
         else:
-            strform = str(format)
+            strform = str(value_format)
             try:
                 valform = YAMLValueFormats.from_str(strform)
             except NameError:

@@ -211,7 +211,10 @@ def main():
 
     try:
         for node in yh.get_eyaml_values(
-            yaml_data, change_path, args.mustexist, new_value
+            yaml_data
+            , change_path
+            , mustexist=args.mustexist
+            , default_value=new_value
         ):
             if node is None:
                 continue
