@@ -5,7 +5,8 @@
 #
 # Requirements:
 # 1. Python >= 3.6
-#    * CentOS:  yum -y install epel-release && yum -y install python36 python36-pip
+#    * CentOS:  yum -y install epel-release \
+#        && yum -y install python36 python36-pip
 # 2. The ruamel.yaml module, version >= 0.15
 #    * CentOS:  pip3 install ruamel.yaml
 #
@@ -30,10 +31,14 @@ MY_VERSION = "1.0.0"
 def processcli():
     # Process command-line arguments
     parser = argparse.ArgumentParser(
-        description="Rotates the encryption keys used for all EYAML values within a set of YAML files, decrypting with old keys and re-encrypting using replacement keys.",
-        epilog="Any YAML_FILEs lacking EYAML values will not be modified (or backed up, even when -b/--backup is specified)."
+        description="Rotates the encryption keys used for all EYAML values"
+            + " within a set of YAML files, decrypting with old keys and"
+            + " re-encrypting using replacement keys.",
+        epilog="Any YAML_FILEs lacking EYAML values will not be modified (or"
+            + " backed up, even when -b/--backup is specified)."
     )
-    parser.add_argument("-V", "--version", action="version", version="%(prog)s " + MY_VERSION)
+    parser.add_argument("-V", "--version", action="version",
+                        version="%(prog)s " + MY_VERSION)
 
     noise_group = parser.add_mutually_exclusive_group()
     noise_group.add_argument("-d", "--debug", action="store_true",
@@ -44,12 +49,15 @@ def processcli():
                             help="suppress all output except errors")
 
     parser.add_argument("-b", "--backup", action="store_true",
-                        help="save a backup of each modified YAML_FILE with an extra .bak file-extension")
-    parser.add_argument("-x", "--eyaml",
-                        default="eyaml",
-                        help="the eyaml binary to use when it isn't on the PATH")
+                        help="save a backup of each modified YAML_FILE with an"
+                            + " extra .bak file-extension")
+    parser.add_argument("-x", "--eyaml", default="eyaml",
+                        help="the eyaml binary to use when it isn't on the"
+                            + " PATH")
 
-    key_group = parser.add_argument_group("EYAML_KEYS", "All key arguments are required")
+    key_group = parser.add_argument_group(
+        "EYAML_KEYS", "All key arguments are required"
+    )
     key_group.add_argument("-r", "--newprivatekey", required=True,
                         help="the new EYAML private key")
     key_group.add_argument("-u", "--newpublickey", required=True,
@@ -116,7 +124,10 @@ for yaml_file in args.yaml_files:
         with open(yaml_file, 'r') as f:
             yaml_data = yaml.load(f)
     except ParserError as e:
-        log.error("YAML parsing error " + str(e.problem_mark).lstrip() + ": " + e.problem)
+        log.error(
+            "YAML parsing error {}:  {}"
+                .format(str(e.problem_mark).lstrip(), e.problem)
+        )
         continue
 
     # Process all EYAML values
@@ -138,7 +149,9 @@ for yaml_file in args.yaml_files:
                 else:
                     seen_anchors.append(anchor_name)
 
-            log.verbose("Decrypting value(s) at {}.".format(yh.str_path(yaml_path)))
+            log.verbose(
+                "Decrypting value(s) at {}.".format(yh.str_path(yaml_path))
+            )
             yh.publickey = args.oldpublickey
             yh.privatekey = args.oldprivatekey
             txtval = yh.decrypt_eyaml(node)
@@ -161,7 +174,9 @@ for yaml_file in args.yaml_files:
     # Save the changes
     if file_changed:
         if args.backup:
-            log.verbose("Saving a backup of " + yaml_file + " to " + backup_file)
+            log.verbose(
+                "Saving a backup of " + yaml_file + " to " + backup_file
+            )
             if exists(backup_file):
                 remove(backup_file)
             copy2(yaml_file, backup_file)

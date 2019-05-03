@@ -315,7 +315,7 @@ try:
     with open(args.yaml_file, 'r') as f:
         yaml_data = yaml.load(f)
 except ParserError as e:
-    log.error("YAML parsing error " + str(e.problem_mark).lstrip() + ": " + e.problem)
+    log.error("YAML parsing error {}:  {}".format(str(e.problem_mark).lstrip(), e.problem))
 ```
 
 #### Searching for YAML Nodes

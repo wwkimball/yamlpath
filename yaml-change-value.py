@@ -8,7 +8,8 @@
 #
 # Requirements:
 # 1. Python >= 3.6
-#    * CentOS:  yum -y install epel-release && yum -y install python36 python36-pip
+#    * CentOS:  yum -y install epel-release \
+#        && yum -y install python36 python36-pip
 # 2. The ruamel.yaml module, version >= 0.15
 #    * CentOS:  pip3 install ruamel.yaml
 #
@@ -197,14 +198,19 @@ try:
     with open(args.yaml_file, 'r') as f:
         yaml_data = yaml.load(f)
 except ParserError as e:
-    log.error("YAML parsing error " + str(e.problem_mark).lstrip() + ": " + e.problem)
+    log.error(
+        "YAML parsing error {}:  {}"
+            .format(str(e.problem_mark).lstrip(), e.problem)
+    )
 
 # Load the present value at the specified YAML Path
 change_path = yh.str_path(args.change)
 change_nodes = []
 
 try:
-    for node in yh.get_eyaml_values(yaml_data, change_path, args.mustexist, new_value):
+    for node in yh.get_eyaml_values(
+        yaml_data, change_path, args.mustexist, new_value
+    ):
         if node is None:
             continue
 
@@ -240,7 +246,8 @@ if args.saveto:
     if 1 < len(change_nodes):
         log.error(
             "It is impossible to meaningly save more than one matched value."
-            + "  Please omit --saveto or set --change to affect exactly one value."
+                + "  Please omit --saveto or set --change to affect exactly one"
+                + " value."
             , 1
         )
 
@@ -260,7 +267,9 @@ if args.eyamlcrypt:
     if format_type in [YAMLValueFormats.FOLDED, YAMLValueFormats.LITERAL]:
         output_type = "block"
     try:
-        yh.set_eyaml_value(yaml_data, change_path, new_value, output_type, False)
+        yh.set_eyaml_value(
+            yaml_data, change_path, new_value, output_type, False
+        )
     except YAMLPathException as ex:
         log.error(ex, 1)
 else:
