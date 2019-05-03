@@ -16,7 +16,7 @@ import sys
 import argparse
 import pprint
 from os import access, R_OK
-from os.path import isfile, exists
+from os.path import isfile
 
 from ruamel.yaml import YAML
 from ruamel.yaml.parser import ParserError
@@ -95,50 +95,54 @@ def validateargs(args, log):
     ):
         log.error("Both private and public EYAML keys must be set.", 1)
 
-args = processcli()
-log = ConsolePrinter(args)
-validateargs(args, log)
-yh = EYAMLPath(
-    log,
-    eyaml=args.eyaml,
-    publickey=args.publickey,
-    privatekey=args.privatekey
-)
-
-# Prep the YAML parser
-yaml = YAML()
-yaml.indent(mapping=2, sequence=4, offset=2)
-yaml.explicit_start = True
-yaml.preserve_quotes = True
-yaml.width = sys.maxsize
-
-# Attempt to open the YAML file; check for parsing errors
-try:
-    with open(args.yaml_file, 'r') as f:
-        yaml_data = yaml.load(f)
-except ParserError as e:
-    log.error(
-        "YAML parsing error {}:  {}"
-            .format(str(e.problem_mark).lstrip(), e.problem)
-        , 1
+def main():
+    args = processcli()
+    log = ConsolePrinter(args)
+    validateargs(args, log)
+    yh = EYAMLPath(
+        log,
+        eyaml=args.eyaml,
+        publickey=args.publickey,
+        privatekey=args.privatekey
     )
 
-# Seek the queried value
-yaml_path = yh.str_path(args.query)
-discovered_nodes = []
+    # Prep the YAML parser
+    yaml = YAML()
+    yaml.indent(mapping=2, sequence=4, offset=2)
+    yaml.explicit_start = True
+    yaml.preserve_quotes = True
+    yaml.width = sys.maxsize
 
-try:
-    for node in yh.get_eyaml_values(yaml_data, yaml_path):
-        if node is not None:
-            log.debug("Got {} from {}.".format(node, yaml_path))
-            discovered_nodes.append(node)
-except YAMLPathException as ex:
-    log.error(ex, 1)
+    # Attempt to open the YAML file; check for parsing errors
+    try:
+        with open(args.yaml_file, 'r') as f:
+            yaml_data = yaml.load(f)
+    except ParserError as e:
+        log.error(
+            "YAML parsing error {}:  {}"
+                .format(str(e.problem_mark).lstrip(), e.problem)
+            , 1
+        )
 
-if not discovered_nodes:
-    log.warning("No matches!")
-    exit(1)
+    # Seek the queried value(s)
+    yaml_path = yh.str_path(args.query)
+    discovered_nodes = []
 
-pp = pprint.PrettyPrinter(indent=4)
-for node in discovered_nodes:
-    pp.pprint(node)
+    try:
+        for node in yh.get_eyaml_values(yaml_data, yaml_path):
+            if node is not None:
+                log.debug("Got {} from {}.".format(node, yaml_path))
+                discovered_nodes.append(node)
+    except YAMLPathException as ex:
+        log.error(ex, 1)
+
+    if not discovered_nodes:
+        log.warning("No matches!")
+        exit(3)
+
+    pp = pprint.PrettyPrinter(indent=4)
+    for node in discovered_nodes:
+        pp.pprint(node)
+
+if __name__ == "__main__":
+    main()

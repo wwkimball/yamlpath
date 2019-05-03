@@ -92,97 +92,101 @@ def validateargs(args, log):
                 1
             )
 
-# Process any command-line arguments
-args = processcli()
-log = ConsolePrinter(args)
-validateargs(args, log)
-yh = EYAMLPath(log, eyaml=args.eyaml)
+def main():
+    # Process any command-line arguments
+    args = processcli()
+    log = ConsolePrinter(args)
+    validateargs(args, log)
+    yh = EYAMLPath(log, eyaml=args.eyaml)
 
-# Prep the YAML parser
-yaml = YAML()
-yaml.indent(mapping=2, sequence=4, offset=2)
-yaml.explicit_start = True
-yaml.preserve_quotes = True
-yaml.width = sys.maxsize
+    # Prep the YAML parser
+    yaml = YAML()
+    yaml.indent(mapping=2, sequence=4, offset=2)
+    yaml.explicit_start = True
+    yaml.preserve_quotes = True
+    yaml.width = sys.maxsize
 
-# Process the input file(s)
-in_file_count = len(args.yaml_files)
-for yaml_file in args.yaml_files:
-    file_changed = False
-    backup_file = yaml_file + ".bak"
-    seen_anchors = []
+    # Process the input file(s)
+    in_file_count = len(args.yaml_files)
+    for yaml_file in args.yaml_files:
+        file_changed = False
+        backup_file = yaml_file + ".bak"
+        seen_anchors = []
 
-    # Each YAML_FILE must actually be a file
-    if not isfile(yaml_file):
-        log.error("Not a file:  " + yaml_file)
-        continue
-
-    # Don't bother with the file change update when there's only one input file
-    if 1 < in_file_count:
-        log.info("Processing " + yaml_file + "...")
-
-    # Try to open the file
-    try:
-        with open(yaml_file, 'r') as f:
-            yaml_data = yaml.load(f)
-    except ParserError as e:
-        log.error(
-            "YAML parsing error {}:  {}"
-                .format(str(e.problem_mark).lstrip(), e.problem)
-        )
-        continue
-
-    # Process all EYAML values
-    for yaml_path in yh.find_eyaml_paths(yaml_data):
-        if yaml_path is None:
+        # Each YAML_FILE must actually be a file
+        if not isfile(yaml_file):
+            log.error("Not a file:  " + yaml_file)
             continue
 
-        # Use ::get_nodes() instead of ::get_eyaml_values() here in order to
-        # ignore values that have already been decrypted via their Anchors.
-        for node in yh.get_nodes(yaml_data, yaml_path):
-            if node is None:
+        # Don't bother with the file change update when there's only one input file
+        if 1 < in_file_count:
+            log.info("Processing " + yaml_file + "...")
+
+        # Try to open the file
+        try:
+            with open(yaml_file, 'r') as f:
+                yaml_data = yaml.load(f)
+        except ParserError as e:
+            log.error(
+                "YAML parsing error {}:  {}"
+                    .format(str(e.problem_mark).lstrip(), e.problem)
+            )
+            continue
+
+        # Process all EYAML values
+        for yaml_path in yh.find_eyaml_paths(yaml_data):
+            if yaml_path is None:
                 continue
 
-            # Ignore values which are Aliases for those already decrypted
-            anchor_name = node.anchor.value if hasattr(node, "anchor") else None
-            if anchor_name is not None:
-                if anchor_name in seen_anchors:
+            # Use ::get_nodes() instead of ::get_eyaml_values() here in order to
+            # ignore values that have already been decrypted via their Anchors.
+            for node in yh.get_nodes(yaml_data, yaml_path):
+                if node is None:
                     continue
-                else:
-                    seen_anchors.append(anchor_name)
 
-            log.verbose(
-                "Decrypting value(s) at {}.".format(yh.str_path(yaml_path))
-            )
-            yh.publickey = args.oldpublickey
-            yh.privatekey = args.oldprivatekey
-            txtval = yh.decrypt_eyaml(node)
-            if txtval is None:
-                # A warning about this failure has already been printed
-                continue
+                # Ignore values which are Aliases for those already decrypted
+                anchor_name = node.anchor.value if hasattr(node, "anchor") else None
+                if anchor_name is not None:
+                    if anchor_name in seen_anchors:
+                        continue
+                    else:
+                        seen_anchors.append(anchor_name)
 
-            # Prefer block (folded) values unless the original YAML value was
-            # already a massivly long (string) line.
-            output = "block"
-            if not isinstance(node, FoldedScalarString):
-                output = "string"
+                log.verbose(
+                    "Decrypting value(s) at {}.".format(yh.str_path(yaml_path))
+                )
+                yh.publickey = args.oldpublickey
+                yh.privatekey = args.oldprivatekey
+                txtval = yh.decrypt_eyaml(node)
+                if txtval is None:
+                    # A warning about this failure has already been printed
+                    continue
 
-            # Re-encrypt the value with new EYAML keys
-            yh.publickey = args.newpublickey
-            yh.privatekey = args.newprivatekey
-            yh.set_eyaml_value(yaml_data, yaml_path, txtval, output)
-            file_changed = True
+                # Prefer block (folded) values unless the original YAML value was
+                # already a massivly long (string) line.
+                output = "block"
+                if not isinstance(node, FoldedScalarString):
+                    output = "string"
 
-    # Save the changes
-    if file_changed:
-        if args.backup:
-            log.verbose(
-                "Saving a backup of " + yaml_file + " to " + backup_file
-            )
-            if exists(backup_file):
-                remove(backup_file)
-            copy2(yaml_file, backup_file)
+                # Re-encrypt the value with new EYAML keys
+                yh.publickey = args.newpublickey
+                yh.privatekey = args.newprivatekey
+                yh.set_eyaml_value(yaml_data, yaml_path, txtval, output)
+                file_changed = True
 
-        log.verbose("Writing changed data to " + yaml_file)
-        with open(yaml_file, 'w') as yaml_dump:
-            yaml.dump(yaml_data, yaml_dump)
+        # Save the changes
+        if file_changed:
+            if args.backup:
+                log.verbose(
+                    "Saving a backup of " + yaml_file + " to " + backup_file
+                )
+                if exists(backup_file):
+                    remove(backup_file)
+                copy2(yaml_file, backup_file)
+
+            log.verbose("Writing changed data to " + yaml_file)
+            with open(yaml_file, 'w') as yaml_dump:
+                yaml.dump(yaml_data, yaml_dump)
+
+if __name__ == "__main__":
+    main()
