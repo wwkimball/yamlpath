@@ -1,11 +1,8 @@
-#!/usr/bin/env python3
-################################################################################
-# Reusable YAML helpers.
-#
-# Copyright 2018, 2019 William W. Kimball, Jr. MBA MSIS
-################################################################################
+"""Reusable YAML helpers.
+
+Copyright 2018, 2019 William W. Kimball, Jr. MBA MSIS
+"""
 from sys import maxsize
-from enum import Enum, auto
 from collections import deque
 from distutils.util import strtobool
 
@@ -21,107 +18,12 @@ from ruamel.yaml.scalarbool import ScalarBoolean
 from ruamel.yaml.scalarfloat import ScalarFloat
 from ruamel.yaml.scalarint import ScalarInt
 
-from yamlexceptions import YAMLPathException
-
-class YAMLValueFormats(Enum):
-    """Supported representation formats for YAML values."""
-    BARE = auto()
-    BOOLEAN = auto()
-    DEFAULT = auto()
-    DQUOTE = auto()
-    FLOAT = auto()
-    FOLDED = auto()
-    INT = auto()
-    LITERAL = auto()
-    SQUOTE = auto()
-
-    @staticmethod
-    def get_names():
-        """Returns all entry names for this enumeration.
-
-        Positional Parameters:  N/A
-
-        Returns:  (list) Upper-case names from this enumeration
-
-        Raises:  N/A
-        """
-        return [entry.name.upper() for entry in YAMLValueFormats]
-
-    @staticmethod
-    def from_str(name):
-        """Converts a string value to a value of this enumeration, if valid.
-
-        Positional Parameters:
-          1. name (str) The name to convert
-
-        Returns:  (YAMLValueFormats) the converted enumeration value
-
-        Raises:
-          NameError when name doesn't match any enumeration values.
-        """
-        check = str(name).upper()
-        if check in YAMLValueFormats.get_names():
-            return YAMLValueFormats[check]
-        else:
-            raise NameError("YAMLValueFormats has no such item, " + check)
+from .exceptions import YAMLPathException
+from .enums import YAMLValueFormats, PathSearchMethods, PathSegmentTypes
 
 class YAMLHelpers:
     """Collection of generally-useful YAML processing methods based on
     ruamel.yaml."""
-
-    class PathSegmentTypes(Enum):
-        """Supported YAML Path segments"""
-        ANCHOR = auto()
-        INDEX = auto()
-        KEY = auto()
-        SEARCH = auto()
-
-    class PathSearchMethods(Enum):
-        """Supported methods for search YAML Path segments"""
-        CONTAINS = auto()
-        ENDS_WITH = auto()
-        EQUALS = auto()
-        STARTS_WITH = auto()
-        GREATER_THAN = auto()
-        LESS_THAN = auto()
-        GREATER_THAN_OR_EQUAL = auto()
-        LESS_THAN_OR_EQUAL = auto()
-
-        @staticmethod
-        def to_operator(method):
-            """Converts a value of this enumeration into a human-friendly
-            operator.
-
-            Positional Parameters:
-              1. method (PathSearchMethods) The enumeration value to convert
-
-            Returns: (str) The operator
-
-            Raises:
-              NotImplementedError when method is unknown to this method.
-            """
-            operator = "???"
-            if method is YAMLHelpers.PathSearchMethods.EQUALS:
-                operator = "="
-            elif method is YAMLHelpers.PathSearchMethods.STARTS_WITH:
-                operator = "^"
-            elif method is YAMLHelpers.PathSearchMethods.ENDS_WITH:
-                operator = "$"
-            elif method is YAMLHelpers.PathSearchMethods.CONTAINS:
-                operator = "%"
-            elif method is YAMLHelpers.PathSearchMethods.LESS_THAN:
-                operator = "<"
-            elif method is YAMLHelpers.PathSearchMethods.GREATER_THAN:
-                operator = ">"
-            elif method is YAMLHelpers.PathSearchMethods.LESS_THAN_OR_EQUAL:
-                operator = "<="
-            elif method is YAMLHelpers.PathSearchMethods.GREATER_THAN_OR_EQUAL:
-                operator = ">="
-            else:
-                raise NotImplementedError
-
-            return operator
-
 
     # Cache parsed YAML Path results across instances to avoid repeated parsing
     _static_parsings = {}
@@ -234,7 +136,8 @@ class YAMLHelpers:
                     continue
                 self._update_value(data, node, value, format)
 
-    def clone_node(self, node):
+    @staticmethod
+    def clone_node(node):
         """Duplicates a YAML Data node.
 
         Positional Parameters:
@@ -251,8 +154,7 @@ class YAMLHelpers:
 
         if hasattr(node, "anchor"):
             return type(node)(clone_value, anchor=node.anchor.value)
-        else:
-            return type(node)(clone_value)
+        return type(node)(clone_value)
 
     def str_path(self, yaml_path):
         """Returns the printable, user-friendly version of a YAML Path.
@@ -269,21 +171,21 @@ class YAMLHelpers:
         ppath = ""
 
         for (ptype, element_id) in parsed_path:
-            if ptype == YAMLHelpers.PathSegmentTypes.KEY:
+            if ptype == PathSegmentTypes.KEY:
                 if add_dot:
                     ppath += "."
                 ppath += element_id.replace(".", "\\.")
-            elif ptype == YAMLHelpers.PathSegmentTypes.INDEX:
+            elif ptype == PathSegmentTypes.INDEX:
                 ppath += "[" + str(element_id) + "]"
-            elif ptype == YAMLHelpers.PathSegmentTypes.ANCHOR:
+            elif ptype == PathSegmentTypes.ANCHOR:
                 ppath += "[&" + element_id + "]"
-            elif ptype == YAMLHelpers.PathSegmentTypes.SEARCH:
+            elif ptype == PathSegmentTypes.SEARCH:
                 invert, method, attr, term = element_id
                 ppath += (
                     "["
                     + str(attr)
                     + ("!" if invert else "")
-                    + YAMLHelpers.PathSearchMethods.to_operator(method)
+                    + PathSearchMethods.to_operator(method)
                     + str(term).replace(" ", "\\ ")
                     + "]"
                 )
@@ -360,9 +262,9 @@ class YAMLHelpers:
         demarc_stack = []
         seeking_anchor_mark = "&" == yaml_path[0]
         escape_next = False
-        element_type = YAMLHelpers.PathSegmentTypes.KEY
+        element_type = PathSegmentTypes.KEY
         search_inverted = False
-        search_method = YAMLHelpers.PathSearchMethods.EQUALS
+        search_method = PathSearchMethods.EQUALS
         search_attr = ""
 
         for c in yaml_path:
@@ -384,7 +286,7 @@ class YAMLHelpers:
             elif not escape_next and seeking_anchor_mark and "&" == c:
                 # Found an expected (permissible) ANCHOR mark
                 seeking_anchor_mark = False
-                element_type = YAMLHelpers.PathSegmentTypes.ANCHOR
+                element_type = PathSegmentTypes.ANCHOR
                 continue
 
             elif not escape_next and c in ['"', "'"]:
@@ -400,7 +302,7 @@ class YAMLHelpers:
                         if 1 > demarc_count:
                             path_elements.append((element_type, element_id))
                             element_id = ""
-                            element_type = YAMLHelpers.PathSegmentTypes.KEY
+                            element_type = PathSegmentTypes.KEY
                             continue
                     else:
                         # Embed a nested, demarcated component
@@ -420,7 +322,7 @@ class YAMLHelpers:
 
                 demarc_stack.append(c)
                 demarc_count += 1
-                element_type = YAMLHelpers.PathSegmentTypes.INDEX
+                element_type = PathSegmentTypes.INDEX
                 seeking_anchor_mark = True
                 search_inverted = False
                 search_method = None
@@ -436,14 +338,14 @@ class YAMLHelpers:
                 # Hash attribute search
                 if "=" == c:
                     # Exact value match OR >=|<=
-                    element_type = YAMLHelpers.PathSegmentTypes.SEARCH
+                    element_type = PathSegmentTypes.SEARCH
 
-                    if search_method is YAMLHelpers.PathSearchMethods.LESS_THAN:
-                        search_method = YAMLHelpers.PathSearchMethods.LESS_THAN_OR_EQUAL
-                    elif search_method is YAMLHelpers.PathSearchMethods.GREATER_THAN:
-                        search_method = YAMLHelpers.PathSearchMethods.GREATER_THAN_OR_EQUAL
+                    if search_method is PathSearchMethods.LESS_THAN:
+                        search_method = PathSearchMethods.LESS_THAN_OR_EQUAL
+                    elif search_method is PathSearchMethods.GREATER_THAN:
+                        search_method = PathSearchMethods.GREATER_THAN_OR_EQUAL
                     else:
-                        search_method = YAMLHelpers.PathSearchMethods.EQUALS
+                        search_method = PathSearchMethods.EQUALS
                         search_attr = element_id
                         element_id = ""
 
@@ -451,40 +353,40 @@ class YAMLHelpers:
 
                 elif "^" == c:
                     # Value starts with
-                    element_type = YAMLHelpers.PathSegmentTypes.SEARCH
-                    search_method = YAMLHelpers.PathSearchMethods.STARTS_WITH
+                    element_type = PathSegmentTypes.SEARCH
+                    search_method = PathSearchMethods.STARTS_WITH
                     search_attr = element_id
                     element_id = ""
                     continue
 
                 elif "$" == c:
                     # Value ends with
-                    element_type = YAMLHelpers.PathSegmentTypes.SEARCH
-                    search_method = YAMLHelpers.PathSearchMethods.ENDS_WITH
+                    element_type = PathSegmentTypes.SEARCH
+                    search_method = PathSearchMethods.ENDS_WITH
                     search_attr = element_id
                     element_id = ""
                     continue
 
                 elif "%" == c:
                     # Value contains
-                    element_type = YAMLHelpers.PathSegmentTypes.SEARCH
-                    search_method = YAMLHelpers.PathSearchMethods.CONTAINS
+                    element_type = PathSegmentTypes.SEARCH
+                    search_method = PathSearchMethods.CONTAINS
                     search_attr = element_id
                     element_id = ""
                     continue
 
                 elif ">" == c:
                     # Value greater than
-                    element_type = YAMLHelpers.PathSegmentTypes.SEARCH
-                    search_method = YAMLHelpers.PathSearchMethods.GREATER_THAN
+                    element_type = PathSegmentTypes.SEARCH
+                    search_method = PathSearchMethods.GREATER_THAN
                     search_attr = element_id
                     element_id = ""
                     continue
 
                 elif "<" == c:
                     # Value less than
-                    element_type = YAMLHelpers.PathSegmentTypes.SEARCH
-                    search_method = YAMLHelpers.PathSearchMethods.LESS_THAN
+                    element_type = PathSegmentTypes.SEARCH
+                    search_method = PathSearchMethods.LESS_THAN
                     search_attr = element_id
                     element_id = ""
                     continue
@@ -501,9 +403,9 @@ class YAMLHelpers:
                 and "]" == c
             ):
                 # Store the INDEX or SEARCH parameters
-                if element_type is YAMLHelpers.PathSegmentTypes.INDEX:
+                if element_type is PathSegmentTypes.INDEX:
                     path_elements.append((element_type, int(element_id)))
-                elif element_type is YAMLHelpers.PathSegmentTypes.SEARCH:
+                elif element_type is PathSegmentTypes.SEARCH:
                     # Undemarcate the search term, if it is so
                     if 0 < len(element_id) and element_id[0] in ["'", '"']:
                         leading_mark = element_id[0]
@@ -531,7 +433,7 @@ class YAMLHelpers:
                     path_elements.append((element_type, element_id))
                     element_id = ""
 
-                element_type = YAMLHelpers.PathSegmentTypes.KEY
+                element_type = PathSegmentTypes.KEY
                 continue
 
             element_id += c
@@ -590,7 +492,7 @@ class YAMLHelpers:
             self.log.debug(data)
             self.log.debug("")
 
-            if YAMLHelpers.PathSegmentTypes.KEY == typ:
+            if PathSegmentTypes.KEY == typ:
                 self.log.debug(
                     "YAMLHelpers::_get_nodes:  Drilling into the present"
                     + " dictionary KEY..."
@@ -601,7 +503,7 @@ class YAMLHelpers:
                             yield node
                 else:
                     return None
-            elif YAMLHelpers.PathSegmentTypes.INDEX == typ:
+            elif PathSegmentTypes.INDEX == typ:
                 self.log.debug(
                     "YAMLHelpers::_get_nodes:  Drilling into the present list"
                      + " INDEX..."
@@ -612,7 +514,7 @@ class YAMLHelpers:
                             yield node
                 else:
                     return None
-            elif YAMLHelpers.PathSegmentTypes.ANCHOR == typ:
+            elif PathSegmentTypes.ANCHOR == typ:
                 if isinstance(data, list):
                     self.log.debug(
                         "YAMLHelpers::_get_nodes:  Searching for an ANCHOR in"
@@ -634,7 +536,7 @@ class YAMLHelpers:
                                 if node is not None:
                                     yield node
                 return None
-            elif YAMLHelpers.PathSegmentTypes.SEARCH == typ:
+            elif PathSegmentTypes.SEARCH == typ:
                 self.log.debug(
                     "YAMLHelpers::_get_nodes:  Performing an attribute"
                     + " SEARCH..."
@@ -784,13 +686,13 @@ class YAMLHelpers:
 
         Positional Parameters:
           1. data (ruamel.yaml data) The parsed YAML data to process
-          2. ref (tuple(YAMLHelpers.PathSegmentTypes,any)) A YAML Path segment
+          2. ref (tuple(PathSegmentTypes,any)) A YAML Path segment
 
         Returns:  (object) At least one YAML Node or None
 
         Raises:
           NotImplementedError when ref indicates an unknown
-          YAMLHelpers.PathSegmentTypes value.
+          PathSegmentTypes value.
         """
         if data is None or ref is None:
             return None
@@ -798,7 +700,7 @@ class YAMLHelpers:
         reftyp = ref[0]
         refele = ref[1]
 
-        if reftyp == YAMLHelpers.PathSegmentTypes.ANCHOR:
+        if reftyp == PathSegmentTypes.ANCHOR:
             if isinstance(data, list):
                 for e in data:
                     if hasattr(e, "anchor") and refele == e.anchor.value:
@@ -809,7 +711,7 @@ class YAMLHelpers:
                         yield v
             else:
                 return None
-        elif reftyp == YAMLHelpers.PathSegmentTypes.INDEX:
+        elif reftyp == PathSegmentTypes.INDEX:
             try:
                 intele = int(refele)
             except ValueError:
@@ -822,12 +724,12 @@ class YAMLHelpers:
                 yield data[intele]
             else:
                 return None
-        elif reftyp == YAMLHelpers.PathSegmentTypes.KEY:
+        elif reftyp == PathSegmentTypes.KEY:
             if isinstance(data, dict) and refele in data:
                 yield data[refele]
             else:
                 return None
-        elif reftyp == YAMLHelpers.PathSegmentTypes.SEARCH:
+        elif reftyp == PathSegmentTypes.SEARCH:
             for match in self._search(data, refele):
                 if match is None:
                     continue
@@ -853,9 +755,9 @@ class YAMLHelpers:
             return value
 
         (typ, _) = yaml_path[0]
-        if typ == YAMLHelpers.PathSegmentTypes.INDEX:
+        if typ == PathSegmentTypes.INDEX:
             return CommentedSeq()
-        elif typ == YAMLHelpers.PathSegmentTypes.KEY:
+        elif typ == PathSegmentTypes.KEY:
             return CommentedMap()
         else:
             if isinstance(value, str):
@@ -916,7 +818,7 @@ class YAMLHelpers:
           1. data (ruamel.yaml data) The parsed YAML data to process
           2. terms (list) A list with these elements:
              0 = invert result (Boolean) true = Return a NON-matching node
-             1 = search method (YAMLHelpers.PathSearchMethods) the search
+             1 = search method (PathSearchMethods) the search
                  method
              2 = attribute name (str) the dictionary key to the value to check
              3 = search phrase (any) the value to match
@@ -931,15 +833,15 @@ class YAMLHelpers:
             self.log.debug(haystack)
             matches = None
 
-            if method is YAMLHelpers.PathSearchMethods.EQUALS:
+            if method is PathSearchMethods.EQUALS:
                 matches = haystack == needle
-            elif method is YAMLHelpers.PathSearchMethods.STARTS_WITH:
+            elif method is PathSearchMethods.STARTS_WITH:
                 matches = str(haystack).startswith(needle)
-            elif method is YAMLHelpers.PathSearchMethods.ENDS_WITH:
+            elif method is PathSearchMethods.ENDS_WITH:
                 matches = str(haystack).endswith(needle)
-            elif method is YAMLHelpers.PathSearchMethods.CONTAINS:
+            elif method is PathSearchMethods.CONTAINS:
                 matches = needle in str(haystack)
-            elif method is YAMLHelpers.PathSearchMethods.GREATER_THAN:
+            elif method is PathSearchMethods.GREATER_THAN:
                 if isinstance(haystack, int):
                     try:
                         matches = haystack > int(needle)
@@ -952,7 +854,7 @@ class YAMLHelpers:
                         matches = False
                 else:
                     matches = haystack > needle
-            elif method is YAMLHelpers.PathSearchMethods.LESS_THAN:
+            elif method is PathSearchMethods.LESS_THAN:
                 if isinstance(haystack, int):
                     try:
                         matches = haystack < int(needle)
@@ -965,7 +867,7 @@ class YAMLHelpers:
                         matches = False
                 else:
                     matches = haystack < needle
-            elif method is YAMLHelpers.PathSearchMethods.GREATER_THAN_OR_EQUAL:
+            elif method is PathSearchMethods.GREATER_THAN_OR_EQUAL:
                 if isinstance(haystack, int):
                     try:
                         matches = haystack >= int(needle)
@@ -978,7 +880,7 @@ class YAMLHelpers:
                         matches = False
                 else:
                     matches = haystack >= needle
-            elif method is YAMLHelpers.PathSearchMethods.LESS_THAN_OR_EQUAL:
+            elif method is PathSearchMethods.LESS_THAN_OR_EQUAL:
                 if isinstance(haystack, int):
                     try:
                         matches = haystack <= int(needle)
@@ -1072,7 +974,7 @@ class YAMLHelpers:
 
             if (
                 1 > matched_nodes
-                and curtyp is not YAMLHelpers.PathSegmentTypes.SEARCH
+                and curtyp is not PathSegmentTypes.SEARCH
             ):
                 # Add the missing element
                 self.log.debug(
@@ -1084,7 +986,7 @@ class YAMLHelpers:
                     self.log.debug(
                         "YAMLHelpers::_ensure_path:  Dealing with a list"
                     )
-                    if curtyp is YAMLHelpers.PathSegmentTypes.ANCHOR:
+                    if curtyp is PathSegmentTypes.ANCHOR:
                         new_val = self._default_for_child(path, value)
                         new_ele = self._append_list_element(
                             data, new_val, curele
@@ -1094,7 +996,7 @@ class YAMLHelpers:
                                 continue
                             matched_nodes += 1
                             yield node
-                    elif curtyp is YAMLHelpers.PathSegmentTypes.INDEX:
+                    elif curtyp is PathSegmentTypes.INDEX:
                         for _ in range(len(data) - 1, curele):
                             new_val = self._default_for_child(path, value)
                             self._append_list_element(data, new_val)
@@ -1122,9 +1024,9 @@ class YAMLHelpers:
                     self.log.debug(
                         "YAMLHelpers::_ensure_path:  Dealing with a dictionary"
                     )
-                    if curtyp is YAMLHelpers.PathSegmentTypes.ANCHOR:
+                    if curtyp is PathSegmentTypes.ANCHOR:
                         raise NotImplementedError
-                    elif curtyp is YAMLHelpers.PathSegmentTypes.KEY:
+                    elif curtyp is PathSegmentTypes.KEY:
                         data[curele] = self._default_for_child(path, value)
                         for node in self._ensure_path(data[curele], path, value):
                             if node is None:

@@ -9,7 +9,8 @@ from subprocess import run, PIPE, CalledProcessError
 from os import access, sep, X_OK
 from distutils.spawn import find_executable
 
-from yamlhelpers import YAMLHelpers, YAMLValueFormats
+from yamlpath.enums import YAMLValueFormats
+from yamlpath.yamlhelpers import YAMLHelpers
 
 class EYAMLHelpers(YAMLHelpers):
     """Collection of generally-useful EYAML helper methods."""

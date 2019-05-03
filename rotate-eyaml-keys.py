@@ -23,7 +23,7 @@ from ruamel.yaml.scalarstring import FoldedScalarString
 
 import ruamelpatches
 from consoleprinter import ConsolePrinter
-from eyamlhelpers import EYAMLHelpers
+from eyamlpath.eyamlhelpers import EYAMLHelpers
 
 # Implied Constants
 MY_VERSION = "1.0.0"
