@@ -32,10 +32,10 @@ class EYAMLPath(YAMLPath):
 
         Raises:  N/A
         """
-        self.log = logger
         self.eyaml = kwargs.pop("eyaml", "eyaml")
         self.publickey = kwargs.pop("publickey", None)
         self.privatekey = kwargs.pop("privatekey", None)
+        super().__init__(logger)
 
     def find_eyaml_paths(self, data, yaml_path=None):
         """Recursively generates a set of stringified YAML Paths, each entry
@@ -49,7 +49,7 @@ class EYAMLPath(YAMLPath):
 
         Raises:  N/A
         """
-        path = self.str_path(yaml_path)
+        path = self.parser.str_path(yaml_path)
 
         if isinstance(data, list):
             path += "["
@@ -230,7 +230,7 @@ class EYAMLPath(YAMLPath):
             YAMLPathException when YAML Path is invalid
         """
         self.log.verbose(
-            "Encrypting value(s) for {}.".format(self.str_path(yaml_path))
+            "Encrypting value(s) for {}.".format(self.parser.str_path(yaml_path))
         )
         encval = self.encrypt_eyaml(value, output)
         emit_format = YAMLValueFormats.FOLDED
@@ -267,7 +267,7 @@ class EYAMLPath(YAMLPath):
             YAMLPathException when YAML Path is invalid
         """
         self.log.verbose(
-            "Decrypting value(s) at {}.".format(self.str_path(yaml_path))
+            "Decrypting value(s) at {}.".format(self.parser.str_path(yaml_path))
         )
         for node in self.get_nodes(data, yaml_path, mustexist, default_value):
             if node is None:

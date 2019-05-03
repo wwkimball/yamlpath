@@ -125,7 +125,7 @@ def main():
         )
 
     # Seek the queried value(s)
-    yaml_path = yh.str_path(args.query)
+    yaml_path = yh.parser.str_path(args.query)
     discovered_nodes = []
 
     try:

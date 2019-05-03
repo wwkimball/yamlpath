@@ -206,7 +206,7 @@ def main():
         )
 
     # Load the present value at the specified YAML Path
-    change_path = yh.str_path(args.change)
+    change_path = yh.parser.str_path(args.change)
     change_nodes = []
 
     try:
