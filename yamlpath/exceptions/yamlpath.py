@@ -1,5 +1,4 @@
-"""
-Define YAML-centric exceptions.
+"""Express an issue with a YAML Path.
 
 Copyright 2019 William W. Kimball, Jr. MBA MSIS
 """

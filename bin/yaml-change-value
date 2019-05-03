@@ -27,11 +27,11 @@ from ruamel.yaml import YAML
 from ruamel.yaml.parser import ParserError
 
 from yamlpath.exceptions import YAMLPathException
-from eyamlpath.eyamlhelpers import EYAMLHelpers
+from yamlpath.eyaml import EYAMLPath
 from yamlpath.enums import YAMLValueFormats
 
-import ruamelpatches
-from consoleprinter import ConsolePrinter
+import yamlpath.patches
+from yamlpath.wrappers import ConsolePrinter
 
 # Implied Constants
 MY_VERSION = "1.0.0"
@@ -162,7 +162,7 @@ def validateargs(args, log):
 args = processcli()
 log = ConsolePrinter(args)
 validateargs(args, log)
-yh = EYAMLHelpers(
+yh = EYAMLPath(
     log,
     eyaml=args.eyaml,
     publickey=args.publickey,

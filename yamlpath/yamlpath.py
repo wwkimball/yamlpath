@@ -1,4 +1,4 @@
-"""Reusable YAML helpers.
+"""YAML Path implementation based on ruamel.yaml.
 
 Copyright 2018, 2019 William W. Kimball, Jr. MBA MSIS
 """
@@ -18,12 +18,13 @@ from ruamel.yaml.scalarbool import ScalarBoolean
 from ruamel.yaml.scalarfloat import ScalarFloat
 from ruamel.yaml.scalarint import ScalarInt
 
-from .exceptions import YAMLPathException
-from .enums import YAMLValueFormats, PathSearchMethods, PathSegmentTypes
+from yamlpath.exceptions.yamlpath import YAMLPathException
+from yamlpath.enums.yamlvalueformats import YAMLValueFormats
+from yamlpath.enums.pathsegmenttypes import PathSegmentTypes
+from yamlpath.enums.pathsearchmethods import PathSearchMethods
 
-class YAMLHelpers:
-    """Collection of generally-useful YAML processing methods based on
-    ruamel.yaml."""
+class YAMLPath:
+    """Query and update YAML data via robust YAML Paths."""
 
     # Cache parsed YAML Path results across instances to avoid repeated parsing
     _static_parsings = {}
@@ -32,7 +33,8 @@ class YAMLHelpers:
         """Init this class.
 
         Positional Parameters:
-          1. logger (ConsoleWriter) Instance of ConsoleWriter
+          1. logger (ConsoleWriter) Instance of ConsoleWriter or any similar
+             wrapper (say, around stdlib logging modules)
 
         Returns:  N/A
 
@@ -136,26 +138,6 @@ class YAMLHelpers:
                     continue
                 self._update_value(data, node, value, format)
 
-    @staticmethod
-    def clone_node(node):
-        """Duplicates a YAML Data node.
-
-        Positional Parameters:
-          1. node (object) The node to clone.
-
-        Returns: (object) Clone of the given node
-        """
-        # Clone str values lest the new node change whenever the original node
-        # changes, which defeates the intention of preserving the present,
-        # pre-change value to an entirely new node.
-        clone_value = node
-        if isinstance(clone_value, str):
-            clone_value = ''.join(node)
-
-        if hasattr(node, "anchor"):
-            return type(node)(clone_value, anchor=node.anchor.value)
-        return type(node)(clone_value)
-
     def str_path(self, yaml_path):
         """Returns the printable, user-friendly version of a YAML Path.
 
@@ -255,8 +237,8 @@ class YAMLHelpers:
             return path_elements
 
         # Don't parse a path that has already been seen
-        if yaml_path in YAMLHelpers._static_parsings:
-            return YAMLHelpers._static_parsings[yaml_path].copy()
+        if yaml_path in YAMLPath._static_parsings:
+            return YAMLPath._static_parsings[yaml_path].copy()
 
         element_id = ""
         demarc_stack = []
@@ -457,12 +439,12 @@ class YAMLHelpers:
         self.log.debug(path_elements)
 
         # Cache the parsed results
-        YAMLHelpers._static_parsings[yaml_path] = path_elements
+        YAMLPath._static_parsings[yaml_path] = path_elements
         str_path = self.str_path(path_elements)
         if not str_path == yaml_path:
             # The stringified YAML Path differs from the user version but has
             # exactly the same parsed result, so cache it, too
-            YAMLHelpers._static_parsings[str_path] = path_elements
+            YAMLPath._static_parsings[str_path] = path_elements
 
         return path_elements.copy()
 
@@ -1071,3 +1053,23 @@ class YAMLHelpers:
             self.log.debug(data)
 
             yield data
+
+    @staticmethod
+    def clone_node(node):
+        """Duplicates a YAML Data node.
+
+        Positional Parameters:
+          1. node (object) The node to clone.
+
+        Returns: (object) Clone of the given node
+        """
+        # Clone str values lest the new node change whenever the original node
+        # changes, which defeates the intention of preserving the present,
+        # pre-change value to an entirely new node.
+        clone_value = node
+        if isinstance(clone_value, str):
+            clone_value = ''.join(node)
+
+        if hasattr(node, "anchor"):
+            return type(node)(clone_value, anchor=node.anchor.value)
+        return type(node)(clone_value)

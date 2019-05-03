@@ -10,9 +10,9 @@ from os import access, sep, X_OK
 from distutils.spawn import find_executable
 
 from yamlpath.enums import YAMLValueFormats
-from yamlpath.yamlhelpers import YAMLHelpers
+from yamlpath.yamlpath import YAMLPath
 
-class EYAMLHelpers(YAMLHelpers):
+class EYAMLPath(YAMLPath):
     """Collection of generally-useful EYAML helper methods."""
 
     def __init__(self, logger, **kwargs):
