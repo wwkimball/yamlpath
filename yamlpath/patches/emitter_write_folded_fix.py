@@ -1,8 +1,8 @@
-###############################################################################
-# Patches bugs in ruamel.yaml.
-#
-# Copyright 2018, 2019 William W. Kimball, Jr. MBA MSIS
-###############################################################################
+"""Patches bugs in ruamel.yaml unless or until they are patched in the
+ruamel.yaml package itself.
+
+Copyright 2018, 2019 William W. Kimball, Jr. MBA MSIS
+"""
 from ruamel.yaml.emitter import (
 	Emitter,
 	EmitterError,

@@ -1,14 +1,15 @@
-#!/usr/bin/env python3
-################################################################################
-# Defines a reusable console print facility for YAML-oriented scripts.
-#
-# Requires a dictionary on init which has the following entries:
-# quiet:  <Boolean> suppresses all output except ConsolePrinter::error().
-# verbose:  <Boolean> allows output from ConsolePrinter::verbose().
-# debug:  <Boolean> allows output from ConsolePrinter::debug().
-#
-# Copyright 2018, 2019 William W. Kimball, Jr. MBA MSIS
-################################################################################
+"""Implements a reusable console print facility for simple command-line scripts.
+Other implementations can easily wrap Python's standard logger/warning modules,
+but this one does not because those are overkill for *simple* STDOUT/STDERR
+printing (that must support squelching).
+
+Requires a dictionary on init which has the following entries:
+  quiet:  <Boolean> suppresses all output except ConsolePrinter::error().
+  verbose:  <Boolean> allows output from ConsolePrinter::verbose().
+  debug:  <Boolean> allows output from ConsolePrinter::debug().
+
+Copyright 2018, 2019 William W. Kimball, Jr. MBA MSIS
+"""
 import sys
 
 class ConsolePrinter:
@@ -20,7 +21,8 @@ class ConsolePrinter:
         """Init this class.
 
         Positional Parameters:
-          1. args (dict) Dictionary of log level settings with:
+          1. args (object) An object representing log level settings with these
+             properties:
              - debug (Boolean) true = write debugging informational messages
              - verbose (Boolean) true = write verbose informational messages
              - quiet (Boolean) true = write only error messages
@@ -110,22 +112,22 @@ class ConsolePrinter:
         """
         if self.args.debug and not self.args.quiet:
             if isinstance(message, list):
-                for i, e in enumerate(message):
+                for i, ele in enumerate(message):
                     attr = ""
-                    if hasattr(e, 'anchor') and e.anchor.value is not None:
-                        attr = "; &" + e.anchor.value
-                    pe = str(e) + attr
-                    print("DEBUG: [" + str(i) + "]=" + str(pe).replace("\n", "\nDEBUG: "))
+                    if hasattr(ele, "anchor") and ele.anchor.value is not None:
+                        attr = "; &" + ele.anchor.value
+                    eattr = (str(ele) + attr).replace("\n", "\nDEBUG:  ")
+                    print("DEBUG:  [" + str(i) + "]=" + str(eattr))
             elif isinstance(message, dict):
-                for k, v in message.items():
+                for k, val in message.items():
                     attr = ""
-                    if hasattr(v, 'anchor') and v.anchor.value is not None:
-                        attr = "; &" + v.anchor.value
-                    pv = str(v) + attr
-                    print("DEBUG: [" + str(k) + "]=>" + str(pv).replace("\n", "\nDEBUG: "))
+                    if hasattr(val, "anchor") and val.anchor.value is not None:
+                        attr = "; &" + val.anchor.value
+                    vattr = (str(val) + attr).replace("\n", "\nDEBUG:  ")
+                    print("DEBUG:  [" + str(k) + "]=>" + str(vattr))
             else:
                 attr = ""
-                if hasattr(message, 'anchor') and message.anchor.value is not None:
+                if hasattr(message, "anchor") and message.anchor.value is not None:
                     attr = "; &" + message.anchor.value
-                pm = str(message) + attr
-                print("DEBUG: " + str(pm).replace("\n", "\nDEBUG: "))
+                mattr = (str(message) + attr).replace("\n", "\nDEBUG:  ")
+                print("DEBUG:  " + str(mattr))

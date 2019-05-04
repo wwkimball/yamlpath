@@ -1,0 +1,1 @@
+import yamlpath.patches.emitter_write_folded_fix

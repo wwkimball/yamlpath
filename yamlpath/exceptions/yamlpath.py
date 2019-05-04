@@ -1,10 +1,7 @@
-#!/usr/bin/env python3
-################################################################################
-# Define YAML-centric exceptions.
-#
-# Copyright 2019 William W. Kimball, Jr. MBA MSIS
-################################################################################
+"""Express an issue with a YAML Path.
 
+Copyright 2019 William W. Kimball, Jr. MBA MSIS
+"""
 class YAMLPathException(Exception):
     """Occurs when a YAML Path is illegal or fails to lead to a YAML node."""
 
@@ -26,14 +23,16 @@ class YAMLPathException(Exception):
         )
 
     def __str__(self):
+        message = ""
         if self.segment is None:
-            return "{} in {}".format(
+            message = "{} in {}".format(
                 self.user_message,
                 self.yaml_path
             )
         else:
-            return "{} at {} in {}".format(
+            message = "{} at {} in {}".format(
                 self.user_message,
                 self.segment,
                 self.yaml_path
             )
+        return message
