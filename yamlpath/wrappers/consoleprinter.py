@@ -1,14 +1,15 @@
-#!/usr/bin/env python3
-################################################################################
-# Defines a reusable console print facility for YAML-oriented scripts.
-#
-# Requires a dictionary on init which has the following entries:
-# quiet:  <Boolean> suppresses all output except ConsolePrinter::error().
-# verbose:  <Boolean> allows output from ConsolePrinter::verbose().
-# debug:  <Boolean> allows output from ConsolePrinter::debug().
-#
-# Copyright 2018, 2019 William W. Kimball, Jr. MBA MSIS
-################################################################################
+"""Implements a reusable console print facility for simple command-line scripts.
+Other implementations can easily wrap Python's standard logger/warning modules,
+but this one does not because those are overkill for *simple* STDOUT/STDERR
+printing (that must support squelching).
+
+Requires a dictionary on init which has the following entries:
+  quiet:  <Boolean> suppresses all output except ConsolePrinter::error().
+  verbose:  <Boolean> allows output from ConsolePrinter::verbose().
+  debug:  <Boolean> allows output from ConsolePrinter::debug().
+
+Copyright 2018, 2019 William W. Kimball, Jr. MBA MSIS
+"""
 import sys
 
 class ConsolePrinter:
@@ -112,20 +113,20 @@ class ConsolePrinter:
             if isinstance(message, list):
                 for i, e in enumerate(message):
                     attr = ""
-                    if hasattr(e, 'anchor') and e.anchor.value is not None:
+                    if hasattr(e, "anchor") and e.anchor.value is not None:
                         attr = "; &" + e.anchor.value
-                    pe = str(e) + attr
-                    print("DEBUG: [" + str(i) + "]=" + str(pe).replace("\n", "\nDEBUG: "))
+                    eattr = (str(e) + attr).replace("\n", "\nDEBUG:  ")
+                    print("DEBUG:  [" + str(i) + "]=" + str(eattr))
             elif isinstance(message, dict):
                 for k, v in message.items():
                     attr = ""
-                    if hasattr(v, 'anchor') and v.anchor.value is not None:
+                    if hasattr(v, "anchor") and v.anchor.value is not None:
                         attr = "; &" + v.anchor.value
-                    pv = str(v) + attr
-                    print("DEBUG: [" + str(k) + "]=>" + str(pv).replace("\n", "\nDEBUG: "))
+                    vattr = (str(v) + attr).replace("\n", "\nDEBUG:  ")
+                    print("DEBUG:  [" + str(k) + "]=>" + str(vattr))
             else:
                 attr = ""
-                if hasattr(message, 'anchor') and message.anchor.value is not None:
+                if hasattr(message, "anchor") and message.anchor.value is not None:
                     attr = "; &" + message.anchor.value
-                pm = str(message) + attr
-                print("DEBUG: " + str(pm).replace("\n", "\nDEBUG: "))
+                mattr = (str(message) + attr).replace("\n", "\nDEBUG:  ")
+                print("DEBUG:  " + str(mattr))

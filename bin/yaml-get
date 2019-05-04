@@ -22,6 +22,7 @@ from ruamel.yaml import YAML
 from ruamel.yaml.parser import ParserError
 
 from yamlpath.exceptions import YAMLPathException
+from yamlpath.parser import Parser
 from yamlpath.eyaml import EYAMLPath
 
 from yamlpath.wrappers import ConsolePrinter
@@ -99,11 +100,13 @@ def main():
     args = processcli()
     log = ConsolePrinter(args)
     validateargs(args, log)
+    parser = Parser(log)
     yh = EYAMLPath(
         log,
         eyaml=args.eyaml,
         publickey=args.publickey,
-        privatekey=args.privatekey
+        privatekey=args.privatekey,
+        parser=parser
     )
 
     # Prep the YAML parser
@@ -125,7 +128,7 @@ def main():
         )
 
     # Seek the queried value(s)
-    yaml_path = yh.parser.str_path(args.query)
+    yaml_path = parser.str_path(args.query)
     discovered_nodes = []
 
     try:

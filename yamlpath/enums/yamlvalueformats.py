@@ -1,3 +1,4 @@
+"""Implements the YAMLValueFormats enumeration."""
 from enum import Enum, auto
 
 class YAMLValueFormats(Enum):

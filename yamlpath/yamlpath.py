@@ -29,7 +29,7 @@ from yamlpath.parser import Parser
 class YAMLPath:
     """Query and update YAML data via robust YAML Paths."""
 
-    def __init__(self, logger):
+    def __init__(self, logger, **kwargs):
         """Init this class.
 
         Positional Parameters:
@@ -41,7 +41,7 @@ class YAMLPath:
         Raises:  N/A
         """
         self.log = logger
-        self.parser = Parser(logger)
+        self.parser = kwargs.pop("parser", Parser(logger))
 
     def get_nodes(self, data, yaml_path, **kwargs):
         """Retrieves zero or more node at YAML Path in YAML data.
@@ -72,7 +72,7 @@ class YAMLPath:
                 if node is not None:
                     matched_nodes += 1
                     self.log.debug(
-                        "YAMLHelpers::get_nodes:  Relaying required node:"
+                        "YAMLPath::get_nodes:  Relaying required node:"
                     )
                     yield node
 
@@ -86,7 +86,7 @@ class YAMLPath:
             for node in self._ensure_path(data, path, default_value):
                 if node is not None:
                     self.log.debug(
-                        "YAMLHelpers::get_nodes:  Relaying optional node:"
+                        "YAMLPath::get_nodes:  Relaying optional node:"
                     )
                     yield node
 
@@ -119,7 +119,7 @@ class YAMLPath:
         path = self.parser.parse_path(yaml_path)
         if mustexist:
             self.log.debug(
-                "YAMLHelpers::set_value:  Seeking required node at {}."
+                "YAMLPath::set_value:  Seeking required node at {}."
                     .format(self.parser.str_path(path))
             )
             found_nodes = 0
@@ -137,7 +137,7 @@ class YAMLPath:
                 )
         else:
             self.log.debug(
-                "YAMLHelpers::set_value:  Seeking optional node at {}."
+                "YAMLPath::set_value:  Seeking optional node at {}."
                     .format(self.parser.str_path(path))
             )
             for node in self._ensure_path(data, path, value):
@@ -164,7 +164,7 @@ class YAMLPath:
             (typ, ele) = yaml_path.popleft()
 
             self.log.debug(
-                ("YAMLHelpers::_get_nodes:  Peeking at element {} of type {} in"
+                ("YAMLPath::_get_nodes:  Peeking at element {} of type {} in"
                     + " data of type {}:"
                 ).format(ele, typ, type(data))
             )
@@ -173,7 +173,7 @@ class YAMLPath:
 
             if PathSegmentTypes.KEY == typ:
                 self.log.debug(
-                    "YAMLHelpers::_get_nodes:  Drilling into the present"
+                    "YAMLPath::_get_nodes:  Drilling into the present"
                     + " dictionary KEY..."
                 )
                 if ele in data:
@@ -184,7 +184,7 @@ class YAMLPath:
                     return None
             elif PathSegmentTypes.INDEX == typ:
                 self.log.debug(
-                    "YAMLHelpers::_get_nodes:  Drilling into the present list"
+                    "YAMLPath::_get_nodes:  Drilling into the present list"
                      + " INDEX..."
                 )
                 if ele < len(data):
@@ -196,7 +196,7 @@ class YAMLPath:
             elif PathSegmentTypes.ANCHOR == typ:
                 if isinstance(data, list):
                     self.log.debug(
-                        "YAMLHelpers::_get_nodes:  Searching for an ANCHOR in"
+                        "YAMLPath::_get_nodes:  Searching for an ANCHOR in"
                         + " a list..."
                     )
                     for e in data:
@@ -206,7 +206,7 @@ class YAMLPath:
                                     yield node
                 elif isinstance(data, dict):
                     self.log.debug(
-                        "YAMLHelpers::_get_nodes:  Searching for an ANCHOR in a"
+                        "YAMLPath::_get_nodes:  Searching for an ANCHOR in a"
                         + " dictionary..."
                     )
                     for _,v in data:
@@ -217,7 +217,7 @@ class YAMLPath:
                 return None
             elif PathSegmentTypes.SEARCH == typ:
                 self.log.debug(
-                    "YAMLHelpers::_get_nodes:  Performing an attribute"
+                    "YAMLPath::_get_nodes:  Performing an attribute"
                     + " SEARCH..."
                 )
                 for match in self._search(data, ele):
@@ -232,7 +232,7 @@ class YAMLPath:
                 raise NotImplementedError
 
         self.log.debug(
-            "YAMLHelpers::_get_nodes:  Finally returning data of type {}:"
+            "YAMLPath::_get_nodes:  Finally returning data of type {}:"
                 .format(type(data))
         )
         self.log.debug(data)
@@ -464,7 +464,7 @@ class YAMLPath:
 
         if anchor is not None and value is not None:
             self.log.debug(
-                ("YAMLHelpers::_append_list_element:  Ensuring {}{} is a"
+                ("YAMLPath::_append_list_element:  Ensuring {}{} is a"
                     + " PlainScalarString."
                 ).format(type(value), value)
             )
@@ -505,7 +505,7 @@ class YAMLPath:
 
         def search_matches(method, needle, haystack):
             self.log.debug(
-                ("YAMLHelpers::_search::search_matches:  Searching for {}"
+                ("YAMLPath::_search::search_matches:  Searching for {}"
                     + " using {} against:"
                 ).format(needle, method)
             )
@@ -620,7 +620,7 @@ class YAMLPath:
         """
         if data is None or path is None:
             self.log.debug(
-                "YAMLHelpers::_ensure_path:  Bailing out on None data/path!"
+                "YAMLPath::_ensure_path:  Bailing out on None data/path!"
             )
             return data
 
@@ -628,7 +628,7 @@ class YAMLPath:
             (curtyp, curele) = curref = path.popleft()
 
             self.log.debug(
-                ("YAMLHelpers::_ensure_path:  Seeking element <{}>{} in data of"
+                ("YAMLPath::_ensure_path:  Seeking element <{}>{} in data of"
                     + " type {}:"
                 ).format(curtyp, curele, type(data))
             )
@@ -643,7 +643,7 @@ class YAMLPath:
 
                 matched_nodes += 1
                 self.log.debug(
-                    ("YAMLHelpers::_ensure_path:  Found element {} in the data;"
+                    ("YAMLPath::_ensure_path:  Found element {} in the data;"
                         + " recursing into it..."
                     ).format(curele)
                 )
@@ -657,13 +657,13 @@ class YAMLPath:
             ):
                 # Add the missing element
                 self.log.debug(
-                    ("YAMLHelpers::_ensure_path:  Element {} is unknown in the"
+                    ("YAMLPath::_ensure_path:  Element {} is unknown in the"
                         + " data!"
                     ).format(curele)
                 )
                 if isinstance(data, list):
                     self.log.debug(
-                        "YAMLHelpers::_ensure_path:  Dealing with a list"
+                        "YAMLPath::_ensure_path:  Dealing with a list"
                     )
                     if curtyp is PathSegmentTypes.ANCHOR:
                         new_val = self._default_for_child(path, value)
@@ -701,7 +701,7 @@ class YAMLPath:
                         )
                 elif isinstance(data, dict):
                     self.log.debug(
-                        "YAMLHelpers::_ensure_path:  Dealing with a dictionary"
+                        "YAMLPath::_ensure_path:  Dealing with a dictionary"
                     )
                     if curtyp is PathSegmentTypes.ANCHOR:
                         raise NotImplementedError
@@ -743,7 +743,7 @@ class YAMLPath:
 
         else:
             self.log.debug(
-                ("YAMLHelpers::_ensure_path:  Finally returning data of type"
+                ("YAMLPath::_ensure_path:  Finally returning data of type"
                     + " {}:"
                 ).format(type(data))
             )

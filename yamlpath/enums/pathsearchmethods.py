@@ -1,3 +1,4 @@
+"""Implements the PathSearchMethods enumeration."""
 from enum import Enum, auto
 
 class PathSearchMethods(Enum):

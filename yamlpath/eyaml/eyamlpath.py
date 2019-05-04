@@ -1,9 +1,7 @@
-#!/usr/bin/env python3
-################################################################################
-# Reusable EYAML helpers.
-#
-# Copyright 2018, 2019 William W. Kimball, Jr. MBA MSIS
-################################################################################
+"""Implements an EYAML-capable version of YAMLPath.
+
+Copyright 2018, 2019 William W. Kimball, Jr. MBA MSIS
+"""
 import re
 from subprocess import run, PIPE, CalledProcessError
 from os import access, sep, X_OK
@@ -13,7 +11,7 @@ from yamlpath.enums import YAMLValueFormats
 from yamlpath.yamlpath import YAMLPath
 
 class EYAMLPath(YAMLPath):
-    """Collection of generally-useful EYAML helper methods."""
+    """Extend YAMLPath to understand EYAML values."""
 
     def __init__(self, logger, **kwargs):
         """Init this class.
@@ -35,7 +33,7 @@ class EYAMLPath(YAMLPath):
         self.eyaml = kwargs.pop("eyaml", "eyaml")
         self.publickey = kwargs.pop("publickey", None)
         self.privatekey = kwargs.pop("privatekey", None)
-        super().__init__(logger)
+        super().__init__(logger, **kwargs)
 
     def find_eyaml_paths(self, data, yaml_path=None):
         """Recursively generates a set of stringified YAML Paths, each entry
@@ -109,7 +107,8 @@ class EYAMLPath(YAMLPath):
         cleanval = str(value).replace("\n", "").replace(" ", "").rstrip()
         bval = (cleanval + "\n").encode("ascii")
         self.log.debug(
-            "About to execute {} against:\n{}".format(cmdstr, cleanval)
+            "EYAMLPath::decrypt_eyaml:  About to execute {} against:\n{}"
+            .format(cmdstr, cleanval)
         )
 
         try:
@@ -130,7 +129,9 @@ class EYAMLPath(YAMLPath):
             )
 
         # Check for bad decryptions
-        self.log.debug("Decrypted result:  {}".format(retval))
+        self.log.debug(
+            "EYAMLPath::decrypt_eyaml:  Decrypted result:  {}".format(retval)
+        )
         if 1 > len(retval) or retval == cleanval:
             self.log.warning(
                 "Unable to decrypt value!  Please verify you are using the"
@@ -173,7 +174,10 @@ class EYAMLPath(YAMLPath):
             cmdstr += " --pkcs7-private-key=" + self.privatekey
 
         cmd = cmdstr.split()
-        self.log.debug("About to execute:  {}".format(" ".join(cmd)))
+        self.log.debug(
+            "EYAMLPath::encrypt_eyaml:  About to execute:  {}"
+            .format(" ".join(cmd))
+        )
         bval = (str(value) + "\n").encode("ascii")
 
         try:
@@ -205,7 +209,9 @@ class EYAMLPath(YAMLPath):
         if output == "block":
             retval = re.sub(r" +", "", retval) + "\n"
 
-        self.log.debug("Encrypted result:\n{}".format(retval))
+        self.log.debug(
+            "EYAMLPath::encrypt_eyaml:  Encrypted result:\n{}".format(retval)
+        )
         return retval
 
     def set_eyaml_value(self, data, yaml_path, value,
@@ -230,7 +236,8 @@ class EYAMLPath(YAMLPath):
             YAMLPathException when YAML Path is invalid
         """
         self.log.verbose(
-            "Encrypting value(s) for {}.".format(self.parser.str_path(yaml_path))
+            "Encrypting value(s) for {}."
+            .format(self.parser.str_path(yaml_path))
         )
         encval = self.encrypt_eyaml(value, output)
         emit_format = YAMLValueFormats.FOLDED
@@ -309,13 +316,17 @@ class EYAMLPath(YAMLPath):
             return False
 
         if 0 > binary.find(sep):
-            self.log.debug("Finding the real path for:  {}".format(binary))
+            self.log.debug(
+                "EYAMLPath::can_run_eyaml:  Finding the real path for:  {}"
+                .format(binary)
+            )
             binary = find_executable(binary)
             if 1 > len(binary):
                 return False
             self.eyaml = binary
 
         self.log.debug(
-            "Checking whether eyaml is executable at:  {}".format(binary)
+            ("EYAMLPath::can_run_eyaml:  Checking whether eyaml is executable"
+            + " at:  {}").format(binary)
         )
         return access(binary, X_OK)

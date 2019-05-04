@@ -106,7 +106,7 @@ class Parser:
           YAMLPathException when yaml_path is invalid
         """
         self.log.debug(
-            "YAMLHelpers::_parse_path:  Evaluating {}...".format(yaml_path)
+            "Parser::parse_path:  Evaluating {}...".format(yaml_path)
         )
 
         path_elements = deque()
@@ -325,7 +325,7 @@ class Parser:
             path_elements.append((element_type, element_id))
 
         self.log.debug(
-            "YAMLHelpers::_parse_path:  Parsed {} into:".format(yaml_path)
+            "Parser::parse_path:  Parsed {} into:".format(yaml_path)
         )
         self.log.debug(path_elements)
 

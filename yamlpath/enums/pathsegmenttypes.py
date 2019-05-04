@@ -1,3 +1,4 @@
+"""Implements the PathSegmentTypes enumeration."""
 from enum import Enum, auto
 
 class PathSegmentTypes(Enum):
