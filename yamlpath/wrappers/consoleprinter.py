@@ -21,7 +21,8 @@ class ConsolePrinter:
         """Init this class.
 
         Positional Parameters:
-          1. args (dict) Dictionary of log level settings with:
+          1. args (object) An object representing log level settings with these
+             properties:
              - debug (Boolean) true = write debugging informational messages
              - verbose (Boolean) true = write verbose informational messages
              - quiet (Boolean) true = write only error messages

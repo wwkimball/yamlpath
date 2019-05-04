@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup(
-    name="yamltools",
+    name="yamlpath",
     version="1.0.0",
     description="Generally-useful YAML and EYAML tools that implement YAML Path",
     long_description="This project presents and utilizes YAML Paths, which are"
@@ -19,7 +19,7 @@ setup(
     author_email="github-yamlpath@kimballstuff.com",
     license="ISC",
     keywords="yaml eyaml",
-    packages=["yamltools"],
+    packages=["yamlpath"],
     scripts=[
         "bin/eyaml-rotate-keys",
         "bin/yaml-get",
@@ -28,6 +28,7 @@ setup(
     install_requires=[
         "ruamel.yaml",
     ],
+    tests_require=["pytest"],
     include_package_data=True,
     zip_safe=False
 )
