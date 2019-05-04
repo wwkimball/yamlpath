@@ -133,7 +133,7 @@ class Parser:
 
         element_id = ""
         demarc_stack = []
-        seeking_anchor_mark = "&" == yaml_path[0]
+        seeking_anchor_mark = yaml_path[0] == "&"
         escape_next = False
         element_type = PathSegmentTypes.KEY
         search_inverted = False
@@ -143,20 +143,20 @@ class Parser:
         for c in yaml_path:
             demarc_count = len(demarc_stack)
 
-            if not escape_next and "\\" == c:
+            if not escape_next and c == "\\":
                 # Escape the next character
                 escape_next = True
                 continue
 
             elif (
                 not escape_next
-                and " " == c
-                and ((1 > demarc_count) or (not demarc_stack[-1] in ["'", '"']))
+                and c == " "
+                and ((demarc_count < 1) or (not demarc_stack[-1] in ["'", '"']))
             ):
                 # Ignore unescaped, non-demarcated whitespace
                 continue
 
-            elif not escape_next and seeking_anchor_mark and "&" == c:
+            elif not escape_next and seeking_anchor_mark and c == "&":
                 # Found an expected (permissible) ANCHOR mark
                 seeking_anchor_mark = False
                 element_type = PathSegmentTypes.ANCHOR
@@ -164,7 +164,7 @@ class Parser:
 
             elif not escape_next and c in ['"', "'"]:
                 # Found a string demarcation mark
-                if 0 < demarc_count:
+                if demarc_count > 0:
                     # Already appending to an ongoing demarcated value
                     if c == demarc_stack[-1]:
                         # Close a matching pair
@@ -172,7 +172,7 @@ class Parser:
                         demarc_count -= 1
 
                         # Record the element_id when all pairs have closed
-                        if 1 > demarc_count:
+                        if demarc_count < 1:
                             path_elements.append((element_type, element_id))
                             element_id = ""
                             element_type = PathSegmentTypes.KEY
@@ -187,8 +187,8 @@ class Parser:
                     demarc_count += 1
                     continue
 
-            elif not escape_next and "[" == c:
-                if 0 < len(element_id):
+            elif not escape_next and c == "[":
+                if element_id:
                     # Named list INDEX; record its predecessor element
                     path_elements.append((element_type, element_id))
                     element_id = ""
@@ -204,12 +204,12 @@ class Parser:
 
             elif (
                 not escape_next
-                and 0 < demarc_count
-                and "[" == demarc_stack[-1]
+                and demarc_count > 0
+                and demarc_stack[-1] == "["
                 and c in ["=", "^", "$", "%", "!", ">", "<"]
             ):
                 # Hash attribute search
-                if "=" == c:
+                if c == "=":
                     # Exact value match OR >=|<=
                     element_type = PathSegmentTypes.SEARCH
 
@@ -224,7 +224,7 @@ class Parser:
 
                     continue
 
-                elif "^" == c:
+                elif c == "^":
                     # Value starts with
                     element_type = PathSegmentTypes.SEARCH
                     search_method = PathSearchMethods.STARTS_WITH
@@ -232,7 +232,7 @@ class Parser:
                     element_id = ""
                     continue
 
-                elif "$" == c:
+                elif c == "$":
                     # Value ends with
                     element_type = PathSegmentTypes.SEARCH
                     search_method = PathSearchMethods.ENDS_WITH
@@ -240,7 +240,7 @@ class Parser:
                     element_id = ""
                     continue
 
-                elif "%" == c:
+                elif c == "%":
                     # Value contains
                     element_type = PathSegmentTypes.SEARCH
                     search_method = PathSearchMethods.CONTAINS
@@ -248,7 +248,7 @@ class Parser:
                     element_id = ""
                     continue
 
-                elif ">" == c:
+                elif c == ">":
                     # Value greater than
                     element_type = PathSegmentTypes.SEARCH
                     search_method = PathSearchMethods.GREATER_THAN
@@ -256,7 +256,7 @@ class Parser:
                     element_id = ""
                     continue
 
-                elif "<" == c:
+                elif c == "<":
                     # Value less than
                     element_type = PathSegmentTypes.SEARCH
                     search_method = PathSearchMethods.LESS_THAN
@@ -264,23 +264,23 @@ class Parser:
                     element_id = ""
                     continue
 
-                elif "!" == c:
+                elif c == "!":
                     # Invert the search
                     search_inverted = True
                     continue
 
             elif (
                 not escape_next
-                and 0 < demarc_count
-                and "[" == demarc_stack[-1]
-                and "]" == c
+                and demarc_count > 0
+                and demarc_stack[-1] == "["
+                and c == "]"
             ):
                 # Store the INDEX or SEARCH parameters
                 if element_type is PathSegmentTypes.INDEX:
                     path_elements.append((element_type, int(element_id)))
                 elif element_type is PathSegmentTypes.SEARCH:
                     # Undemarcate the search term, if it is so
-                    if 0 < len(element_id) and element_id[0] in ["'", '"']:
+                    if element_id and element_id[0] in ["'", '"']:
                         leading_mark = element_id[0]
                         if element_id[-1] == leading_mark:
                             element_id = element_id[1:-1]
@@ -300,9 +300,9 @@ class Parser:
                 demarc_count -= 1
                 continue
 
-            elif not escape_next and 1 > demarc_count and "." == c:
+            elif not escape_next and demarc_count < 1 and c == ".":
                 # Do not store empty elements
-                if 0 < len(element_id):
+                if element_id:
                     path_elements.append((element_type, element_id))
                     element_id = ""
 
@@ -314,14 +314,14 @@ class Parser:
             escape_next = False
 
         # Check for mismatched demarcations
-        if 0 < demarc_count:
+        if demarc_count > 0:
             raise YAMLPathException(
                 "YAML path contains at least one unmatched demarcation mark",
                 yaml_path
             )
 
         # Store the final element_id
-        if 0 < len(element_id):
+        if element_id:
             path_elements.append((element_type, element_id))
 
         self.log.debug(

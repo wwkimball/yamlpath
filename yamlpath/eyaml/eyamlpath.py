@@ -51,29 +51,31 @@ class EYAMLPath(YAMLPath):
 
         if isinstance(data, list):
             path += "["
-            for i, e in enumerate(data):
-                if hasattr(e, "anchor"):
-                    tmp_path = path + "&" + e.anchor.value + "]"
+            for i, ele in enumerate(data):
+                if hasattr(ele, "anchor"):
+                    tmp_path = path + "&" + ele.anchor.value + "]"
                 else:
                     tmp_path = path + str(i) + "]"
 
-                if self.is_eyaml_value(e):
+                if self.is_eyaml_value(ele):
                     yield tmp_path
 
-                for p in self.find_eyaml_paths(e, tmp_path):
-                    yield p
+                for eyp in self.find_eyaml_paths(ele, tmp_path):
+                    if eyp is not None:
+                        yield eyp
 
         elif isinstance(data, dict):
-            if 0 < len(path):
+            if path:
                 path += "."
 
-            for k, v in data.non_merged_items():
+            for k, val in data.non_merged_items():
                 tmp_path = path + str(k)
-                if self.is_eyaml_value(v):
+                if self.is_eyaml_value(val):
                     yield tmp_path
 
-                for p in self.find_eyaml_paths(v, tmp_path):
-                    yield p
+                for eyp in self.find_eyaml_paths(val, tmp_path):
+                    if eyp is not None:
+                        yield eyp
 
         else:
             yield None
@@ -124,7 +126,7 @@ class EYAMLPath(YAMLPath):
         except CalledProcessError as ex:
             self.log.error(
                 "The {} command cannot be run due to exit code:  {}"
-                    .format(self.eyaml, ex.returncode)
+                .format(self.eyaml, ex.returncode)
                 , 1
             )
 
@@ -132,11 +134,11 @@ class EYAMLPath(YAMLPath):
         self.log.debug(
             "EYAMLPath::decrypt_eyaml:  Decrypted result:  {}".format(retval)
         )
-        if 1 > len(retval) or retval == cleanval:
+        if not retval or retval == cleanval:
             self.log.warning(
                 "Unable to decrypt value!  Please verify you are using the"
                 + " correct old EYAML keys and the value is not corrupt:\n{}"
-                    .format(cleanval)
+                .format(cleanval)
             )
             retval = None
 
@@ -183,9 +185,9 @@ class EYAMLPath(YAMLPath):
         try:
             retval = (
                 run(cmd, stdout=PIPE, input=bval, check=True)
-                    .stdout
-                    .decode('ascii')
-                    .rstrip()
+                .stdout
+                .decode('ascii')
+                .rstrip()
             )
         except FileNotFoundError:
             self.log.error(
@@ -194,15 +196,15 @@ class EYAMLPath(YAMLPath):
         except CalledProcessError as ex:
             self.log.error(
                 "The {} command cannot be run due to exit code:  {}"
-                    .format(self.eyaml, ex.returncode)
+                .format(self.eyaml, ex.returncode)
                 , 1
             )
 
-        if 1 > len(retval):
+        if not retval:
             self.log.error(
                 ("The {} command was unable to encrypt your value.  Please"
-                    + " verify this process can run that command and read your"
-                    + " EYAML keys.").format(self.eyaml)
+                 + " verify this process can run that command and read your"
+                 + " EYAML keys.").format(self.eyaml)
                 , 1
             )
 
@@ -312,21 +314,21 @@ class EYAMLPath(YAMLPath):
         Raises:  N/A
         """
         binary = self.eyaml
-        if binary is None or 1 > len(binary):
+        if binary is None or not binary:
             return False
 
-        if 0 > binary.find(sep):
+        if binary.find(sep) < 0:
             self.log.debug(
                 "EYAMLPath::can_run_eyaml:  Finding the real path for:  {}"
                 .format(binary)
             )
             binary = find_executable(binary)
-            if 1 > len(binary):
+            if not binary:
                 return False
             self.eyaml = binary
 
         self.log.debug(
             ("EYAMLPath::can_run_eyaml:  Checking whether eyaml is executable"
-            + " at:  {}").format(binary)
+             + " at:  {}").format(binary)
         )
         return access(binary, X_OK)

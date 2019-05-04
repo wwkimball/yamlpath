@@ -76,7 +76,7 @@ class YAMLPath:
                     )
                     yield node
 
-            if 1 > matched_nodes:
+            if matched_nodes < 1:
                 raise YAMLPathException(
                     "Required YAML Path does not match any nodes",
                     self.parser.str_path(yaml_path),
@@ -120,7 +120,7 @@ class YAMLPath:
         if mustexist:
             self.log.debug(
                 "YAMLPath::set_value:  Seeking required node at {}."
-                    .format(self.parser.str_path(path))
+                .format(self.parser.str_path(path))
             )
             found_nodes = 0
             for node in self._get_nodes(data, path):
@@ -130,7 +130,7 @@ class YAMLPath:
                 found_nodes += 1
                 self._update_value(data, node, value, value_format)
 
-            if 1 > found_nodes:
+            if found_nodes < 1:
                 raise YAMLPathException(
                     "No nodes matched required YAML Path",
                     self.parser.str_path(path)
@@ -138,7 +138,7 @@ class YAMLPath:
         else:
             self.log.debug(
                 "YAMLPath::set_value:  Seeking optional node at {}."
-                    .format(self.parser.str_path(path))
+                .format(self.parser.str_path(path))
             )
             for node in self._ensure_path(data, path, value):
                 if node is None:
@@ -160,12 +160,12 @@ class YAMLPath:
         if data is None or yaml_path is None:
             return None
 
-        if 0 < len(yaml_path):
+        if yaml_path:
             (typ, ele) = yaml_path.popleft()
 
             self.log.debug(
                 ("YAMLPath::_get_nodes:  Peeking at element {} of type {} in"
-                    + " data of type {}:"
+                 + " data of type {}:"
                 ).format(ele, typ, type(data))
             )
             self.log.debug(data)
@@ -185,7 +185,7 @@ class YAMLPath:
             elif PathSegmentTypes.INDEX == typ:
                 self.log.debug(
                     "YAMLPath::_get_nodes:  Drilling into the present list"
-                     + " INDEX..."
+                    + " INDEX..."
                 )
                 if ele < len(data):
                     for node in self._get_nodes(data[ele], yaml_path):
@@ -199,9 +199,9 @@ class YAMLPath:
                         "YAMLPath::_get_nodes:  Searching for an ANCHOR in"
                         + " a list..."
                     )
-                    for e in data:
-                        if hasattr(e, "anchor") and ele == e.anchor.value:
-                            for node in self._get_nodes(e, yaml_path):
+                    for item in data:
+                        if hasattr(item, "anchor") and ele == item.anchor.value:
+                            for node in self._get_nodes(item, yaml_path):
                                 if node is not None:
                                     yield node
                 elif isinstance(data, dict):
@@ -209,9 +209,9 @@ class YAMLPath:
                         "YAMLPath::_get_nodes:  Searching for an ANCHOR in a"
                         + " dictionary..."
                     )
-                    for _,v in data:
-                        if hasattr(v, "anchor") and ele == v.anchor.value:
-                            for node in self._get_nodes(v, yaml_path):
+                    for _, val in data:
+                        if hasattr(val, "anchor") and ele == val.anchor.value:
+                            for node in self._get_nodes(val, yaml_path):
                                 if node is not None:
                                     yield node
                 return None
@@ -233,7 +233,7 @@ class YAMLPath:
 
         self.log.debug(
             "YAMLPath::_get_nodes:  Finally returning data of type {}:"
-                .format(type(data))
+            .format(type(data))
         )
         self.log.debug(data)
         self.log.debug("")
@@ -271,11 +271,11 @@ class YAMLPath:
                         enumerate(data.keys()) if key is reference_node
                 ]:
                     data.insert(i, replacement_node, data.pop(k))
-                for k, v in data.non_merged_items():
-                    if v is reference_node:
+                for k, val in data.non_merged_items():
+                    if val is reference_node:
                         data[k] = replacement_node
                     else:
-                        update_refs(v, reference_node, replacement_node)
+                        update_refs(val, reference_node, replacement_node)
             elif isinstance(data, list):
                 for idx, item in enumerate(data):
                     if item is reference_node:
@@ -381,13 +381,13 @@ class YAMLPath:
 
         if reftyp == PathSegmentTypes.ANCHOR:
             if isinstance(data, list):
-                for e in data:
-                    if hasattr(e, "anchor") and refele == e.anchor.value:
-                        yield e
+                for ele in data:
+                    if hasattr(ele, "anchor") and refele == ele.anchor.value:
+                        yield ele
             elif isinstance(data, dict):
-                for _,v in data:
-                    if hasattr(v, "anchor") and refele == v.anchor.value:
-                        yield v
+                for _, val in data:
+                    if hasattr(val, "anchor") and refele == val.anchor.value:
+                        yield val
             else:
                 return None
         elif reftyp == PathSegmentTypes.INDEX:
@@ -430,7 +430,7 @@ class YAMLPath:
 
         Raises:  N/A
         """
-        if yaml_path is None or 1 > len(yaml_path):
+        if yaml_path is None or not yaml_path:
             return value
 
         (typ, _) = yaml_path[0]
@@ -465,9 +465,13 @@ class YAMLPath:
         if anchor is not None and value is not None:
             self.log.debug(
                 ("YAMLPath::_append_list_element:  Ensuring {}{} is a"
-                    + " PlainScalarString."
+                 + " PlainScalarString."
                 ).format(type(value), value)
             )
+
+            # pylint whines about this "unidiomatic" type check but it is
+            # absolutely necessary to check whether the value is str and NOT
+            # a subclass of str.
             if type(value) is str:
                 value = PlainScalarString(value)
             value.yaml_set_anchor(anchor)
@@ -506,7 +510,7 @@ class YAMLPath:
         def search_matches(method, needle, haystack):
             self.log.debug(
                 ("YAMLPath::_search::search_matches:  Searching for {}"
-                    + " using {} against:"
+                 + " using {} against:"
                 ).format(needle, method)
             )
             self.log.debug(haystack)
@@ -524,12 +528,12 @@ class YAMLPath:
                 if isinstance(haystack, int):
                     try:
                         matches = haystack > int(needle)
-                    except:
+                    except ValueError:
                         matches = False
                 elif isinstance(haystack, float):
                     try:
                         matches = haystack > float(needle)
-                    except:
+                    except ValueError:
                         matches = False
                 else:
                     matches = haystack > needle
@@ -537,12 +541,12 @@ class YAMLPath:
                 if isinstance(haystack, int):
                     try:
                         matches = haystack < int(needle)
-                    except:
+                    except ValueError:
                         matches = False
                 elif isinstance(haystack, float):
                     try:
                         matches = haystack < float(needle)
-                    except:
+                    except ValueError:
                         matches = False
                 else:
                     matches = haystack < needle
@@ -550,12 +554,12 @@ class YAMLPath:
                 if isinstance(haystack, int):
                     try:
                         matches = haystack >= int(needle)
-                    except:
+                    except ValueError:
                         matches = False
                 elif isinstance(haystack, float):
                     try:
                         matches = haystack >= float(needle)
-                    except:
+                    except ValueError:
                         matches = False
                 else:
                     matches = haystack >= needle
@@ -563,12 +567,12 @@ class YAMLPath:
                 if isinstance(haystack, int):
                     try:
                         matches = haystack <= int(needle)
-                    except:
+                    except ValueError:
                         matches = False
                 elif isinstance(haystack, float):
                     try:
                         matches = haystack <= float(needle)
-                    except:
+                    except ValueError:
                         matches = False
                 else:
                     matches = haystack <= needle
@@ -579,11 +583,11 @@ class YAMLPath:
 
         invert, method, attr, term = terms
         if isinstance(data, list):
-            for e in data:
-                if isinstance(e, dict) and attr in e:
-                    matches = search_matches(method, term, e[attr])
+            for ele in data:
+                if isinstance(ele, dict) and attr in ele:
+                    matches = search_matches(method, term, ele[attr])
                     if (matches and not invert) or (invert and not matches):
-                        yield e
+                        yield ele
 
         elif isinstance(data, dict):
             if attr in data:
@@ -624,12 +628,12 @@ class YAMLPath:
             )
             return data
 
-        if 0 < len(path):
+        if path:
             (curtyp, curele) = curref = path.popleft()
 
             self.log.debug(
                 ("YAMLPath::_ensure_path:  Seeking element <{}>{} in data of"
-                    + " type {}:"
+                 + " type {}:"
                 ).format(curtyp, curele, type(data))
             )
             self.log.debug(data)
@@ -644,21 +648,21 @@ class YAMLPath:
                 matched_nodes += 1
                 self.log.debug(
                     ("YAMLPath::_ensure_path:  Found element {} in the data;"
-                        + " recursing into it..."
+                     + " recursing into it..."
                     ).format(curele)
                 )
-                for node in self._ensure_path(node, path.copy(), value):
-                    if node is not None:
-                        yield node
+                for epn in self._ensure_path(node, path.copy(), value):
+                    if epn is not None:
+                        yield epn
 
             if (
-                1 > matched_nodes
+                matched_nodes < 1
                 and curtyp is not PathSegmentTypes.SEARCH
             ):
                 # Add the missing element
                 self.log.debug(
                     ("YAMLPath::_ensure_path:  Element {} is unknown in the"
-                        + " data!"
+                     + " data!"
                     ).format(curele)
                 )
                 if isinstance(data, list):
@@ -695,7 +699,7 @@ class YAMLPath:
                         throw_element = self.parser.str_path(throw_element)
                         raise YAMLPathException(
                             "Cannot add {} subreference to lists"
-                                .format(str(curtyp))
+                            .format(str(curtyp))
                             , restore_path
                             , throw_element
                         )
@@ -744,7 +748,7 @@ class YAMLPath:
         else:
             self.log.debug(
                 ("YAMLPath::_ensure_path:  Finally returning data of type"
-                    + " {}:"
+                 + " {}:"
                 ).format(type(data))
             )
             self.log.debug(data)

@@ -111,18 +111,18 @@ class ConsolePrinter:
         """
         if self.args.debug and not self.args.quiet:
             if isinstance(message, list):
-                for i, e in enumerate(message):
+                for i, ele in enumerate(message):
                     attr = ""
-                    if hasattr(e, "anchor") and e.anchor.value is not None:
-                        attr = "; &" + e.anchor.value
-                    eattr = (str(e) + attr).replace("\n", "\nDEBUG:  ")
+                    if hasattr(ele, "anchor") and ele.anchor.value is not None:
+                        attr = "; &" + ele.anchor.value
+                    eattr = (str(ele) + attr).replace("\n", "\nDEBUG:  ")
                     print("DEBUG:  [" + str(i) + "]=" + str(eattr))
             elif isinstance(message, dict):
-                for k, v in message.items():
+                for k, val in message.items():
                     attr = ""
-                    if hasattr(v, "anchor") and v.anchor.value is not None:
-                        attr = "; &" + v.anchor.value
-                    vattr = (str(v) + attr).replace("\n", "\nDEBUG:  ")
+                    if hasattr(val, "anchor") and val.anchor.value is not None:
+                        attr = "; &" + val.anchor.value
+                    vattr = (str(val) + attr).replace("\n", "\nDEBUG:  ")
                     print("DEBUG:  [" + str(k) + "]=>" + str(vattr))
             else:
                 attr = ""
