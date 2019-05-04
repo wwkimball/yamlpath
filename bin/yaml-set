@@ -37,7 +37,7 @@ from yamlpath.wrappers import ConsolePrinter
 MY_VERSION = "1.0.0"
 
 def processcli():
-    # Process command-line arguments
+    """Process command-line arguments."""
     parser = argparse.ArgumentParser(
         description="Changes one or more values in a YAML file at a specified\
             YAML Path.  Matched values can be checked before they are replaced\
@@ -113,6 +113,7 @@ def processcli():
     return parser.parse_args()
 
 def validateargs(args, log):
+    """Validate command-line arguments."""
     # Enforce sanity
     # * At least one of --value, --file, --stdin, or --random must be set
     if not (args.value
@@ -160,10 +161,11 @@ def validateargs(args, log):
         log.error("Both private and public EYAML keys must be set.", 1)
 
 def main():
+    """Main code."""
     args = processcli()
     log = ConsolePrinter(args)
     validateargs(args, log)
-    yh = EYAMLPath(
+    processor = EYAMLPath(
         log,
         eyaml=args.eyaml,
         publickey=args.publickey,
@@ -206,11 +208,11 @@ def main():
         )
 
     # Load the present value at the specified YAML Path
-    change_path = yh.parser.str_path(args.change)
+    change_path = processor.parser.str_path(args.change)
     change_nodes = []
 
     try:
-        for node in yh.get_eyaml_values(
+        for node in processor.get_eyaml_values(
             yaml_data
             , change_path
             , mustexist=args.mustexist
@@ -221,9 +223,13 @@ def main():
 
             log.debug("Got {} from {}.".format(node, change_path))
 
-            # Do nothing if the value will not be changing, unless this is an EYAML
-            # recrypt attempt (same value, encrypted or even re-encrypted).
-            if new_value is not node and new_value == node and not args.eyamlcrypt:
+            # Do nothing if the value will not be changing, unless this is an
+            # EYAML recrypt attempt (same value, encrypted or even
+            # re-encrypted).
+            if (new_value is not node
+                and new_value == node
+                and not args.eyamlcrypt
+            ):
                 log.warning("New and old values are identical.")
                 continue
 
@@ -231,12 +237,12 @@ def main():
     except YAMLPathException as ex:
         log.error(ex, 1)
 
-    log.debug("Collected nodes:")
-    log.debug(change_nodes)
-
-    if 1 > len(change_nodes):
+    if not change_nodes:
         log.warning("Nothing to do!")
         exit(0)
+
+    log.debug("Collected nodes:")
+    log.debug(change_nodes)
 
     # Check the value(s), if desired
     for node in change_nodes:
@@ -248,7 +254,7 @@ def main():
     if args.saveto:
         # Only one can be saved; otherwise it is impossible to meaningfully convey
         # to the end-user from exactly which other YAML node each saved value came.
-        if 1 < len(change_nodes):
+        if len(change_nodes) > 1:
             log.error(
                 "It is impossible to meaningly save more than one matched value."
                     + "  Please omit --saveto or set --change to affect exactly one"
@@ -259,7 +265,7 @@ def main():
         log.verbose("Saving the old value to {}.".format(args.saveto))
         try:
             log.verbose("Writing a single value...")
-            yh.set_value(yaml_data, args.saveto, yh.clone_node(change_nodes[0]))
+            processor.set_value(yaml_data, args.saveto, processor.clone_node(change_nodes[0]))
             log.verbose("DONE writing a single value...")
         except YAMLPathException as ex:
             log.error(ex, 1)
@@ -272,14 +278,14 @@ def main():
         if format_type in [YAMLValueFormats.FOLDED, YAMLValueFormats.LITERAL]:
             output_type = "block"
         try:
-            yh.set_eyaml_value(
+            processor.set_eyaml_value(
                 yaml_data, change_path, new_value, output_type, False
             )
         except YAMLPathException as ex:
             log.error(ex, 1)
     else:
         try:
-            yh.set_value(yaml_data, change_path, new_value, False, args.format)
+            processor.set_value(yaml_data, change_path, new_value, False, args.format)
         except YAMLPathException as ex:
             log.error(ex, 1)
 

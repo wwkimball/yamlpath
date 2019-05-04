@@ -31,7 +31,7 @@ from yamlpath.wrappers import ConsolePrinter
 MY_VERSION = "1.0.0"
 
 def processcli():
-    # Process command-line arguments
+    """Process command-line arguments."""
     parser = argparse.ArgumentParser(
         description="Rotates the encryption keys used for all EYAML values"
             + " within a set of YAML files, decrypting with old keys and"
@@ -74,6 +74,7 @@ def processcli():
     return parser.parse_args()
 
 def validateargs(args, log):
+    """Validate command-line arguments."""
     # Enforce sanity
     # * The new and old EYAML keys must be different
     if ((args.newprivatekey == args.oldprivatekey)
@@ -81,23 +82,23 @@ def validateargs(args, log):
         log.error("The new and old EYAML keys must be different.", 1)
 
     # * All EYAML certs must exist and be readable to the present user
-    for f in [args.newprivatekey,
-              args.newpublickey,
-              args.oldprivatekey,
-              args.oldpublickey
-    ]:
-        if not (isfile(f) and access(f, R_OK)):
+    for check_file in [args.newprivatekey,
+                       args.newpublickey,
+                       args.oldprivatekey,
+                       args.oldpublickey]:
+        if not (isfile(check_file) and access(check_file, R_OK)):
             log.error(
                 "EYAML key is not a readable file:  " + args.privatekey,
                 1
             )
 
 def main():
+    """Main code."""
     # Process any command-line arguments
     args = processcli()
     log = ConsolePrinter(args)
     validateargs(args, log)
-    yh = EYAMLPath(log, eyaml=args.eyaml)
+    processor = EYAMLPath(log, eyaml=args.eyaml)
 
     # Prep the YAML parser
     yaml = YAML()
@@ -119,28 +120,28 @@ def main():
             continue
 
         # Don't bother with the file change update when there's only one input file
-        if 1 < in_file_count:
+        if in_file_count > 1:
             log.info("Processing " + yaml_file + "...")
 
         # Try to open the file
         try:
-            with open(yaml_file, 'r') as f:
-                yaml_data = yaml.load(f)
-        except ParserError as e:
+            with open(yaml_file, 'r') as fhnd:
+                yaml_data = yaml.load(fhnd)
+        except ParserError as ex:
             log.error(
                 "YAML parsing error {}:  {}"
-                    .format(str(e.problem_mark).lstrip(), e.problem)
+                    .format(str(ex.problem_mark).lstrip(), ex.problem)
             )
             continue
 
         # Process all EYAML values
-        for yaml_path in yh.find_eyaml_paths(yaml_data):
+        for yaml_path in processor.find_eyaml_paths(yaml_data):
             if yaml_path is None:
                 continue
 
             # Use ::get_nodes() instead of ::get_eyaml_values() here in order to
             # ignore values that have already been decrypted via their Anchors.
-            for node in yh.get_nodes(yaml_data, yaml_path):
+            for node in processor.get_nodes(yaml_data, yaml_path):
                 if node is None:
                     continue
 
@@ -153,11 +154,11 @@ def main():
                         seen_anchors.append(anchor_name)
 
                 log.verbose(
-                    "Decrypting value(s) at {}.".format(yh.parser.str_path(yaml_path))
+                    "Decrypting value(s) at {}.".format(processor.parser.str_path(yaml_path))
                 )
-                yh.publickey = args.oldpublickey
-                yh.privatekey = args.oldprivatekey
-                txtval = yh.decrypt_eyaml(node)
+                processor.publickey = args.oldpublickey
+                processor.privatekey = args.oldprivatekey
+                txtval = processor.decrypt_eyaml(node)
                 if txtval is None:
                     # A warning about this failure has already been printed
                     continue
@@ -169,9 +170,9 @@ def main():
                     output = "string"
 
                 # Re-encrypt the value with new EYAML keys
-                yh.publickey = args.newpublickey
-                yh.privatekey = args.newprivatekey
-                yh.set_eyaml_value(yaml_data, yaml_path, txtval, output)
+                processor.publickey = args.newpublickey
+                processor.privatekey = args.newprivatekey
+                processor.set_eyaml_value(yaml_data, yaml_path, txtval, output)
                 file_changed = True
 
         # Save the changes

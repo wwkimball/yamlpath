@@ -31,7 +31,7 @@ from yamlpath.wrappers import ConsolePrinter
 MY_VERSION = "1.0.0"
 
 def processcli():
-    # Process command-line arguments
+    """Process command-line arguments."""
     parser = argparse.ArgumentParser(
         description="Gets one or more values from a YAML file at a specified\
             YAML Path.  Can employ EYAML to decrypt values.",
@@ -70,6 +70,7 @@ def processcli():
     return parser.parse_args()
 
 def validateargs(args, log):
+    """Validate command-line arguments."""
     # Enforce sanity
     # * When set, --privatekey must be a readable file
     if args.privatekey and not (
@@ -97,11 +98,12 @@ def validateargs(args, log):
         log.error("Both private and public EYAML keys must be set.", 1)
 
 def main():
+    """Main code."""
     args = processcli()
     log = ConsolePrinter(args)
     validateargs(args, log)
     parser = Parser(log)
-    yh = EYAMLPath(
+    processor = EYAMLPath(
         log,
         eyaml=args.eyaml,
         publickey=args.publickey,
@@ -120,10 +122,10 @@ def main():
     try:
         with open(args.yaml_file, 'r') as f:
             yaml_data = yaml.load(f)
-    except ParserError as e:
+    except ParserError as ex:
         log.error(
             "YAML parsing error {}:  {}"
-                .format(str(e.problem_mark).lstrip(), e.problem)
+            .format(str(ex.problem_mark).lstrip(), ex.problem)
             , 1
         )
 
@@ -132,7 +134,7 @@ def main():
     discovered_nodes = []
 
     try:
-        for node in yh.get_eyaml_values(yaml_data, yaml_path):
+        for node in processor.get_eyaml_values(yaml_data, yaml_path):
             if node is not None:
                 log.debug("Got {} from {}.".format(node, yaml_path))
                 discovered_nodes.append(node)
@@ -143,9 +145,9 @@ def main():
         log.warning("No matches!")
         exit(3)
 
-    pp = pprint.PrettyPrinter(indent=4)
+    pprinter = pprint.PrettyPrinter(indent=4)
     for node in discovered_nodes:
-        pp.pprint(node)
+        pprinter.pprint(node)
 
 if __name__ == "__main__":
     main()
