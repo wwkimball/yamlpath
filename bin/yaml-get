@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 ################################################################################
-# Gets one or more values from a YAML file at a specified YAML Path.  Can employ
-# EYAML to decrypt values.
+# Retrieves one or more values from a YAML file at a specified YAML Path.
+# Output is printed to STDOUT, one line per match.  When a result is a complex
+# data-type (Array or Hash), a Python-compatible dump is produced to represent
+# the entire complex result.  EYAML can be employed to decrypt the values.
 #
 # Requirements:
 # 1. Python >= 3.6
@@ -36,7 +38,7 @@ def processcli():
         description="Gets one or more values from a YAML file at a specified\
             YAML Path.  Can employ EYAML to decrypt values.",
         epilog="For more information about YAML Paths, please visit\
-            https://github.com/wwkimball/yaml-tools#yaml-path."
+            https://github.com/wwkimball/yamlpath."
     )
     parser.add_argument("-V", "--version", action="version",
                         version="%(prog)s " + MY_VERSION)

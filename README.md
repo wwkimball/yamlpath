@@ -1,33 +1,12 @@
-# YAML Tools
-
-This is a set of generally-useful [YAML](https://yaml.org/) and
-[EYAML](https://github.com/voxpupuli/hiera-eyaml) value editing tools.  Today,
-it is based on [ruamel.yaml](https://bitbucket.org/ruamel/yaml/overview) for
-[Python](https://www.python.org/) 3.  At the time of this writing, ruamel.yaml
-is unstable, presently undergoing a refactoring and feature creation effort.
-As it is a moving target, this project is necessarily bound to limited ranges
-of compatible versions between it and the ruamel.yaml project.  Futher, this
-project comes with fixes to some notable bugs in ruamel.yaml.  As such, you
-should note which specific versions of ruamel.yaml which this code is
-compatible with.  Failing to do so will probably lead to some incompatbility.
-
-## Compatible ruamel.yaml Versions
-
-This list will not be aggressively updated but rather, from time to time as
-in/compatibility reports come in from users of this project.  At present, known
-compatible versions include:
-
-YAML Tools Version | ruamel.yaml Min | Max
--------------------|-----------------|---------
-1.0.x              | 0.15.92         | 0.15.95
-
-You may find other compatible versions outside these ranges.
-
-## YAML Path
+# YAML Path
 
 This project presents and utilizes YAML Paths, which are a human-friendly means
-of expressing a path through the structure of YAML data to a specific key or a
-set of keys matching some search criteria.  For example:
+of identifying one or more nodes within a [YAML](https://yaml.org/) or
+[EYAML](https://github.com/voxpupuli/hiera-eyaml) data structure.  The libraries
+(modules) and several sample command-line tool implementations are provided
+(discussed later).
+
+To illustrate some YAML Path capabilities, review this sample YAML data:
 
 ```yaml
 ---
@@ -59,7 +38,7 @@ sensitive::accounts:
           access_level: 500
 ```
 
-Contains these sample YAML Paths:
+This YAML data sample contains these single-result YAML Paths:
 
 1. `aliases[&commonUsername]`
 2. `aliases[&commonPassword]`
@@ -76,7 +55,12 @@ Contains these sample YAML Paths:
 13. `sensitive::accounts.application.db.users[1].pass`
 14. `sensitive::accounts.application.db.users[1].access_level`
 
-### Some Notable YAML Path Notations
+You could also access some of these sample nodes using search expressions, like:
+
+1. `sensitive::accounts.application.db.users[name=admin].access_level`
+2. `sensitive::accounts.application.db.users[access_level<500].name`
+
+## Supported YAML Path Forms
 
 YAML Path understands these forms:
 
@@ -99,32 +83,68 @@ YAML Path understands these forms:
   * Multi-level matching: `sensitive::accounts.application.db.users[name%admin].pass[encrypted!^ENC\[]`
 * Complex combinations: `[2].some::complex.structure[with!=""].any[&valid].[yaml=data]`
 
+## Based on ruamel.yaml and Python 3
+
+In order to support the best available YAML editing capability (so called,
+round-trip editing with support for comment preservation), this project is based
+on [ruamel.yaml](https://bitbucket.org/ruamel/yaml/overview) for
+[Python](https://www.python.org/) 3.
+
+### Compatible ruamel.yaml Versions
+
+At the time of this writing, ruamel.yaml is unstable, presently undergoing a
+refactoring and feature creation effort.  As it is a moving target, this project
+is necessarily bound to limited ranges of compatible versions between it and the
+ruamel.yaml project.  Futher, this project comes with fixes to some notable bugs
+in ruamel.yaml.  As such, you should note which specific versions of ruamel.yaml
+which this code is compatible with.  Failing to do so will probably lead to some
+incompatbility.
+
+This list will not be aggressively updated but rather, from time to time as
+in/compatibility reports come in from users of this project.  At present, known
+and tested compatible versions include:
+
+YAML Path Version | ruamel.yaml Min | Max
+------------------|-----------------|---------
+1.0.x             | 0.15.92         | 0.15.95
+
+You may find other compatible versions outside these ranges.  If you do, please
+drop a note so this table can be updated!
+
 ## The Files of This Project
 
 This repository contains:
 
 1. Generally-useful Python library files.  These contain the reusable core of
-   this project's editing capabilities.
+   this project's YAML Path capabilities.
 2. Some implementations of those libraries, exhibiting their capabilities and
-   simple APIs.
+   simple-to-use APIs.
 3. Various support, documentation, and build files.
 
-More specifically, the most interesting files include:
+### Libraries
 
-* yamlhelpers.py -- A collection of generally-useful YAML methods that enable
-  setting and retrieving values via YAML Paths (my own notation for representing
-  otherwise complex YAML nodes in human-readable form).
-* eyamlhelpers.py -- A collection of generally-useful EYAML methods that
-  simplify interacting with the eyaml command to read and write encrypted YAML
-  values.
+More specifically, the most interesting library files include:
 
-I have used these libraries to write two implementations which I needed for my
-own projects and which you may also find use for:
+* [parser.py](yamlpath/parser.py) The core YAML Path parser logic.
+* [yamlpath.py](yamlpath/yamlpath.py) -- A collection of generally-useful YAML
+  methods that enable easily setting and retrieving values via YAML Paths.
+* [eyamlpath.py](yamlpath/eyaml/eyamlpath.py) -- Extends the YAMLPath class to
+  support EYAML data encryption and decryption.
 
-* rotate-eyaml-keys.py -- Rotates the encryption keys used for all EYAML values
-  within a set of YAML files, decrypting with old keys and re-encrypting using
-  replacement keys.
-* yaml-change-value.py -- Changes one or more values in a YAML file at a
+### Command-Line Tools
+
+This project also provides some command-line tool implementations which utilize
+these libraries:
+
+* [eyaml-rotate-keys](bin/eyaml-rotate-keys) -- Rotates the encryption keys used
+  for all EYAML values within a set of YAML files, decrypting with old keys and
+  re-encrypting using replacement keys.
+* [yaml-get](bin/yaml-get) -- Retrieves one or more values from a YAML file at a
+  specified YAML Path.  Output is printed to STDOUT, one line per match.  When
+  a result is a complex data-type (Array or Hash), a Python-compatible dump is
+  produced to represent the entire complex result.  EYAML can be employed to
+  decrypt the values.
+* [yaml-set](bin/yaml-set) -- Changes one or more values in a YAML file at a
   specified YAML Path.  Matched values can be checked before they are replaced
   to mitigate accidental change. When matching singular results, the value can
   be archived to another key before it is replaced.  Further, EYAML can be
@@ -133,21 +153,22 @@ own projects and which you may also find use for:
 
 ## Basic Usage
 
-The files of this project can be used either as command-line scripts to take
+The files of this project can be used either as command-line tools to take
 advantage of the existing example implementations or as libraries to supplement
 your own implementations.
 
 ### Basic Usage:  Command-Line Tools
 
 The command-line implementations (above) are self-documented.  Simply pass
-`--help` to them in order to learn their capabilities.  Here are some simple examples.
+`--help` to them in order to learn their capabilities.  Here are some simple
+examples.
 
 #### Rotate Your EYAML Keys
 
 If the eyaml command is already on your PATH:
 
 ```shell
-rotate-eyaml-keys.py \
+eyaml-rotate-keys \
   --oldprivatekey=~/old-keys/private_key.pkcs7.pem \
   --oldpublickey=~/old-keys/public_key.pkcs7.pem \
   --newprivatekey=~/new-keys/private_key.pkcs7.pem \
@@ -158,12 +179,20 @@ rotate-eyaml-keys.py \
 You could combine this with `find` and `xargs` if your E/YAML file are
 dispersed through a directory hierarchy.
 
+#### Get a YAML Value
+
+At its simplest:
+
+```shell
+yaml-get --query=see.documentation.above.for.many.samples my_yaml_file.yaml
+```
+
 #### Change a YAML Value
 
 For a no-frills change to a YAML file with deeply nested Hash structures:
 
 ```shell
-yaml-change-value.py \
+yaml-set \
   --change=see.documentation.above.for.many.samples \
   --value="New Value" \
   my_yaml_file.yaml
@@ -172,7 +201,7 @@ yaml-change-value.py \
 Save a backup copy of the original YAML_FILE (with a .bak file-extension):
 
 ```shell
-yaml-change-value.py \
+yaml-set \
   --change=see.documentation.above.for.many.samples \
   --value="New Value" \
   --backup \
@@ -183,7 +212,7 @@ To rotate a password, preserving the old password perhaps so your automation can
 apply the new password to your application(s):
 
 ```shell
-yaml-change-value.py \
+yaml-set \
   --change=the.new.password \
   --saveto=the.old.password \
   --value="New Password" \
@@ -191,10 +220,11 @@ yaml-change-value.py \
   my_yaml_file.yaml
 ```
 
-To check the old password before rotating it, say to be sure you're changing out the right one:
+To check the old password before rotating it, say to be sure you're changing out
+the right one:
 
 ```shell
-yaml-change-value.py \
+yaml-set \
   --change=the.new.password \
   --saveto=the.old.password \
   --check="Old Password" \
@@ -210,7 +240,7 @@ correctly.  In such cases, you can add `--mustexist` to disallow creating
 missing `--change` YAML Paths:
 
 ```shell
-yaml-change-value.py \
+yaml-set \
   --change=the.new.password \
   --mustexist \
   --saveto=the.old.password \
@@ -228,7 +258,7 @@ Puppet.  Note that `--format` has several other settings and applies only to
 new values.
 
 ```shell
-yaml-change-value.py \
+yaml-set \
   --change=the.new.password \
   --mustexist \
   --saveto=the.old.password \
@@ -243,7 +273,7 @@ yaml-change-value.py \
 You can even tell EYAML which keys to use:
 
 ```shell
-yaml-change-value.py \
+yaml-set \
   --change=the.new.password \
   --mustexist \
   --saveto=the.old.password \
@@ -272,13 +302,26 @@ credit to the source).  That said, here's a general flow/synopsis.
 #### Initialize ruamel.yaml and These Helpers
 
 Your preferences may differ, but I use this setup for round-trip YAML parsing
-and editing with ruamel.yaml.  Note that `import ruamelpatches` is entirely
-optional; I wrote and use it to block ruamel.yaml's Emitter from injecting
-unnecessary newlines into folded values (it improperly converts every single
-new-line into two for left-flushed multi-line values, at the time of this
-writing).  Since block output EYAML values are left-flushed multi-line folded
-strings, this fix is necessary when using EYAML features (at the time of this
-writing).
+and editing with ruamel.yaml.  I also use `EYAMLPath` in virtually all cases
+rather than `YAMLPath`, but you can do the opposite if you are absolutely
+certain that your data will never be EYAML encrypted.
+
+Note that `import yamlpath.patches` is entirely optional; I wrote and use it to
+block ruamel.yaml's Emitter from injecting unnecessary newlines into folded
+values (it improperly converts every single new-line into two for left-flushed
+multi-line values, at the time of this writing).  Since block output EYAML
+values are left-flushed multi-line folded strings, this fix is necessary when
+using EYAML features.
+
+Note also that these examples use `ConsolePrinter` to handle STDOUT and STDERR
+messaging.  You don't have to.  However, some kind of logger must be passed to
+these libraries so they can write messages _somewhere_.  Your custom message
+handler or logger must provide the same API as ConsolePrinter; review the header
+documentation in [consoleprinter.py](yamlpath/wrappers/consoleprinter.py) for
+details.  Generally speaking, it would be trivial to write your own custom
+wrapper for Python's standard logger facility for your own implementations which
+may need to write to your operating system's central logging facility or even to
+log files.
 
 ```python
 import sys
@@ -286,21 +329,18 @@ import sys
 from ruamel.yaml import YAML
 from ruamel.yaml.parser import ParserError
 
-import ruamelpatches
-from yamlexceptions import YAMLPathException
-from consoleprinter import ConsolePrinter
-from eyamlhelpers import EYAMLHelpers
-from yamlhelpers import YAMLValueFormats
+from yamlpath.exceptions import YAMLPathException
+from yamlpath.eyaml import EYAMLPath
+from yamlpath.enums import YAMLValueFormats
 
-# My examples use ConsolePrinter to handle STDOUT and STDERR messaging.  You
-# don't have to but some kind of logger must be passed to my libraries so they
-# can write messages _somewhere_.  Your custom message handler or logger must
-# provide the same API as ConsolePrinter; review the header documentation in
-# consoleprinter.py for details.
+import yamlpath.patches
+from yamlpath.wrappers import ConsolePrinter
+
+# Process command-line arguments, initialize the output writer and the YAMLPath
+# processor.
 args = processcli()
 log = ConsolePrinter(args)
-validateargs(args, log)
-yh = EYAMLHelpers(log)
+processor = EYAMLPath(log)
 
 # Prep the YAML parser
 yaml = YAML()

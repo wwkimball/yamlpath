@@ -14,7 +14,7 @@ setup(
         "Programming Language :: Python :: 3.6",
         "Topic :: Software Development :: Libraries :: Python Modules",
     ],
-    url="https://github.com/wwkimball/yaml-tools",
+    url="https://github.com/wwkimball/yamlpath",
     author="William W. Kimball, Jr., MBA, MSIS",
     author_email="github-yamlpath@kimballstuff.com",
     license="ISC",
