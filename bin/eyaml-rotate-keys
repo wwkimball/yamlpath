@@ -22,7 +22,8 @@ from ruamel.yaml import YAML
 from ruamel.yaml.parser import ParserError
 from ruamel.yaml.scalarstring import FoldedScalarString
 
-from yamlpath.eyaml.eyamlpath import EYAMLPath
+from yamlpath.exceptions import EYAMLCommandException
+from yamlpath.eyaml import EYAMLPath
 
 import yamlpath.patches
 from yamlpath.wrappers import ConsolePrinter
@@ -75,11 +76,14 @@ def processcli():
 
 def validateargs(args, log):
     """Validate command-line arguments."""
+    has_errors = False
+
     # Enforce sanity
     # * The new and old EYAML keys must be different
     if ((args.newprivatekey == args.oldprivatekey)
             or (args.newpublickey == args.oldpublickey)):
-        log.error("The new and old EYAML keys must be different.", 1)
+        has_errors = True
+        log.error("The new and old EYAML keys must be different.")
 
     # * All EYAML certs must exist and be readable to the present user
     for check_file in [args.newprivatekey,
@@ -87,10 +91,13 @@ def validateargs(args, log):
                        args.oldprivatekey,
                        args.oldpublickey]:
         if not (isfile(check_file) and access(check_file, R_OK)):
+            has_errors = True
             log.error(
-                "EYAML key is not a readable file:  " + args.privatekey,
-                1
+                "EYAML key is not a readable file:  " + check_file
             )
+
+    if has_errors:
+        exit(1)
 
 def main():
     """Main code."""
@@ -119,7 +126,8 @@ def main():
             log.error("Not a file:  " + yaml_file)
             continue
 
-        # Don't bother with the file change update when there's only one input file
+        # Don't bother with the file change update when there's only one input
+        # file.
         if in_file_count > 1:
             log.info("Processing " + yaml_file + "...")
 
@@ -146,7 +154,9 @@ def main():
                     continue
 
                 # Ignore values which are Aliases for those already decrypted
-                anchor_name = node.anchor.value if hasattr(node, "anchor") else None
+                anchor_name = (
+                    node.anchor.value if hasattr(node, "anchor") else None
+                )
                 if anchor_name is not None:
                     if anchor_name in seen_anchors:
                         continue
@@ -158,13 +168,18 @@ def main():
                 )
                 processor.publickey = args.oldpublickey
                 processor.privatekey = args.oldprivatekey
-                txtval = processor.decrypt_eyaml(node)
+
+                try:
+                    txtval = processor.decrypt_eyaml(node)
+                except EYAMLCommandException as ex:
+                    log.critical(ex, 2)
+
                 if txtval is None:
                     # A warning about this failure has already been printed
                     continue
 
-                # Prefer block (folded) values unless the original YAML value was
-                # already a massivly long (string) line.
+                # Prefer block (folded) values unless the original YAML value
+                # was already a massivly long (string) line.
                 output = "block"
                 if not isinstance(node, FoldedScalarString):
                     output = "string"
@@ -172,7 +187,14 @@ def main():
                 # Re-encrypt the value with new EYAML keys
                 processor.publickey = args.newpublickey
                 processor.privatekey = args.newprivatekey
-                processor.set_eyaml_value(yaml_data, yaml_path, txtval, output)
+
+                try:
+                    processor.set_eyaml_value(
+                        yaml_data, yaml_path, txtval, output
+                    )
+                except EYAMLCommandException as ex:
+                    log.critical(ex, 2)
+
                 file_changed = True
 
         # Save the changes
