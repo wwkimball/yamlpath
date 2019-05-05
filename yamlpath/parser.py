@@ -210,6 +210,13 @@ class Parser:
             ):
                 # Hash attribute search
                 if c == "!":
+                    if search_inverted:
+                        raise YAMLPathException(
+                            "Double search inversion is meaningless at {}"
+                            .format(c)
+                            , yaml_path
+                        )
+
                     # Invert the search
                     search_inverted = True
                     continue
@@ -239,7 +246,7 @@ class Parser:
                             )
                     else:
                         raise YAMLPathException(
-                            "Unsupported search operator combination at, {}"
+                            "Unsupported search operator combination at {}"
                             .format(c)
                             , yaml_path
                         )
