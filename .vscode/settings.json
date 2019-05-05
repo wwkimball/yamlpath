@@ -1,5 +1,8 @@
 {
 	"python.testing.pyTestArgs": [
+		"--cov=yamlpath",
+		"--cov-report=term-missing",
+		"--cov-report=html",
 		"tests"
 	],
 	"python.testing.unittestEnabled": false,
