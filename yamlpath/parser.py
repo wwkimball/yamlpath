@@ -82,16 +82,16 @@ class Parser:
            8. dictionary.'with.dotted.subkey'
            9. dictionary."with.dotted.subkey"
           10. dictionary.with\.dottet\.subkey
-          11. complex.structures.with[&many].nested."elements.in.any"[form]
-          12. sensitive::accounts.application.db.users[name=admin].password.encrypted
-          13. sensitive::accounts.application.db.users[name^adm].password.encrypted
-          14. sensitive::accounts.application.db.users[name$in].password.encrypted
-          15. sensitive::accounts.application.db.users[name%dmi].password.encrypted
-          16. sensitive::accounts.application.db.users[name!=admin].password.encrypted
-          17. sensitive::accounts.application.db.users[access_level>3].password.enabled
-          18. sensitive::accounts.application.db.users[access_level<6].password.enabled
-          19. sensitive::accounts.application.db.users[access_level<=5].password.enabled
-          20. sensitive::accounts.application.db.users[access_level<=5].password.[encrypted!^ENC\[]
+          11. sensitive::accounts.application.db.users[name=admin].password.encrypted
+          12. sensitive::accounts.application.db.users[name^adm].password.encrypted
+          13. sensitive::accounts.application.db.users[name$in].password.encrypted
+          14. sensitive::accounts.application.db.users[name%dmi].password.encrypted
+          15. sensitive::accounts.application.db.users[name!=admin].password.encrypted
+          16. sensitive::accounts.application.db.users[access_level>3].password.enabled
+          17. sensitive::accounts.application.db.users[access_level<6].password.enabled
+          18. sensitive::accounts.application.db.users[access_level<=5].password.enabled
+          19. sensitive::accounts.application.db.users[access_level<=5].password.[encrypted!^ENC\[]
+          20. complex.structures.with[many=nested]."elements.in.any"[form]
 
         Positional Parameters:
           1. yaml_path (any) The stringified YAML Path to parse

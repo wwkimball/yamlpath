@@ -58,13 +58,18 @@ class YAMLPath:
              it not already exist in data and mustexist is False;
              default=None
 
-        Returns:  (object) The requested YAML nodes as they are matched
+        Returns:  (object) The requested YAML nodes as they are matched or None
+          when data or yaml_path are None.
 
         Raises:
             YAMLPathException when YAML Path is invalid
         """
         mustexist = kwargs.pop("mustexist", False)
         default_value = kwargs.pop("default_value", None)
+
+        if data is None or yaml_path is None:
+            return None
+
         path = self.parser.parse_path(yaml_path)
         if mustexist:
             matched_nodes = 0
@@ -208,7 +213,7 @@ class YAMLPath:
                         "YAMLPath::_get_nodes:  Searching for an ANCHOR in a"
                         + " dictionary..."
                     )
-                    for _, val in data:
+                    for _, val in data.items():
                         if hasattr(val, "anchor") and ele == val.anchor.value:
                             for node in self._get_nodes(val, yaml_path):
                                 if node is not None:
@@ -386,7 +391,7 @@ class YAMLPath:
                     if hasattr(ele, "anchor") and refele == ele.anchor.value:
                         yield ele
             elif isinstance(data, dict):
-                for _, val in data:
+                for _, val in data.items():
                     if hasattr(val, "anchor") and refele == val.anchor.value:
                         yield val
             else:
@@ -510,15 +515,26 @@ class YAMLPath:
 
         def search_matches(method, needle, haystack):
             self.log.debug(
-                ("YAMLPath::_search::search_matches:  Searching for {}"
-                 + " using {} against:"
-                ).format(needle, method)
+                ("YAMLPath::_search::search_matches:  Searching for {}{}"
+                 + " using {} against {}:"
+                ).format(type(needle), needle, method, type(haystack))
             )
             self.log.debug(haystack)
             matches = None
 
             if method is PathSearchMethods.EQUALS:
-                matches = haystack == needle
+                if isinstance(haystack, int):
+                    try:
+                        matches = haystack == int(needle)
+                    except ValueError:
+                        matches = False
+                elif isinstance(haystack, float):
+                    try:
+                        matches = haystack == float(needle)
+                    except ValueError:
+                        matches = False
+                else:
+                    matches = haystack == needle
             elif method is PathSearchMethods.STARTS_WITH:
                 matches = str(haystack).startswith(needle)
             elif method is PathSearchMethods.ENDS_WITH:

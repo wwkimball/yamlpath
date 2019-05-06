@@ -1,4 +1,4 @@
-# YAML Path
+# YAML Path and Command-Line Tools
 
 This project presents and utilizes YAML Paths, which are a human-friendly means
 of identifying one or more nodes within a [YAML](https://yaml.org/) or
@@ -81,7 +81,7 @@ YAML Path understands these forms:
   * Invert any match with `!`, like: `sensitive::accounts.application.db.users[name!=admin].pass`
   * Demarcate expression values, like: `sensitive::accounts.application.db.users[full_name="Some User\'s Name"].pass`
   * Multi-level matching: `sensitive::accounts.application.db.users[name%admin].pass[encrypted!^ENC\[]`
-* Complex combinations: `[2].some::complex.structure[with!=""].any[&valid].[yaml=data]`
+* Complex combinations: `[2].some::complex.structure[with!=""].'any.valid'.[yaml=data]`
 
 ## Based on ruamel.yaml and Python 3
 
