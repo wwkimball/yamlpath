@@ -215,6 +215,20 @@ def test_happy_singular_get_leaf_nodes(yamlpath, yamldata, search, compare):
         assert node == compare
 
 @pytest.mark.parametrize("search,compare", [
+    ("namespaced::hash.with_array_of_hashes[id<3].name", ["ichi", "ni"]),
+    ("namespaced::hash.with_array_of_hashes[id<3].id", [1, 2]),
+    ("namespaced::hash.with_array_of_hashes[id>=2].id", [2, 3]),
+    ("namespaced::hash.with_array_of_hashes[id>=2].name", ["ni", "san"]),
+    ("namespaced::hash.with_array_of_hashes[!id>=2].name", ["ichi"]),
+    ("namespaced::hash.with_array_of_hashes[!id>=2].id", [1]),
+])
+def test_happy_multiple_get_nodes(yamlpath, yamldata, search, compare):
+    matches = []
+    for node in yamlpath.get_nodes(yamldata, search):
+        matches.append(node)
+    assert matches == compare
+
+@pytest.mark.parametrize("search,compare", [
     ("aliases[&doesNotExist]", "This Anchor does not exist!"),
     ("top_fake_scalar", "No such value."),
     ("top_array_anchor[4]", "No such index."),
