@@ -166,72 +166,30 @@ class YAMLPath:
 
         matches = 0
         if yaml_path:
-            (typ, ele) = yaml_path.popleft()
+            (curtyp, curele) = curref = yaml_path.popleft()
 
             self.log.debug(
-                ("YAMLPath::_get_nodes:  Peeking at element {} of type {} in"
-                 + " data of type {}:"
-                ).format(ele, typ, type(data))
+                ("YAMLPath::_get_nodes:  Seeking element <{}>{} in data of"
+                 + " type {}:"
+                ).format(curtyp, curele, type(data))
             )
             self.log.debug(data)
             self.log.debug("")
 
-            if PathSegmentTypes.KEY == typ:
+            # The next element must already exist
+            for node in self._get_elements_by_ref(data, curref):
+                if node is None:
+                    continue
+
+                matches += 1
                 self.log.debug(
-                    "YAMLPath::_get_nodes:  Drilling into the present"
-                    + " dictionary KEY..."
+                    ("YAMLPath::_get_nodes:  Found element {} in the data;"
+                     + " recursing into it..."
+                    ).format(curele)
                 )
-                if ele in data:
-                    for node in self._get_nodes(data[ele], yaml_path):
-                        if node is not None:
-                            matches += 1
-                            yield node
-            elif PathSegmentTypes.INDEX == typ:
-                self.log.debug(
-                    "YAMLPath::_get_nodes:  Drilling into the present list"
-                    + " INDEX..."
-                )
-                if ele < len(data):
-                    for node in self._get_nodes(data[ele], yaml_path):
-                        if node is not None:
-                            matches += 1
-                            yield node
-            elif PathSegmentTypes.ANCHOR == typ:
-                if isinstance(data, list):
-                    self.log.debug(
-                        "YAMLPath::_get_nodes:  Searching for an ANCHOR in"
-                        + " a list..."
-                    )
-                    for item in data:
-                        if hasattr(item, "anchor") and ele == item.anchor.value:
-                            for node in self._get_nodes(item, yaml_path):
-                                if node is not None:
-                                    matches += 1
-                                    yield node
-                elif isinstance(data, dict):
-                    self.log.debug(
-                        "YAMLPath::_get_nodes:  Searching for an ANCHOR in a"
-                        + " dictionary..."
-                    )
-                    for _, val in data.items():
-                        if hasattr(val, "anchor") and ele == val.anchor.value:
-                            for node in self._get_nodes(val, yaml_path):
-                                if node is not None:
-                                    matches += 1
-                                    yield node
-            elif PathSegmentTypes.SEARCH == typ:
-                self.log.debug(
-                    "YAMLPath::_get_nodes:  Performing an attribute"
-                    + " SEARCH..."
-                )
-                for match in self._search(data, ele):
-                    if match is not None:
-                        for node in self._get_nodes(match, yaml_path):
-                            if node is not None:
-                                matches += 1
-                                yield node
-            else:
-                raise NotImplementedError
+                for epn in self._get_nodes(node, yaml_path.copy()):
+                    if epn is not None:
+                        yield epn
 
             if not matches:
                 return None
@@ -385,15 +343,9 @@ class YAMLPath:
         reftyp = ref[0]
         refele = ref[1]
 
-        if reftyp == PathSegmentTypes.ANCHOR:
-            if isinstance(data, list):
-                for ele in data:
-                    if hasattr(ele, "anchor") and refele == ele.anchor.value:
-                        yield ele
-            elif isinstance(data, dict):
-                for _, val in data.items():
-                    if hasattr(val, "anchor") and refele == val.anchor.value:
-                        yield val
+        if reftyp == PathSegmentTypes.KEY:
+            if isinstance(data, dict) and refele in data:
+                yield data[refele]
             else:
                 return None
         elif reftyp == PathSegmentTypes.INDEX:
@@ -409,9 +361,15 @@ class YAMLPath:
                 yield data[intele]
             else:
                 return None
-        elif reftyp == PathSegmentTypes.KEY:
-            if isinstance(data, dict) and refele in data:
-                yield data[refele]
+        elif reftyp == PathSegmentTypes.ANCHOR:
+            if isinstance(data, list):
+                for ele in data:
+                    if hasattr(ele, "anchor") and refele == ele.anchor.value:
+                        yield ele
+            elif isinstance(data, dict):
+                for _, val in data.items():
+                    if hasattr(val, "anchor") and refele == val.anchor.value:
+                        yield val
             else:
                 return None
         elif reftyp == PathSegmentTypes.SEARCH:
@@ -607,7 +565,14 @@ class YAMLPath:
                         yield ele
 
         elif isinstance(data, dict):
-            if attr in data:
+            # Allow . to mean "every node"
+            if attr == '.':
+                for key, val in data.items():
+                    matches = search_matches(method, term, key)
+                    if (matches and not invert) or (invert and not matches):
+                        yield val
+
+            elif attr in data:
                 value = data[attr]
                 matches = search_matches(method, term, value)
                 if (matches and not invert) or (invert and not matches):

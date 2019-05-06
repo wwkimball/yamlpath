@@ -90,6 +90,66 @@ namespaced::hash:
   'and.with.dotted.child':
     that: has it's own
     child: nodes
+
+complex:
+  array_of_hashes:
+    - id: 1
+      key: child1
+      name: one
+      children:
+        first: ichi
+        second: ni
+        third: san
+    - id: 2
+      key: child2
+      name: two
+      children:
+        first: shi
+        second: go
+        third: roku
+    - id: 3
+      key: child3
+      name: three
+      children:
+        first: shichi
+        second: hachi
+        third: ku
+    - id: 4
+      key: child4
+      name: four
+      children:
+        first: ju
+        second: ju ichi
+        third: ji ni
+  hash_of_hashes:
+    child1:
+      id: 1
+      name: one
+      children:
+        first: ichi
+        second: ni
+        third: san
+    child2:
+      id: 2
+      name: two
+      children:
+        first: shi
+        second: go
+        third: roku
+    child3:
+      id: 3
+      name: three
+      children:
+        first: shichi
+        second: hachi
+        third: ku
+    child4:
+      id: 4
+      name: four
+      children:
+        first: ju
+        second: ju ichi
+        third: ji ni
 """
     return yaml.load(data)
 
@@ -221,10 +281,17 @@ def test_happy_singular_get_leaf_nodes(yamlpath, yamldata, search, compare):
     ("namespaced::hash.with_array_of_hashes[id>=2].name", ["ni", "san"]),
     ("namespaced::hash.with_array_of_hashes[!id>=2].name", ["ichi"]),
     ("namespaced::hash.with_array_of_hashes[!id>=2].id", [1]),
+    ("complex.hash_of_hashes[.^child].children.first", ["ichi", "shi", "shichi", "ju"]),
+    (r"complex.hash_of_hashes[.^child].children[first%ichi]", ["ichi", "shichi"]),
 ])
 def test_happy_multiple_get_nodes(yamlpath, yamldata, search, compare):
     matches = []
     for node in yamlpath.get_nodes(yamldata, search):
+        matches.append(node)
+    assert matches == compare
+
+    matches = []
+    for node in yamlpath.get_nodes(yamldata, search, mustexist=True):
         matches.append(node)
     assert matches == compare
 
