@@ -26,7 +26,7 @@ from shutil import copy2
 from ruamel.yaml import YAML
 from ruamel.yaml.parser import ParserError
 
-from yamlpath.exceptions import YAMLPathException
+from yamlpath.exceptions import YAMLPathException, EYAMLCommandException
 from yamlpath.eyaml import EYAMLPath
 from yamlpath.enums import YAMLValueFormats
 
@@ -114,6 +114,8 @@ def processcli():
 
 def validateargs(args, log):
     """Validate command-line arguments."""
+    has_errors = False
+
     # Enforce sanity
     # * At least one of --value, --file, --stdin, or --random must be set
     if not (args.value
@@ -121,36 +123,36 @@ def validateargs(args, log):
         or args.stdin
         or args.random
     ):
+        has_errors = True
         log.error(
             "Exactly one of the following must be set:  --value, --file,"
-                 + " --stdin, or --random",
-            1
+                 + " --stdin, or --random"
         )
 
     # * When set, --saveto cannot be identical to --change
     if args.saveto and args.saveto == args.change:
+        has_errors = True
         log.error(
             "Impossible to save the old value to the same YAML Path as the new"
-                + " value!",
-            1
+                + " value!"
         )
 
     # * When set, --privatekey must be a readable file
     if args.privatekey and not (
         isfile(args.privatekey) and access(args.privatekey, R_OK)
     ):
+        has_errors = True
         log.error(
-            "EYAML private key is not a readable file:  " + args.privatekey,
-            1
+            "EYAML private key is not a readable file:  " + args.privatekey
         )
 
     # * When set, --publickey must be a readable file
     if args.publickey and not (
         isfile(args.publickey) and access(args.publickey, R_OK)
     ):
+        has_errors = True
         log.error(
-            "EYAML public key is not a readable file:  " + args.publickey,
-            1
+            "EYAML public key is not a readable file:  " + args.publickey
         )
 
     # * When either --publickey or --privatekey are set, the other must also be
@@ -158,7 +160,11 @@ def validateargs(args, log):
         (args.publickey and not args.privatekey)
         or (args.privatekey and not args.publickey)
     ):
-        log.error("Both private and public EYAML keys must be set.", 1)
+        has_errors = True
+        log.error("Both private and public EYAML keys must be set.")
+
+    if has_errors:
+        exit(1)
 
 def main():
     """Main code."""
@@ -188,7 +194,7 @@ def main():
             ) for _ in range(args.random)
         )
     else:
-        log.error("Unsupported input method.", 1)
+        log.critical("Unsupported input method.", 1)
 
     # Prep the YAML parser
     yaml = YAML()
@@ -202,21 +208,25 @@ def main():
         with open(args.yaml_file, 'r') as f:
             yaml_data = yaml.load(f)
     except ParserError as e:
-        log.error(
+        log.critical(
             "YAML parsing error {}:  {}"
-                .format(str(e.problem_mark).lstrip(), e.problem)
+            .format(str(e.problem_mark).lstrip(), e.problem)
+            , 1
         )
 
     # Load the present value at the specified YAML Path
-    change_path = processor.parser.str_path(args.change)
     change_nodes = []
+    try:
+        change_path = processor.parser.str_path(args.change)
+    except YAMLPathException as ex:
+        log.critical(ex, 1)
 
     try:
         for node in processor.get_eyaml_values(
             yaml_data
             , change_path
             , mustexist=args.mustexist
-            , default_value=new_value
+            , default_value=("" if new_value else " ")
         ):
             if node is None:
                 continue
@@ -235,7 +245,9 @@ def main():
 
             change_nodes.append(node)
     except YAMLPathException as ex:
-        log.error(ex, 1)
+        log.critical(ex, 1)
+    except EYAMLCommandException as ex:
+        log.critical(ex, 2)
 
     if not change_nodes:
         log.warning("Nothing to do!")
@@ -248,14 +260,16 @@ def main():
     for node in change_nodes:
         if args.check:
             if not args.check == node:
-                log.error("{} does not match the check value.".format(node), 20)
+                log.critical(
+                    "{} does not match the check value.".format(node), 20
+                )
 
     # Save the old value, if desired and possible
     if args.saveto:
         # Only one can be saved; otherwise it is impossible to meaningfully convey
         # to the end-user from exactly which other YAML node each saved value came.
         if len(change_nodes) > 1:
-            log.error(
+            log.critical(
                 "It is impossible to meaningly save more than one matched value."
                     + "  Please omit --saveto or set --change to affect exactly one"
                     + " value."
@@ -264,17 +278,21 @@ def main():
 
         log.verbose("Saving the old value to {}.".format(args.saveto))
         try:
-            log.verbose("Writing a single value...")
             processor.set_value(yaml_data, args.saveto, processor.clone_node(change_nodes[0]))
-            log.verbose("DONE writing a single value...")
         except YAMLPathException as ex:
-            log.error(ex, 1)
+            log.critical(ex, 1)
 
     # Set the requested value
     log.verbose("Setting the new value for {}.".format(change_path))
     if args.eyamlcrypt:
         output_type = "string"
-        format_type = YAMLValueFormats.from_str(args.format)
+        try:
+            format_type = YAMLValueFormats.from_str(args.format)
+        except NameError:
+            log.critical(
+                "Unknown YAML value format ,{}.".format(args.format), 1
+            )
+
         if format_type in [YAMLValueFormats.FOLDED, YAMLValueFormats.LITERAL]:
             output_type = "block"
         try:
@@ -282,12 +300,16 @@ def main():
                 yaml_data, change_path, new_value, output_type, False
             )
         except YAMLPathException as ex:
-            log.error(ex, 1)
+            log.critical(ex, 1)
+        except EYAMLCommandException as ex:
+            log.critical(ex, 2)
     else:
         try:
-            processor.set_value(yaml_data, change_path, new_value, False, args.format)
+            processor.set_value(
+                yaml_data, change_path, new_value, value_format=args.format
+            )
         except YAMLPathException as ex:
-            log.error(ex, 1)
+            log.critical(ex, 1)
 
     # Save a backup of the original file, if requested
     if args.backup:

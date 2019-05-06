@@ -58,13 +58,18 @@ class YAMLPath:
              it not already exist in data and mustexist is False;
              default=None
 
-        Returns:  (object) The requested YAML nodes as they are matched
+        Returns:  (object) The requested YAML nodes as they are matched or None
+          when data or yaml_path are None.
 
         Raises:
             YAMLPathException when YAML Path is invalid
         """
         mustexist = kwargs.pop("mustexist", False)
         default_value = kwargs.pop("default_value", None)
+
+        if data is None or yaml_path is None:
+            return None
+
         path = self.parser.parse_path(yaml_path)
         if mustexist:
             matched_nodes = 0
@@ -79,8 +84,7 @@ class YAMLPath:
             if matched_nodes < 1:
                 raise YAMLPathException(
                     "Required YAML Path does not match any nodes",
-                    self.parser.str_path(yaml_path),
-                    self.parser.str_path(path)
+                    self.parser.str_path(yaml_path)
                 )
         else:
             for node in self._ensure_path(data, path, default_value):
@@ -160,6 +164,7 @@ class YAMLPath:
         if data is None or yaml_path is None:
             return None
 
+        matches = 0
         if yaml_path:
             (typ, ele) = yaml_path.popleft()
 
@@ -179,9 +184,8 @@ class YAMLPath:
                 if ele in data:
                     for node in self._get_nodes(data[ele], yaml_path):
                         if node is not None:
+                            matches += 1
                             yield node
-                else:
-                    return None
             elif PathSegmentTypes.INDEX == typ:
                 self.log.debug(
                     "YAMLPath::_get_nodes:  Drilling into the present list"
@@ -190,9 +194,8 @@ class YAMLPath:
                 if ele < len(data):
                     for node in self._get_nodes(data[ele], yaml_path):
                         if node is not None:
+                            matches += 1
                             yield node
-                else:
-                    return None
             elif PathSegmentTypes.ANCHOR == typ:
                 if isinstance(data, list):
                     self.log.debug(
@@ -203,42 +206,45 @@ class YAMLPath:
                         if hasattr(item, "anchor") and ele == item.anchor.value:
                             for node in self._get_nodes(item, yaml_path):
                                 if node is not None:
+                                    matches += 1
                                     yield node
                 elif isinstance(data, dict):
                     self.log.debug(
                         "YAMLPath::_get_nodes:  Searching for an ANCHOR in a"
                         + " dictionary..."
                     )
-                    for _, val in data:
+                    for _, val in data.items():
                         if hasattr(val, "anchor") and ele == val.anchor.value:
                             for node in self._get_nodes(val, yaml_path):
                                 if node is not None:
+                                    matches += 1
                                     yield node
-                return None
             elif PathSegmentTypes.SEARCH == typ:
                 self.log.debug(
                     "YAMLPath::_get_nodes:  Performing an attribute"
                     + " SEARCH..."
                 )
                 for match in self._search(data, ele):
-                    if match is None:
-                        continue
-                    else:
+                    if match is not None:
                         for node in self._get_nodes(match, yaml_path):
                             if node is not None:
+                                matches += 1
                                 yield node
-                return None
             else:
                 raise NotImplementedError
 
-        self.log.debug(
-            "YAMLPath::_get_nodes:  Finally returning data of type {}:"
-            .format(type(data))
-        )
-        self.log.debug(data)
-        self.log.debug("")
+            if not matches:
+                return None
 
-        yield data
+        if not matches:
+            self.log.debug(
+                "YAMLPath::_get_nodes:  Finally returning data of type {}:"
+                .format(type(data))
+            )
+            self.log.debug(data)
+            self.log.debug("")
+
+            yield data
 
     def _update_value(self, data, source_node, value, value_format):
         """Recursively updates the value of a YAML Node and any references to it
@@ -385,7 +391,7 @@ class YAMLPath:
                     if hasattr(ele, "anchor") and refele == ele.anchor.value:
                         yield ele
             elif isinstance(data, dict):
-                for _, val in data:
+                for _, val in data.items():
                     if hasattr(val, "anchor") and refele == val.anchor.value:
                         yield val
             else:
@@ -509,15 +515,26 @@ class YAMLPath:
 
         def search_matches(method, needle, haystack):
             self.log.debug(
-                ("YAMLPath::_search::search_matches:  Searching for {}"
-                 + " using {} against:"
-                ).format(needle, method)
+                ("YAMLPath::_search::search_matches:  Searching for {}{}"
+                 + " using {} against {}:"
+                ).format(type(needle), needle, method, type(haystack))
             )
             self.log.debug(haystack)
             matches = None
 
             if method is PathSearchMethods.EQUALS:
-                matches = haystack == needle
+                if isinstance(haystack, int):
+                    try:
+                        matches = haystack == int(needle)
+                    except ValueError:
+                        matches = False
+                elif isinstance(haystack, float):
+                    try:
+                        matches = haystack == float(needle)
+                    except ValueError:
+                        matches = False
+                else:
+                    matches = haystack == needle
             elif method is PathSearchMethods.STARTS_WITH:
                 matches = str(haystack).startswith(needle)
             elif method is PathSearchMethods.ENDS_WITH:

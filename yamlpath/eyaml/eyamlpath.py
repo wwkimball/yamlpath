@@ -8,6 +8,7 @@ from os import access, sep, X_OK
 from distutils.spawn import find_executable
 
 from yamlpath.enums import YAMLValueFormats
+from yamlpath.exceptions import EYAMLCommandException
 from yamlpath.yamlpath import YAMLPath
 
 class EYAMLPath(YAMLPath):
@@ -89,15 +90,14 @@ class EYAMLPath(YAMLPath):
         Returns:  (str) The decrypted value or the original value if it was not
         actually encrypted.
 
-        Raises:  Nothing except when the eyaml binary cannot be utilized, an
-        error message is printed and the calling program is terminated.
+        Raises:
+          EYAMLCommandException when the eyaml binary cannot be utilized.
         """
         if not self.is_eyaml_value(value):
             return value
 
         if not self.can_run_eyaml():
-            self.log.error("No accessible eyaml command.", 1)
-            return None
+            raise EYAMLCommandException("No accessible eyaml command.")
 
         cmdstr = self.eyaml + " decrypt --quiet --stdin"
         if self.publickey:
@@ -120,14 +120,13 @@ class EYAMLPath(YAMLPath):
                 input=bval
             ).stdout.decode('ascii').rstrip()
         except FileNotFoundError:
-            self.log.error(
-                "The {} command could not be found.".format(self.eyaml), 2
+            raise EYAMLCommandException(
+                "The {} command could not be found.".format(self.eyaml)
             )
         except CalledProcessError as ex:
-            self.log.error(
+            raise EYAMLCommandException(
                 "The {} command cannot be run due to exit code:  {}"
                 .format(self.eyaml, ex.returncode)
-                , 1
             )
 
         # Check for bad decryptions
@@ -156,18 +155,16 @@ class EYAMLPath(YAMLPath):
         Returns:  (str) The encrypted result or the original value if it was
         already an EYAML encryption.
 
-        Raises:  Nothing except when the eyaml binary cannot be utilized, an
-        error message is printed and the calling program is terminated.
+        Raises:
+          EYAMLCommandException when the eyaml binary cannot be utilized.
         """
         if self.is_eyaml_value(value):
             return value
 
         if not self.can_run_eyaml():
-            self.log.error(
+            raise EYAMLCommandException(
                 "The eyaml binary is not executable at {}.".format(self.eyaml)
-                , 1
             )
-            return None
 
         cmdstr = self.eyaml + " encrypt --quiet --stdin --output=" + output
         if self.publickey:
@@ -190,22 +187,20 @@ class EYAMLPath(YAMLPath):
                 .rstrip()
             )
         except FileNotFoundError:
-            self.log.error(
-                "The {} command could not be found.".format(self.eyaml), 2
+            raise EYAMLCommandException(
+                "The {} command could not be found.".format(self.eyaml)
             )
         except CalledProcessError as ex:
-            self.log.error(
+            raise EYAMLCommandException(
                 "The {} command cannot be run due to exit code:  {}"
                 .format(self.eyaml, ex.returncode)
-                , 1
             )
 
         if not retval:
-            self.log.error(
+            raise EYAMLCommandException(
                 ("The {} command was unable to encrypt your value.  Please"
                  + " verify this process can run that command and read your"
                  + " EYAML keys.").format(self.eyaml)
-                , 1
             )
 
         if output == "block":

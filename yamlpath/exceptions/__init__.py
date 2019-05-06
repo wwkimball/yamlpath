@@ -1,1 +1,2 @@
 from yamlpath.exceptions.yamlpath import YAMLPathException
+from yamlpath.exceptions.eyamlcommand import EYAMLCommandException

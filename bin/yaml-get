@@ -23,7 +23,7 @@ from os.path import isfile
 from ruamel.yaml import YAML
 from ruamel.yaml.parser import ParserError
 
-from yamlpath.exceptions import YAMLPathException
+from yamlpath.exceptions import YAMLPathException, EYAMLCommandException
 from yamlpath.parser import Parser
 from yamlpath.eyaml import EYAMLPath
 
@@ -73,14 +73,15 @@ def processcli():
 
 def validateargs(args, log):
     """Validate command-line arguments."""
+    has_errors = False
+
     # Enforce sanity
     # * When set, --privatekey must be a readable file
     if args.privatekey and not (
         isfile(args.privatekey) and access(args.privatekey, R_OK)
     ):
         log.error(
-            "EYAML private key is not a readable file:  " + args.privatekey,
-            1
+            "EYAML private key is not a readable file:  " + args.privatekey
         )
 
     # * When set, --publickey must be a readable file
@@ -88,8 +89,7 @@ def validateargs(args, log):
         isfile(args.publickey) and access(args.publickey, R_OK)
     ):
         log.error(
-            "EYAML public key is not a readable file:  " + args.publickey,
-            1
+            "EYAML public key is not a readable file:  " + args.publickey
         )
 
     # * When either --publickey or --privatekey are set, the other must also be
@@ -97,7 +97,10 @@ def validateargs(args, log):
         (args.publickey and not args.privatekey)
         or (args.privatekey and not args.publickey)
     ):
-        log.error("Both private and public EYAML keys must be set.", 1)
+        log.error("Both private and public EYAML keys must be set.")
+
+    if has_errors:
+        exit(1)
 
 def main():
     """Main code."""
@@ -125,15 +128,18 @@ def main():
         with open(args.yaml_file, 'r') as f:
             yaml_data = yaml.load(f)
     except ParserError as ex:
-        log.error(
+        log.critical(
             "YAML parsing error {}:  {}"
             .format(str(ex.problem_mark).lstrip(), ex.problem)
             , 1
         )
 
     # Seek the queried value(s)
-    yaml_path = parser.str_path(args.query)
     discovered_nodes = []
+    try:
+        yaml_path = parser.str_path(args.query)
+    except YAMLPathException as ex:
+        log.critical(ex, 1)
 
     try:
         for node in processor.get_eyaml_values(yaml_data, yaml_path):
@@ -141,11 +147,12 @@ def main():
                 log.debug("Got {} from {}.".format(node, yaml_path))
                 discovered_nodes.append(node)
     except YAMLPathException as ex:
-        log.error(ex, 1)
+        log.critical(ex, 1)
+    except EYAMLCommandException as ex:
+        log.critical(ex, 2)
 
     if not discovered_nodes:
-        log.warning("No matches!")
-        exit(3)
+        log.critical("No matches for {}!".format(yaml_path), 3)
 
     pprinter = pprint.PrettyPrinter(indent=4)
     for node in discovered_nodes:

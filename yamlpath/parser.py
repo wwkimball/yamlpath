@@ -82,16 +82,16 @@ class Parser:
            8. dictionary.'with.dotted.subkey'
            9. dictionary."with.dotted.subkey"
           10. dictionary.with\.dottet\.subkey
-          11. complex.structures.with[&many].nested."elements.in.any"[form]
-          12. sensitive::accounts.application.db.users[name=admin].password.encrypted
-          13. sensitive::accounts.application.db.users[name^adm].password.encrypted
-          14. sensitive::accounts.application.db.users[name$in].password.encrypted
-          15. sensitive::accounts.application.db.users[name%dmi].password.encrypted
-          16. sensitive::accounts.application.db.users[name!=admin].password.encrypted
-          17. sensitive::accounts.application.db.users[access_level>3].password.enabled
-          18. sensitive::accounts.application.db.users[access_level<6].password.enabled
-          19. sensitive::accounts.application.db.users[access_level<=5].password.enabled
-          20. sensitive::accounts.application.db.users[access_level<=5].password.[encrypted!^ENC\[]
+          11. sensitive::accounts.application.db.users[name=admin].password.encrypted
+          12. sensitive::accounts.application.db.users[name^adm].password.encrypted
+          13. sensitive::accounts.application.db.users[name$in].password.encrypted
+          14. sensitive::accounts.application.db.users[name%dmi].password.encrypted
+          15. sensitive::accounts.application.db.users[name!=admin].password.encrypted
+          16. sensitive::accounts.application.db.users[access_level>3].password.enabled
+          17. sensitive::accounts.application.db.users[access_level<6].password.enabled
+          18. sensitive::accounts.application.db.users[access_level<=5].password.enabled
+          19. sensitive::accounts.application.db.users[access_level<=5].password.[encrypted!^ENC\[]
+          20. complex.structures.with[many=nested]."elements.in.any"[form]
 
         Positional Parameters:
           1. yaml_path (any) The stringified YAML Path to parse
@@ -137,7 +137,7 @@ class Parser:
         escape_next = False
         element_type = PathSegmentTypes.KEY
         search_inverted = False
-        search_method = PathSearchMethods.EQUALS
+        search_method = None
         search_attr = ""
 
         for c in yaml_path:
@@ -209,7 +209,19 @@ class Parser:
                 and c in ["=", "^", "$", "%", "!", ">", "<"]
             ):
                 # Hash attribute search
-                if c == "=":
+                if c == "!":
+                    if search_inverted:
+                        raise YAMLPathException(
+                            "Double search inversion is meaningless at {}"
+                            .format(c)
+                            , yaml_path
+                        )
+
+                    # Invert the search
+                    search_inverted = True
+                    continue
+
+                elif c == "=":
                     # Exact value match OR >=|<=
                     element_type = PathSegmentTypes.SEARCH
 
@@ -217,56 +229,80 @@ class Parser:
                         search_method = PathSearchMethods.LESS_THAN_OR_EQUAL
                     elif search_method is PathSearchMethods.GREATER_THAN:
                         search_method = PathSearchMethods.GREATER_THAN_OR_EQUAL
-                    else:
+                    elif search_method is PathSearchMethods.EQUALS:
+                        # Allow ==
+                        continue
+                    elif search_method is None:
                         search_method = PathSearchMethods.EQUALS
-                        search_attr = element_id
-                        element_id = ""
+
+                        if element_id:
+                            search_attr = element_id
+                            element_id = ""
+                        else:
+                            raise YAMLPathException(
+                                "Missing search operand before operator, {}"
+                                .format(c)
+                                , yaml_path
+                            )
+                    else:
+                        raise YAMLPathException(
+                            "Unsupported search operator combination at {}"
+                            .format(c)
+                            , yaml_path
+                        )
 
                     continue
+
+                elif not element_id:
+                    # All tests beyond this point require an operand
+                    raise YAMLPathException(
+                        "Missing search operand before operator, {}".format(c)
+                        , yaml_path
+                    )
 
                 elif c == "^":
                     # Value starts with
                     element_type = PathSegmentTypes.SEARCH
                     search_method = PathSearchMethods.STARTS_WITH
-                    search_attr = element_id
-                    element_id = ""
+                    if element_id:
+                        search_attr = element_id
+                        element_id = ""
                     continue
 
                 elif c == "$":
                     # Value ends with
                     element_type = PathSegmentTypes.SEARCH
                     search_method = PathSearchMethods.ENDS_WITH
-                    search_attr = element_id
-                    element_id = ""
+                    if element_id:
+                        search_attr = element_id
+                        element_id = ""
                     continue
 
                 elif c == "%":
                     # Value contains
                     element_type = PathSegmentTypes.SEARCH
                     search_method = PathSearchMethods.CONTAINS
-                    search_attr = element_id
-                    element_id = ""
+                    if element_id:
+                        search_attr = element_id
+                        element_id = ""
                     continue
 
                 elif c == ">":
                     # Value greater than
                     element_type = PathSegmentTypes.SEARCH
                     search_method = PathSearchMethods.GREATER_THAN
-                    search_attr = element_id
-                    element_id = ""
+                    if element_id:
+                        search_attr = element_id
+                        element_id = ""
                     continue
 
                 elif c == "<":
                     # Value less than
                     element_type = PathSegmentTypes.SEARCH
                     search_method = PathSearchMethods.LESS_THAN
-                    search_attr = element_id
-                    element_id = ""
-                    continue
-
-                elif c == "!":
-                    # Invert the search
-                    search_inverted = True
+                    if element_id:
+                        search_attr = element_id
+                        element_id = ""
                     continue
 
             elif (

@@ -75,8 +75,8 @@ class ConsolePrinter:
             print("WARNING:  " + str(message).replace("\n", "\nWARNING:  "))
 
     def error(self, message, exit_code=None):
-        """Writes an error message to STDERR and optionally terminates the
-        program, exiting with a specific error code.
+        """Writes a recoverable error message to STDERR and optionally
+        terminates the program, exiting with a specific error code.
 
         Positional Parameters:
           1. message (str) The message to print
@@ -97,6 +97,28 @@ class ConsolePrinter:
         # Optionally terminate program execution with a specified exit code
         if exit_code is not None:
             exit(exit_code)
+
+    def critical(self, message, exit_code=1):
+        """Writes a critical, nonrecoverable failure message to STDERR and
+        terminates the program, exiting with a specific error code.
+
+        Positional Parameters:
+          1. message (str) The message to print
+          2. exit_code (int) The exit code to terminate the program
+             with; default=1
+
+        Returns:  N/A
+
+        Raises:  N/A
+        """
+        print(
+            "CRITICAL:  " + str(message).replace("\n", "\nCRITICAL:  "),
+            file=sys.stderr
+        )
+        sys.stdout.flush()
+
+        # Terminate program execution with a specified exit code
+        exit(exit_code)
 
     def debug(self, message):
         """Writes a debug message to STDOUT unless quiet mode is active, dumping
