@@ -226,7 +226,7 @@ def main():
             yaml_data
             , change_path
             , mustexist=args.mustexist
-            , default_value=new_value
+            , default_value=("" if new_value else " ")
         ):
             if node is None:
                 continue
