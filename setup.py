@@ -7,9 +7,13 @@ setup(
     long_description="This project presents and utilizes YAML Paths, which are"
         + " a human-friendly means of expressing a path through the structure"
         + " of YAML data to a specific key or a set of keys matching some"
-        + " search criteria.",
+        + " search criteria.  Also provides command-line tools:  yaml-get (get"
+        + " zero or more values from a YAML file), yaml-set (change the value"
+        + " of one or more nodes in a YAML file), and eyaml-rotate-keys"
+        + " (decrypt all EYAML values within a YAML file using old keys and"
+        + " re-encrypt them using new keys).",
     classifiers=[
-        "Development Status :: 3 - Alpha",
+        "Development Status :: 4 - Beta",
         "License :: OSI Approved :: ISC License (ISCL)",
         "Programming Language :: Python :: 3.6",
         "Topic :: Software Development :: Libraries :: Python Modules",

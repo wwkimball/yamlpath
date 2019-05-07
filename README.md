@@ -109,18 +109,18 @@ YAML Path understands these forms:
 
 ## Installing
 
-This project requires Python 3.  Most operating systems and distributions have
-access to Python 3 even if only Python 2 came pre-installed.  It is generally
-safe to have more than one version of Python on your system at the same time.
-Each version of Python uses a unique binary name as well as different library
-and working directories, like `python2.7` versus `python3.6`.  Further, each
-often provides symlinks like `python` (usually for Python 2) and `python3`,
-respectively.
+This project requires [Python](https://www.python.org/) 3.6.  Most operating
+systems and distributions have access to Python 3 even if only Python 2 came
+pre-installed.  It is generally safe to have more than one version of Python on
+your system at the same time.  Each version of Python uses a unique binary name
+as well as different library and working directories, like `python2.7` versus
+`python3.6`.  Further, each often provides symlinks like `python` (usually for
+Python 2) and `python3`, respectively.
 
-This project runs on all operating systems and distributions where Python 3 and
-project dependencies are able to run.  While the documentation examples here are
-presented in Linux/OSX shell form, the same commands can be used on Windows with
-minor adjustment.  Cygwin users are also able to enjoy this project.
+This project runs on all operating systems and distributions where Python 3.6
+and project dependencies are able to run.  While the documentation examples here
+are presented in Linux/OSX shell form, the same commands can be used on Windows
+with minor adjustment.  Cygwin users are also able to enjoy this project.
 
 Each published version of this project can be installed from
 [PyPI](https://pypi.org/) using `pip`.  Note that on systems with more than one
@@ -136,7 +136,7 @@ pip3 install yamlpath
 In order to support the best available YAML editing capability (so called,
 round-trip editing with support for comment preservation), this project is based
 on [ruamel.yaml](https://bitbucket.org/ruamel/yaml/overview) for
-[Python](https://www.python.org/) 3.  While ruamel.yaml is based on PyYAML --
+Python 3.6.  While ruamel.yaml is based on PyYAML --
 Python's "standard" YAML library -- ruamel.yaml is [objectively better than
 PyYAML](https://yaml.readthedocs.io/en/latest/pyyaml.html).
 
