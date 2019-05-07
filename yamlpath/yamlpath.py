@@ -26,6 +26,7 @@ from yamlpath.enums import (
 )
 from yamlpath.parser import Parser
 
+
 class YAMLPath:
     """Query and update YAML data via robust YAML Paths."""
 

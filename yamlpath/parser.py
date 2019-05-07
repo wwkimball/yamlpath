@@ -10,6 +10,7 @@ from yamlpath.enums import (
     PathSearchMethods,
 )
 
+
 class Parser:
     """Parse YAML Paths into iterable queue components."""
 

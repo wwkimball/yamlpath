@@ -1,6 +1,7 @@
 """Implements the YAMLValueFormats enumeration."""
 from enum import Enum, auto
 
+
 class YAMLValueFormats(Enum):
     """Supported representation formats for YAML values."""
     BARE = auto()

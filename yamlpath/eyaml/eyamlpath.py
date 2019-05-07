@@ -11,6 +11,7 @@ from yamlpath.enums import YAMLValueFormats
 from yamlpath.exceptions import EYAMLCommandException
 from yamlpath.yamlpath import YAMLPath
 
+
 class EYAMLPath(YAMLPath):
     """Extend YAMLPath to understand EYAML values."""
 

@@ -8,6 +8,7 @@ from ruamel.yaml.emitter import (
     EmitterError,
 )
 
+
 # Stop Emitter.write_folded from injecting unnecessary new-lines
 def write_folded_fix(self, text):
     # type: (Any) -> None

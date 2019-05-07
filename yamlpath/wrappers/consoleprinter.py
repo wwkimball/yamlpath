@@ -12,6 +12,7 @@ Copyright 2018, 2019 William W. Kimball, Jr. MBA MSIS
 """
 import sys
 
+
 class ConsolePrinter:
     """Generally-useful console messager, writing INFO, VERBOSE, WARN, and DEBUG
     messages to STDOUT as well as ERROR messages to STDERR with multi-lne

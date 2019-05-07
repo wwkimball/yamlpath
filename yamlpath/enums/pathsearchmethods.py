@@ -1,6 +1,7 @@
 """Implements the PathSearchMethods enumeration."""
 from enum import Enum, auto
 
+
 class PathSearchMethods(Enum):
     """Supported methods for search YAML Path segments"""
     CONTAINS = auto()
