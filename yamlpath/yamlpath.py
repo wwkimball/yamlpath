@@ -263,7 +263,9 @@ class YAMLPath:
                 raise NameError(
                     "Unknown YAML Value Format:  {}".format(strform)
                     + ".  Please specify one of:  "
-                    + ", ".join([l.lower() for l in YAMLValueFormats.get_names()])
+                    + ", ".join(
+                        [l.lower() for l in YAMLValueFormats.get_names()]
+                    )
                 )
 
         if valform == YAMLValueFormats.BARE:
@@ -668,7 +670,9 @@ class YAMLPath:
                         raise NotImplementedError
                     elif curtyp is PathSegmentTypes.KEY:
                         data[curele] = self._default_for_child(path, value)
-                        for node in self._ensure_path(data[curele], path, value):
+                        for node in self._ensure_path(
+                            data[curele], path, value
+                        ):
                             if node is None:
                                 continue
                             matched_nodes += 1

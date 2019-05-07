@@ -150,7 +150,9 @@ class ConsolePrinter:
                     print("DEBUG:  [" + str(k) + "]=>" + str(vattr))
             else:
                 attr = ""
-                if hasattr(message, "anchor") and message.anchor.value is not None:
+                if (hasattr(message, "anchor")
+                    and message.anchor.value is not None
+                ):
                     attr = "; &" + message.anchor.value
                 mattr = (str(message) + attr).replace("\n", "\nDEBUG:  ")
                 print("DEBUG:  " + str(mattr))

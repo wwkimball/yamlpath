@@ -69,9 +69,12 @@ def write_folded_fix(self, text):
                     if end < (len(text) - 1) and not text[end + 2].isspace():
                         self.write_line_break()
                         self.write_indent()
-                        end += 2  # \a and the space that is inserted on the fold
+                        # \a and the space that is inserted on the fold
+                        end += 2
                     else:
-                        raise EmitterError('unexcpected fold indicator \\a before space')
+                        raise EmitterError(
+                            'unexcpected fold indicator \\a before space'
+                        )
                 if ch is None:
                     self.write_line_break()
                 start = end
