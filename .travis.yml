@@ -12,9 +12,9 @@ install:
   - pip install --upgrade ruamel.yaml pytest pytest-cov pycodestyle
 
 script:
+  - pip install .
   - pytest --verbose --cov=yamlpath --cov-report=term-missing tests
   - pycodestyle yamlpath
-  - pip install .
 
 notifications:
   email: false
