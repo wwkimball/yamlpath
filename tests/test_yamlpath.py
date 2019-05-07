@@ -1,12 +1,13 @@
 import pytest
 
 from types import SimpleNamespace
+from distutils.util import strtobool
 
 from ruamel.yaml import YAML
 
 from yamlpath import YAMLPath
 from yamlpath.exceptions import YAMLPathException
-
+from yamlpath.enums import YAMLValueFormats
 from yamlpath.wrappers import ConsolePrinter
 
 @pytest.fixture
@@ -67,10 +68,13 @@ namespaced::hash:
   with_array_of_hashes:
     - id: 1
       name: ichi
+      ref: 1.4142135623
     - id: 2
       name: ni
+      ref: 2.7182818284
     - id: 3
       name: san
+      ref: 3.1415926535
   with_array_alias: *topArrayAnchor
   with_hash_alias:
     <<: *topHashAnchor
@@ -90,11 +94,77 @@ namespaced::hash:
   'and.with.dotted.child':
     that: has it's own
     child: nodes
+
+complex:
+  array_of_hashes:
+    - id: 1
+      key: child1
+      name: one
+      children:
+        first: ichi
+        second: ni
+        third: san
+    - id: 2
+      key: child2
+      name: two
+      children:
+        first: shi
+        second: go
+        third: roku
+    - id: 3
+      key: child3
+      name: three
+      children:
+        first: shichi
+        second: hachi
+        third: ku
+    - id: 4
+      key: child4
+      name: four
+      children:
+        first: ju
+        second: ju ichi
+        third: ji ni
+  hash_of_hashes:
+    child1:
+      id: 1
+      name: one
+      children:
+        first: ichi
+        second: ni
+        third: san
+    child2:
+      id: 2
+      name: two
+      children:
+        first: shi
+        second: go
+        third: roku
+    child3:
+      id: 3
+      name: three
+      children:
+        first: shichi
+        second: hachi
+        third: ku
+    child4:
+      id: 4
+      name: four
+      children:
+        first: ju
+        second: ju ichi
+        third: ji ni
 """
     return yaml.load(data)
 
 def test_empty_get_nodes(yamlpath, yamldata):
     for node in yamlpath.get_nodes(yamldata, None):
+        assert node == None
+
+    for node in yamlpath._get_nodes(yamldata, None):
+        assert node == None
+
+    for node in yamlpath._ensure_path(yamldata, None):
         assert node == None
 
     for node in yamlpath.get_nodes(yamldata, None, mustexist=True):
@@ -103,8 +173,16 @@ def test_empty_get_nodes(yamlpath, yamldata):
     for node in yamlpath.get_nodes(None, "top_scalar"):
         assert node == None
 
+    for node in yamlpath._get_nodes(None, "top_scalar"):
+        assert node == None
+
     for node in yamlpath.get_nodes(None, "top_scalar", mustexist=True):
         assert node == None
+
+def test_empty_set_nodes(yamlpath, yamldata):
+    # Should do nothing and not raise any exceptions
+    yamlpath.set_value(None, "aliases[&dnf]", "New Value")
+    yamlpath.set_value(yamldata, None, "New Value")
 
 @pytest.mark.parametrize("search,compare", [
     ("aliases[&test_scalarstring]", "This is a scalar string."),
@@ -206,6 +284,7 @@ def test_empty_get_nodes(yamlpath, yamldata):
     ("namespaced::hash.with_array_of_hashes[id<=1].name", "ichi"),
     ("namespaced::hash.with_array_of_hashes[id>=3].name", "san"),
     (r"namespaced::hash.with_array_of_hashes[name!%i].id", 3),
+    (r"[.^top_][.^key][.^child][attr_tst=child\ 2]", "child 2"),
 ])
 def test_happy_singular_get_leaf_nodes(yamlpath, yamldata, search, compare):
     for node in yamlpath.get_nodes(yamldata, search):
@@ -215,11 +294,140 @@ def test_happy_singular_get_leaf_nodes(yamlpath, yamldata, search, compare):
         assert node == compare
 
 @pytest.mark.parametrize("search,compare", [
-    ("aliases[&doesNotExist]", "This Anchor does not exist!"),
+    ("namespaced::hash.with_array_of_hashes[id<3].name", ["ichi", "ni"]),
+    ("namespaced::hash.with_array_of_hashes[id<3].id", [1, 2]),
+    ("namespaced::hash.with_array_of_hashes[id<=3].name", ["ichi", "ni", "san"]),
+    ("namespaced::hash.with_array_of_hashes[id<=3].id", [1, 2, 3]),
+    ("namespaced::hash.with_array_of_hashes[id>1].id", [2, 3]),
+    ("namespaced::hash.with_array_of_hashes[id>1].name", ["ni", "san"]),
+    ("namespaced::hash.with_array_of_hashes[id>=2].id", [2, 3]),
+    ("namespaced::hash.with_array_of_hashes[id>=2].name", ["ni", "san"]),
+    ("namespaced::hash.with_array_of_hashes[!id>=2].name", ["ichi"]),
+    ("namespaced::hash.with_array_of_hashes[!id>=2].id", [1]),
+    ("namespaced::hash.with_array_of_hashes[name>na].name", ["ni", "san"]),
+    ("namespaced::hash.with_array_of_hashes[name>na].name", ["ni", "san"]),
+    ("namespaced::hash.with_array_of_hashes[name>=ni].name", ["ni", "san"]),
+    ("namespaced::hash.with_array_of_hashes[name<san].name", ["ichi", "ni"]),
+    ("namespaced::hash.with_array_of_hashes[name<=ni].name", ["ichi", "ni"]),
+    ("complex.hash_of_hashes[.^child].children.first", ["ichi", "shi", "shichi", "ju"]),
+    (r"complex.hash_of_hashes[.^child].children[first%ichi]", ["ichi", "shichi"]),
+])
+def test_happy_multiple_get_nodes(yamlpath, yamldata, search, compare):
+    matches = []
+    for node in yamlpath.get_nodes(yamldata, search):
+        matches.append(node)
+    assert matches == compare
+
+    matches = []
+    for node in yamlpath.get_nodes(yamldata, search, mustexist=True):
+        matches.append(node)
+    assert matches == compare
+
+@pytest.mark.parametrize("search,compare", [
+    ("&doesNotExist", "No such top-level Anchor!"),
+    ("aliases[&doesNotExist]", "This listed Anchor does not exist!"),
     ("top_fake_scalar", "No such value."),
     ("top_array_anchor[4]", "No such index."),
+    ("top_array_anchor[4F]", "Invalid index."),
+    ("namespaced::hash.with_array_of_hashes[id=4F].id", "Invalid index"),
+    ("namespaced::hash.with_array_of_hashes[id>4F].id", "Invalid index"),
+    ("namespaced::hash.with_array_of_hashes[id>=4F].id", "Invalid index"),
+    ("namespaced::hash.with_array_of_hashes[id<4F].id", "Invalid index"),
+    ("namespaced::hash.with_array_of_hashes[id<=4F].id", "Invalid index"),
+    ("namespaced::hash.with_array_of_hashes[ref=1.41F].id", "Invalid index"),
+    ("namespaced::hash.with_array_of_hashes[ref>1.41F].id", "Invalid index"),
+    ("namespaced::hash.with_array_of_hashes[ref>=1.41F].id", "Invalid index"),
+    ("namespaced::hash.with_array_of_hashes[ref<1.41F].id", "Invalid index"),
+    ("namespaced::hash.with_array_of_hashes[ref<=1.41F].id", "Invalid index"),
 ])
 def test_unhappy_singular_get_leaf_nodes(yamlpath, yamldata, search, compare):
     with pytest.raises(YAMLPathException):
         for node in yamlpath.get_nodes(yamldata, search, mustexist=True):
             node == compare
+
+@pytest.mark.parametrize("search,compare", [
+    ("new_top_scalarstring", "String data"),
+    ("new_top_scalarint", 10),
+    ("new_top_scalarfloat", 10.01),
+    ("new_top_scalarbool", True),
+    ("aliases[&doesNotExist]", "Sample data"),
+    ("new_top_array[7]", "Repeated seven times data"),
+    ("new_top_hash.with.many.'levels.of.sub'.keys", "Including dotted sub-keys"),
+    ("new_top_hash.with.'an.original'.new_array[3]", "Including dotted sub-keys and three new elments"),
+])
+def test_happy_adding_nodes(yamlpath, yamldata, search, compare):
+    for node in yamlpath.get_nodes(yamldata, search, mustexist=False, default_value=compare):
+        assert node == compare
+
+@pytest.mark.parametrize("search,compare", [
+    ("top_scalar.impossible.hash.reference", "Can't convert an Scalar into a Hash"),
+    ("aliases.cannot.do.this", "Can't convert an Array into a Hash"),
+    ("sub_hash_anchor[4]", "Can't convert a Hash into an Array"),
+])
+def test_unhappy_adding_nodes(yamlpath, yamldata, search, compare):
+    with pytest.raises(YAMLPathException):
+        for node in yamlpath.get_nodes(yamldata, search, mustexist=False, default_value=compare):
+            node == compare
+
+def test_clone_node(yamlpath, yamldata):
+    test_value = "Some string."
+    assert test_value == yamlpath.clone_node(test_value)
+
+    for node in yamlpath.get_nodes(yamldata, "aliases[0]"):
+        assert node == yamlpath.clone_node(node)
+
+@pytest.mark.parametrize("search,compare,vformat,mexist", [
+    ("aliases[&test_scalarstring]", "A whole new BARE value.", YAMLValueFormats.BARE, True),
+    ("aliases[&test_scalarstring]", "A whole new DQUOTE value.", YAMLValueFormats.DQUOTE, True),
+    ("aliases[&test_scalarstring]", "A whole new SQUOTE value.", YAMLValueFormats.SQUOTE, True),
+    ("aliases[&test_scalarstring]", "A whole new FOLDED value.", YAMLValueFormats.FOLDED, True),
+    ("aliases[&test_scalarstring]", "A whole new LITERAL value.", YAMLValueFormats.LITERAL, True),
+    ("aliases[&new_scalarfloat]", 10.01, YAMLValueFormats.FLOAT, False),
+    ("aliases[&new_scalarint]", 42, YAMLValueFormats.INT, False),
+    ("aliases[&test_scalarstring]", "A whole new bare value.", "bare", True),
+    ("aliases[&test_scalarstring]", "A whole new dquote value.", "dquote", True),
+    ("aliases[&test_scalarstring]", "A whole new squote value.", "squote", True),
+    ("aliases[&test_scalarstring]", "A whole new folded value.", "folded", True),
+    ("aliases[&test_scalarstring]", "A whole new literal value.", "literal", True),
+    ("aliases[&new_scalarfloat]", 1.1, "float", False),
+    ("aliases[&new_scalarint]", 24, "int", False),
+    ("aliases[&new_scalarstring]", "Did not previously exist.", YAMLValueFormats.BARE, False),
+])
+def test_happy_set_value(yamlpath, yamldata, search, compare, vformat, mexist):
+    yamlpath.set_value(yamldata, search, compare, value_format=vformat, mustexist=mexist)
+    for node in yamlpath.get_nodes(yamldata, search, mustexist=True):
+        assert node == compare
+
+@pytest.mark.parametrize("search,compare,vformat,mexist", [
+    ("aliases[&new_scalarbool]", True, YAMLValueFormats.BOOLEAN, False),
+    ("aliases[&new_scalarbool]", "true", YAMLValueFormats.BOOLEAN, False),
+    ("aliases[&new_scalarbool]", False, "boolean", False),
+    ("aliases[&new_scalarbool]", "false", "boolean", False),
+])
+def test_happy_set_bool_value(yamlpath, yamldata, search, compare, vformat, mexist):
+    yamlpath.set_value(yamldata, search, compare, value_format=vformat, mustexist=mexist)
+    checkval = compare
+    if isinstance(compare, str):
+        checkval = strtobool(compare)
+    for node in yamlpath.get_nodes(yamldata, search, mustexist=True):
+        assert node == checkval
+
+@pytest.mark.parametrize("search,compare,vformat,mexist", [
+    ("aliases[&new_scalarstring]", "Did not previously exist.", YAMLValueFormats.BARE, True),
+])
+def test_unhappy_set_value(yamlpath, yamldata, search, compare, vformat, mexist):
+    with pytest.raises(YAMLPathException):
+        yamlpath.set_value(yamldata, search, compare, value_format=vformat, mustexist=mexist)
+
+@pytest.mark.parametrize("search,compare,vformat,mexist", [
+    ("aliases[&new_scalarstring]", "Did not previously exist.", YAMLValueFormats.BARE, True),
+])
+def test_yamlpatherror_str(yamlpath, yamldata, search, compare, vformat, mexist):
+    try:
+        yamlpath.set_value(yamldata, search, compare, value_format=vformat, mustexist=mexist)
+    except YAMLPathException as ex:
+        assert str(ex)
+
+def test_bad_value_format(yamlpath, yamldata):
+    with pytest.raises(NameError):
+        yamlpath.set_value(yamldata, "aliases[&test_scalarstring]", "Poorly formatted value.", value_format="no_such_format", mustexist=False)

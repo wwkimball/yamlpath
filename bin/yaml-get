@@ -142,7 +142,9 @@ def main():
         log.critical(ex, 1)
 
     try:
-        for node in processor.get_eyaml_values(yaml_data, yaml_path):
+        for node in processor.get_eyaml_values(
+            yaml_data, yaml_path, mustexist=True
+        ):
             if node is not None:
                 log.debug("Got {} from {}.".format(node, yaml_path))
                 discovered_nodes.append(node)

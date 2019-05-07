@@ -1,5 +1,23 @@
 # YAML Path and Command-Line Tools
 
+Contents:
+
+1. [Supported YAML Path Forms](#supported-yaml-path-forms)
+2. [Based on ruamel.yaml and Python 3](#based-on-ruamelyaml-and-python-3)
+   1. [Compatible ruamel.yaml Versions](#compatible-ruamelyaml-versions)
+3. [The Files of This Project](#the-files-of-this-project)
+   1. [Libraries](#libraries)
+   2. [Command-Line Tools](#command-line-tools)
+4. [Basic Usage](#basic-usage)
+   1. [Basic Usage:  Command-Line Tools](#basic-usage--command-line-tools)
+      1. [Rotate Your EYAML Keys](#rotate-your-eyaml-keys)
+      2. [Get a YAML Value](#get-a-yaml-value)
+      3. [Change a YAML Value](#change-a-yaml-value)
+   2. [Basic Usage:  Libraries](#basic-usage--libraries)
+      1. [Initialize ruamel.yaml and These Helpers](#initialize-ruamelyaml-and-these-helpers)
+      2. [Searching for YAML Nodes](#searching-for-yaml-nodes)
+      3. [Changing Values](#changing-values)
+
 This project presents and utilizes YAML Paths, which are a human-friendly means
 of identifying one or more nodes within a [YAML](https://yaml.org/) or
 [EYAML](https://github.com/voxpupuli/hiera-eyaml) data structure.  The libraries
@@ -78,10 +96,11 @@ YAML Path understands these forms:
   * Greater Than match: `sensitive::accounts.application.db.users[access_level>0].pass`
   * Less Than or Equal match: `sensitive::accounts.application.db.users[access_level<=100].pass`
   * Greater Than or Equal match: `sensitive::accounts.application.db.users[access_level>=0].pass`
+  * Match against Hash keys (`.`) rather than values (yields their values, not the keys themselves): `sensitive::accounts.database[.^app_]`
   * Invert any match with `!`, like: `sensitive::accounts.application.db.users[name!=admin].pass`
   * Demarcate expression values, like: `sensitive::accounts.application.db.users[full_name="Some User\'s Name"].pass`
   * Multi-level matching: `sensitive::accounts.application.db.users[name%admin].pass[encrypted!^ENC\[]`
-* Complex combinations: `[2].some::complex.structure[with!=""].'any.valid'.[yaml=data]`
+* Complex combinations: `[2].some::deep.hierarchy[with!=""].'any.valid'[.$yaml][data%structure].complexity`
 
 ## Based on ruamel.yaml and Python 3
 

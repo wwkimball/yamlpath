@@ -313,7 +313,14 @@ class Parser:
             ):
                 # Store the INDEX or SEARCH parameters
                 if element_type is PathSegmentTypes.INDEX:
-                    path_elements.append((element_type, int(element_id)))
+                    try:
+                        idx = int(element_id)
+                    except ValueError:
+                        raise YAMLPathException(
+                            "Not an integer index:  {}".format(element_id)
+                            , yaml_path
+                        )
+                    path_elements.append((element_type, idx))
                 elif element_type is PathSegmentTypes.SEARCH:
                     # Undemarcate the search term, if it is so
                     if element_id and element_id[0] in ["'", '"']:
