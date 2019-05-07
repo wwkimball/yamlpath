@@ -200,7 +200,7 @@ def test_happy_get_eyaml_values(eyamlpath, eyamldata, eyamlkeys, search, compare
     ("aliases[&brandNewEntry]", "This key doesn't already exist.", False, "block"),
 ])
 def test_happy_set_eyaml_value(eyamlpath, eyamldata, eyamlkeys, search, compare, mustexist, output):
-    # Assign the assymetric keys
+    # Assign the asymetric keys
     eyamlpath.privatekey = eyamlkeys[0]
     eyamlpath.publickey = eyamlkeys[1]
 

@@ -123,9 +123,9 @@ presented in Linux/OSX shell form, the same commands can be used on Windows with
 minor adjustment.  Cygwin users are also able to enjoy this project.
 
 Each published version of this project can be installed from
-[PyPI](https://pypi.org/) using Python's package manager, `pip`.  Note that on
-systems with more than one version of Python, you will probably need to use
-`pip3`, or equivalent (e.g.:  Cygwin users may need to use `pip3.6`).
+[PyPI](https://pypi.org/) using `pip`.  Note that on systems with more than one
+version of Python, you will probably need to use `pip3`, or equivalent (e.g.:
+Cygwin users may need to use `pip3.6`).
 
 ```shell
 pip3 install yamlpath
@@ -136,7 +136,15 @@ pip3 install yamlpath
 In order to support the best available YAML editing capability (so called,
 round-trip editing with support for comment preservation), this project is based
 on [ruamel.yaml](https://bitbucket.org/ruamel/yaml/overview) for
-[Python](https://www.python.org/) 3.
+[Python](https://www.python.org/) 3.  While ruamel.yaml is based on PyYAML --
+Python's "standard" YAML library -- ruamel.yaml is [objectively better than
+PyYAML](https://yaml.readthedocs.io/en/latest/pyyaml.html).
+
+Should PyYAML ever merge with -- or at least, catch up with -- ruamel.yaml, this
+project can be (lightly) adapted to depend on it, instead:
+
+* [Is this time to pass the baton?](https://github.com/yaml/pyyaml/issues/31)
+* [Rebase off ruamel? - many new valuable features](https://github.com/yaml/pyyaml/issues/46)
 
 ### Compatible ruamel.yaml Versions
 
