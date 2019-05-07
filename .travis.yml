@@ -12,7 +12,7 @@ install:
 
 script:
   - pip install .
-  - pytest --verbose --cov=yamlpath --cov-report=term-missing tests
+  - pytest --verbose --cov=yamlpath --cov-report=html --cov-report=term-missing tests
   - pycodestyle yamlpath
 
 notifications:
