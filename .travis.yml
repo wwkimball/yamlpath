@@ -11,8 +11,8 @@ install:
   - gem install hiera-eyaml
 
 script:
-  - pip install .
-  - pytest --verbose --cov=yamlpath --cov-report=html --cov-report=term-missing tests
+  - pip install -e .
+  - pytest --cov=yamlpath --cov-report=html --cov-report=term-missing tests
   - pycodestyle yamlpath
 
 notifications:
