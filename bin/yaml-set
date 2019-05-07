@@ -297,7 +297,9 @@ def main():
             output_type = "block"
         try:
             processor.set_eyaml_value(
-                yaml_data, change_path, new_value, output_type, False
+                yaml_data, change_path, new_value
+                , output=output_type
+                , mustexist=False
             )
         except YAMLPathException as ex:
             log.critical(ex, 1)

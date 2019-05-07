@@ -386,38 +386,6 @@ class YAMLPath:
         else:
             raise NotImplementedError
 
-    def _default_for_child(self, yaml_path, value=None):
-        """Identifies and returns the most appropriate default value for the
-        next entry in a YAML Path, should it not already exist.
-
-        Positional Parameters:
-          1. yaml_path (deque) The pre-parsed YAML Path to follow
-          2. value (any) The final expected value for the final YAML Path entry
-
-        Returns:  (any) The most appropriate default value
-
-        Raises:  N/A
-        """
-        if yaml_path is None or not yaml_path:
-            return value
-
-        (typ, _) = yaml_path[0]
-        if typ == PathSegmentTypes.INDEX:
-            return CommentedSeq()
-        elif typ == PathSegmentTypes.KEY:
-            return CommentedMap()
-        else:
-            if isinstance(value, str):
-                return PlainScalarString("")
-            elif isinstance(value, int):
-                return ScalarInt(maxsize)
-            elif isinstance(value, float):
-                return ScalarFloat("inf")
-            elif isinstance(value, bool):
-                return ScalarBoolean(False)
-            else:
-                return value
-
     def _append_list_element(self, data, value=None, anchor=None):
         """Appends a new element to an ruamel.yaml presented list, preserving
         any tailing comment for the former last element of the same list.
@@ -744,22 +712,66 @@ class YAMLPath:
             yield data
 
     @staticmethod
+    def _default_for_child(yaml_path, value=None):
+        """Identifies and returns the most appropriate default value for the
+        next entry in a YAML Path, should it not already exist.
+
+        Positional Parameters:
+          1. yaml_path (deque) The pre-parsed YAML Path to follow
+          2. value (any) The final expected value for the final YAML Path entry
+
+        Returns:  (any) The most appropriate default value
+
+        Raises:  N/A
+        """
+        if yaml_path is None or not yaml_path:
+            return value
+
+        default_value = value
+        (typ, _) = yaml_path[0]
+        if typ == PathSegmentTypes.INDEX:
+            default_value = CommentedSeq()
+        elif typ == PathSegmentTypes.KEY:
+            default_value = CommentedMap()
+        elif isinstance(value, str):
+            default_value = PlainScalarString("")
+        elif isinstance(value, int):
+            default_value = ScalarInt(maxsize)
+        elif isinstance(value, float):
+            default_value = ScalarFloat("inf")
+        elif isinstance(value, bool):
+            default_value = ScalarBoolean(False)
+
+        return default_value
+
+    @staticmethod
     def wrap_type(value):
+        """Wraps a value in one of the ruamel.yaml wrapper types.
+
+        Positional Parameters:
+          1. value (any) The value to wrap.
+
+        Returns: (any) The wrapped value or the original value when a better
+          wrapper could not be identified.
+
+        Raises:  N/A
+        """
+        wrapped_value = value
         typ = type(value)
         if typ is list:
-            return CommentedSeq(value)
+            wrapped_value = CommentedSeq(value)
         elif typ is dict:
-            return CommentedMap(value)
+            wrapped_value = CommentedMap(value)
         elif typ is str:
-            return PlainScalarString(value)
+            wrapped_value = PlainScalarString(value)
         elif typ is int:
-            return ScalarInt(value)
+            wrapped_value = ScalarInt(value)
         elif typ is float:
-            return ScalarFloat(value)
+            wrapped_value = ScalarFloat(value)
         elif typ is bool:
-            return ScalarBoolean(value)
-        else:
-            return value
+            wrapped_value = ScalarBoolean(value)
+
+        return wrapped_value
 
     @staticmethod
     def clone_node(node):
