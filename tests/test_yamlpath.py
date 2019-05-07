@@ -419,6 +419,15 @@ def test_unhappy_set_value(yamlpath, yamldata, search, compare, vformat, mexist)
     with pytest.raises(YAMLPathException):
         yamlpath.set_value(yamldata, search, compare, value_format=vformat, mustexist=mexist)
 
+@pytest.mark.parametrize("search,compare,vformat,mexist", [
+    ("aliases[&new_scalarstring]", "Did not previously exist.", YAMLValueFormats.BARE, True),
+])
+def test_yamlpatherror_str(yamlpath, yamldata, search, compare, vformat, mexist):
+    try:
+        yamlpath.set_value(yamldata, search, compare, value_format=vformat, mustexist=mexist)
+    except YAMLPathException as ex:
+        assert str(ex)
+
 def test_bad_value_format(yamlpath, yamldata):
     with pytest.raises(NameError):
         yamlpath.set_value(yamldata, "aliases[&test_scalarstring]", "Poorly formatted value.", value_format="no_such_format", mustexist=False)
