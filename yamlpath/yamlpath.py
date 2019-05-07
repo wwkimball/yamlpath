@@ -2,8 +2,6 @@
 
 Copyright 2018, 2019 William W. Kimball, Jr. MBA MSIS
 """
-
-
 from sys import maxsize
 from collections import deque
 from distutils.util import strtobool

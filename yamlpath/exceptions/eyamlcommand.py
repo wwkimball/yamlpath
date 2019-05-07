@@ -1,2 +1,2 @@
 class EYAMLCommandException(Exception):
-	pass
+    pass
