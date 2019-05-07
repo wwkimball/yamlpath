@@ -9,7 +9,7 @@ python:
   - 3.8
 
 install:
-  - pip install ruamel.yaml pytest pytest-cov pycodestyle
+  - pip install --upgrade ruamel.yaml pytest pytest-cov pycodestyle
 
 script:
   - pytest --verbose --cov=yamlpath --cov-report=term-missing tests
