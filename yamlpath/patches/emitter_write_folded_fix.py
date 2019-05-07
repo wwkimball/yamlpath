@@ -79,4 +79,6 @@ def write_folded_fix(self, text):
             breaks = ch in u'\n\x85\u2028\u2029'
             spaces = ch == u' '
         end += 1
+
+
 Emitter.write_folded = write_folded_fix
