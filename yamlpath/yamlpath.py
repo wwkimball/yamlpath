@@ -259,9 +259,10 @@ class YAMLPath:
             try:
                 valform = YAMLValueFormats.from_str(strform)
             except NameError:
-                self.log.error(
-                    "Unknown YAML value format:  {}".format(strform)
-                    , 1
+                raise NameError(
+                    "Unknown YAML Value Format:  {}".format(strform)
+                    + ".  Please specify one of:  "
+                    + ", ".join([l.lower() for l in YAMLValueFormats.get_names()])
                 )
 
         if valform == YAMLValueFormats.BARE:
@@ -281,7 +282,10 @@ class YAMLPath:
             newval = str(value)
         elif valform == YAMLValueFormats.BOOLEAN:
             newtype = ScalarBoolean
-            newval = strtobool(value)
+            if isinstance(value, bool):
+                newval = value
+            else:
+                newval = strtobool(value)
         elif valform == YAMLValueFormats.FLOAT:
             try:
                 newval = float(value)
@@ -409,6 +413,8 @@ class YAMLPath:
                 return ScalarInt(maxsize)
             elif isinstance(value, float):
                 return ScalarFloat("inf")
+            elif isinstance(value, bool):
+                return ScalarBoolean(False)
             else:
                 return value
 
@@ -433,11 +439,11 @@ class YAMLPath:
                 ).format(type(value), value)
             )
 
-            # pylint whines about this "unidiomatic" type check but it is
-            # absolutely necessary to check whether the value is str and NOT
-            # a subclass of str.
-            if type(value) is str:
-                value = PlainScalarString(value)
+            value = YAMLPath.wrap_type(value)
+            if not hasattr(value, "anchor"):
+                raise ValueError(
+                    "Impossible to add an Anchor to value:  {}".format(value)
+                )
             value.yaml_set_anchor(anchor)
 
         old_tail_pos = len(data) - 1
@@ -736,6 +742,24 @@ class YAMLPath:
             self.log.debug(data)
 
             yield data
+
+    @staticmethod
+    def wrap_type(value):
+        typ = type(value)
+        if typ is list:
+            return CommentedSeq(value)
+        elif typ is dict:
+            return CommentedMap(value)
+        elif typ is str:
+            return PlainScalarString(value)
+        elif typ is int:
+            return ScalarInt(value)
+        elif typ is float:
+            return ScalarFloat(value)
+        elif typ is bool:
+            return ScalarBoolean(value)
+        else:
+            return value
 
     @staticmethod
     def clone_node(node):
