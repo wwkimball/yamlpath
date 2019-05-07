@@ -22,6 +22,7 @@ def eyamlpath():
     logger = ConsolePrinter(args)
     return EYAMLPath(logger)
 
+@requireseyaml
 @pytest.fixture
 def eyamldata():
     data = """---
@@ -89,8 +90,8 @@ aliased::secrets:
     yaml = YAML()
     return yaml.load(data)
 
-@requireseyaml
 @pytest.fixture(scope="module")
+@requireseyaml
 def eyamlkeys(tmp_path_factory):
     """Creates temporary keys for encryption/decryption tests."""
     private_key_file_name = "private_key.pkcs7.pem"
@@ -218,6 +219,7 @@ def test_happy_set_eyaml_value(eyamlpath, eyamldata, eyamlkeys, search, compare,
 def test_none_eyaml_value():
     assert False == EYAMLPath.is_eyaml_value(None)
 
+@requireseyaml
 def test_impossible_eyaml_exe(eyamlpath, eyamlkeys):
     assert None == EYAMLPath.get_eyaml_executable("/no/such/file/anywhere")
     assert None == EYAMLPath.get_eyaml_executable("this-file-does-not-exist")
