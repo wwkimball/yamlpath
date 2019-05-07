@@ -2,13 +2,15 @@
 
 Contents:
 
-1. [Supported YAML Path Forms](#supported-yaml-path-forms)
-2. [Based on ruamel.yaml and Python 3](#based-on-ruamelyaml-and-python-3)
+1. [Introduction](#introduction)
+2. [Installing](#installing)
+3. [Supported YAML Path Forms](#supported-yaml-path-forms)
+4. [Based on ruamel.yaml and Python 3](#based-on-ruamelyaml-and-python-3)
    1. [Compatible ruamel.yaml Versions](#compatible-ruamelyaml-versions)
-3. [The Files of This Project](#the-files-of-this-project)
-   1. [Libraries](#libraries)
-   2. [Command-Line Tools](#command-line-tools)
-4. [Basic Usage](#basic-usage)
+5. [The Files of This Project](#the-files-of-this-project)
+   1. [Command-Line Tools](#command-line-tools)
+   2. [Libraries](#libraries)
+6. [Basic Usage](#basic-usage)
    1. [Basic Usage:  Command-Line Tools](#basic-usage--command-line-tools)
       1. [Rotate Your EYAML Keys](#rotate-your-eyaml-keys)
       2. [Get a YAML Value](#get-a-yaml-value)
@@ -17,6 +19,8 @@ Contents:
       1. [Initialize ruamel.yaml and These Helpers](#initialize-ruamelyaml-and-these-helpers)
       2. [Searching for YAML Nodes](#searching-for-yaml-nodes)
       3. [Changing Values](#changing-values)
+
+## Introduction
 
 This project presents and utilizes YAML Paths, which are a human-friendly means
 of identifying one or more nodes within a [YAML](https://yaml.org/) or
@@ -82,12 +86,13 @@ You could also access some of these sample nodes using search expressions, like:
 
 YAML Path understands these forms:
 
-* Anchor lookups in Arrays:  `aliases[&anchor_name]`
+* Array element selection:  `array[#]` (where `#` is the 0-based element number)
 * Dot notation for Hash data structure sub-keys:  `hash.child.key`
-* Demarcation for dotted Hash keys:  `hash.'dotted.child.key'`
-* Escape symbol recognition:  `keys_with_\\slashes`
-* Array element selection:  `array[element#]`
-* Hash key lookups (which can return zero or more matches):
+* Demarcation for dotted Hash keys:  `hash.'dotted.child.key'` or `hash."dotted.child.key"`
+* Escape symbol recognition:  `hash.dotted\.child\.key` or `keys_with_\\slashes`
+* Top-level (Hash) Anchor lookups: `&anchor_name`
+* Anchor lookups in Arrays:  `aliases[&anchor_name]`
+* Hash attribute searches (which can return zero or more matches):
   * Exact match:  `sensitive::accounts.application.db.users[name=admin].pass`
   * Starts With match:  `sensitive::accounts.application.db.users[name^adm].pass`
   * Ends With match:  `sensitive::accounts.application.db.users[name$min].pass`
@@ -96,11 +101,35 @@ YAML Path understands these forms:
   * Greater Than match: `sensitive::accounts.application.db.users[access_level>0].pass`
   * Less Than or Equal match: `sensitive::accounts.application.db.users[access_level<=100].pass`
   * Greater Than or Equal match: `sensitive::accounts.application.db.users[access_level>=0].pass`
-  * Match against Hash keys (`.`) rather than values (yields their values, not the keys themselves): `sensitive::accounts.database[.^app_]`
   * Invert any match with `!`, like: `sensitive::accounts.application.db.users[name!=admin].pass`
-  * Demarcate expression values, like: `sensitive::accounts.application.db.users[full_name="Some User\'s Name"].pass`
+  * Demarcate and/or escape expression values, like: `sensitive::accounts.application.db.users[full\ name="Some User\'s Name"].pass`
   * Multi-level matching: `sensitive::accounts.application.db.users[name%admin].pass[encrypted!^ENC\[]`
+* Hash key-name searches using `.`, yielding their values, not the keys themselves:  `sensitive::accounts.database[.^app_]`
 * Complex combinations: `[2].some::deep.hierarchy[with!=""].'any.valid'[.$yaml][data%structure].complexity`
+
+## Installing
+
+This project requires Python 3.  Most operating systems and distributions have
+access to Python 3 even if only Python 2 came pre-installed.  It is generally
+safe to have more than one version of Python on your system at the same time.
+Each version of Python uses a unique binary name as well as different library
+and working directories, like `python2.7` versus `python3.6`.  Further, each
+often provides symlinks like `python` (usually for Python 2) and `python3`,
+respectively.
+
+This project runs on all operating systems and distributions where Python 3 and
+project dependencies are able to run.  While the documentation examples here are
+presented in Linux/OSX shell form, the same commands can be used on Windows with
+minor adjustment.  Cygwin users are also able to enjoy this project.
+
+Each published version of this project can be installed from
+[PyPI](https://pypi.org/) using Python's package manager, `pip`.  Note that on
+systems with more than one version of Python, you will probably need to use
+`pip3`, or equivalent (e.g.:  Cygwin users may need to use `pip3.6`).
+
+```shell
+pip3 install yamlpath
+```
 
 ## Based on ruamel.yaml and Python 3
 
@@ -125,7 +154,7 @@ and tested compatible versions include:
 
 YAML Path Version | ruamel.yaml Min | Max
 ------------------|-----------------|---------
-1.0.x             | 0.15.92         | 0.15.95
+1.0.x             | 0.15.92         | 0.15.94
 
 You may find other compatible versions outside these ranges.  If you do, please
 drop a note so this table can be updated!
@@ -140,20 +169,10 @@ This repository contains:
    simple-to-use APIs.
 3. Various support, documentation, and build files.
 
-### Libraries
-
-More specifically, the most interesting library files include:
-
-* [parser.py](yamlpath/parser.py) The core YAML Path parser logic.
-* [yamlpath.py](yamlpath/yamlpath.py) -- A collection of generally-useful YAML
-  methods that enable easily setting and retrieving values via YAML Paths.
-* [eyamlpath.py](yamlpath/eyaml/eyamlpath.py) -- Extends the YAMLPath class to
-  support EYAML data encryption and decryption.
-
 ### Command-Line Tools
 
-This project also provides some command-line tool implementations which utilize
-these libraries:
+This project provides some command-line tool implementations which utilize
+these YAML Path libraries:
 
 * [eyaml-rotate-keys](bin/eyaml-rotate-keys) -- Rotates the encryption keys used
   for all EYAML values within a set of YAML files, decrypting with old keys and
@@ -170,17 +189,28 @@ these libraries:
   employed to encrypt the new values and/or decrypt old values before checking
   them.
 
+### Libraries
+
+While there are several supporting library files like enumerations and
+exceptions, the most interesting library files include:
+
+* [parser.py](yamlpath/parser.py) The core YAML Path parser logic.
+* [yamlpath.py](yamlpath/yamlpath.py) -- A collection of generally-useful YAML
+  methods that enable easily setting and retrieving values via YAML Paths.
+* [eyamlpath.py](yamlpath/eyaml/eyamlpath.py) -- Extends the YAMLPath class to
+  support EYAML data encryption and decryption.
+
 ## Basic Usage
 
-The files of this project can be used either as command-line tools to take
-advantage of the existing example implementations or as libraries to supplement
-your own implementations.
+The files of this project can be used either as command-line tools -- to take
+advantage of the existing example implementations -- or as libraries to
+supplement your own implementations.
 
 ### Basic Usage:  Command-Line Tools
 
-The command-line implementations (above) are self-documented.  Simply pass
-`--help` to them in order to learn their capabilities.  Here are some simple
-examples.
+The command-line tools are self-documented.  Simply pass `--help` to them in
+order to obtain detailed documentation.  Here are some simple examples of their
+typical use-cases.
 
 #### Rotate Your EYAML Keys
 
@@ -255,7 +285,7 @@ yaml-set \
 This tool will create the `--change` within your YAML_FILE if it doesn't already
 exist.  This may not always be ideal, perhaps when you need to be absolutely
 certain that you're editing the right YAML_FILEs and/or have `--change` set
-correctly.  In such cases, you can add `--mustexist` to disallow creating
+correctly.  In such cases, you can add `--mustexist` to disallow creating any
 missing `--change` YAML Paths:
 
 ```shell
@@ -270,11 +300,11 @@ yaml-set \
 ```
 
 You can also add EYAML encryption (assuming the `eyaml` command is on your
-PATH).  In this example, I add the optional `--format=folded` for this example
-so that the long EYAML value is broken up into a multi-line value rather than
-one very long string.  This is the preferred format for EYAML consumers like
-Puppet.  Note that `--format` has several other settings and applies only to
-new values.
+PATH; if not, you can pass `--eyaml` to specify its location).  In this example,
+I add the optional `--format=folded` for this example so that the long EYAML
+value is broken up into a multi-line value rather than one very long string.
+This is the preferred format for EYAML consumers like Puppet.  Note that
+`--format` has several other settings and applies only to new values.
 
 ```shell
 yaml-set \
