@@ -190,7 +190,7 @@ def main():
 
                 try:
                     processor.set_eyaml_value(
-                        yaml_data, yaml_path, txtval, output
+                        yaml_data, yaml_path, txtval, output=output
                     )
                 except EYAMLCommandException as ex:
                     log.critical(ex, 2)

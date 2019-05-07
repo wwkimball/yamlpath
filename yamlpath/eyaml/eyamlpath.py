@@ -96,7 +96,7 @@ class EYAMLPath(YAMLPath):
         if not self.is_eyaml_value(value):
             return value
 
-        if not self.can_run_eyaml():
+        if not self._can_run_eyaml():
             raise EYAMLCommandException("No accessible eyaml command.")
 
         cmdstr = self.eyaml + " decrypt --quiet --stdin"
@@ -161,7 +161,7 @@ class EYAMLPath(YAMLPath):
         if self.is_eyaml_value(value):
             return value
 
-        if not self.can_run_eyaml():
+        if not self._can_run_eyaml():
             raise EYAMLCommandException(
                 "The eyaml binary is not executable at {}.".format(self.eyaml)
             )
@@ -211,8 +211,7 @@ class EYAMLPath(YAMLPath):
         )
         return retval
 
-    def set_eyaml_value(self, data, yaml_path, value,
-                        output="string", mustexist=False):
+    def set_eyaml_value(self, data, yaml_path, value, **kwargs):
         """Encrypts a value and stores the result to zero or more nodes
         specified via YAML Path.
 
@@ -236,6 +235,8 @@ class EYAMLPath(YAMLPath):
             "Encrypting value(s) for {}."
             .format(self.parser.str_path(yaml_path))
         )
+        output = kwargs.pop("output", "string")
+        mustexist = kwargs.pop("mustexist", False)
         encval = self.encrypt_eyaml(value, output)
         emit_format = YAMLValueFormats.FOLDED
         if output == "string":
@@ -283,7 +284,51 @@ class EYAMLPath(YAMLPath):
             plain_text = self.decrypt_eyaml(node)
             yield plain_text
 
-    def is_eyaml_value(self, value):
+    def _can_run_eyaml(self):
+        """Indicates whether this instance is capable of running the eyaml
+        binary as specified via its eyaml property.
+
+        Positional Parameters:  N/A
+
+        Returns:  (Boolean) true when the present eyaml property indicates an
+        executable; false, otherwise
+
+        Raises:  N/A
+        """
+        binary = EYAMLPath.get_eyaml_executable(self.eyaml)
+        if binary is None:
+            return False
+        self.eyaml = binary
+        return True
+
+    @staticmethod
+    def get_eyaml_executable(binary="eyaml"):
+        """Returns the full executable path to an eyaml binary or None when it
+        cannot be found or is not executable.
+
+        Positional Parameters:
+          1. binary (str) The executable to test.  If an absolute or relative
+             path is not provided, the system PATH will be searched for a match
+             to test.
+
+        Returns: (str) None or the executable eyaml binary path.
+
+        Raises:  N/A
+        """
+        if binary is None or not binary:
+            return None
+
+        if binary.find(sep) < 0:
+            binary = find_executable(binary)
+            if not binary:
+                return None
+
+        if access(binary, X_OK):
+            return binary
+        return None
+
+    @staticmethod
+    def is_eyaml_value(value):
         """Indicates whether a value is EYAML-encrypted.
 
         Positional Parameters:
@@ -296,34 +341,3 @@ class EYAMLPath(YAMLPath):
         if value is None:
             return False
         return str(value).replace("\n", "").replace(" ", "").startswith("ENC[")
-
-    def can_run_eyaml(self):
-        """Indicates whether this instance is capable of running the eyaml
-        binary as specified via its eyaml property.
-
-        Positional Parameters:  N/A
-
-        Returns:  (Boolean) true when the present eyaml property indicates an
-        executable; false, otherwise
-
-        Raises:  N/A
-        """
-        binary = self.eyaml
-        if binary is None or not binary:
-            return False
-
-        if binary.find(sep) < 0:
-            self.log.debug(
-                "EYAMLPath::can_run_eyaml:  Finding the real path for:  {}"
-                .format(binary)
-            )
-            binary = find_executable(binary)
-            if not binary:
-                return False
-            self.eyaml = binary
-
-        self.log.debug(
-            ("EYAMLPath::can_run_eyaml:  Checking whether eyaml is executable"
-             + " at:  {}").format(binary)
-        )
-        return access(binary, X_OK)
