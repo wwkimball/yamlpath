@@ -101,9 +101,9 @@ class EYAMLPath(YAMLPath):
 
         cmdstr = self.eyaml + " decrypt --quiet --stdin"
         if self.publickey:
-            cmdstr += " --pkcs7-public-key=" + self.publickey
+            cmdstr += " --pkcs7-public-key={}".format(self.publickey)
         if self.privatekey:
-            cmdstr += " --pkcs7-private-key=" + self.privatekey
+            cmdstr += " --pkcs7-private-key={}".format(self.privatekey)
 
         cmd = cmdstr.split()
         cleanval = str(value).replace("\n", "").replace(" ", "").rstrip()
@@ -168,9 +168,9 @@ class EYAMLPath(YAMLPath):
 
         cmdstr = self.eyaml + " encrypt --quiet --stdin --output=" + output
         if self.publickey:
-            cmdstr += " --pkcs7-public-key=" + self.publickey
+            cmdstr += " --pkcs7-public-key={}".format(self.publickey)
         if self.privatekey:
-            cmdstr += " --pkcs7-private-key=" + self.privatekey
+            cmdstr += " --pkcs7-private-key={}".format(self.privatekey)
 
         cmd = cmdstr.split()
         self.log.debug(
@@ -220,10 +220,12 @@ class EYAMLPath(YAMLPath):
           2. yaml_path (any) The YAML Path specifying which node to
              encrypt
           3. value (any) The value to encrypt
-          4. output (string) one of "string" or "block"; "string" causes
+
+        Optional Parameters:
+          1. output (string) one of "string" or "block"; "string" causes
              the EYAML representation to be one single line while
              "block" results in a folded-string variant
-          5. mustexist (Boolean) Indicates whether YAML Path must
+          2. mustexist (Boolean) Indicates whether YAML Path must
              specify a pre-existing node
 
         Returns:  N/A
@@ -318,7 +320,7 @@ class EYAMLPath(YAMLPath):
         if binary is None or not binary:
             return None
 
-        if binary.find(sep) < 0:
+        if str(binary).find(sep) < 0:
             binary = find_executable(binary)
             if not binary:
                 return None

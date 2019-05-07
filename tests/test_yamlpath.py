@@ -19,7 +19,6 @@ def yamlpath():
 
 @pytest.fixture
 def yamldata():
-    yaml = YAML()
     data = """---
 aliases:
   - &test_scalarstring This is a scalar string.
@@ -155,6 +154,7 @@ complex:
         second: ju ichi
         third: ji ni
 """
+    yaml = YAML()
     return yaml.load(data)
 
 def test_empty_get_nodes(yamlpath, yamldata):
