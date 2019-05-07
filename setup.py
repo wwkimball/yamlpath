@@ -1,21 +1,19 @@
-from setuptools import setup
+import setuptools
 
-setup(
+with open("README.md", "r") as fh:
+    long_description = fh.read()
+
+setuptools.setup(
     name="yamlpath",
     version="1.0.0",
-    description="Generally-useful YAML and EYAML tools that implement YAML Path",
-    long_description="This project presents and utilizes YAML Paths, which are"
-        + " a human-friendly means of expressing a path through the structure"
-        + " of YAML data to a specific key or a set of keys matching some"
-        + " search criteria.  Also provides command-line tools:  yaml-get (get"
-        + " zero or more values from a YAML file), yaml-set (change the value"
-        + " of one or more nodes in a YAML file), and eyaml-rotate-keys"
-        + " (decrypt all EYAML values within a YAML file using old keys and"
-        + " re-encrypt them using new keys).",
+    description="Generally-useful YAML and EYAML tools employing a human-friendly YAML Path",
+    long_description=long_description,
+    long_description_content_type="text/markdown",
     classifiers=[
         "Development Status :: 4 - Beta",
         "License :: OSI Approved :: ISC License (ISCL)",
         "Programming Language :: Python :: 3.6",
+        "Operating System :: OS Independent",
         "Topic :: Software Development :: Libraries :: Python Modules",
     ],
     url="https://github.com/wwkimball/yamlpath",
@@ -23,7 +21,7 @@ setup(
     author_email="github-yamlpath@kimballstuff.com",
     license="ISC",
     keywords="yaml eyaml",
-    packages=["yamlpath"],
+    packages=setuptools.find_packages(),
     scripts=[
         "bin/eyaml-rotate-keys",
         "bin/yaml-get",
