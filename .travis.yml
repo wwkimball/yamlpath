@@ -13,7 +13,6 @@ install:
 script:
   - pip install -e .
   - pytest --verbose --cov=yamlpath --cov-report=term-missing --cov-fail-under=90 tests
-  - coverage run --source=yamlpath setup.py tests
   - coveralls
   - pycodestyle yamlpath
 
