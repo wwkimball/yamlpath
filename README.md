@@ -1,5 +1,7 @@
 # YAML Path and Command-Line Tools
 
+[![Build Status](https://travis-ci.org/wwkimball/yamlpath.svg?branch=master)](https://travis-ci.org/wwkimball/yamlpath)
+
 Contents:
 
 1. [Introduction](#introduction)
