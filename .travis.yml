@@ -12,7 +12,7 @@ install:
 
 script:
   - pip install -e .
-  - pytest --verbose --cov --cov-report=term-missing tests --cov-fail-under=90%
+  - pytest --verbose --cov --cov-report=term-missing tests --cov-fail-under=90
   - pycodestyle yamlpath
 
 notifications:
