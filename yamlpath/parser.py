@@ -118,6 +118,7 @@ class Parser:
         search_inverted = False
         search_method = None
         search_attr = ""
+        capturing_regex = False
 
         for c in yaml_path:
             demarc_count = len(demarc_stack)
@@ -129,6 +130,7 @@ class Parser:
 
             elif (
                 not escape_next
+                and not capturing_regex
                 and c == " "
                 and ((demarc_count < 1) or (not demarc_stack[-1] in ["'", '"']))
             ):
@@ -185,7 +187,7 @@ class Parser:
                 not escape_next
                 and demarc_count > 0
                 and demarc_stack[-1] == "["
-                and c in ["=", "^", "$", "%", "!", ">", "<"]
+                and c in ["=", "^", "$", "%", "!", ">", "<", "~"]
             ):
                 # Hash attribute search
                 if c == "!":
@@ -238,6 +240,18 @@ class Parser:
                         "Missing search operand before operator, {}".format(c)
                         , yaml_path
                     )
+
+                elif c == "~":
+                    if search_method == PathSearchMethods.EQUALS:
+                        search_method = PathSearchMethods.REGEX
+                    else:
+                        raise YAMLPathException(
+                            ("Unexpected use of {} operator.  Please try =~ if"
+                            + " you mean to search with a Regular Expression.")
+                            .format(c)
+                            , yaml_path
+                        )
+                    continue
 
                 elif c == "^":
                     # Value starts with
@@ -334,6 +348,9 @@ class Parser:
             element_id += c
             seeking_anchor_mark = False
             escape_next = False
+
+            # Permit all symbols (including spaces) when capturing a RegEx
+            capturing_regex = search_method == PathSearchMethods.REGEX
 
         # Check for mismatched demarcations
         if demarc_count > 0:

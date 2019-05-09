@@ -3,6 +3,7 @@
 Copyright 2018, 2019 William W. Kimball, Jr. MBA MSIS
 """
 from sys import maxsize
+import re
 from collections import deque
 from distutils.util import strtobool
 
@@ -528,6 +529,9 @@ class YAMLPath:
                         matches = False
                 else:
                     matches = haystack <= needle
+            elif method == PathSearchMethods.REGEX:
+                matcher = re.compile(needle)
+                matches = matcher.search(haystack) is not None
             else:
                 raise NotImplementedError
 
@@ -542,7 +546,7 @@ class YAMLPath:
                         yield ele
 
         elif isinstance(data, dict):
-            # Allow . to mean "every node"
+            # Allow . to mean "each key's name"
             if attr == '.':
                 for key, val in data.items():
                     matches = search_matches(method, term, key)
