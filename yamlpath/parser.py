@@ -280,7 +280,8 @@ class Parser:
                     else:
                         raise YAMLPathException(
                             ("Unexpected use of {} operator.  Please try =~ if"
-                            + " you mean to search with a Regular Expression."
+                                + " you mean to search with a Regular"
+                                + " Expression."
                             ).format(c)
                             , yaml_path
                         )

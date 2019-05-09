@@ -181,7 +181,7 @@ class YAMLPath:
                     matches += 1
                     self.log.debug(
                         ("YAMLPath::_get_nodes:  Found element {} in the data;"
-                        + " recursing into it..."
+                            + " recursing into it..."
                         ).format(curele)
                     )
                     for epn in self._get_nodes(node, yaml_path.copy()):
@@ -586,7 +586,7 @@ class YAMLPath:
                     matched_nodes += 1
                     self.log.debug(
                         ("YAMLPath::_ensure_path:  Found element {} in the"
-                        + " data; recursing into it..."
+                            + " data; recursing into it..."
                         ).format(curele)
                     )
                     for epn in self._ensure_path(node, path.copy(), value):
