@@ -54,7 +54,7 @@ class EYAMLPath(YAMLPath):
         if isinstance(data, list):
             path += "["
             for i, ele in enumerate(data):
-                if hasattr(ele, "anchor"):
+                if hasattr(ele, "anchor") and ele.anchor.value is not None:
                     tmp_path = path + "&" + ele.anchor.value + "]"
                 else:
                     tmp_path = path + str(i) + "]"
@@ -120,10 +120,6 @@ class EYAMLPath(YAMLPath):
                 stdout=PIPE,
                 input=bval
             ).stdout.decode('ascii').rstrip()
-        except FileNotFoundError:
-            raise EYAMLCommandException(
-                "The {} command could not be found.".format(self.eyaml)
-            )
         except CalledProcessError as ex:
             raise EYAMLCommandException(
                 "The {} command cannot be run due to exit code:  {}"
@@ -135,12 +131,11 @@ class EYAMLPath(YAMLPath):
             "EYAMLPath::decrypt_eyaml:  Decrypted result:  {}".format(retval)
         )
         if not retval or retval == cleanval:
-            self.log.warning(
+            raise EYAMLCommandException(
                 "Unable to decrypt value!  Please verify you are using the"
-                + " correct old EYAML keys and the value is not corrupt:\n{}"
+                + " correct old EYAML keys and the value is not corrupt:  {}"
                 .format(cleanval)
             )
-            retval = None
 
         return retval
 
@@ -186,10 +181,6 @@ class EYAMLPath(YAMLPath):
                 .stdout
                 .decode('ascii')
                 .rstrip()
-            )
-        except FileNotFoundError:
-            raise EYAMLCommandException(
-                "The {} command could not be found.".format(self.eyaml)
             )
         except CalledProcessError as ex:
             raise EYAMLCommandException(
@@ -282,10 +273,9 @@ class EYAMLPath(YAMLPath):
         for node in self.get_nodes(
             data, yaml_path, mustexist=mustexist, default_value=default_value
         ):
-            if node is None:
-                continue
-            plain_text = self.decrypt_eyaml(node)
-            yield plain_text
+            if node is not None:
+                plain_text = self.decrypt_eyaml(node)
+                yield plain_text
 
     def _can_run_eyaml(self):
         """Indicates whether this instance is capable of running the eyaml
