@@ -280,8 +280,8 @@ class Parser:
                     else:
                         raise YAMLPathException(
                             ("Unexpected use of {} operator.  Please try =~ if"
-                            + " you mean to search with a Regular Expression.")
-                            .format(c)
+                            + " you mean to search with a Regular Expression."
+                            ).format(c)
                             , yaml_path
                         )
                     continue
@@ -389,17 +389,17 @@ class Parser:
             seeking_anchor_mark = False
             escape_next = False
 
+        # Check for unterminated RegExes
+        if capturing_regex:
+            raise YAMLPathException(
+                "YAML Path contains an unterminated Regular Expression.",
+                yaml_path
+            )
+
         # Check for mismatched demarcations
         if demarc_count > 0:
             raise YAMLPathException(
                 "YAML Path contains at least one unmatched demarcation mark",
-                yaml_path
-            )
-
-        # Check for unterminated RegExes
-        if capturing_regex:
-            raise YAMLPathException(
-                "YAML Path contains unterminated Regular Expression.",
                 yaml_path
             )
 
