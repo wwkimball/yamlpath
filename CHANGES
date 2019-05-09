@@ -1,3 +1,8 @@
+1.1.0
+Added support for Regular Expressions as a search mechanism against Hash keys
+and values.  Also increased unit test coverage and fixed some bugs in that
+effort.
+
 1.0.0
 Initial release.  All features are belived to be working as expected, backed by
 comprehensive unit tests and my own in-production use of the bundled
