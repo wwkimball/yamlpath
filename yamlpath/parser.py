@@ -118,32 +118,58 @@ class Parser:
         search_inverted = False
         search_method = None
         search_attr = ""
+
+        seeking_regex_delim = False
         capturing_regex = False
 
         for c in yaml_path:
             demarc_count = len(demarc_stack)
 
-            if not escape_next and c == "\\":
+            if escape_next:
+                # Pass-through; capture this escaped character
+                pass
+
+            elif capturing_regex:
+                if c == demarc_stack[-1]:
+                    # Stop the RegEx capture
+                    capturing_regex = False
+                    demarc_stack.pop()
+                    continue
+                else:
+                    # Pass-through; capture everything that isn't the present
+                    # RegEx delimiter.
+                    pass
+
+            elif c == "\\":
                 # Escape the next character
                 escape_next = True
                 continue
 
             elif (
-                not escape_next
-                and not capturing_regex
-                and c == " "
-                and ((demarc_count < 1) or (not demarc_stack[-1] in ["'", '"']))
+                c == " "
+                and (
+                    (demarc_count < 1)
+                    or (not demarc_stack[-1] in ["'", '"'])
+                )
             ):
                 # Ignore unescaped, non-demarcated whitespace
                 continue
 
-            elif not escape_next and seeking_anchor_mark and c == "&":
+            elif seeking_regex_delim:
+                # This first non-space symbol is now the RegEx delimiter
+                seeking_regex_delim = False
+                capturing_regex = True
+                demarc_stack.append(c)
+                demarc_count += 1
+                continue
+
+            elif seeking_anchor_mark and c == "&":
                 # Found an expected (permissible) ANCHOR mark
                 seeking_anchor_mark = False
                 element_type = PathSegmentTypes.ANCHOR
                 continue
 
-            elif not escape_next and c in ['"', "'"]:
+            elif c in ['"', "'"]:
                 # Found a string demarcation mark
                 if demarc_count > 0:
                     # Already appending to an ongoing demarcated value
@@ -168,7 +194,7 @@ class Parser:
                     demarc_count += 1
                     continue
 
-            elif not escape_next and c == "[":
+            elif c == "[":
                 if element_id:
                     # Named list INDEX; record its predecessor element
                     path_elements.append((element_type, element_id))
@@ -184,8 +210,7 @@ class Parser:
                 continue
 
             elif (
-                not escape_next
-                and demarc_count > 0
+                demarc_count > 0
                 and demarc_stack[-1] == "["
                 and c in ["=", "^", "$", "%", "!", ">", "<", "~"]
             ):
@@ -234,16 +259,10 @@ class Parser:
 
                     continue
 
-                elif not element_id:
-                    # All tests beyond this point require an operand
-                    raise YAMLPathException(
-                        "Missing search operand before operator, {}".format(c)
-                        , yaml_path
-                    )
-
                 elif c == "~":
                     if search_method == PathSearchMethods.EQUALS:
                         search_method = PathSearchMethods.REGEX
+                        seeking_regex_delim = True
                     else:
                         raise YAMLPathException(
                             ("Unexpected use of {} operator.  Please try =~ if"
@@ -252,6 +271,13 @@ class Parser:
                             , yaml_path
                         )
                     continue
+
+                elif not element_id:
+                    # All tests beyond this point require an operand
+                    raise YAMLPathException(
+                        "Missing search operand before operator, {}".format(c)
+                        , yaml_path
+                    )
 
                 elif c == "^":
                     # Value starts with
@@ -299,10 +325,9 @@ class Parser:
                     continue
 
             elif (
-                not escape_next
-                and demarc_count > 0
-                and demarc_stack[-1] == "["
+                demarc_count > 0
                 and c == "]"
+                and demarc_stack[-1] == "["
             ):
                 # Store the INDEX or SEARCH parameters
                 if element_type is PathSegmentTypes.INDEX:
@@ -334,9 +359,10 @@ class Parser:
                 element_id = ""
                 demarc_stack.pop()
                 demarc_count -= 1
+                search_method = None
                 continue
 
-            elif not escape_next and demarc_count < 1 and c == ".":
+            elif demarc_count < 1 and c == ".":
                 # Do not store empty elements
                 if element_id:
                     path_elements.append((element_type, element_id))
@@ -349,13 +375,17 @@ class Parser:
             seeking_anchor_mark = False
             escape_next = False
 
-            # Permit all symbols (including spaces) when capturing a RegEx
-            capturing_regex = search_method == PathSearchMethods.REGEX
-
         # Check for mismatched demarcations
         if demarc_count > 0:
             raise YAMLPathException(
-                "YAML path contains at least one unmatched demarcation mark",
+                "YAML Path contains at least one unmatched demarcation mark",
+                yaml_path
+            )
+
+        # Check for unterminated RegExes
+        if capturing_regex:
+            raise YAMLPathException(
+                "YAML Path contains unterminated Regular Expression.",
                 yaml_path
             )
 
