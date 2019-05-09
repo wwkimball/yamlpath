@@ -4,10 +4,19 @@ from types import SimpleNamespace
 from distutils.util import strtobool
 
 from ruamel.yaml import YAML
+from ruamel.yaml.comments import CommentedSeq, CommentedMap
+from ruamel.yaml.scalarstring import PlainScalarString
+from ruamel.yaml.scalarbool import ScalarBoolean
+from ruamel.yaml.scalarfloat import ScalarFloat
+from ruamel.yaml.scalarint import ScalarInt
 
 from yamlpath import YAMLPath
 from yamlpath.exceptions import YAMLPathException
-from yamlpath.enums import YAMLValueFormats
+from yamlpath.enums import (
+    YAMLValueFormats,
+    PathSegmentTypes,
+    PathSearchMethods,
+)
 from yamlpath.wrappers import ConsolePrinter
 
 @pytest.fixture
@@ -123,7 +132,7 @@ complex:
       children:
         first: ju
         second: ju ichi
-        third: ji ni
+        third: ji ni     # Deliberate typo for testing (should be "ju ni")
   hash_of_hashes:
     child1:
       id: 1
@@ -285,6 +294,11 @@ def test_empty_set_nodes(yamlpath, yamldata):
     ("namespaced::hash.with_array_of_hashes[id>=3].name", "san"),
     (r"namespaced::hash.with_array_of_hashes[name!%i].id", 3),
     (r"[.^top_][.^key][.^child][attr_tst=child\ 2]", "child 2"),
+    (r"complex.hash_of_hashes[.=~/^child\d+/].children[third=~/^j[^u]\s\w+$/]", "ji ni"),
+    (r"complex.hash_of_hashes[.=~/^child[0-9]+/].children[third=~/^j[^u] \w+$/]", "ji ni"),
+    (r"complex.hash_of_hashes[.=~_^child\d+_].children[third=~#^j[^u] \w+$#]", "ji ni"),
+    (r"complex.hash_of_hashes[ . =~ !^child\d+! ].children[ third =~ a^j[^u] \w+$a ]", "ji ni"),
+    (r"complex.hash_of_hashes[.=~ -^child\d+-].children[third =~ $^j[^u] \w+$]", "ji ni"),
 ])
 def test_happy_singular_get_leaf_nodes(yamlpath, yamldata, search, compare):
     for node in yamlpath.get_nodes(yamldata, search):
@@ -431,3 +445,89 @@ def test_yamlpatherror_str(yamlpath, yamldata, search, compare, vformat, mexist)
 def test_bad_value_format(yamlpath, yamldata):
     with pytest.raises(NameError):
         yamlpath.set_value(yamldata, "aliases[&test_scalarstring]", "Poorly formatted value.", value_format="no_such_format", mustexist=False)
+
+@pytest.mark.parametrize("val,typ", [
+    ([], CommentedSeq),
+    ({}, CommentedMap),
+    ("", PlainScalarString),
+    (1, ScalarInt),
+    (1.1, ScalarFloat),
+    (True, ScalarBoolean),
+    (SimpleNamespace(), SimpleNamespace),
+])
+def test_wrap_type(val, typ):
+  assert isinstance(YAMLPath.wrap_type(val), typ)
+
+def test_default_for_child_none(yamlpath):
+  assert isinstance(yamlpath._default_for_child(None, ""), str)
+
+@pytest.mark.parametrize("path,typ", [
+  ([(True, False)], ScalarBoolean),
+  ([(str, "")], PlainScalarString),
+  ([(int, 1)], ScalarInt),
+  ([(float, 1.1)], ScalarFloat),
+])
+def test_default_for_child(yamlpath, path, typ):
+  assert isinstance(yamlpath._default_for_child(path, path[0][1]), typ)
+
+def test_notimplementeds(yamlpath, yamldata):
+  with pytest.raises(NotImplementedError):
+    yamlpath.set_value(yamldata, "namespaced::hash[&newAnchor]", "New Value")
+
+def test_scalar_search(yamlpath, yamldata):
+  for node in yamlpath._search(yamldata["top_scalar"], [True, PathSearchMethods.EQUALS, ".", "top_scalar"]):
+    assert node is not None
+
+def test_nonexistant_path_search_method(yamlpath, yamldata):
+  from enum import Enum
+  from yamlpath.enums import PathSearchMethods
+  names = [m.name for m in PathSearchMethods] + ['DNF']
+  PathSearchMethods = Enum('PathSearchMethods', names)
+
+  with pytest.raises(NotImplementedError):
+    for _ in yamlpath._search(yamldata["top_scalar"], [True, PathSearchMethods.DNF, ".", "top_scalar"]):
+      pass
+
+def test_nonexistant_path_segment_types(yamlpath, yamldata):
+  from enum import Enum
+  from yamlpath.enums import PathSegmentTypes
+  names = [m.name for m in PathSegmentTypes] + ['DNF']
+  PathSegmentTypes = Enum('PathSegmentTypes', names)
+
+  with pytest.raises(NotImplementedError):
+    for _ in yamlpath._get_elements_by_ref(yamldata, (PathSegmentTypes.DNF, False)):
+      pass
+
+def test_append_list_element_value_error(yamlpath):
+  with pytest.raises(ValueError):
+    yamlpath._append_list_element([], PathSearchMethods, "anchor")
+
+def test_get_elements_by_bad_ref(yamlpath, yamldata):
+  with pytest.raises(YAMLPathException):
+    for _ in yamlpath._get_elements_by_ref(yamldata, (PathSegmentTypes.INDEX, "4F")):
+      pass
+
+def test_get_elements_by_none_refs(yamlpath, yamldata):
+  tally = 0
+  for _ in yamlpath._get_elements_by_ref(None, (PathSegmentTypes.INDEX, "4F")):
+    tally += 1
+
+  for _ in yamlpath._get_elements_by_ref(yamldata, None):
+    tally += 1
+
+  assert tally == 0
+
+@pytest.mark.parametrize("newval,newform", [
+  ("new value", YAMLValueFormats.LITERAL),
+  (1.1, YAMLValueFormats.FLOAT),
+])
+def test_update_value(yamlpath, yamldata, newval, newform):
+  yamlpath._update_value(yamldata, yamldata["top_scalar"], newval, newform)
+
+@pytest.mark.parametrize("newval,newform", [
+  ("4F", YAMLValueFormats.INT),
+  ("4.F", YAMLValueFormats.FLOAT),
+])
+def test_bad_update_value(yamlpath, yamldata, newval, newform):
+  with pytest.raises(SystemExit):
+    yamlpath._update_value(yamldata, yamldata["top_scalar"], newval, newform)
