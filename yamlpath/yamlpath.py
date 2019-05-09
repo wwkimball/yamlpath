@@ -531,7 +531,7 @@ class YAMLPath:
                     matches = haystack <= needle
             elif method == PathSearchMethods.REGEX:
                 matcher = re.compile(needle)
-                matches = matcher.search(haystack) is not None
+                matches = matcher.search(str(haystack)) is not None
             else:
                 raise NotImplementedError
 

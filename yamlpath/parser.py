@@ -50,17 +50,24 @@ class Parser:
                     ppath += "."
                 ppath += element_id.replace(".", "\\.")
             elif ptype == PathSegmentTypes.INDEX:
-                ppath += "[" + str(element_id) + "]"
+                ppath += "[{}]".format(element_id)
             elif ptype == PathSegmentTypes.ANCHOR:
-                ppath += "[&" + element_id + "]"
+                if ppath:
+                    ppath += "[&{}]".format(element_id)
+                else:
+                    ppath = "&{}".format(element_id)
             elif ptype == PathSegmentTypes.SEARCH:
                 invert, method, attr, term = element_id
+                if method == PathSearchMethods.REGEX:
+                    safe_term = "/{}/".format(term.replace("/", r"\/"))
+                else:
+                    safe_term = str(term).replace(" ", r"\ ")
                 ppath += (
                     "["
                     + str(attr)
                     + ("!" if invert else "")
                     + PathSearchMethods.to_operator(method)
-                    + str(term).replace(" ", "\\ ")
+                    + safe_term
                     + "]"
                 )
 
@@ -137,9 +144,16 @@ class Parser:
                     continue
                 else:
                     # Pass-through; capture everything that isn't the present
-                    # RegEx delimiter.
+                    # RegEx delimiter.  This deliberately means users cannot
+                    # escape the RegEx delimiter itself should it occur within
+                    # the RegEx; thus, users must select a delimiter that won't
+                    # appear within the RegEx (which is exactly why the user
+                    # gets to choose the delimiter).
                     pass
 
+            # The escape test MUST come AFTER the RegEx capture test so users
+            # won't be forced into "The Backslash Plague".
+            # (https://docs.python.org/3/howto/regex.html#the-backslash-plague)
             elif c == "\\":
                 # Escape the next character
                 escape_next = True
