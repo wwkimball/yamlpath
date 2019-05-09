@@ -50,17 +50,24 @@ class Parser:
                     ppath += "."
                 ppath += element_id.replace(".", "\\.")
             elif ptype == PathSegmentTypes.INDEX:
-                ppath += "[" + str(element_id) + "]"
+                ppath += "[{}]".format(element_id)
             elif ptype == PathSegmentTypes.ANCHOR:
-                ppath += "[&" + element_id + "]"
+                if ppath:
+                    ppath += "[&{}]".format(element_id)
+                else:
+                    ppath = "&{}".format(element_id)
             elif ptype == PathSegmentTypes.SEARCH:
                 invert, method, attr, term = element_id
+                if method == PathSearchMethods.REGEX:
+                    safe_term = "/{}/".format(term.replace("/", r"\/"))
+                else:
+                    safe_term = str(term).replace(" ", r"\ ")
                 ppath += (
                     "["
                     + str(attr)
                     + ("!" if invert else "")
                     + PathSearchMethods.to_operator(method)
-                    + str(term).replace(" ", "\\ ")
+                    + safe_term
                     + "]"
                 )
 
@@ -119,29 +126,64 @@ class Parser:
         search_method = None
         search_attr = ""
 
+        seeking_regex_delim = False
+        capturing_regex = False
+
         for c in yaml_path:
             demarc_count = len(demarc_stack)
 
-            if not escape_next and c == "\\":
+            if escape_next:
+                # Pass-through; capture this escaped character
+                pass
+
+            elif capturing_regex:
+                if c == demarc_stack[-1]:
+                    # Stop the RegEx capture
+                    capturing_regex = False
+                    demarc_stack.pop()
+                    continue
+                else:
+                    # Pass-through; capture everything that isn't the present
+                    # RegEx delimiter.  This deliberately means users cannot
+                    # escape the RegEx delimiter itself should it occur within
+                    # the RegEx; thus, users must select a delimiter that won't
+                    # appear within the RegEx (which is exactly why the user
+                    # gets to choose the delimiter).
+                    pass
+
+            # The escape test MUST come AFTER the RegEx capture test so users
+            # won't be forced into "The Backslash Plague".
+            # (https://docs.python.org/3/howto/regex.html#the-backslash-plague)
+            elif c == "\\":
                 # Escape the next character
                 escape_next = True
                 continue
 
             elif (
-                not escape_next
-                and c == " "
-                and ((demarc_count < 1) or (not demarc_stack[-1] in ["'", '"']))
+                c == " "
+                and (
+                    (demarc_count < 1)
+                    or (not demarc_stack[-1] in ["'", '"'])
+                )
             ):
                 # Ignore unescaped, non-demarcated whitespace
                 continue
 
-            elif not escape_next and seeking_anchor_mark and c == "&":
+            elif seeking_regex_delim:
+                # This first non-space symbol is now the RegEx delimiter
+                seeking_regex_delim = False
+                capturing_regex = True
+                demarc_stack.append(c)
+                demarc_count += 1
+                continue
+
+            elif seeking_anchor_mark and c == "&":
                 # Found an expected (permissible) ANCHOR mark
                 seeking_anchor_mark = False
                 element_type = PathSegmentTypes.ANCHOR
                 continue
 
-            elif not escape_next and c in ['"', "'"]:
+            elif c in ['"', "'"]:
                 # Found a string demarcation mark
                 if demarc_count > 0:
                     # Already appending to an ongoing demarcated value
@@ -166,7 +208,7 @@ class Parser:
                     demarc_count += 1
                     continue
 
-            elif not escape_next and c == "[":
+            elif c == "[":
                 if element_id:
                     # Named list INDEX; record its predecessor element
                     path_elements.append((element_type, element_id))
@@ -182,10 +224,9 @@ class Parser:
                 continue
 
             elif (
-                not escape_next
-                and demarc_count > 0
+                demarc_count > 0
                 and demarc_stack[-1] == "["
-                and c in ["=", "^", "$", "%", "!", ">", "<"]
+                and c in ["=", "^", "$", "%", "!", ">", "<", "~"]
             ):
                 # Hash attribute search
                 if c == "!":
@@ -230,6 +271,20 @@ class Parser:
                             , yaml_path
                         )
 
+                    continue
+
+                elif c == "~":
+                    if search_method == PathSearchMethods.EQUALS:
+                        search_method = PathSearchMethods.REGEX
+                        seeking_regex_delim = True
+                    else:
+                        raise YAMLPathException(
+                            ("Unexpected use of {} operator.  Please try =~ if"
+                                + " you mean to search with a Regular"
+                                + " Expression."
+                            ).format(c)
+                            , yaml_path
+                        )
                     continue
 
                 elif not element_id:
@@ -285,10 +340,9 @@ class Parser:
                     continue
 
             elif (
-                not escape_next
-                and demarc_count > 0
-                and demarc_stack[-1] == "["
+                demarc_count > 0
                 and c == "]"
+                and demarc_stack[-1] == "["
             ):
                 # Store the INDEX or SEARCH parameters
                 if element_type is PathSegmentTypes.INDEX:
@@ -320,9 +374,10 @@ class Parser:
                 element_id = ""
                 demarc_stack.pop()
                 demarc_count -= 1
+                search_method = None
                 continue
 
-            elif not escape_next and demarc_count < 1 and c == ".":
+            elif demarc_count < 1 and c == ".":
                 # Do not store empty elements
                 if element_id:
                     path_elements.append((element_type, element_id))
@@ -335,10 +390,17 @@ class Parser:
             seeking_anchor_mark = False
             escape_next = False
 
+        # Check for unterminated RegExes
+        if capturing_regex:
+            raise YAMLPathException(
+                "YAML Path contains an unterminated Regular Expression.",
+                yaml_path
+            )
+
         # Check for mismatched demarcations
         if demarc_count > 0:
             raise YAMLPathException(
-                "YAML path contains at least one unmatched demarcation mark",
+                "YAML Path contains at least one unmatched demarcation mark",
                 yaml_path
             )
 

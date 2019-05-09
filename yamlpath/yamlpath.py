@@ -3,6 +3,7 @@
 Copyright 2018, 2019 William W. Kimball, Jr. MBA MSIS
 """
 from sys import maxsize
+import re
 from collections import deque
 from distutils.util import strtobool
 
@@ -129,11 +130,9 @@ class YAMLPath:
             )
             found_nodes = 0
             for node in self._get_nodes(data, path):
-                if node is None:
-                    continue
-
-                found_nodes += 1
-                self._update_value(data, node, value, value_format)
+                if node is not None:
+                    found_nodes += 1
+                    self._update_value(data, node, value, value_format)
 
             if found_nodes < 1:
                 raise YAMLPathException(
@@ -146,9 +145,8 @@ class YAMLPath:
                 .format(self.parser.str_path(path))
             )
             for node in self._ensure_path(data, path, value):
-                if node is None:
-                    continue
-                self._update_value(data, node, value, value_format)
+                if node is not None:
+                    self._update_value(data, node, value, value_format)
 
     def _get_nodes(self, data, yaml_path):
         """Generates zero or more matching, pre-existing nodes from YAML data
@@ -179,18 +177,16 @@ class YAMLPath:
 
             # The next element must already exist
             for node in self._get_elements_by_ref(data, curref):
-                if node is None:
-                    continue
-
-                matches += 1
-                self.log.debug(
-                    ("YAMLPath::_get_nodes:  Found element {} in the data;"
-                     + " recursing into it..."
-                    ).format(curele)
-                )
-                for epn in self._get_nodes(node, yaml_path.copy()):
-                    if epn is not None:
-                        yield epn
+                if node is not None:
+                    matches += 1
+                    self.log.debug(
+                        ("YAMLPath::_get_nodes:  Found element {} in the data;"
+                            + " recursing into it..."
+                        ).format(curele)
+                    )
+                    for epn in self._get_nodes(node, yaml_path.copy()):
+                        if epn is not None:
+                            yield epn
 
             if not matches:
                 return None
@@ -320,7 +316,7 @@ class YAMLPath:
             try:
                 newval = int(value)
             except ValueError:
-                self.log.error("Not an integer:  {}".format(value), 1)
+                self.log.critical("Not an integer:  {}".format(value), 1)
 
         if new_node is None:
             if hasattr(source_node, "anchor"):
@@ -345,16 +341,13 @@ class YAMLPath:
           PathSegmentTypes value.
         """
         if data is None or ref is None:
-            return None
+            return
 
         reftyp = ref[0]
         refele = ref[1]
-
         if reftyp == PathSegmentTypes.KEY:
             if isinstance(data, dict) and refele in data:
                 yield data[refele]
-            else:
-                return None
         elif reftyp == PathSegmentTypes.INDEX:
             try:
                 intele = int(refele)
@@ -366,8 +359,6 @@ class YAMLPath:
 
             if isinstance(data, list) and len(data) > intele:
                 yield data[intele]
-            else:
-                return None
         elif reftyp == PathSegmentTypes.ANCHOR:
             if isinstance(data, list):
                 for ele in data:
@@ -377,15 +368,10 @@ class YAMLPath:
                 for _, val in data.items():
                     if hasattr(val, "anchor") and refele == val.anchor.value:
                         yield val
-            else:
-                return None
         elif reftyp == PathSegmentTypes.SEARCH:
             for match in self._search(data, refele):
-                if match is None:
-                    continue
-                else:
+                if match is not None:
                     yield match
-            return None
         else:
             raise NotImplementedError
 
@@ -404,12 +390,6 @@ class YAMLPath:
         """
 
         if anchor is not None and value is not None:
-            self.log.debug(
-                ("YAMLPath::_append_list_element:  Ensuring {}{} is a"
-                 + " PlainScalarString."
-                ).format(type(value), value)
-            )
-
             value = YAMLPath.wrap_type(value)
             if not hasattr(value, "anchor"):
                 raise ValueError(
@@ -528,6 +508,9 @@ class YAMLPath:
                         matches = False
                 else:
                     matches = haystack <= needle
+            elif method == PathSearchMethods.REGEX:
+                matcher = re.compile(needle)
+                matches = matcher.search(str(haystack)) is not None
             else:
                 raise NotImplementedError
 
@@ -542,7 +525,7 @@ class YAMLPath:
                         yield ele
 
         elif isinstance(data, dict):
-            # Allow . to mean "every node"
+            # Allow . to mean "each key's name"
             if attr == '.':
                 for key, val in data.items():
                     matches = search_matches(method, term, key)
@@ -560,8 +543,6 @@ class YAMLPath:
             matches = search_matches(method, term, data)
             if (matches and not invert) or (invert and not matches):
                 yield data
-
-        yield None
 
     def _ensure_path(self, data, path, value=None):
         """Returns zero or more pre-existing nodes matching a YAML Path, or
@@ -601,18 +582,16 @@ class YAMLPath:
             # The next element may not exist; this method ensures that it does
             matched_nodes = 0
             for node in self._get_elements_by_ref(data, curref):
-                if node is None:
-                    continue
-
-                matched_nodes += 1
-                self.log.debug(
-                    ("YAMLPath::_ensure_path:  Found element {} in the data;"
-                     + " recursing into it..."
-                    ).format(curele)
-                )
-                for epn in self._ensure_path(node, path.copy(), value):
-                    if epn is not None:
-                        yield epn
+                if node is not None:
+                    matched_nodes += 1
+                    self.log.debug(
+                        ("YAMLPath::_ensure_path:  Found element {} in the"
+                            + " data; recursing into it..."
+                        ).format(curele)
+                    )
+                    for epn in self._ensure_path(node, path.copy(), value):
+                        if epn is not None:
+                            yield epn
 
             if (
                 matched_nodes < 1
@@ -634,10 +613,9 @@ class YAMLPath:
                             data, new_val, curele
                         )
                         for node in self._ensure_path(new_ele, path, value):
-                            if node is None:
-                                continue
-                            matched_nodes += 1
-                            yield node
+                            if node is not None:
+                                matched_nodes += 1
+                                yield node
                     elif curtyp is PathSegmentTypes.INDEX:
                         for _ in range(len(data) - 1, curele):
                             new_val = self._default_for_child(path, value)
@@ -645,10 +623,9 @@ class YAMLPath:
                         for node in self._ensure_path(
                             data[curele], path, value
                         ):
-                            if node is None:
-                                continue
-                            matched_nodes += 1
-                            yield node
+                            if node is not None:
+                                matched_nodes += 1
+                                yield node
                     else:
                         restore_path = path.copy()
                         restore_path.appendleft(curref)
@@ -673,10 +650,9 @@ class YAMLPath:
                         for node in self._ensure_path(
                             data[curele], path, value
                         ):
-                            if node is None:
-                                continue
-                            matched_nodes += 1
-                            yield node
+                            if node is not None:
+                                matched_nodes += 1
+                                yield node
                     else:
                         restore_path = path.copy()
                         restore_path.appendleft(curref)
@@ -740,12 +716,12 @@ class YAMLPath:
             default_value = CommentedMap()
         elif isinstance(value, str):
             default_value = PlainScalarString("")
+        elif isinstance(value, bool):
+            default_value = ScalarBoolean(False)
         elif isinstance(value, int):
             default_value = ScalarInt(maxsize)
         elif isinstance(value, float):
             default_value = ScalarFloat("inf")
-        elif isinstance(value, bool):
-            default_value = ScalarBoolean(False)
 
         return default_value
 

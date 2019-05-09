@@ -106,11 +106,12 @@ YAML Path understands these forms:
   * Greater Than match: `sensitive::accounts.application.db.users[access_level>0].pass`
   * Less Than or Equal match: `sensitive::accounts.application.db.users[access_level<=100].pass`
   * Greater Than or Equal match: `sensitive::accounts.application.db.users[access_level>=0].pass`
+  * Regular Expression matches using any delimiter you choose (other than `/`, if you need something else): `sensitive::accounts.application.db.users[access_level=~/^\D+$/].pass`
   * Invert any match with `!`, like: `sensitive::accounts.application.db.users[name!=admin].pass`
   * Demarcate and/or escape expression values, like: `sensitive::accounts.application.db.users[full\ name="Some User\'s Name"].pass`
   * Multi-level matching: `sensitive::accounts.application.db.users[name%admin].pass[encrypted!^ENC\[]`
-* Hash key-name searches using `.`, yielding their values, not the keys themselves:  `sensitive::accounts.database[.^app_]`
-* Complex combinations: `[2].some::deep.hierarchy[with!=""].'any.valid'[.$yaml][data%structure].complexity`
+* Hash key-name searches with all search methods above by using `.` (yields their values, not the keys themselves): `sensitive::accounts.database[.^app_]`
+* Complex combinations: `some::deep.hierarchy[with!=""].'any.valid'[.$yaml][data%structure].or.[!complexity=~/^.{4}$/][2]`
 
 ## Installing
 
