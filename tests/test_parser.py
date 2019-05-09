@@ -1,6 +1,7 @@
 import pytest
 
 from types import SimpleNamespace
+from collections import deque
 
 from yamlpath.parser import Parser
 from yamlpath.exceptions import YAMLPathException
@@ -61,38 +62,50 @@ def test_empty_str_path(parser):
     ('some[!search < 42]', "some[search!<42]"),
     ('some[!search >= 5280]', "some[search!>=5280]"),
     ('some[!search <= 14000]', "some[search!<=14000]"),
+    (r'some[search =~ /^\d{5}$/]', r'some[search=~/^\d{5}$/]'),
 ])
 def test_happy_str_path_translations(parser, yaml_path, stringified):
     assert parser.str_path(yaml_path) == stringified
 
+def test_happy_parse_path_list_to_deque(parser):
+    assert isinstance(parser.parse_path(["item1", "item2"]), deque)
+
 # Unhappy searches
-@pytest.mark.parametrize("yaml_path,stringified", [
-    ('some[search ^^ "Name "]', r"some[search^Name\ ]"),
-    ('some[search $$ " Here"]', r"some[search$\ Here]"),
-    (r'some[search %% "e H"]', r"some[search%e\ H]"),
-    ('some[search >> 50]', "some[search>50]"),
-    ('some[search << 42]', "some[search<42]"),
-    ('some[search >>== 5280]', "some[search>=5280]"),
-    ('some[search <<== 14000]', "some[search<=14000]"),
-    ('some[search !!= "Name Here"]', r"some[search!=Name\ Here]"),
-    ('some[search !!== "Name Here"]', r"some[search!=Name\ Here]"),
-    ('some[search !!^ "Name "]', r"some[search!^Name\ ]"),
-    ('some[search !!$ " Here"]', r"some[search!$\ Here]"),
-    ('some[search !!% "e H"]', r"some[search!%e\ H]"),
-    ('some[search !!> 50]', "some[search!>50]"),
-    ('some[search !!< 42]', "some[search!<42]"),
-    ('some[search !!>= 5280]', "some[search!>=5280]"),
-    ('some[search !!<= 14000]', "some[search!<=14000]"),
-    ('some[!search != "Name Here"]', r"some[search!=Name\ Here]"),
-    ('some[!search !== "Name Here"]', r"some[search!=Name\ Here]"),
-    ('some[!search !^ "Name "]', r"some[search!^Name\ ]"),
-    ('some[!search !$ " Here"]', r"some[search!$\ Here]"),
-    ('some[!search !% "e H"]', r"some[search!%e\ H]"),
-    ('some[!search !> 50]', "some[search!>50]"),
-    ('some[!search !< 42]', "some[search!<42]"),
-    ('some[!search !>= 5280]', "some[search!>=5280]"),
-    ('some[!search !<= 14000]', "some[search!<=14000]"),
+@pytest.mark.parametrize("yaml_path", [
+    ('some[search ^^ "Name "]'),
+    ('some[search $$ " Here"]'),
+    (r'some[search %% "e H"]'),
+    ('some[search >> 50]'),
+    ('some[search << 42]'),
+    ('some[search >>== 5280]'),
+    ('some[search <<== 14000]'),
+    ('some[search !!= "Name Here"]'),
+    ('some[search !!== "Name Here"]'),
+    ('some[search !!^ "Name "]'),
+    ('some[search !!$ " Here"]'),
+    ('some[search !!% "e H"]'),
+    ('some[search !!> 50]'),
+    ('some[search !!< 42]'),
+    ('some[search !!>= 5280]'),
+    ('some[search !!<= 14000]'),
+    ('some[!search != "Name Here"]'),
+    ('some[!search !== "Name Here"]'),
+    ('some[!search !^ "Name "]'),
+    ('some[!search !$ " Here"]'),
+    ('some[!search !% "e H"]'),
+    ('some[!search !> 50]'),
+    ('some[!search !< 42]'),
+    ('some[!search !>= 5280]'),
+    ('some[!search !<= 14000]'),
+    ('some[= "missing LHS operand"]'),
+    ('some[search ~ "meaningless tilde"]'),
+    ('some[search = "unterminated demarcation]'),
+    ('some[search =~ /unterminated RegEx]'),
+    ('some[search ^= "meaningless operator"]'),
+    ({}),
 ])
-def test_uphappy_str_path_translations(parser, yaml_path, stringified):
+def test_uphappy_str_path_translations(parser, yaml_path):
     with pytest.raises(YAMLPathException):
-        parser.str_path(yaml_path) == stringified
+        parser.str_path(yaml_path)
+
+# 105, 107

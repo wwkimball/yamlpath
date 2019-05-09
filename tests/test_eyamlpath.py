@@ -1,12 +1,13 @@
 import pytest
 
-from subprocess import run
 from types import SimpleNamespace
+from subprocess import run, CalledProcessError
 
 from ruamel.yaml import YAML
 
 from yamlpath.eyaml import EYAMLPath
 from yamlpath.wrappers import ConsolePrinter
+from yamlpath.exceptions import EYAMLCommandException
 
 requireseyaml = pytest.mark.skipif(
     not EYAMLPath.get_eyaml_executable("eyaml")
@@ -16,7 +17,7 @@ requireseyaml = pytest.mark.skipif(
 )
 
 @pytest.fixture
-def eyamlpath():
+def eyamlpath_f():
     """Returns an EYAMLPath with a quiet logger."""
     args = SimpleNamespace(verbose=False, quiet=True, debug=False)
     logger = ConsolePrinter(args)
@@ -56,6 +57,19 @@ anchored::secrets: &anchoredSecrets
   aliased_values:
     ident: *secretIdentity
     phrase: *secretPhrase
+  array_of_array_idents:
+    -
+      - >
+        ENC[PKCS7,MIIBmQYJKoZIhvcNAQcDoIIBijCCAYYCAQAxggEhMIIBHQIBADAFMAACAQEw
+        DQYJKoZIhvcNAQEBBQAEggEAxum+Uyt3ETjkaQ9C5PqnpCUVCU6wrUYuVBk+
+        PV7t7hayWGrG+dixzUUP9HKbIh6kbVYIwGCpEhMOmJQZ8TLiu/ye+KQzX/CE
+        wz4uk7qvv/OvsFiMqmApxcvzNl2Qq7unCScXfngZKPjv4BxAFI1axzsUmxLx
+        ChOUSkLMkuIJ5myAw43Sfan9Yx3lk96IoN97gN74ZzXTRGjl3n0zxrHy3obT
+        M12f+MZqHuaTnuvksakk32nQ7jGX82QqxX3HChEkzUkKXG5ceS/cFzSTj9QG
+        xbYrUXDNq/uviShfVk6tUey76VJAguLlw1ONqRkjonjAz7iR+YIu4RzvPvyJ
+        Grz/ezBcBgkqhkiG9w0BBwEwHQYJYIZIAWUDBAEqBBDcP+GwmSrNro9UALHI
+        FoRFgDCwH91AbH9DOpDMj3HAOlxD2JzAkpy4X9SOZVn6Vht2do38Y1Z02Ccf
+        pHj/ObATQ9M=]
 
 aliased::secrets:
   <<: *anchoredSecrets
@@ -166,33 +180,43 @@ FktE6rH8a+8SwO+TGw==
         new_private_key_file, new_public_key_file
     )
 
-def test_find_eyaml_paths(eyamlpath, eyamldata):
+def test_find_eyaml_paths(eyamlpath_f, eyamldata):
     expected = [
         "aliases[&secretIdentity]",
         "aliases[&secretPhrase]",
         "anchored::secrets.aliased_values.ident",
         "anchored::secrets.aliased_values.phrase",
+        "anchored::secrets.array_of_array_idents[0][0]",
         "aliased::secrets.novel_values.ident",
         "aliased::secrets.novel_values.phrase",
         "aliased::secrets.string_values.ident",
         "aliased::secrets.string_values.phrase",
     ]
     actual = []
-    for node in eyamlpath.find_eyaml_paths(eyamldata):
+    for node in eyamlpath_f.find_eyaml_paths(eyamldata):
         actual.append(node)
 
     assert actual == expected
+
+@pytest.fixture
+def force_subprocess_run_cpe(monkeypatch):
+    import yamlpath.eyaml.eyamlpath as break_module
+
+    def fake_run(*args, **kwargs):
+        raise CalledProcessError(42, "bad eyaml")
+
+    monkeypatch.setattr(break_module, "run", fake_run)
 
 @requireseyaml
 @pytest.mark.parametrize("search,compare", [
     ("aliases[&secretIdentity]", "This is not the identity you are looking for."),
     ("aliases[&secretPhrase]", "There is no secret phrase."),
 ])
-def test_happy_get_eyaml_values(eyamlpath, eyamldata, eyamlkeys, search, compare):
-    eyamlpath.privatekey = eyamlkeys[0]
-    eyamlpath.publickey = eyamlkeys[1]
-    for node in eyamlpath.get_eyaml_values(eyamldata, search, mustexist=True):
-        eyamlpath.log.warning(node)
+def test_happy_get_eyaml_values(eyamlpath_f, eyamldata, eyamlkeys, search, compare):
+    eyamlpath_f.privatekey = eyamlkeys[0]
+    eyamlpath_f.publickey = eyamlkeys[1]
+    for node in eyamlpath_f.get_eyaml_values(eyamldata, search, mustexist=True):
+        eyamlpath_f.log.warning(node)
         assert node == compare
 
 @requireseyaml
@@ -200,31 +224,75 @@ def test_happy_get_eyaml_values(eyamlpath, eyamldata, eyamlkeys, search, compare
     ("aliases[&secretIdentity]", "This is your new identity.", True, "string"),
     ("aliases[&brandNewEntry]", "This key doesn't already exist.", False, "block"),
 ])
-def test_happy_set_eyaml_value(eyamlpath, eyamldata, eyamlkeys, search, compare, mustexist, output):
+def test_happy_set_eyaml_value(eyamlpath_f, eyamldata, eyamlkeys, search, compare, mustexist, output):
     # Assign the asymetric keys
-    eyamlpath.privatekey = eyamlkeys[0]
-    eyamlpath.publickey = eyamlkeys[1]
+    eyamlpath_f.privatekey = eyamlkeys[0]
+    eyamlpath_f.publickey = eyamlkeys[1]
 
     # Set the test value
-    eyamlpath.set_eyaml_value(eyamldata, search, compare, mustexist=mustexist, output=output)
+    eyamlpath_f.set_eyaml_value(eyamldata, search, compare, mustexist=mustexist, output=output)
 
     # Ensure the new value is encrypted
-    for encnode in eyamlpath.get_nodes(eyamldata, search):
+    for encnode in eyamlpath_f.get_nodes(eyamldata, search):
         assert EYAMLPath.is_eyaml_value(encnode)
 
     # Ensure the new value decrypts back to the original value
-    for decnode in eyamlpath.get_eyaml_values(eyamldata, search, mustexist=True):
+    for decnode in eyamlpath_f.get_eyaml_values(eyamldata, search, mustexist=True):
         assert decnode == compare
 
 def test_none_eyaml_value():
     assert False == EYAMLPath.is_eyaml_value(None)
 
-@requireseyaml
-def test_impossible_eyaml_exe(eyamlpath, eyamlkeys):
-    assert None == EYAMLPath.get_eyaml_executable("/no/such/file/anywhere")
-    assert None == EYAMLPath.get_eyaml_executable("this-file-does-not-exist")
-    assert None == EYAMLPath.get_eyaml_executable(eyamlkeys[0])
-    assert None == EYAMLPath.get_eyaml_executable(None)
+@pytest.mark.parametrize("exe", [
+    ("/no/such/file/anywhere"),
+    ("this-file-does-not-exist"),
+    (None),
+])
+def test_impossible_eyaml_exe(exe):
+    assert None == EYAMLPath.get_eyaml_executable(exe)
 
-    eyamlpath.eyaml = None
-    assert False == eyamlpath._can_run_eyaml()
+def test_not_can_run_eyaml(eyamlpath_f):
+    eyamlpath_f.eyaml = None
+    assert False == eyamlpath_f._can_run_eyaml()
+
+@requireseyaml
+def test_bad_encryption_keys(eyamlpath_f):
+    eyamlpath_f.privatekey = "/no/such/file"
+    eyamlpath_f.publickey = "/no/such/file"
+
+    with pytest.raises(EYAMLCommandException):
+        eyamlpath_f.encrypt_eyaml("test")
+
+def test_no_encrypt_without_eyaml(eyamlpath_f):
+    eyamlpath_f.eyaml = None
+    with pytest.raises(EYAMLCommandException):
+        eyamlpath_f.encrypt_eyaml("test")
+
+def test_no_decrypt_without_eyaml(eyamlpath_f):
+    eyamlpath_f.eyaml = None
+    with pytest.raises(EYAMLCommandException):
+        eyamlpath_f.decrypt_eyaml("ENC[...]")
+
+def test_ignore_already_encrypted_cryps(eyamlpath_f):
+    testval = "ENC[...]"
+    assert testval == eyamlpath_f.encrypt_eyaml(testval)
+
+def test_ignore_already_decrypted_cryps(eyamlpath_f):
+    testval = "some value"
+    assert testval == eyamlpath_f.decrypt_eyaml(testval)
+
+@requireseyaml
+def test_impossible_decryption(eyamlpath_f, eyamlkeys):
+    testval = "ENC[...]"
+    with pytest.raises(EYAMLCommandException):
+        eyamlpath_f.decrypt_eyaml(testval)
+
+def test_encrypt_calledprocesserror(eyamlpath_f, force_subprocess_run_cpe):
+    with pytest.raises(EYAMLCommandException):
+        eyamlpath_f.encrypt_eyaml("any value")
+
+def test_decrypt_calledprocesserror(eyamlpath_f, force_subprocess_run_cpe):
+    with pytest.raises(EYAMLCommandException):
+        eyamlpath_f.decrypt_eyaml("ENC[...]")
+
+# 60, 67, 98, 101, 123-128, 138-143, 163, 190-191

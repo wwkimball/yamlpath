@@ -12,6 +12,7 @@ class PathSearchMethods(Enum):
     LESS_THAN = auto()
     GREATER_THAN_OR_EQUAL = auto()
     LESS_THAN_OR_EQUAL = auto()
+    REGEX = auto()
 
     @staticmethod
     def to_operator(method):
@@ -26,7 +27,7 @@ class PathSearchMethods(Enum):
         Raises:
             NotImplementedError when method is unknown to this method.
         """
-        operator = "???"
+        operator = ""
         if method is PathSearchMethods.EQUALS:
             operator = "="
         elif method is PathSearchMethods.STARTS_WITH:
@@ -43,6 +44,8 @@ class PathSearchMethods(Enum):
             operator = "<="
         elif method is PathSearchMethods.GREATER_THAN_OR_EQUAL:
             operator = ">="
+        elif method is PathSearchMethods.REGEX:
+            operator = "=~"
         else:
             raise NotImplementedError
 
