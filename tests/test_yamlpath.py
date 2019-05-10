@@ -325,6 +325,7 @@ def test_happy_singular_get_leaf_nodes(yamlpath, yamldata, search, compare):
     ("namespaced::hash.with_array_of_hashes[name<=ni].name", ["ichi", "ni"]),
     ("complex.hash_of_hashes[.^child].children.first", ["ichi", "shi", "shichi", "ju"]),
     (r"complex.hash_of_hashes[.^child].children[first%ichi]", ["ichi", "shichi"]),
+    (r"&topArrayAnchor[.%original]", ["An original value", "Another original value"]),
 ])
 def test_happy_multiple_get_nodes(yamlpath, yamldata, search, compare):
     matches = []
