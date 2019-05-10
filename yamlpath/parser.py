@@ -48,7 +48,19 @@ class Parser:
             if ptype == PathSegmentTypes.KEY:
                 if add_dot:
                     ppath += "."
-                ppath += element_id.replace(".", "\\.")
+                ppath += (
+                    element_id
+                    .replace(".", r"\.")
+                    .replace("&", r"\&")
+                    .replace("!", r"\!")
+                    .replace("~", r"\~")
+                    .replace("[", r"\[")
+                    .replace("]", r"\]")
+                    .replace("{", r"\{")
+                    .replace("}", r"\}")
+                    .replace("(", r"\(")
+                    .replace("(", r"\(")
+                )
             elif ptype == PathSegmentTypes.INDEX:
                 ppath += "[{}]".format(element_id)
             elif ptype == PathSegmentTypes.ANCHOR:
@@ -121,11 +133,10 @@ class Parser:
         demarc_stack = []
         seeking_anchor_mark = yaml_path[0] == "&"
         escape_next = False
-        element_type = PathSegmentTypes.KEY
+        element_type = None
         search_inverted = False
         search_method = None
         search_attr = ""
-
         seeking_regex_delim = False
         capturing_regex = False
 
@@ -193,10 +204,18 @@ class Parser:
                         demarc_count -= 1
 
                         # Record the element_id when all pairs have closed
+                        # unless there is no element_id.
                         if demarc_count < 1:
-                            path_elements.append((element_type, element_id))
+                            if element_id:
+                                # Unless the element has already been
+                                # identified as a special type, assume it is a
+                                # KEY.
+                                if element_type is None:
+                                    element_type = PathSegmentTypes.KEY
+                                path_elements.append((element_type, element_id))
+
                             element_id = ""
-                            element_type = PathSegmentTypes.KEY
+                            element_type = None
                             continue
                     else:
                         # Embed a nested, demarcated component
@@ -208,9 +227,13 @@ class Parser:
                     demarc_count += 1
                     continue
 
-            elif c == "[":
+            elif demarc_count == 0 and c == "[":
+                # Array INDEX or SEARCH
                 if element_id:
-                    # Named list INDEX; record its predecessor element
+                    # Record its predecessor element; unless it has already
+                    # been identified as a special type, assume it is a KEY.
+                    if element_type is None:
+                        element_type = PathSegmentTypes.KEY
                     path_elements.append((element_type, element_id))
                     element_id = ""
 
@@ -372,6 +395,7 @@ class Parser:
                     path_elements.append((element_type, element_id))
 
                 element_id = ""
+                element_type = None
                 demarc_stack.pop()
                 demarc_count -= 1
                 search_method = None
@@ -380,10 +404,14 @@ class Parser:
             elif demarc_count < 1 and c == ".":
                 # Do not store empty elements
                 if element_id:
+                    # Unless its type has already been identified as a special
+                    # type, assume it is a KEY.
+                    if element_type is None:
+                        element_type = PathSegmentTypes.KEY
                     path_elements.append((element_type, element_id))
                     element_id = ""
 
-                element_type = PathSegmentTypes.KEY
+                element_type = None
                 continue
 
             element_id += c
@@ -404,8 +432,12 @@ class Parser:
                 yaml_path
             )
 
-        # Store the final element_id
+        # Store the final element_id, which must have been a KEY
         if element_id:
+            # Unless its type has already been identified as a special
+            # type, assume it is a KEY.
+            if element_type is None:
+                element_type = PathSegmentTypes.KEY
             path_elements.append((element_type, element_id))
 
         self.log.debug(
