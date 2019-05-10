@@ -48,7 +48,18 @@ class Parser:
             if ptype == PathSegmentTypes.KEY:
                 if add_dot:
                     ppath += "."
-                ppath += element_id.replace(".", "\\.")
+                ppath += (element_id
+                    .replace(".", r"\.")
+                    .replace("&", r"\&")
+                    .replace("!", r"\!")
+                    .replace("~", r"\~")
+                    .replace("[", r"\[")
+                    .replace("]", r"\]")
+                    .replace("{", r"\{")
+                    .replace("}", r"\}")
+                    .replace("(", r"\(")
+                    .replace("(", r"\(")
+                )
             elif ptype == PathSegmentTypes.INDEX:
                 ppath += "[{}]".format(element_id)
             elif ptype == PathSegmentTypes.ANCHOR:
@@ -215,7 +226,7 @@ class Parser:
                     demarc_count += 1
                     continue
 
-            elif c == "[":
+            elif demarc_count == 0 and c == "[":
                 # Array INDEX or SEARCH
                 if element_id:
                     # Record its predecessor element; unless it has already
