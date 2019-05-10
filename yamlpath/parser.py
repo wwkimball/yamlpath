@@ -48,7 +48,8 @@ class Parser:
             if ptype == PathSegmentTypes.KEY:
                 if add_dot:
                     ppath += "."
-                ppath += (element_id
+                ppath += (
+                    element_id
                     .replace(".", r"\.")
                     .replace("&", r"\&")
                     .replace("!", r"\!")
