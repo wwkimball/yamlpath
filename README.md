@@ -28,26 +28,28 @@ Contents:
 ## Introduction
 
 This project presents and utilizes YAML Paths, which are a human-friendly means
-of identifying one or more nodes within a [YAML](https://yaml.org/) or
-[EYAML](https://github.com/voxpupuli/hiera-eyaml) data structure.  The libraries
-(modules) and several [command-line tool implementations](#command-line-tools)
-are provided.
+of identifying one or more nodes within a [YAML](https://yaml.org/),
+[EYAML](https://github.com/voxpupuli/hiera-eyaml), or compatible data structure.
+The libraries (modules) and several [command-line tool
+implementations](#command-line-tools) are provided.
 
 This implementation of YAML Path is a query langauge in addition to a node
 descriptor.  With it, you can select a single precise node or search for any
 number of nodes which match criteria that can be expressed in several ways.
-Keys and values can both be searched at any number of levels within the data
-structure using the same query.
+Keys, values, and elements can all be searched at any number of levels within
+the data structure using the same query.
 
 Other versions of "yaml-path" exist but they fill different needs.  This
 implementation was created specifically to enable selecting and editing YAML --
-and compatible -- data of any complexity.  At its inception, this project was
-born out of a need to periodically rotate EYAML keys in the fastest, most
-automation-friendly way.  This YAML Path variety grew from that need into a far
-more generally-useful body of query and edit tools that are both command-line
-and API friendly.
+and compatible -- data of any complexity via an intuitive, expressive syntax.
+Starting with the ubiquitous -- albeit limited -- dot-notation for accessing
+Hash members, this YAML Path solution grew to include new syntax for:
 
-To illustrate some of this YAML Path's concepts, review this sample YAML data:
+* Array elements
+* Anchors by name
+* Search expressions for single or multiple matches
+
+To illustrate some of these concepts, consider this sample YAML data:
 
 ```yaml
 ---
@@ -98,7 +100,7 @@ This YAML data sample contains these single-result YAML Paths:
 
 You could also access some of these sample nodes using search expressions, like:
 
-1. `configuration::application.general\.settings.'a.dotted.subkey'[.=~/^element[1-2]$]`
+1. `configuration::application.general\.settings.'a.dotted.subkey'[.=~/^element[1-2]$/]`
 2. `sensitive::accounts.application.db.users[name=admin].access_level`
 3. `sensitive::accounts.application.db.users[access_level<500].name`
 
@@ -106,7 +108,7 @@ You could also access some of these sample nodes using search expressions, like:
 
 YAML Path understands these forms:
 
-* Dot notation for Hash data structure sub-keys:  `hash.child.key`
+* Dot notation for Hash sub-keys:  `hash.child.key`
 * Demarcation for dotted Hash keys:  `hash.'dotted.child.key'` or `hash."dotted.child.key"`
 * Array element selection:  `array[#]` (where `array` is omitted for top-level Arrays or is the name of the Hash key containing Array data and `#` is the 0-based element number)
 * Escape symbol recognition:  `hash.dotted\.child\.key` or `keys_with_\\slashes`
@@ -125,7 +127,7 @@ YAML Path understands these forms:
   * Invert any match with `!`, like: `sensitive::accounts.application.db.users[name!=admin].pass`
   * Demarcate and/or escape expression values, like: `sensitive::accounts.application.db.users[full\ name="Some User\'s Name"].pass`
   * Multi-level matching: `sensitive::accounts.application.db.users[name%admin].pass[encrypted!^ENC\[]`
-* Hash key-name searches with all search methods above by using `.` (yields their values, not the keys themselves): `sensitive::accounts.database[.^app_]`
+* Array element and Hash key-name searches with all of the search methods above via `.` (yields their values, not the keys themselves): `sensitive::accounts.database[.^app_]`
 * Complex combinations: `some::deep.hierarchy[with!=""].'any.valid'[.$yaml][data%structure].or.[!complexity=~/^.{4}$/][2]`
 
 ## Installing
