@@ -519,10 +519,13 @@ class YAMLPath:
         invert, method, attr, term = terms
         if isinstance(data, list):
             for ele in data:
-                if isinstance(ele, dict) and attr in ele:
+                if attr == '.':
+                    matches = search_matches(method, term, ele)
+                elif isinstance(ele, dict) and attr in ele:
                     matches = search_matches(method, term, ele[attr])
-                    if (matches and not invert) or (invert and not matches):
-                        yield ele
+
+                if (matches and not invert) or (invert and not matches):
+                    yield ele
 
         elif isinstance(data, dict):
             # Allow . to mean "each key's name"
