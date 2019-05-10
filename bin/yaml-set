@@ -223,7 +223,7 @@ def main():
         log.critical(ex, 1)
 
     try:
-        for node in processor.get_eyaml_values(
+        for node in processor.get_nodes(
             yaml_data
             , change_path
             , mustexist=args.mustexist
@@ -232,13 +232,17 @@ def main():
             if node is None:
                 continue
 
-            log.debug("Got {} from {}.".format(node, change_path))
+            log.debug('Got "{}" from {}.'.format(node, change_path))
+            if processor.is_eyaml_value(node):
+                old_value = processor.decrypt_eyaml(node)
+            else:
+                old_value = node
 
             # Do nothing if the value will not be changing, unless this is an
             # EYAML recrypt attempt (same value, encrypted or even
             # re-encrypted).
             if (new_value is not node
-                and new_value == node
+                and new_value == old_value
                 and not args.eyamlcrypt
             ):
                 log.warning("New and old values are identical.")
@@ -258,9 +262,14 @@ def main():
     log.debug(change_nodes)
 
     # Check the value(s), if desired
-    for node in change_nodes:
-        if args.check:
-            if not args.check == node:
+    if args.check:
+        for node in change_nodes:
+            if processor.is_eyaml_value(node):
+                check_value = processor.decrypt_eyaml(node)
+            else:
+                check_value = node
+
+            if not args.check == check_value:
                 log.critical(
                     "{} does not match the check value.".format(node), 20
                 )
@@ -279,7 +288,9 @@ def main():
 
         log.verbose("Saving the old value to {}.".format(args.saveto))
         try:
-            processor.set_value(yaml_data, args.saveto, processor.clone_node(change_nodes[0]))
+            processor.set_value(
+                yaml_data, args.saveto, processor.clone_node(change_nodes[0])
+            )
         except YAMLPathException as ex:
             log.critical(ex, 1)
 
