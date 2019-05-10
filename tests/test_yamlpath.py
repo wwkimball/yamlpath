@@ -129,6 +129,28 @@ single_match_tests = [
     (r"complex.hash_of_hashes[.=~ -^child\d+-].children[third =~ $^j[^u] \w+$]", "ji ni"),
 ]
 
+# Define a set of multiple-match inputs that are used for multiple tests
+multi_matche_tests = [
+    ("namespaced::hash.with_array_of_hashes[id<3].name", ["ichi", "ni"]),
+    ("namespaced::hash.with_array_of_hashes[id<3].id", [1, 2]),
+    ("namespaced::hash.with_array_of_hashes[id<=3].name", ["ichi", "ni", "san"]),
+    ("namespaced::hash.with_array_of_hashes[id<=3].id", [1, 2, 3]),
+    ("namespaced::hash.with_array_of_hashes[id>1].id", [2, 3]),
+    ("namespaced::hash.with_array_of_hashes[id>1].name", ["ni", "san"]),
+    ("namespaced::hash.with_array_of_hashes[id>=2].id", [2, 3]),
+    ("namespaced::hash.with_array_of_hashes[id>=2].name", ["ni", "san"]),
+    ("namespaced::hash.with_array_of_hashes[!id>=2].name", ["ichi"]),
+    ("namespaced::hash.with_array_of_hashes[!id>=2].id", [1]),
+    ("namespaced::hash.with_array_of_hashes[name>na].name", ["ni", "san"]),
+    ("namespaced::hash.with_array_of_hashes[name>na].name", ["ni", "san"]),
+    ("namespaced::hash.with_array_of_hashes[name>=ni].name", ["ni", "san"]),
+    ("namespaced::hash.with_array_of_hashes[name<san].name", ["ichi", "ni"]),
+    ("namespaced::hash.with_array_of_hashes[name<=ni].name", ["ichi", "ni"]),
+    ("complex.hash_of_hashes[.^child].children.first", ["ichi", "shi", "shichi", "ju"]),
+    (r"complex.hash_of_hashes[.^child].children[first%ichi]", ["ichi", "shichi"]),
+    (r"&topArrayAnchor[.%original]", ["An original value", "Another original value"]),
+]
+
 @pytest.fixture
 def yamlpath():
     """Returns a YAMLPath with a quiet logger."""
@@ -313,32 +335,15 @@ def test_happy_singular_get_leaf_nodes_req(yamlpath, yamldata, search, compare):
     for node in yamlpath.get_nodes(yamldata, search, mustexist=True):
         assert node == compare
 
-@pytest.mark.parametrize("search,compare", [
-    ("namespaced::hash.with_array_of_hashes[id<3].name", ["ichi", "ni"]),
-    ("namespaced::hash.with_array_of_hashes[id<3].id", [1, 2]),
-    ("namespaced::hash.with_array_of_hashes[id<=3].name", ["ichi", "ni", "san"]),
-    ("namespaced::hash.with_array_of_hashes[id<=3].id", [1, 2, 3]),
-    ("namespaced::hash.with_array_of_hashes[id>1].id", [2, 3]),
-    ("namespaced::hash.with_array_of_hashes[id>1].name", ["ni", "san"]),
-    ("namespaced::hash.with_array_of_hashes[id>=2].id", [2, 3]),
-    ("namespaced::hash.with_array_of_hashes[id>=2].name", ["ni", "san"]),
-    ("namespaced::hash.with_array_of_hashes[!id>=2].name", ["ichi"]),
-    ("namespaced::hash.with_array_of_hashes[!id>=2].id", [1]),
-    ("namespaced::hash.with_array_of_hashes[name>na].name", ["ni", "san"]),
-    ("namespaced::hash.with_array_of_hashes[name>na].name", ["ni", "san"]),
-    ("namespaced::hash.with_array_of_hashes[name>=ni].name", ["ni", "san"]),
-    ("namespaced::hash.with_array_of_hashes[name<san].name", ["ichi", "ni"]),
-    ("namespaced::hash.with_array_of_hashes[name<=ni].name", ["ichi", "ni"]),
-    ("complex.hash_of_hashes[.^child].children.first", ["ichi", "shi", "shichi", "ju"]),
-    (r"complex.hash_of_hashes[.^child].children[first%ichi]", ["ichi", "shichi"]),
-    (r"&topArrayAnchor[.%original]", ["An original value", "Another original value"]),
-])
-def test_happy_multiple_get_nodes(yamlpath, yamldata, search, compare):
+@pytest.mark.parametrize("search,compare", multi_matche_tests)
+def test_happy_multiple_get_nodes_opt(yamlpath, yamldata, search, compare):
     matches = []
     for node in yamlpath.get_nodes(yamldata, search):
         matches.append(node)
     assert matches == compare
 
+@pytest.mark.parametrize("search,compare", multi_matche_tests)
+def test_happy_multiple_get_nodes_req(yamlpath, yamldata, search, compare):
     matches = []
     for node in yamlpath.get_nodes(yamldata, search, mustexist=True):
         matches.append(node)
@@ -390,10 +395,12 @@ def test_unhappy_adding_nodes(yamlpath, yamldata, search, compare):
         for node in yamlpath.get_nodes(yamldata, search, mustexist=False, default_value=compare):
             node == compare
 
-def test_clone_node(yamlpath, yamldata):
+def test_clone_raw_node(yamlpath, yamldata):
     test_value = "Some string."
     assert test_value == yamlpath.clone_node(test_value)
 
+
+def test_clone_data_node(yamlpath, yamldata):
     for node in yamlpath.get_nodes(yamldata, "aliases[0]"):
         assert node == yamlpath.clone_node(node)
 

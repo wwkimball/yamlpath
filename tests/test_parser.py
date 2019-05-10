@@ -112,5 +112,3 @@ def test_happy_parse_path_list_to_deque(parser):
 def test_uphappy_str_path_translations(parser, yaml_path):
     with pytest.raises(YAMLPathException):
         parser.str_path(yaml_path)
-
-# 105, 107
