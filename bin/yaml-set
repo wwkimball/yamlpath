@@ -34,7 +34,7 @@ import yamlpath.patches
 from yamlpath.wrappers import ConsolePrinter
 
 # Implied Constants
-MY_VERSION = "1.0.0"
+MY_VERSION = "1.0.1"
 
 def processcli():
     """Process command-line arguments."""
@@ -92,7 +92,8 @@ def processcli():
 
     eyaml_group = parser.add_argument_group(
         "EYAML options", "Left unset, the EYAML keys will default to your\
-         system or user defaults.  Both keys must be set when using EYAML.")
+         system or user defaults.  Both keys must be set either here or in\
+         your system or user EYAML configuration file when using EYAML.")
     eyaml_group.add_argument("-e", "--eyamlcrypt", action="store_true",
         help="encrypt the new value using EYAML")
     eyaml_group.add_argument("-x", "--eyaml", default="eyaml",

@@ -210,7 +210,7 @@ these YAML Path libraries:
   for all EYAML values within a set of YAML files, decrypting with old keys and
   re-encrypting using replacement keys.
 
-```shell
+```text
 usage: eyaml-rotate-keys [-h] [-V] [-d | -v | -q] [-b] [-x EYAML]
                          -i OLDPRIVATEKEY -c OLDPUBLICKEY
                          -r NEWPRIVATEKEY -u NEWPUBLICKEY
@@ -255,7 +255,7 @@ when -b/--backup is specified).
   produced to represent the entire complex result.  EYAML can be employed to
   decrypt the values.
 
-```shell
+```text
 usage: yaml-get [-h] [-V] -p YAML_PATH [-x EYAML] [-r PRIVATEKEY]
                 [-u PUBLICKEY] [-d | -v | -q]
                 YAML_FILE
@@ -279,7 +279,8 @@ required settings:
 
 EYAML options:
   Left unset, the EYAML keys will default to your system or user defaults.
-  Both keys must be set when using EYAML.
+  Both keys must be set either here or in your system or user EYAML
+  configuration file when using EYAML.
 
   -x EYAML, --eyaml EYAML
                         the eyaml binary to use when it isn't on the PATH
@@ -299,7 +300,7 @@ https://github.com/wwkimball/yamlpath.
   employed to encrypt the new values and/or decrypt old values before checking
   them.
 
-```shell
+```text
 usage: yaml-set [-h] [-V] -g YAML_PATH [-a VALUE | -f FILE | -i | -R LENGTH]
                 [-F {bare,boolean,default,dquote,float,folded,int,literal,squote}]
                 [-c CHECK] [-s YAML_PATH] [-m] [-b] [-e] [-x EYAML]
@@ -349,7 +350,8 @@ input options:
 
 EYAML options:
   Left unset, the EYAML keys will default to your system or user defaults.
-  Both keys must be set when using EYAML.
+  Both keys must be set either here or in your system or user EYAML
+  configuration file when using EYAML.
 
   -e, --eyamlcrypt      encrypt the new value using EYAML
   -x EYAML, --eyaml EYAML
@@ -448,13 +450,13 @@ yaml-set \
   --saveto=the.old.password \
   --check="Old Password" \
   --value="New Password" \
-  --backup
+  --backup \
   my_yaml_file.yaml
 ```
 
 You can also add EYAML encryption (assuming the `eyaml` command is on your
 PATH; if not, you can pass `--eyaml` to specify its location).  In this example,
-I add the optional `--format=folded` fso that the long EYAML value is broken up
+I add the optional `--format=folded` so that the long EYAML value is broken up
 into a multi-line value rather than one very long string.  This is the preferred
 format for EYAML consumers like Puppet.  Note that `--format` has several other
 settings and applies only to new values.
@@ -565,26 +567,24 @@ except ParserError as e:
 These libraries use [Generators](https://wiki.python.org/moin/Generators) to get
 nodes from parsed YAML data.  Identify which node(s) to get via
 [YAML Path](#yaml-path) strings.  You should also catch `YAMLPathException`s
-unless you prefer Python's native stack traces.  Whether you are working with a
-single result or many, you must consume the Generator output with a pattern
-similar to:
+unless you prefer Python's native stack traces.  When using EYAML, you should
+also catch `EYAMLCommandException`s for the same reason.  Whether you are
+working with a single result or many, you must consume the Generator output with
+a pattern similar to:
 
 ```python
 yaml_path = "see.documentation.above.for.many.samples"
 try:
     for node in yh.get_eyaml_values(yaml_data, yaml_path):
-        # These Generators can return None, which means a node wasn't found but
-        # because searches are recursive and can be multi-tier, the non-matching
-        # leaf nodes can be encountered anywhere during the search, not only at
-        # the very end.
-        if node is None:
-            continue
-
         log.debug("Got {} from {}.".format(node, yaml_path))
 
         # Do something with each node...
 except YAMLPathException as ex:
-    log.error(ex, 1)
+    # If merely retrieving data, this exception may be deemed non-critical
+    # unless your later code absolutely depends upon a result.
+    log.error(ex)
+except EYAMLCommandException as ex:
+    log.critical(ex, 120)
 ```
 
 #### Changing Values
@@ -592,11 +592,14 @@ except YAMLPathException as ex:
 At its simplest, you only need to supply the pre-parsed YAML data, the YAML
 Path to one or more nodes to update, and the value to apply to them.  Catching
 `YAMLPathException` is optional but usually preferred over allowing Python to
-dump the call stack in front of your users.
+dump the call stack in front of your users.  When using EYAML, the same applies
+to `EYAMLCommandException`.
 
 ```python
 try:
     yh.set_value(yaml_data, yaml_path, new_value)
 except YAMLPathException as ex:
-    log.error(ex, 1)
+    log.critical(ex, 119)
+except EYAMLCommandException as ex:
+    log.critical(ex, 120)
 ```
