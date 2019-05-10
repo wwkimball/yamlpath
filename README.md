@@ -33,16 +33,21 @@ of identifying one or more nodes within a [YAML](https://yaml.org/) or
 (modules) and several [command-line tool implementations](#command-line-tools)
 are provided.
 
-This implementation of YAML Paths is a query langauge.  With it, you can select
-either a single precise node within data, or search for zero to many nodes
-which match criteria that can be expressed in several ways.  Keys and values
-can both be searched and any number of levels within the data structure.
+This implementation of YAML Path is a query langauge in addition to a node
+descriptor.  With it, you can select a single precise node or search for any
+number of nodes which match criteria that can be expressed in several ways.
+Keys and values can both be searched at any number of levels within the data
+structure using the same query.
 
 Other versions of "yaml-path" exist but they fill different needs.  This
 implementation was created specifically to enable selecting and editing YAML --
-and compatible -- data of any complexity.
+and compatible -- data of any complexity.  At its inception, this project was
+born out of a need to periodically rotate EYAML keys in the fastest, most
+automation-friendly way.  This YAML Path variety grew from that need into a far
+more generally-useful body of query and edit tools that are both command-line
+and API friendly.
 
-To illustrate some YAML Path capabilities, review this sample YAML data:
+To illustrate some of this YAML Path's concepts, review this sample YAML data:
 
 ```yaml
 ---
@@ -93,8 +98,9 @@ This YAML data sample contains these single-result YAML Paths:
 
 You could also access some of these sample nodes using search expressions, like:
 
-1. `sensitive::accounts.application.db.users[name=admin].access_level`
-2. `sensitive::accounts.application.db.users[access_level<500].name`
+1. `configuration::application.general\.settings.'a.dotted.subkey'[.=~/^element[1-2]$]`
+2. `sensitive::accounts.application.db.users[name=admin].access_level`
+3. `sensitive::accounts.application.db.users[access_level<500].name`
 
 ## Supported YAML Path Forms
 
