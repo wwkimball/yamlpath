@@ -30,8 +30,17 @@ Contents:
 This project presents and utilizes YAML Paths, which are a human-friendly means
 of identifying one or more nodes within a [YAML](https://yaml.org/) or
 [EYAML](https://github.com/voxpupuli/hiera-eyaml) data structure.  The libraries
-(modules) and several sample command-line tool implementations are provided
-(discussed later).
+(modules) and several [command-line tool implementations](#command-line-tools)
+are provided.
+
+This implementation of YAML Paths is a query langauge.  With it, you can select
+either a single precise node within data, or search for zero to many nodes
+which match criteria that can be expressed in several ways.  Keys and values
+can both be searched and any number of levels within the data structure.
+
+Other versions of "yaml-path" exist but they fill different needs.  This
+implementation was created specifically to enable selecting and editing YAML --
+and compatible -- data of any complexity.
 
 To illustrate some YAML Path capabilities, review this sample YAML data:
 
@@ -91,12 +100,12 @@ You could also access some of these sample nodes using search expressions, like:
 
 YAML Path understands these forms:
 
-* Array element selection:  `array[#]` (where `#` is the 0-based element number)
 * Dot notation for Hash data structure sub-keys:  `hash.child.key`
 * Demarcation for dotted Hash keys:  `hash.'dotted.child.key'` or `hash."dotted.child.key"`
+* Array element selection:  `array[#]` (where `array` is omitted for top-level Arrays or is the name of the Hash key containing Array data and `#` is the 0-based element number)
 * Escape symbol recognition:  `hash.dotted\.child\.key` or `keys_with_\\slashes`
 * Top-level (Hash) Anchor lookups: `&anchor_name`
-* Anchor lookups in Arrays:  `aliases[&anchor_name]`
+* Anchor lookups in Arrays:  `array[&anchor_name]`
 * Hash attribute searches (which can return zero or more matches):
   * Exact match:  `sensitive::accounts.application.db.users[name=admin].pass`
   * Starts With match:  `sensitive::accounts.application.db.users[name^adm].pass`
@@ -106,7 +115,7 @@ YAML Path understands these forms:
   * Greater Than match: `sensitive::accounts.application.db.users[access_level>0].pass`
   * Less Than or Equal match: `sensitive::accounts.application.db.users[access_level<=100].pass`
   * Greater Than or Equal match: `sensitive::accounts.application.db.users[access_level>=0].pass`
-  * Regular Expression matches using any delimiter you choose (other than `/`, if you need something else): `sensitive::accounts.application.db.users[access_level=~/^\D+$/].pass`
+  * Regular Expression matches using any delimiter you choose (other than `/`, if you need something else): `sensitive::accounts.application.db.users[access_level=~/^\D+$/].pass` or `some::hash[containing=~#/path/values#]`
   * Invert any match with `!`, like: `sensitive::accounts.application.db.users[name!=admin].pass`
   * Demarcate and/or escape expression values, like: `sensitive::accounts.application.db.users[full\ name="Some User\'s Name"].pass`
   * Multi-level matching: `sensitive::accounts.application.db.users[name%admin].pass[encrypted!^ENC\[]`
@@ -159,7 +168,7 @@ refactoring and feature creation effort.  As it is a moving target, this project
 is necessarily bound to limited ranges of compatible versions between it and the
 ruamel.yaml project.  Futher, this project comes with fixes to some notable bugs
 in ruamel.yaml.  As such, you should note which specific versions of ruamel.yaml
-which this code is compatible with.  Failing to do so will probably lead to some
+that this code is compatible with.  Failing to do so will probably lead to some
 incompatbility.
 
 This list will not be aggressively updated but rather, from time to time as
@@ -169,6 +178,7 @@ and tested compatible versions include:
 YAML Path Version | ruamel.yaml Min | Max
 ------------------|-----------------|---------
 1.0.x             | 0.15.92         | 0.15.94
+1.1.x             | 0.15.92         | 0.15.94
 
 You may find other compatible versions outside these ranges.  If you do, please
 drop a note so this table can be updated!
@@ -191,11 +201,89 @@ these YAML Path libraries:
 * [eyaml-rotate-keys](bin/eyaml-rotate-keys) -- Rotates the encryption keys used
   for all EYAML values within a set of YAML files, decrypting with old keys and
   re-encrypting using replacement keys.
+
+```shell
+usage: eyaml-rotate-keys [-h] [-V] [-d | -v | -q] [-b] [-x EYAML]
+                         -i OLDPRIVATEKEY -c OLDPUBLICKEY
+                         -r NEWPRIVATEKEY -u NEWPUBLICKEY
+                         YAML_FILE [YAML_FILE ...]
+
+Rotates the encryption keys used for all EYAML values within a set of YAML
+files, decrypting with old keys and re-encrypting using replacement keys.
+
+positional arguments:
+  YAML_FILE             one or more YAML files containing EYAML values
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -V, --version         show program's version number and exit
+  -d, --debug           output debugging details
+  -v, --verbose         increase output verbosity
+  -q, --quiet           suppress all output except errors
+  -b, --backup          save a backup of each modified YAML_FILE with an extra
+                        .bak file-extension
+  -x EYAML, --eyaml EYAML
+                        the eyaml binary to use when it isn't on the PATH
+
+EYAML_KEYS:
+  All key arguments are required
+
+  -r NEWPRIVATEKEY, --newprivatekey NEWPRIVATEKEY
+                        the new EYAML private key
+  -u NEWPUBLICKEY, --newpublickey NEWPUBLICKEY
+                        the new EYAML public key
+  -i OLDPRIVATEKEY, --oldprivatekey OLDPRIVATEKEY
+                        the old EYAML private key
+  -c OLDPUBLICKEY, --oldpublickey OLDPUBLICKEY
+                        the old EYAML public key
+
+Any YAML_FILEs lacking EYAML values will not be modified (or backed up, even
+when -b/--backup is specified).
+```
+
 * [yaml-get](bin/yaml-get) -- Retrieves one or more values from a YAML file at a
   specified YAML Path.  Output is printed to STDOUT, one line per match.  When
   a result is a complex data-type (Array or Hash), a Python-compatible dump is
   produced to represent the entire complex result.  EYAML can be employed to
   decrypt the values.
+
+```shell
+usage: yaml-get [-h] [-V] -p YAML_PATH [-x EYAML] [-r PRIVATEKEY]
+                [-u PUBLICKEY] [-d | -v | -q]
+                YAML_FILE
+
+Gets one or more values from a YAML file at a specified YAML Path. Can employ
+EYAML to decrypt values.
+
+positional arguments:
+  YAML_FILE             the YAML file to query
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -V, --version         show program's version number and exit
+  -d, --debug           output debugging details
+  -v, --verbose         increase output verbosity
+  -q, --quiet           suppress all output except errors
+
+required settings:
+  -p YAML_PATH, --query YAML_PATH
+                        YAML Path to query
+
+EYAML options:
+  Left unset, the EYAML keys will default to your system or user defaults.
+  Both keys must be set when using EYAML.
+
+  -x EYAML, --eyaml EYAML
+                        the eyaml binary to use when it isn't on the PATH
+  -r PRIVATEKEY, --privatekey PRIVATEKEY
+                        EYAML private key
+  -u PUBLICKEY, --publickey PUBLICKEY
+                        EYAML public key
+
+For more information about YAML Paths, please visit
+https://github.com/wwkimball/yamlpath.
+```
+
 * [yaml-set](bin/yaml-set) -- Changes one or more values in a YAML file at a
   specified YAML Path.  Matched values can be checked before they are replaced
   to mitigate accidental change. When matching singular results, the value can
@@ -203,12 +291,77 @@ these YAML Path libraries:
   employed to encrypt the new values and/or decrypt old values before checking
   them.
 
+```shell
+usage: yaml-set [-h] [-V] -g YAML_PATH [-a VALUE | -f FILE | -i | -R LENGTH]
+                [-F {bare,boolean,default,dquote,float,folded,int,literal,squote}]
+                [-c CHECK] [-s YAML_PATH] [-m] [-b] [-e] [-x EYAML]
+                [-r PRIVATEKEY] [-u PUBLICKEY] [-d | -v | -q]
+                YAML_FILE
+
+Changes one or more values in a YAML file at a specified YAML Path. Matched
+values can be checked before they are replaced to mitigate accidental change.
+When matching singular results, the value can be archived to another key
+before it is replaced. Further, EYAML can be employed to encrypt the new
+values and/or decrypt an old value before checking them.
+
+positional arguments:
+  YAML_FILE             the YAML file to update
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -V, --version         show program's version number and exit
+  -F {bare,boolean,default,dquote,float,folded,int,literal,squote}, --format {bare,boolean,default,dquote,float,folded,int,literal,squote}
+                        override automatic formatting of the new value
+  -c CHECK, --check CHECK
+                        check the value before replacing it
+  -s YAML_PATH, --saveto YAML_PATH
+                        save the old value to YAML_PATH before replacing it
+  -m, --mustexist       require that the --change YAML_PATH already exist in
+                        YAML_FILE
+  -b, --backup          save a backup YAML_FILE with an extra .bak file-
+                        extension
+  -d, --debug           output debugging details
+  -v, --verbose         increase output verbosity
+  -q, --quiet           suppress all output except errors
+
+required settings:
+  -g YAML_PATH, --change YAML_PATH
+                        YAML Path where the target value is found
+
+input options:
+  -a VALUE, --value VALUE
+                        set the new value from the command-line instead of
+                        STDIN
+  -f FILE, --file FILE  read the new value from file (discarding any trailing
+                        new-lines)
+  -i, --stdin           accept the new value from STDIN (best for sensitive
+                        data)
+  -R LENGTH, --random LENGTH
+                        randomly generate a replacement value of a set length
+
+EYAML options:
+  Left unset, the EYAML keys will default to your system or user defaults.
+  Both keys must be set when using EYAML.
+
+  -e, --eyamlcrypt      encrypt the new value using EYAML
+  -x EYAML, --eyaml EYAML
+                        the eyaml binary to use when it isn't on the PATH
+  -r PRIVATEKEY, --privatekey PRIVATEKEY
+                        EYAML private key
+  -u PUBLICKEY, --publickey PUBLICKEY
+                        EYAML public key
+
+When no changes are made, no backup is created, even when -b/--backup is
+specified. For more information about YAML Paths, please visit
+https://github.com/wwkimball/yamlpath.
+```
+
 ### Libraries
 
 While there are several supporting library files like enumerations and
 exceptions, the most interesting library files include:
 
-* [parser.py](yamlpath/parser.py) The core YAML Path parser logic.
+* [parser.py](yamlpath/parser.py) -- The core YAML Path parser logic.
 * [yamlpath.py](yamlpath/yamlpath.py) -- A collection of generally-useful YAML
   methods that enable easily setting and retrieving values via YAML Paths.
 * [eyamlpath.py](yamlpath/eyaml/eyamlpath.py) -- Extends the YAMLPath class to
@@ -222,13 +375,15 @@ supplement your own implementations.
 
 ### Basic Usage:  Command-Line Tools
 
-The command-line tools are self-documented.  Simply pass `--help` to them in
-order to obtain detailed documentation.  Here are some simple examples of their
-typical use-cases.
+The command-line tools are self-documented and [their documentation is captured
+above](#command-line-tools) for easy reference.  Simply pass `--help` to them in
+order to obtain the same detailed documentation.  Here are some simple examples
+of their typical use-cases.
 
 #### Rotate Your EYAML Keys
 
-If the eyaml command is already on your PATH:
+If the eyaml command is already on your PATH (if not, be sure to also supply
+the optional `--eyaml` or `-x` argument):
 
 ```shell
 eyaml-rotate-keys \
@@ -247,7 +402,9 @@ dispersed through a directory hierarchy.
 At its simplest:
 
 ```shell
-yaml-get --query=see.documentation.above.for.many.samples my_yaml_file.yaml
+yaml-get \
+  --query=see.documentation.above.for.many.samples \
+  my_yaml_file.yaml
 ```
 
 #### Change a YAML Value
@@ -261,16 +418,6 @@ yaml-set \
   my_yaml_file.yaml
 ```
 
-Save a backup copy of the original YAML_FILE (with a .bak file-extension):
-
-```shell
-yaml-set \
-  --change=see.documentation.above.for.many.samples \
-  --value="New Value" \
-  --backup \
-  my_yaml_file.yaml
-```
-
 To rotate a password, preserving the old password perhaps so your automation can
 apply the new password to your application(s):
 
@@ -279,46 +426,30 @@ yaml-set \
   --change=the.new.password \
   --saveto=the.old.password \
   --value="New Password" \
-  --backup \
   my_yaml_file.yaml
 ```
 
-To check the old password before rotating it, say to be sure you're changing out
-the right one:
+For the extremely cautious, you could check the old password before rotating
+it, save a backup of the original file, and mandate that the password path
+already exist within the data before replacing it:
 
 ```shell
 yaml-set \
-  --change=the.new.password \
-  --saveto=the.old.password \
-  --check="Old Password" \
-  --value="New Password" \
-  --backup \
-  my_yaml_file.yaml
-```
-
-This tool will create the `--change` within your YAML_FILE if it doesn't already
-exist.  This may not always be ideal, perhaps when you need to be absolutely
-certain that you're editing the right YAML_FILEs and/or have `--change` set
-correctly.  In such cases, you can add `--mustexist` to disallow creating any
-missing `--change` YAML Paths:
-
-```shell
-yaml-set \
-  --change=the.new.password \
   --mustexist \
+  --change=the.new.password \
   --saveto=the.old.password \
   --check="Old Password" \
   --value="New Password" \
-  --backup \
+  --backup
   my_yaml_file.yaml
 ```
 
 You can also add EYAML encryption (assuming the `eyaml` command is on your
 PATH; if not, you can pass `--eyaml` to specify its location).  In this example,
-I add the optional `--format=folded` for this example so that the long EYAML
-value is broken up into a multi-line value rather than one very long string.
-This is the preferred format for EYAML consumers like Puppet.  Note that
-`--format` has several other settings and applies only to new values.
+I add the optional `--format=folded` fso that the long EYAML value is broken up
+into a multi-line value rather than one very long string.  This is the preferred
+format for EYAML consumers like Puppet.  Note that `--format` has several other
+settings and applies only to new values.
 
 ```shell
 yaml-set \
@@ -333,7 +464,8 @@ yaml-set \
   my_yaml_file.yaml
 ```
 
-You can even tell EYAML which keys to use:
+You can even tell EYAML which keys to use, if not your default system or user
+keys:
 
 ```shell
 yaml-set \
@@ -382,9 +514,8 @@ these libraries so they can write messages _somewhere_.  Your custom message
 handler or logger must provide the same API as ConsolePrinter; review the header
 documentation in [consoleprinter.py](yamlpath/wrappers/consoleprinter.py) for
 details.  Generally speaking, it would be trivial to write your own custom
-wrapper for Python's standard logger facility for your own implementations which
-may need to write to your operating system's central logging facility or even to
-log files.
+wrapper for Python's standard logging facilities if you require targets other
+than STDOUT and STDERR.
 
 ```python
 import sys
@@ -450,7 +581,7 @@ except YAMLPathException as ex:
 
 #### Changing Values
 
-At its simplest, you simply need to supply the pre-parsed YAML data, the YAML
+At its simplest, you only need to supply the pre-parsed YAML data, the YAML
 Path to one or more nodes to update, and the value to apply to them.  Catching
 `YAMLPathException` is optional but usually preferred over allowing Python to
 dump the call stack in front of your users.
