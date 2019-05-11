@@ -16,7 +16,7 @@
 ################################################################################
 import sys
 import argparse
-import pprint
+import json
 from os import access, R_OK
 from os.path import isfile
 
@@ -157,9 +157,11 @@ def main():
     if not discovered_nodes:
         log.critical("No matches for {}!".format(yaml_path), 3)
 
-    pprinter = pprint.PrettyPrinter(indent=4)
     for node in discovered_nodes:
-        pprinter.pprint(node)
+        if isinstance(node, list) or isinstance(node, dict):
+            print(json.dumps(node))
+        else:
+            print("{}".format(node))
 
 if __name__ == "__main__":
     main()
