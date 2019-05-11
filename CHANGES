@@ -13,7 +13,7 @@ Enhancements:
   seperator cab be either strictly specified or automatically inferred by
   whether the first character of a given YAML Path is /.  Command-line tools
   like yaml-get and yaml-set have a new --pathsep argument for this; the default
-  is "auto" and can be set to "/" or ".".
+  is "auto" and can be set to "fslash" (/) or "dot" (.).
 
 Bug Fixes:
 * EYAML on Windows now works when a batch file is used to wrap the Ruby `eyaml`

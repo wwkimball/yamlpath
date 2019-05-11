@@ -17,7 +17,6 @@ def parser():
 def test_empty_str_path(parser):
     assert parser.str_path("") == ""
 
-# Happy searches
 @pytest.mark.parametrize("yaml_path,stringified", [
     ("aliases[&anchor]", "aliases[&anchor]"),
     ("a l i a s e s [ & a n c h o r ]", "aliases[&anchor]"),
@@ -75,7 +74,6 @@ def test_happy_str_path_translations(parser, yaml_path, stringified):
 def test_happy_parse_path_list_to_deque(parser):
     assert isinstance(parser.parse_path(["item1", "item2"]), deque)
 
-# Unhappy searches
 @pytest.mark.parametrize("yaml_path", [
     ('some[search ^^ "Name "]'),
     ('some[search $$ " Here"]'),
@@ -112,3 +110,12 @@ def test_happy_parse_path_list_to_deque(parser):
 def test_uphappy_str_path_translations(parser, yaml_path):
     with pytest.raises(YAMLPathException):
         parser.str_path(yaml_path)
+
+@pytest.mark.parametrize("pathsep,yaml_path,stringified", [
+    ('.', "some.hash.key", "some.hash.key"),
+    ('/', "/some/hash/key", "/some/hash/key"),
+    ('.', "/some/hash/key", "some.hash.key"),
+    ('/', "some.hash.key", "/some/hash/key"),
+])
+def test_pathsep(parser, pathsep, yaml_path, stringified):
+    assert parser.str_path(yaml_path, pathsep=pathsep) == stringified
