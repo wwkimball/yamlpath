@@ -43,7 +43,11 @@ class YAMLPath:
         Raises:  N/A
         """
         self.log = logger
-        self.parser = kwargs.pop("parser", Parser(logger))
+
+        if "parser" in kwargs:
+            self.parser = kwargs.pop("parser")
+        else:
+            self.parser = Parser(logger, **kwargs)
 
     def get_nodes(self, data, yaml_path, **kwargs):
         """Retrieves zero or more node at YAML Path in YAML data.

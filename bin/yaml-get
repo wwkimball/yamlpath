@@ -24,6 +24,7 @@ from ruamel.yaml import YAML
 from ruamel.yaml.parser import ParserError
 
 from yamlpath.exceptions import YAMLPathException, EYAMLCommandException
+from yamlpath.enums import PathSeperators
 from yamlpath.parser import Parser
 from yamlpath.eyaml import EYAMLPath
 
@@ -49,6 +50,13 @@ def processcli():
         required=True,
         metavar="YAML_PATH",
         help="YAML Path to query"
+    )
+
+    parser.add_argument("-t", "--pathsep",
+        default="auto",
+        choices=[l.lower() for l in PathSeperators.get_names()],
+        type=str.lower,
+        help="force the separator in YAML_PATH when inference fails"
     )
 
     eyaml_group = parser.add_argument_group(
@@ -108,7 +116,7 @@ def main():
     args = processcli()
     log = ConsolePrinter(args)
     validateargs(args, log)
-    parser = Parser(log)
+    parser = Parser(log, pathsep=args.pathsep)
     processor = EYAMLPath(
         log,
         eyaml=args.eyaml,
