@@ -352,6 +352,40 @@ class YAMLPath:
         if reftyp == PathSegmentTypes.KEY:
             if isinstance(data, dict) and refele in data:
                 yield data[refele]
+            elif isinstance(data, list):
+                # Pass-through search against possible Array-of-Hashes
+                for rec in data:
+                    for node in self._get_elements_by_ref(rec, ref):
+                        if node is not None:
+                            yield node
+        elif (
+            reftyp == PathSegmentTypes.INDEX
+            and isinstance(refele, str)
+            and ':' in refele
+        ):
+            # Array index or Hash key slice
+            refparts = refele.split(':', 1)
+            min_match = refparts[0]
+            max_match = refparts[1]
+            if isinstance(data, list):
+                try:
+                    intmin = int(min_match)
+                    intmax = int(max_match)
+                except ValueError:
+                    raise YAMLPathException(
+                        "{} is not an integer array slice".format(str(refele))
+                        , str(ref)
+                    )
+
+                if intmin == intmax and len(data) > intmin:
+                    yield data[intmin]
+                else:
+                    yield data[intmin:intmax]
+
+            elif isinstance(data, dict):
+                for key, val in data.items():
+                    if key >= min_match and key <= max_match:
+                        yield val
         elif reftyp == PathSegmentTypes.INDEX:
             try:
                 intele = int(refele)
@@ -623,7 +657,10 @@ class YAMLPath:
                             if node is not None:
                                 matched_nodes += 1
                                 yield node
-                    elif curtyp is PathSegmentTypes.INDEX:
+                    elif (
+                        curtyp is PathSegmentTypes.INDEX
+                        and isinstance(curele, int)
+                    ):
                         for _ in range(len(data) - 1, curele):
                             new_val = self._default_for_child(path, value)
                             self._append_list_element(data, new_val)

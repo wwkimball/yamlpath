@@ -282,7 +282,7 @@ class Parser:
                     continue
 
             elif demarc_count == 0 and c == "[":
-                # Array INDEX or SEARCH
+                # Array INDEX/SLICE or SEARCH
                 if element_id:
                     # Record its predecessor element; unless it has already
                     # been identified as a special type, assume it is a KEY.
@@ -421,8 +421,11 @@ class Parser:
                 and c == "]"
                 and demarc_stack[-1] == "["
             ):
-                # Store the INDEX or SEARCH parameters
-                if element_type is PathSegmentTypes.INDEX:
+                # Store the INDEX, SLICE, or SEARCH parameters
+                if (
+                    element_type is PathSegmentTypes.INDEX
+                    and ':' not in element_id
+                ):
                     try:
                         idx = int(element_id)
                     except ValueError:
