@@ -19,6 +19,14 @@ Bug Fixes:
 * EYAML on Windows now works when a batch file is used to wrap the Ruby `eyaml`
   command.
 
+Known Issues:
+* Escape symbols in YAML Paths parse correctly and will be properly processed,
+  resulting in retriving or setting the expected data.  However, the parsed
+  path cannot be stringified back to its original form (with escape symbols).
+  This issue affects only logging/printing of the post-parsed path.  A unit test
+  has been created to track this issue, but it is marked xfail until such time
+  as someone is willing to tackle this (very) low priority issue.
+
 1.1.1
 Bug fixes:
 * The . search operand was limited to only Hash key-names; it now also enables
