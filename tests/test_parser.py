@@ -66,9 +66,24 @@ def test_empty_str_path(parser):
     ('&topArrayAnchor[0]', '&topArrayAnchor[0]'),
     ('"&topArrayAnchor[0]"', r'\&topArrayAnchor\[0\]'),
     ('"&subHashAnchor.child1.attr_tst"', r'\&subHashAnchor\.child1\.attr_tst'),
-    ("'&topArrayAnchor[!.=~/[Oo]riginal/]'", r"\&topArrayAnchor\[\!\.=\~/\[Oo\]riginal/\]"),
+    ("'&topArrayAnchor[!.=~/[Oo]riginal/]'", r"\&topArrayAnchor\[!\.=~/\[Oo\]riginal/\]"),
 ])
 def test_happy_str_path_translations(parser, yaml_path, stringified):
+    assert parser.str_path(yaml_path) == stringified
+
+# This will be a KNOWN ISSUE for this release.  The fix for this may require a
+# deep rethink of the Parser class.  The issue here is that escaped characters
+# in YAML Paths work perfectly well, but they can't be printed back to the
+# screen in their pre-parsed form.  So, when a user submits a YAML Path of
+# "some\\escaped\\key", all printed forms of the key will become
+# "someescapedkey" even though the path WILL find the requested data.  This is
+# only a stringification (printing) anomoly and hense, it will be LOW PRIORITY,
+# tracked as a KNOWN ISSUE, for now.
+@pytest.mark.xfail
+@pytest.mark.parametrize("yaml_path,stringified", [
+    ('key\\with\\slashes', 'key\\with\\slashes'),
+])
+def test_escaped_translations(parser, yaml_path, stringified):
     assert parser.str_path(yaml_path) == stringified
 
 def test_happy_parse_path_list_to_deque(parser):
@@ -105,6 +120,7 @@ def test_happy_parse_path_list_to_deque(parser):
     ('some[search = "unterminated demarcation]'),
     ('some[search =~ /unterminated RegEx]'),
     ('some[search ^= "meaningless operator"]'),
+    ('array[4F]'),
     ({}),
 ])
 def test_uphappy_str_path_translations(parser, yaml_path):

@@ -103,14 +103,8 @@ class Parser:
                     element_id
                     .replace(pathsep, "\\{}".format(pathsep))
                     .replace("&", r"\&")
-                    .replace("!", r"\!")
-                    .replace("~", r"\~")
                     .replace("[", r"\[")
                     .replace("]", r"\]")
-                    .replace("{", r"\{")
-                    .replace("}", r"\}")
-                    .replace("(", r"\(")
-                    .replace("(", r"\(")
                 )
             elif ptype == PathSegmentTypes.INDEX:
                 ppath += "[{}]".format(element_id)
@@ -282,7 +276,7 @@ class Parser:
                     continue
 
             elif demarc_count == 0 and c == "[":
-                # Array INDEX or SEARCH
+                # Array INDEX/SLICE or SEARCH
                 if element_id:
                     # Record its predecessor element; unless it has already
                     # been identified as a special type, assume it is a KEY.
@@ -348,7 +342,7 @@ class Parser:
                             , yaml_path
                         )
 
-                    continue
+                    continue  # pragma: no cover
 
                 elif c == "~":
                     if search_method == PathSearchMethods.EQUALS:
@@ -362,7 +356,8 @@ class Parser:
                             ).format(c)
                             , yaml_path
                         )
-                    continue
+
+                    continue  # pragma: no cover
 
                 elif not element_id:
                     # All tests beyond this point require an operand
@@ -421,8 +416,11 @@ class Parser:
                 and c == "]"
                 and demarc_stack[-1] == "["
             ):
-                # Store the INDEX or SEARCH parameters
-                if element_type is PathSegmentTypes.INDEX:
+                # Store the INDEX, SLICE, or SEARCH parameters
+                if (
+                    element_type is PathSegmentTypes.INDEX
+                    and ':' not in element_id
+                ):
                     try:
                         idx = int(element_id)
                     except ValueError:
