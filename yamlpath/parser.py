@@ -342,7 +342,7 @@ class Parser:
                             , yaml_path
                         )
 
-                    continue # pragma: no cover
+                    continue  # pragma: no cover
 
                 elif c == "~":
                     if search_method == PathSearchMethods.EQUALS:
@@ -357,7 +357,7 @@ class Parser:
                             , yaml_path
                         )
 
-                    continue # pragma: no cover
+                    continue  # pragma: no cover
 
                 elif not element_id:
                     # All tests beyond this point require an operand
