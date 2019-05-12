@@ -28,7 +28,7 @@ from ruamel.yaml.parser import ParserError
 
 from yamlpath.exceptions import YAMLPathException, EYAMLCommandException
 from yamlpath.eyaml import EYAMLPath
-from yamlpath.enums import YAMLValueFormats
+from yamlpath.enums import YAMLValueFormats, PathSeperators
 
 import yamlpath.patches
 from yamlpath.wrappers import ConsolePrinter
@@ -89,6 +89,12 @@ def processcli():
         help="require that the --change YAML_PATH already exist in YAML_FILE")
     parser.add_argument("-b", "--backup", action="store_true",
         help="save a backup YAML_FILE with an extra .bak file-extension")
+    parser.add_argument("-t", "--pathsep",
+        default="auto",
+        choices=[l.lower() for l in PathSeperators.get_names()],
+        type=str.lower,
+        help="force the separator in YAML_PATH when inference fails"
+    )
 
     eyaml_group = parser.add_argument_group(
         "EYAML options", "Left unset, the EYAML keys will default to your\
@@ -176,7 +182,8 @@ def main():
         log,
         eyaml=args.eyaml,
         publickey=args.publickey,
-        privatekey=args.privatekey
+        privatekey=args.privatekey,
+        pathsep=args.pathsep,
     )
     backup_file = args.yaml_file + ".bak"
 

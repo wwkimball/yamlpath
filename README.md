@@ -48,6 +48,7 @@ Hash members, this YAML Path solution grew to include new syntax for:
 * Array elements
 * Anchors by name
 * Search expressions for single or multiple matches
+* Forward-slash notation
 
 To illustrate some of these concepts, consider this sample YAML data:
 
@@ -83,34 +84,43 @@ sensitive::accounts:
 
 This YAML data sample contains these single-result YAML Paths:
 
-1. `aliases[&commonUsername]`
-2. `aliases[&commonPassword]`
-3. `configuration::application.'general.settings'.slash\\key`
-4. `configuration::application.'general.settings'.'a.dotted.subkey'[0]`
-5. `configuration::application.'general.settings'.'a.dotted.subkey'[1]`
-6. `configuration::application.'general.settings'.'a.dotted.subkey'[2]`
-7. `sensitive::accounts.database.app_user`
-8. `sensitive::accounts.database.app_pass`
-9. `sensitive::accounts.application.db.users[0].name`
-10. `sensitive::accounts.application.db.users[0].pass`
-11. `sensitive::accounts.application.db.users[0].access_level`
-12. `sensitive::accounts.application.db.users[1].name`
-13. `sensitive::accounts.application.db.users[1].pass`
-14. `sensitive::accounts.application.db.users[1].access_level`
+Dot Notation                                                         | Forward-Slash Notation
+---------------------------------------------------------------------|------------------------------------------------------------------
+`aliases[&commonUsername]`                                           | `/aliases[&commonUsername]`
+`aliases[&commonPassword]`                                           | `/aliases[&commonPassword]`
+`configuration::application.'general.settings'.slash\\key`           | `/configuration::application/general.settings/slash\\key`
+`configuration::application.'general.settings'.'a.dotted.subkey'[0]` | `/configuration::application/general.settings/a.dotted.subkey[0]`
+`configuration::application.'general.settings'.'a.dotted.subkey'[1]` | `/configuration::application/general.settings/a.dotted.subkey[1]`
+`configuration::application.'general.settings'.'a.dotted.subkey'[2]` | `/configuration::application/general.settings/a.dotted.subkey[2]`
+`sensitive::accounts.database.app_user`                              | `/sensitive::accounts/database/app_user`
+`sensitive::accounts.database.app_pass`                              | `/sensitive::accounts/database/app_pass`
+`sensitive::accounts.application.db.users[0].name`                   | `/sensitive::accounts/application/db/users[0]/name`
+`sensitive::accounts.application.db.users[0].pass`                   | `/sensitive::accounts/application/db/users[0]/pass`
+`sensitive::accounts.application.db.users[0].access_level`           | `/sensitive::accounts/application/db/users[0]/access_level`
+`sensitive::accounts.application.db.users[1].name`                   | `/sensitive::accounts/application/db/users[1]/name`
+`sensitive::accounts.application.db.users[1].pass`                   | `/sensitive::accounts/application/db/users[1]/pass`
+`sensitive::accounts.application.db.users[1].access_level`           | `/sensitive::accounts/application/db/users[1]/access_level`
 
 You could also access some of these sample nodes using search expressions, like:
 
-1. `configuration::application.general\.settings.'a.dotted.subkey'[.=~/^element[1-2]$/]`
-2. `sensitive::accounts.application.db.users[name=admin].access_level`
-3. `sensitive::accounts.application.db.users[access_level<500].name`
+Dot Notation                                                                          | Forward-Slash Notation
+--------------------------------------------------------------------------------------|------------------------------------------------------------------
+`configuration::application.general\.settings.'a.dotted.subkey'[.=~/^element[1-2]$/]` | `/configuration::application/general.settings/a.dotted.subkey[.=~/^element[1-2]$/]`
+`configuration::application.general\.settings.'a.dotted.subkey'[1:2]`                 | `/configuration::application/general.settings/a.dotted.subkey[0:-2]`
+`sensitive::accounts.application.db.users[name=admin].access_level`                   | `/sensitive::accounts/application/db/users[name=admin]/access_level`
+`sensitive::accounts.application.db.users[access_level<500].name`                     | `/sensitive::accounts/application/db/users[access_level<500]/name`
 
 ## Supported YAML Path Forms
 
 YAML Path understands these forms:
 
+* Top-level Array element selection: `[#]` where `#` is the 0-based element number (`#` can also be negative, causing the element to be selected from the end of the Array)
+* Top-level Hash key selection: `key`
 * Dot notation for Hash sub-keys:  `hash.child.key`
 * Demarcation for dotted Hash keys:  `hash.'dotted.child.key'` or `hash."dotted.child.key"`
-* Array element selection:  `array[#]` (where `array` is omitted for top-level Arrays or is the name of the Hash key containing Array data and `#` is the 0-based element number)
+* Array element selection:  `array[#]` where `array` is omitted for top-level Arrays or is the name of the Hash key containing Array data and `#` is the 0-based element number (`#` can also be negative, causing the element to be selected from the end of the Array)
+* Array slicing: `array[start#:stop#]` where `start#` is the first, zero-based element and `stop#` is the last element to select (either or both can be negative, causing the elements to be selected from the end of the Array)
+* Hash slicing: `hash[min:max]` where `min` and `max` are alphanumeric terms between which the Hash's keys are compared
 * Escape symbol recognition:  `hash.dotted\.child\.key` or `keys_with_\\slashes`
 * Top-level (Hash) Anchor lookups: `&anchor_name`
 * Anchor lookups in Arrays:  `array[&anchor_name]`
@@ -123,12 +133,13 @@ YAML Path understands these forms:
   * Greater Than match: `sensitive::accounts.application.db.users[access_level>0].pass`
   * Less Than or Equal match: `sensitive::accounts.application.db.users[access_level<=100].pass`
   * Greater Than or Equal match: `sensitive::accounts.application.db.users[access_level>=0].pass`
-  * Regular Expression matches using any delimiter you choose (other than `/`, if you need something else): `sensitive::accounts.application.db.users[access_level=~/^\D+$/].pass` or `some::hash[containing=~#/path/values#]`
+  * Regular Expression matches using any delimiter you choose (other than `/`, if you need something else): `sensitive::accounts.application.db.users[access_level=~/^\D+$/].pass` or `some::hash[containing=~"/path/values"]`
   * Invert any match with `!`, like: `sensitive::accounts.application.db.users[name!=admin].pass`
   * Demarcate and/or escape expression values, like: `sensitive::accounts.application.db.users[full\ name="Some User\'s Name"].pass`
   * Multi-level matching: `sensitive::accounts.application.db.users[name%admin].pass[encrypted!^ENC\[]`
 * Array element and Hash key-name searches with all of the search methods above via `.` (yields their values, not the keys themselves): `sensitive::accounts.database[.^app_]`
-* Complex combinations: `some::deep.hierarchy[with!=""].'any.valid'[.$yaml][data%structure].or.[!complexity=~/^.{4}$/][2]`
+* Complex combinations: `some::deep.hierarchy[with!=""].'any.valid'[.$yaml][data%structure].or[!complexity=~/^.{4}$/][2]`
+* Forward-slash rather than dot notation:  `/key` up to `/some::deep/hierarchy[with!=""]/any.valid[.$yaml][data%structure]/or[!complexity=~/^.{4}$/][2]`
 
 ## Installing
 
