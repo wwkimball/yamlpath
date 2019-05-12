@@ -62,11 +62,12 @@ def test_empty_str_path(parser):
     ('some[!search >= 5280]', "some[search!>=5280]"),
     ('some[!search <= 14000]', "some[search!<=14000]"),
     (r'some[search =~ /^\d{5}$/]', r'some[search=~/^\d{5}$/]'),
+    ('key\\with\\slashes', 'key\\with\\slashes'),
     ('"aliases[&some_name]"', r'aliases\[\&some_name\]'),
     ('&topArrayAnchor[0]', '&topArrayAnchor[0]'),
     ('"&topArrayAnchor[0]"', r'\&topArrayAnchor\[0\]'),
     ('"&subHashAnchor.child1.attr_tst"', r'\&subHashAnchor\.child1\.attr_tst'),
-    ("'&topArrayAnchor[!.=~/[Oo]riginal/]'", r"\&topArrayAnchor\[\!\.=\~/\[Oo\]riginal/\]"),
+    ("'&topArrayAnchor[!.=~/[Oo]riginal/]'", r"\&topArrayAnchor\[!\.=~/\[Oo\]riginal/\]"),
 ])
 def test_happy_str_path_translations(parser, yaml_path, stringified):
     assert parser.str_path(yaml_path) == stringified
@@ -105,6 +106,7 @@ def test_happy_parse_path_list_to_deque(parser):
     ('some[search = "unterminated demarcation]'),
     ('some[search =~ /unterminated RegEx]'),
     ('some[search ^= "meaningless operator"]'),
+    ('array[4F]'),
     ({}),
 ])
 def test_uphappy_str_path_translations(parser, yaml_path):

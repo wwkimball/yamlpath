@@ -103,14 +103,8 @@ class Parser:
                     element_id
                     .replace(pathsep, "\\{}".format(pathsep))
                     .replace("&", r"\&")
-                    .replace("!", r"\!")
-                    .replace("~", r"\~")
                     .replace("[", r"\[")
                     .replace("]", r"\]")
-                    .replace("{", r"\{")
-                    .replace("}", r"\}")
-                    .replace("(", r"\(")
-                    .replace("(", r"\(")
                 )
             elif ptype == PathSegmentTypes.INDEX:
                 ppath += "[{}]".format(element_id)
@@ -348,7 +342,7 @@ class Parser:
                             , yaml_path
                         )
 
-                    continue
+                    continue # pragma: no cover
 
                 elif c == "~":
                     if search_method == PathSearchMethods.EQUALS:
@@ -362,7 +356,8 @@ class Parser:
                             ).format(c)
                             , yaml_path
                         )
-                    continue
+
+                    continue # pragma: no cover
 
                 elif not element_id:
                     # All tests beyond this point require an operand
