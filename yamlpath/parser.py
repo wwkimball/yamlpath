@@ -87,6 +87,10 @@ class Parser:
 
         Raises:  N/A
         """
+        self.log.debug(
+            "Parser::str_path:  Building stringified <{}>{}..."
+            .format(type(yaml_path), yaml_path)
+        )
         parsed_path = self.parse_path(yaml_path)
         add_sep = False
         ppath = ""
@@ -97,7 +101,7 @@ class Parser:
             ppath = "/"
 
         for (ptype, element_vers) in parsed_path:
-            element_id = element_vers[1]
+            element_id = element_vers[2]
             if ptype == PathSegmentTypes.KEY:
                 if add_sep:
                     ppath += pathsep
@@ -141,8 +145,9 @@ class Parser:
         tuple in the deque indicates:
           1. The PathSegmentTypes of the element
           2. A tuple providing:
-             1. The escape-stripped version of the element
-             2. The non-stripped version of the same element
+             1. The original YAML Path, unparsed (for error reporting)
+             2. The escape-stripped version of the element
+             3. The non-stripped version of the same element
 
         Positional Parameters:
           1. yaml_path (any) The stringified YAML Path to parse
@@ -155,6 +160,8 @@ class Parser:
         Raises:
           YAMLPathException when yaml_path is invalid
         """
+        self.log.debug("Parser::parse_path:  Parsing {}...".format(yaml_path))
+
         if yaml_path is None:
             return deque()
         elif isinstance(yaml_path, deque):
@@ -168,7 +175,7 @@ class Parser:
             )
 
         if yaml_path in Parser._combined_static_parsings:
-            return Parser._combined_static_parsings[yaml_path]
+            return Parser._combined_static_parsings[yaml_path].copy()
 
         stripped_path = self._parse_path(yaml_path, True)
         unstripped_path = self._parse_path(yaml_path, False)
@@ -179,12 +186,17 @@ class Parser:
             sele = sref[1]
             uele = uref[1]
             combined_path.append(
-                (styp, (sele, uele))
+                (styp, (yaml_path, sele, uele))
             )
 
         Parser._combined_static_parsings[yaml_path] = combined_path
 
-        return combined_path
+        self.log.debug(
+            "Parser::parse_path:  Combined {} into:".format(yaml_path)
+        )
+        self.log.debug(combined_path)
+
+        return combined_path.copy()
 
     def _parse_path(self, yaml_path, strip_escapes=True):
         r"""Breaks apart a stringified YAML Path into component elements, each
@@ -561,17 +573,10 @@ class Parser:
         )
         self.log.debug(path_elements)
 
-        # Cache the parsed results; note that the stringified YAML Path may
-        # differ from the user version but it has exactly the same parsed
-        # result, so cache it, too.
-        str_path = self.str_path(path_elements)
+        # Cache the parsed results.
         if strip_escapes:
             Parser._stripped_static_parsings[yaml_path] = path_elements
-            if not str_path == yaml_path:
-                Parser._stripped_static_parsings[str_path] = path_elements
         else:
             Parser._unstripped_static_parsings[yaml_path] = path_elements
-            if not str_path == yaml_path:
-                Parser._unstripped_static_parsings[str_path] = path_elements
 
         return path_elements.copy()

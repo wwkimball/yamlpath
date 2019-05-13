@@ -525,7 +525,7 @@ def test_nonexistant_path_segment_types(yamlpath, yamldata):
   PathSegmentTypes = Enum('PathSegmentTypes', names)
 
   with pytest.raises(NotImplementedError):
-    for _ in yamlpath._get_elements_by_ref(yamldata, (PathSegmentTypes.DNF, False)):
+    for _ in yamlpath._get_elements_by_ref(yamldata, (PathSegmentTypes.DNF, ("", False, False))):
       pass
 
 @pytest.mark.parametrize("sep,val", [
