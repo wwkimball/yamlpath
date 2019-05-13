@@ -170,11 +170,12 @@ class YAMLPath:
         matches = 0
         if yaml_path:
             (curtyp, curele) = curref = yaml_path.popleft()
+            unstripped_ele = curele[2]
 
             self.log.debug(
                 ("YAMLPath::_get_nodes:  Seeking element <{}>{} in data of"
                  + " type {}:"
-                ).format(curtyp, curele, type(data))
+                ).format(curtyp, unstripped_ele, type(data))
             )
             self.log.debug(data)
             self.log.debug("")
@@ -184,9 +185,9 @@ class YAMLPath:
                 if node is not None:
                     matches += 1
                     self.log.debug(
-                        ("YAMLPath::_get_nodes:  Found element {} in the data;"
-                            + " recursing into it..."
-                        ).format(curele)
+                        ("YAMLPath::_get_nodes:  Found element <{}>{} in the"
+                         + " data and recursing into it...")
+                        .format(curtyp, unstripped_ele)
                     )
                     for epn in self._get_nodes(node, yaml_path.copy()):
                         if epn is not None:
@@ -688,7 +689,9 @@ class YAMLPath:
                     if curtyp is PathSegmentTypes.ANCHOR:
                         raise NotImplementedError
                     elif curtyp is PathSegmentTypes.KEY:
-                        data[stripped_ele] = self._default_for_child(path, value)
+                        data[stripped_ele] = self._default_for_child(
+                            path, value
+                        )
                         for node in self._ensure_path(
                             data[stripped_ele], path, value
                         ):

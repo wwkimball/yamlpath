@@ -1,3 +1,13 @@
+1.2.1
+Bug Fixes:
+* yaml-get version 1.0.2 now converts new-lines into "\n" character sequences
+  when writing output so that multi-line values remain one-result-per-line.
+* Use of escape symbols for unusual characters (where demarcation would usually
+  be preferred) is now preserved.  Thus, these two search phrases are now
+  identical:
+    array[.%" can't "]
+    array[.%\ can\'t\ ]
+
 1.2.0
 Enhancements:
 * A new search operator, :, now enables capturing slices of Arrays (by 0-based

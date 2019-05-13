@@ -125,7 +125,13 @@ class Parser:
                 if method == PathSearchMethods.REGEX:
                     safe_term = "/{}/".format(term.replace("/", r"\/"))
                 else:
-                    safe_term = str(term).replace(" ", r"\ ")
+                    # Replace unescaped spaces with escaped spaces
+                    safe_term = r"\ ".join(
+                        list(map(
+                            lambda ele: ele.replace(" ", r"\ ")
+                            , term.split(r"\ ")
+                        ))
+                    )
                 ppath += (
                     "["
                     + str(attr)
@@ -137,6 +143,10 @@ class Parser:
 
             add_sep = True
 
+        self.log.debug(
+            "Parser::str_path:  Finished building <{}>{} from <{}>{}."
+            .format(type(ppath), ppath, type(yaml_path), yaml_path)
+        )
         return ppath
 
     def parse_path(self, yaml_path):
@@ -268,6 +278,7 @@ class Parser:
 
             if escape_next:
                 # Pass-through; capture this escaped character
+                escape_next = False
                 pass
 
             elif capturing_regex:
@@ -544,7 +555,6 @@ class Parser:
 
             element_id += c
             seeking_anchor_mark = False
-            escape_next = False
 
         # Check for unterminated RegExes
         if capturing_regex:

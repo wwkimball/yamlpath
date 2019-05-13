@@ -19,6 +19,7 @@ def test_empty_str_path(parser):
     assert parser.str_path("") == ""
 
 @pytest.mark.parametrize("yaml_path,stringified", [
+    ("&topArrayAnchor[0]", "&topArrayAnchor[0]"),
     ("aliases[&anchor]", "aliases[&anchor]"),
     ("a l i a s e s [ & a n c h o r ]", "aliases[&anchor]"),
     ("aliases[2]", "aliases[2]"),
@@ -27,6 +28,11 @@ def test_empty_str_path(parser):
     ("lookup::credentials.backend.database.password.hash", "lookup::credentials.backend.database.password.hash"),
     ("does::not[7].exist[4]", "does::not[7].exist[4]"),
     ("messy.messy.'dotted.sub.key'.child", r"messy.messy.dotted\.sub\.key.child"),
+])
+def test_happy_str_path_translations_simple(parser, yaml_path, stringified):
+    assert parser.str_path(yaml_path) == stringified
+
+@pytest.mark.parametrize("yaml_path,stringified", [
     ('some[search="Name Here"]', r"some[search=Name\ Here]"),
     ('some[search=="Name Here"]', r"some[search=Name\ Here]"),
     ('some[search^"Name "]', r"some[search^Name\ ]"),
@@ -62,14 +68,30 @@ def test_empty_str_path(parser):
     ('some[!search < 42]', "some[search!<42]"),
     ('some[!search >= 5280]', "some[search!>=5280]"),
     ('some[!search <= 14000]', "some[search!<=14000]"),
+])
+def test_happy_str_path_translations_simple_searches(parser, yaml_path, stringified):
+    assert parser.str_path(yaml_path) == stringified
+
+@pytest.mark.parametrize("yaml_path,stringified", [
     (r'some[search =~ /^\d{5}$/]', r'some[search=~/^\d{5}$/]'),
+])
+def test_happy_str_path_translations_regex_searches(parser, yaml_path, stringified):
+    assert parser.str_path(yaml_path) == stringified
+
+@pytest.mark.parametrize("yaml_path,stringified", [
     ('"aliases[&some_name]"', r'aliases\[\&some_name\]'),
-    ('&topArrayAnchor[0]', '&topArrayAnchor[0]'),
     ('"&topArrayAnchor[0]"', r'\&topArrayAnchor\[0\]'),
     ('"&subHashAnchor.child1.attr_tst"', r'\&subHashAnchor\.child1\.attr_tst'),
     ("'&topArrayAnchor[!.=~/[Oo]riginal/]'", r"\&topArrayAnchor\[!\.=~/\[Oo\]riginal/\]"),
 ])
-def test_happy_str_path_translations(parser, yaml_path, stringified):
+def test_happy_str_path_translations_bad_quotes(parser, yaml_path, stringified):
+    assert parser.str_path(yaml_path) == stringified
+
+@pytest.mark.parametrize("yaml_path,stringified", [
+    ("aliases[.%' ']", r"aliases[.%\ ]"),
+    (r"aliases[.%\ ]", r"aliases[.%\ ]"),
+])
+def test_happy_str_path_translations_weird_escapes(parser, yaml_path, stringified):
     assert parser.str_path(yaml_path) == stringified
 
 @pytest.mark.parametrize("yaml_path,stringified", [
