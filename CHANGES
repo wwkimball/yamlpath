@@ -1,7 +1,7 @@
 1.2.1
 Enhancements:
 * Some exception/error messages have been updated to print the entire original
-  -- albeit parsed -- YAML Path rather than just the present segment under
+  -- albeit parsed -- YAML Path in addition to the present segment under
   evaluation.
 
 Bug Fixes:

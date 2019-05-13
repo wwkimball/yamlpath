@@ -1,4 +1,7 @@
-"""Implements the YAMLValueFormats enumeration."""
+"""Implements the YAMLValueFormats enumeration.
+
+Copyright 2019 William W. Kimball, Jr. MBA MSIS
+"""
 from enum import Enum, auto
 
 
