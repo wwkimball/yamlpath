@@ -689,7 +689,9 @@ class YAMLPath:
                     if curtyp is PathSegmentTypes.ANCHOR:
                         raise NotImplementedError
                     elif curtyp is PathSegmentTypes.KEY:
-                        data[stripped_ele] = self._default_for_child(path, value)
+                        data[stripped_ele] = self._default_for_child(
+                            path, value
+                        )
                         for node in self._ensure_path(
                             data[stripped_ele], path, value
                         ):
