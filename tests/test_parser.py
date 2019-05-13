@@ -6,6 +6,7 @@ from collections import deque
 from yamlpath.parser import Parser
 from yamlpath.exceptions import YAMLPathException
 from yamlpath.wrappers import ConsolePrinter
+from yamlpath.enums import PathSeperators
 
 @pytest.fixture
 def parser():
@@ -132,6 +133,24 @@ def test_uphappy_str_path_translations(parser, yaml_path):
     ('/', "/some/hash/key", "/some/hash/key"),
     ('.', "/some/hash/key", "some.hash.key"),
     ('/', "some.hash.key", "/some/hash/key"),
+    ('/', "/&someAnchoredArray[0]", "/&someAnchoredArray[0]"),
+    ('.', "&someAnchoredArray[0]", "&someAnchoredArray[0]"),
+    ('.', "/&someAnchoredArray[0]", "&someAnchoredArray[0]"),
+    ('/', "&someAnchoredArray[0]", "/&someAnchoredArray[0]"),
 ])
 def test_pathsep(parser, pathsep, yaml_path, stringified):
     assert parser.str_path(yaml_path, pathsep=pathsep) == stringified
+
+@pytest.mark.parametrize("pathsep,compare", [
+    (PathSeperators.DOT, PathSeperators.DOT),
+    (PathSeperators.FSLASH, PathSeperators.FSLASH),
+    ('.', PathSeperators.DOT),
+    ('/', PathSeperators.FSLASH),
+])
+def test_pretyped_pathsep(pathsep, compare):
+    parser = Parser(None, pathsep=pathsep)
+    assert compare == parser.pathsep
+
+def test_bad_pathsep():
+    with pytest.raises(YAMLPathException):
+        _ = Parser(None, pathsep="no such seperator!")

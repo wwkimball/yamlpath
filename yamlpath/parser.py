@@ -35,16 +35,16 @@ class Parser:
         """
         self.log = logger
 
-        pathsep_arg = kwargs.pop("pathsep", "auto")
-        if pathsep_arg is PathSeperators:
-            self.pathsep = pathsep_arg
+        pathsep = kwargs.pop("pathsep", "auto")
+        if isinstance(pathsep, PathSeperators):
+            self.pathsep = pathsep
         else:
             try:
-                self.pathsep = PathSeperators.from_str(pathsep_arg)
+                self.pathsep = PathSeperators.from_str(pathsep)
             except NameError:
                 raise YAMLPathException(
-                    "Unknown YAML Path seperator, {}.".format(pathsep_arg)
-                    , pathsep_arg
+                    "Unknown YAML Path seperator, {}.".format(pathsep)
+                    , pathsep
                 )
 
     def _infer_pathsep(self, yaml_path):
@@ -176,10 +176,13 @@ class Parser:
 
         # Infer the path seperator
         pathsep = self._infer_pathsep(yaml_path)
+        first_anchor_pos = 0
+        if pathsep == '/':
+            first_anchor_pos = 1
 
         element_id = ""
         demarc_stack = []
-        seeking_anchor_mark = yaml_path[0] == "&"
+        seeking_anchor_mark = yaml_path[first_anchor_pos] == "&"
         escape_next = False
         element_type = None
         search_inverted = False
@@ -208,7 +211,7 @@ class Parser:
                     # the RegEx; thus, users must select a delimiter that won't
                     # appear within the RegEx (which is exactly why the user
                     # gets to choose the delimiter).
-                    pass
+                    pass  # pragma: no cover
 
             # The escape test MUST come AFTER the RegEx capture test so users
             # won't be forced into "The Backslash Plague".

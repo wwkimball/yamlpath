@@ -32,14 +32,14 @@ class PathSeperators(Enum):
         Raises:
           NameError when name doesn't match any enumeration values.
         """
-        if name is PathSeperators:
+        if isinstance(name, PathSeperators):
             return name
 
         check = str(name).upper()
 
-        if check == ".":
+        if check == '.':
             check = "DOT"
-        elif check == "/":
+        elif check == '/':
             check = "FSLASH"
 
         if check in PathSeperators.get_names():
@@ -49,8 +49,8 @@ class PathSeperators(Enum):
 
     @staticmethod
     def to_seperator(name):
-        seperator = "."
+        seperator = '.'
         if name == PathSeperators.FSLASH:
-            seperator = "/"
+            seperator = '/'
 
         return seperator
