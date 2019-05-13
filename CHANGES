@@ -36,6 +36,22 @@ Known Issues:
     5. Try to use this parsed-stringified-parsed path result for anything.
        Instead, only use the first parsed result that you got at step 2.
 
+1.1.2
+Bug fixes:
+* When the YAML Path is fully quoted -- a known side-effect of using Jenkins and
+  trying to responsibly quote any part of an argument to a shell command -- the
+  visual feedback failed to show the user that the parsed version of the YAML
+  Path was (correctly) treated as one whole KEY.  While this is not what most
+  users should expect, it is correct because YAML Path cannot safely make any
+  assumptions as to whether the quoting was deliberate or unintentional.  Now,
+  the stringified version of affected YAML Paths very clearly injects escape
+  symbols for otherwise intentional special symbols, clearly alerting the user
+  that a probable issue is afoot.
+* When instructed to `--save` old values, the yaml-set binary was saving only
+  decrypted versions of the original values.  It now preserves the original
+  encrypted form while still performing other requested or necessary tests
+  against the decrypted value.
+
 1.1.1
 Bug fixes:
 * The . search operand was limited to only Hash key-names; it now also enables
