@@ -8,6 +8,7 @@ from yamlpath.exceptions import YAMLPathException
 from yamlpath.enums import (
     PathSegmentTypes,
     PathSearchMethods,
+    PathSeperators,
 )
 
 
@@ -17,12 +18,16 @@ class Parser:
     # Cache parsed YAML Path results across instances to avoid repeated parsing
     _static_parsings = {}
 
-    def __init__(self, logger):
+    def __init__(self, logger, **kwargs):
         """Init this class.
 
         Positional Parameters:
           1. logger (ConsoleWriter) Instance of ConsoleWriter or any similar
              wrapper (say, around stdlib logging modules)
+
+        Optional Parameters:
+          1. pathsep (string) A PathSeperators value for controlling the YAML
+             Path seperator
 
         Returns:  N/A
 
@@ -30,44 +35,84 @@ class Parser:
         """
         self.log = logger
 
-    def str_path(self, yaml_path):
+        pathsep = kwargs.pop("pathsep", "auto")
+        if isinstance(pathsep, PathSeperators):
+            self.pathsep = pathsep
+        else:
+            try:
+                self.pathsep = PathSeperators.from_str(pathsep)
+            except NameError:
+                raise YAMLPathException(
+                    "Unknown YAML Path seperator, {}.".format(pathsep)
+                    , pathsep
+                )
+
+    def _infer_pathsep(self, yaml_path):
+        """Gets the most likely YAML Path seperator to use based on whether one
+        has already been manually specified or from what can be inferred from a
+        sample.
+
+        Positional Parameters:
+          1. yaml_path (any) The YAML Path to evaluate
+
+        Returns:  (str) The stringified YAML Path seperator
+
+        Raises:  N/A
+        """
+        seperator = '.'
+        if self.pathsep is not PathSeperators.AUTO:
+            seperator = PathSeperators.to_seperator(self.pathsep)
+        elif not yaml_path:
+            self.pathsep = PathSeperators.DOT
+            seperator = '.'
+        elif '/' == yaml_path[0]:
+            self.pathsep = PathSeperators.FSLASH
+            seperator = '/'
+
+        return seperator
+
+    def str_path(self, yaml_path, **kwargs):
         """Returns the printable, user-friendly version of a YAML Path.
 
         Positional Parameters:
           1. yaml_path (any) The YAML Path to convert
+
+        Optional Parameters:
+          1. pathsep (string) A PathSeperators value for controlling the YAML
+             Path seperator
 
         Returns:  (str) The stringified YAML Path
 
         Raises:  N/A
         """
         parsed_path = self.parse_path(yaml_path)
-        add_dot = False
+        add_sep = False
         ppath = ""
+        pathsep = kwargs.pop("pathsep", self._infer_pathsep(yaml_path))
+
+        # FSLASH pathsep requires a path starting with a /
+        if pathsep == '/':
+            ppath = "/"
 
         for (ptype, element_id) in parsed_path:
             if ptype == PathSegmentTypes.KEY:
-                if add_dot:
-                    ppath += "."
+                if add_sep:
+                    ppath += pathsep
+
                 ppath += (
                     element_id
-                    .replace(".", r"\.")
+                    .replace(pathsep, "\\{}".format(pathsep))
                     .replace("&", r"\&")
-                    .replace("!", r"\!")
-                    .replace("~", r"\~")
                     .replace("[", r"\[")
                     .replace("]", r"\]")
-                    .replace("{", r"\{")
-                    .replace("}", r"\}")
-                    .replace("(", r"\(")
-                    .replace("(", r"\(")
                 )
             elif ptype == PathSegmentTypes.INDEX:
                 ppath += "[{}]".format(element_id)
             elif ptype == PathSegmentTypes.ANCHOR:
-                if ppath:
+                if add_sep:
                     ppath += "[&{}]".format(element_id)
                 else:
-                    ppath = "&{}".format(element_id)
+                    ppath += "&{}".format(element_id)
             elif ptype == PathSegmentTypes.SEARCH:
                 invert, method, attr, term = element_id
                 if method == PathSearchMethods.REGEX:
@@ -83,7 +128,7 @@ class Parser:
                     + "]"
                 )
 
-            add_dot = True
+            add_sep = True
 
         return ppath
 
@@ -129,9 +174,15 @@ class Parser:
         if yaml_path in Parser._static_parsings:
             return Parser._static_parsings[yaml_path].copy()
 
+        # Infer the path seperator
+        pathsep = self._infer_pathsep(yaml_path)
+        first_anchor_pos = 0
+        if pathsep == '/':
+            first_anchor_pos = 1
+
         element_id = ""
         demarc_stack = []
-        seeking_anchor_mark = yaml_path[0] == "&"
+        seeking_anchor_mark = yaml_path[first_anchor_pos] == "&"
         escape_next = False
         element_type = None
         search_inverted = False
@@ -160,7 +211,7 @@ class Parser:
                     # the RegEx; thus, users must select a delimiter that won't
                     # appear within the RegEx (which is exactly why the user
                     # gets to choose the delimiter).
-                    pass
+                    pass  # pragma: no cover
 
             # The escape test MUST come AFTER the RegEx capture test so users
             # won't be forced into "The Backslash Plague".
@@ -228,7 +279,7 @@ class Parser:
                     continue
 
             elif demarc_count == 0 and c == "[":
-                # Array INDEX or SEARCH
+                # Array INDEX/SLICE or SEARCH
                 if element_id:
                     # Record its predecessor element; unless it has already
                     # been identified as a special type, assume it is a KEY.
@@ -294,7 +345,7 @@ class Parser:
                             , yaml_path
                         )
 
-                    continue
+                    continue  # pragma: no cover
 
                 elif c == "~":
                     if search_method == PathSearchMethods.EQUALS:
@@ -308,7 +359,8 @@ class Parser:
                             ).format(c)
                             , yaml_path
                         )
-                    continue
+
+                    continue  # pragma: no cover
 
                 elif not element_id:
                     # All tests beyond this point require an operand
@@ -367,8 +419,11 @@ class Parser:
                 and c == "]"
                 and demarc_stack[-1] == "["
             ):
-                # Store the INDEX or SEARCH parameters
-                if element_type is PathSegmentTypes.INDEX:
+                # Store the INDEX, SLICE, or SEARCH parameters
+                if (
+                    element_type is PathSegmentTypes.INDEX
+                    and ':' not in element_id
+                ):
                     try:
                         idx = int(element_id)
                     except ValueError:
@@ -401,7 +456,7 @@ class Parser:
                 search_method = None
                 continue
 
-            elif demarc_count < 1 and c == ".":
+            elif demarc_count < 1 and c == pathsep:
                 # Do not store empty elements
                 if element_id:
                     # Unless its type has already been identified as a special

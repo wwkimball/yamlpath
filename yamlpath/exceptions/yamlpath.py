@@ -17,12 +17,13 @@ class YAMLPathException(Exception):
             .format(user_message, yaml_path, segment)
         )
 
-    def __reduce__(self):
-        return YAMLPathException, (
-            self.user_message,
-            self.yaml_path,
-            self.segment
-        )
+    # Should Pickling ever be necessary:
+    # def __reduce__(self):
+    #     return YAMLPathException, (
+    #         self.user_message,
+    #         self.yaml_path,
+    #         self.segment
+    #     )
 
     def __str__(self):
         message = ""

@@ -16,7 +16,7 @@
 ################################################################################
 import sys
 import argparse
-import pprint
+import json
 from os import access, R_OK
 from os.path import isfile
 
@@ -24,6 +24,7 @@ from ruamel.yaml import YAML
 from ruamel.yaml.parser import ParserError
 
 from yamlpath.exceptions import YAMLPathException, EYAMLCommandException
+from yamlpath.enums import PathSeperators
 from yamlpath.parser import Parser
 from yamlpath.eyaml import EYAMLPath
 
@@ -49,6 +50,13 @@ def processcli():
         required=True,
         metavar="YAML_PATH",
         help="YAML Path to query"
+    )
+
+    parser.add_argument("-t", "--pathsep",
+        default="auto",
+        choices=[l.lower() for l in PathSeperators.get_names()],
+        type=str.lower,
+        help="force the separator in YAML_PATH when inference fails"
     )
 
     eyaml_group = parser.add_argument_group(
@@ -108,7 +116,7 @@ def main():
     args = processcli()
     log = ConsolePrinter(args)
     validateargs(args, log)
-    parser = Parser(log)
+    parser = Parser(log, pathsep=args.pathsep)
     processor = EYAMLPath(
         log,
         eyaml=args.eyaml,
@@ -157,9 +165,11 @@ def main():
     if not discovered_nodes:
         log.critical("No matches for {}!".format(yaml_path), 3)
 
-    pprinter = pprint.PrettyPrinter(indent=4)
     for node in discovered_nodes:
-        pprinter.pprint(node)
+        if isinstance(node, list) or isinstance(node, dict):
+            print(json.dumps(node))
+        else:
+            print("{}".format(node))
 
 if __name__ == "__main__":
     main()

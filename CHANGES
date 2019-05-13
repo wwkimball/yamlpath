@@ -1,3 +1,41 @@
+1.2.0
+Enhancements:
+* A new search operator, :, now enables capturing slices of Arrays (by 0-based
+  element number) and Hashes (by alphanumeric key-name).  This looks like:
+  "some::array[2:15]" or "some::hash[beta:gamma]".
+* yaml-get now returns JSON instead of "pretty Python" data objects when the
+  search returns complex data types (Arrays and Hashes).  This change makes the
+  result more portable to non-Python consumers and ensures the result will be
+  one per line.
+* The separator used for identifying Hash sub-keys can now be customized.  If
+  you prefer your paths to look like "/hash/sub/key" rather than "hash.sub.key",
+  you can now have it your way.  For now, only . and / are allowed.  The
+  seperator can be either strictly specified or automatically inferred by
+  whether the first character of a given YAML Path is /.  Command-line tools
+  like yaml-get and yaml-set have a new --pathsep argument for this; the default
+  is "auto" and can be set to "fslash" (/) or "dot" (.).
+
+Bug Fixes:
+* EYAML on Windows now works when a batch file is used to wrap the Ruby `eyaml`
+  command.
+
+Known Issues:
+* Escape symbols in YAML Paths parse correctly and will be properly processed,
+  resulting in retriving or setting the expected data.  However, the parsed
+  path cannot be stringified back to its original form (with escape symbols).
+  This issue affects only logging/printing of the post-parsed path.  A unit test
+  has been created to track this issue, but it is marked xfail until such time
+  as someone is willing to tackle this (very) low priority issue.  Until then,
+  developers should try to print the pre-parsed version of their paths rather
+  than rely exclusively on Parser.str_path().  Further, don't do this:
+    1. Accept or take a string path that has escaped characters.
+    2. Parse that path.
+    3. Stringify the parsed path.
+    4. Parse the stringified, parsed path.  This is silly, anyway because you
+       already have the first (good) parsed result at step 2.
+    5. Try to use this parsed-stringified-parsed path result for anything.
+       Instead, only use the first parsed result that you got at step 2.
+
 1.1.2
 Bug fixes:
 * When the YAML Path is fully quoted -- a known side-effect of using Jenkins and

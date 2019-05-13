@@ -16,6 +16,7 @@ from yamlpath.enums import (
     YAMLValueFormats,
     PathSegmentTypes,
     PathSearchMethods,
+    PathSeperators,
 )
 from yamlpath.wrappers import ConsolePrinter
 
@@ -23,110 +24,112 @@ from yamlpath.wrappers import ConsolePrinter
 # Define a set of single-match inputs that are used for multiple tests
 single_match_tests = [
     ("aliases[&test_scalarstring]", "This is a scalar string."),
-    ("aliases[&test_foldedstring]", "This is a folded multi-line string."),
+    ("/aliases[&test_foldedstring]", "This is a folded multi-line string."),
     ("aliases[&test_literalstring]", "This is a\nliteral multi-line\nstring."),
-    ("top_scalar", "value"),
+    ("/top_scalar", "value"),
     ("top_alias", "This is a scalar string."),
-    ("top_array_anchor[0]", "This is a scalar string."),
+    ("/top_array_anchor[0]", "This is a scalar string."),
     ("top_array_anchor[1]", "An original value"),
-    ("top_array_anchor[2]", "This is a folded multi-line string."),
+    ("/top_array_anchor[2]", "This is a folded multi-line string."),
     ("top_array_anchor[3]", "Another original value"),
-    ("&topArrayAnchor[0]", "This is a scalar string."),
+    ("/&topArrayAnchor[0]", "This is a scalar string."),
     ("&topArrayAnchor[1]", "An original value"),
-    ("&topArrayAnchor[2]", "This is a folded multi-line string."),
+    ("/&topArrayAnchor[2]", "This is a folded multi-line string."),
     ("&topArrayAnchor[3]", "Another original value"),
-    ("sub_hash_anchor.child1.attr_tst", "child 1"),
+    ("/sub_hash_anchor/child1/attr_tst", "child 1"),
     ("sub_hash_anchor.child1.attr_val", 100),
-    ("sub_hash_anchor.child2.attr_tst", "child 2"),
+    ("/sub_hash_anchor/child2/attr_tst", "child 2"),
     ("sub_hash_anchor.child2.attr_val", 200),
-    ("sub_hash_anchor.child3.attr_tst", "child 3"),
+    ("/sub_hash_anchor/child3/attr_tst", "child 3"),
     ("sub_hash_anchor.child3.attr_val", 300),
-    ("sub_hash_anchor.childN.attr_tst", "child N"),
+    ("/sub_hash_anchor/childN/attr_tst", "child N"),
     ("sub_hash_anchor.childN.attr_val", 999),
-    ("&subHashAnchor.child1.attr_tst", "child 1"),
+    ("/&subHashAnchor/child1/attr_tst", "child 1"),
     ("&subHashAnchor.child1.attr_val", 100),
-    ("&subHashAnchor.child2.attr_tst", "child 2"),
+    ("/&subHashAnchor/child2/attr_tst", "child 2"),
     ("&subHashAnchor.child2.attr_val", 200),
-    ("&subHashAnchor.child3.attr_tst", "child 3"),
+    ("/&subHashAnchor/child3/attr_tst", "child 3"),
     ("&subHashAnchor.child3.attr_val", 300),
-    ("&subHashAnchor.childN.attr_tst", "child N"),
+    ("/&subHashAnchor/childN/attr_tst", "child N"),
     ("&subHashAnchor.childN.attr_val", 999),
-    ("top_hash_anchor.key1", "value 1"),
+    ("/top_hash_anchor/key1", "value 1"),
     ("top_hash_anchor.key2", "value 2"),
-    ("top_hash_anchor.key3", "value 3"),
+    ("/top_hash_anchor/key3", "value 3"),
     ("top_hash_anchor.key_complex.child1.attr_tst", "child 1"),
-    ("top_hash_anchor.key_complex.child1.attr_val", 100),
+    ("/top_hash_anchor/key_complex/child1/attr_val", 100),
     ("top_hash_anchor.key_complex.child2.attr_tst", "child 2"),
-    ("top_hash_anchor.key_complex.child2.attr_val", 200),
+    ("/top_hash_anchor/key_complex/child2/attr_val", 200),
     ("top_hash_anchor.key_complex.child3.attr_tst", "child 3"),
-    ("top_hash_anchor.key_complex.child3.attr_val", 300),
-    ("top_hash_anchor.key_complex.childN.attr_tst", "child N"),
+    ("/top_hash_anchor/key_complex/child3/attr_val", 300),
+    ("/top_hash_anchor/key_complex/childN/attr_tst", "child N"),
     ("top_hash_anchor.key_complex.childN.attr_val", 999),
     ("&topHashAnchor.key1", "value 1"),
-    ("&topHashAnchor.key2", "value 2"),
+    ("/&topHashAnchor/key2", "value 2"),
     ("&topHashAnchor.key3", "value 3"),
-    ("&topHashAnchor.key_complex.child1.attr_tst", "child 1"),
+    ("/&topHashAnchor/key_complex/child1/attr_tst", "child 1"),
     ("&topHashAnchor.key_complex.child1.attr_val", 100),
     ("&topHashAnchor.key_complex.child2.attr_tst", "child 2"),
-    ("&topHashAnchor.key_complex.child2.attr_val", 200),
+    ("/&topHashAnchor/key_complex/child2/attr_val", 200),
     ("&topHashAnchor.key_complex.child3.attr_tst", "child 3"),
-    ("&topHashAnchor.key_complex.child3.attr_val", 300),
-    ("&topHashAnchor.key_complex.childN.attr_tst", "child N"),
+    ("/&topHashAnchor/key_complex/child3/attr_val", 300),
+    ("/&topHashAnchor/key_complex/childN/attr_tst", "child N"),
     ("&topHashAnchor.key_complex.childN.attr_val", 999),
     ("namespaced::hash.with_array[0]", "one"),
-    ("namespaced::hash.with_array[1]", "two"),
+    ("/namespaced::hash/with_array[1]", "two"),
     ("namespaced::hash.with_array[2]", "three"),
     ("namespaced::hash.with_array_of_hashes[0].id", 1),
-    ("namespaced::hash.with_array_of_hashes[0].name", "ichi"),
-    ("namespaced::hash.with_array_of_hashes[1].id", 2),
+    ("/namespaced::hash/with_array_of_hashes[0]/name", "ichi"),
+    ("/namespaced::hash/with_array_of_hashes[1]/id", 2),
     ("namespaced::hash.with_array_of_hashes[1].name", "ni"),
-    ("namespaced::hash.with_array_of_hashes[2].id", 3),
+    ("/namespaced::hash/with_array_of_hashes[2]/id", 3),
     ("namespaced::hash.with_array_of_hashes[2].name", "san"),
-    ("namespaced::hash.with_array_alias[0]", "This is a scalar string."),
+    ("/namespaced::hash/with_array_alias[0]", "This is a scalar string."),
     ("namespaced::hash.with_array_alias[1]", "An original value"),
-    ("namespaced::hash.with_array_alias[2]", "This is a folded multi-line string."),
+    ("/namespaced::hash/with_array_alias[2]", "This is a folded multi-line string."),
     ("namespaced::hash.with_array_alias[3]", "Another original value"),
-    ("namespaced::hash.with_hash_alias.key1", "value 1"),
+    ("/namespaced::hash/with_hash_alias/key1", "value 1"),
     ("namespaced::hash.with_hash_alias.key2", "value 2"),
-    ("namespaced::hash.with_hash_alias.key3", "value 3.2"),
+    ("/namespaced::hash/with_hash_alias/key3", "value 3.2"),
     ("namespaced::hash.with_hash_alias.key4", "value 4.0"),
-    ("namespaced::hash.with_hash_alias.key_complex.child1.attr_tst", "child 1"),
+    ("/namespaced::hash/with_hash_alias/key_complex/child1/attr_tst", "child 1"),
     ("namespaced::hash.with_hash_alias.key_complex.child1.attr_val", 100),
     ("namespaced::hash.with_hash_alias.key_complex.child2.attr_tst", "child 2"),
-    ("namespaced::hash.with_hash_alias.key_complex.child2.attr_val", 200),
+    ("/namespaced::hash/with_hash_alias/key_complex/child2/attr_val", 200),
     ("namespaced::hash.with_hash_alias.key_complex.child3.attr_tst", "child 3"),
-    ("namespaced::hash.with_hash_alias.key_complex.child3.attr_val", 300),
-    ("namespaced::hash.with_hash_alias.key_complex.child4.attr_tst", "child 4"),
+    ("/namespaced::hash/with_hash_alias/key_complex/child3/attr_val", 300),
+    ("/namespaced::hash/with_hash_alias/key_complex/child4/attr_tst", "child 4"),
     ("namespaced::hash.with_hash_alias.key_complex.child4.attr_val", 400),
-    ("namespaced::hash.with_hash_alias.key_complex.child5.attr_tst", "child 5"),
+    ("/namespaced::hash/with_hash_alias/key_complex/child5/attr_tst", "child 5"),
     ("namespaced::hash.with_hash_alias.key_complex.child5.attr_val", 500),
-    ("namespaced::hash.with_hash_alias.key_complex.childN.attr_tst", "child N2"),
+    ("/namespaced::hash/with_hash_alias/key_complex/childN/attr_tst", "child N2"),
     ("namespaced::hash.with_hash_alias.key_complex.childN.attr_val", 0),
     (r"namespaced::hash.and\.with\.dotted\.child.that", "has it's own"),
-    (r"namespaced::hash.and\.with\.dotted\.child.child", "nodes"),
+    (r"/namespaced::hash/and.with.dotted.child/child", "nodes"),
     ("namespaced::hash.with_array_of_hashes[id=1].name", "ichi"),
-    ("namespaced::hash.with_array_of_hashes[name=ichi].id", 1),
+    ("/namespaced::hash/with_array_of_hashes[name=ichi]/id", 1),
     ("namespaced::hash.with_array_of_hashes[name='ichi'].id", 1),
-    ("namespaced::hash.with_array_of_hashes[id=2].name", "ni"),
+    ("/namespaced::hash/with_array_of_hashes[id=2]/name", "ni"),
     ("namespaced::hash.with_array_of_hashes[name=ni].id", 2),
-    ("namespaced::hash.with_array_of_hashes[name='ni'].id", 2),
-    ("namespaced::hash.with_array_of_hashes[id=3].name", "san"),
+    ("/namespaced::hash/with_array_of_hashes[name='ni']/id", 2),
+    ("/namespaced::hash/with_array_of_hashes[id=3]/name", "san"),
     ("namespaced::hash.with_array_of_hashes[name=san].id", 3),
     ("namespaced::hash.with_array_of_hashes[name='san'].id", 3),
-    ("namespaced::hash.with_array_of_hashes[name^ich].id", 1),
+    ("/namespaced::hash/with_array_of_hashes[name^ich]/id", 1),
     ("namespaced::hash.with_array_of_hashes[name$n].id", 3),
     (r"namespaced::hash.with_array_of_hashes[name%a].id", 3),
     ("namespaced::hash.with_array_of_hashes[id<2].name", "ichi"),
-    ("namespaced::hash.with_array_of_hashes[id>2].name", "san"),
-    ("namespaced::hash.with_array_of_hashes[id<=1].name", "ichi"),
+    ("/namespaced::hash/with_array_of_hashes[id>2]/name", "san"),
+    ("/namespaced::hash/with_array_of_hashes[id<=1]/name", "ichi"),
     ("namespaced::hash.with_array_of_hashes[id>=3].name", "san"),
     (r"namespaced::hash.with_array_of_hashes[name!%i].id", 3),
-    (r"[.^top_][.^key][.^child][attr_tst=child\ 2]", "child 2"),
+    (r"/[.^top_][.^key][.^child][attr_tst=child\ 2]", "child 2"),
     (r"complex.hash_of_hashes[.=~/^child\d+/].children[third=~/^j[^u]\s\w+$/]", "ji ni"),
-    (r"complex.hash_of_hashes[.=~/^child[0-9]+/].children[third=~/^j[^u] \w+$/]", "ji ni"),
+    (r"/complex/hash_of_hashes[.=~/^child[0-9]+/]/children[third=~/^j[^u] \w+$/]", "ji ni"),
     (r"complex.hash_of_hashes[.=~_^child\d+_].children[third=~#^j[^u] \w+$#]", "ji ni"),
-    (r"complex.hash_of_hashes[ . =~ !^child\d+! ].children[ third =~ a^j[^u] \w+$a ]", "ji ni"),
+    (r"/complex/hash_of_hashes[ . =~ !^child\d+! ]/children[ third =~ a^j[^u] \w+$a ]", "ji ni"),
     (r"complex.hash_of_hashes[.=~ -^child\d+-].children[third =~ $^j[^u] \w+$]", "ji ni"),
+    ("namespaced::hash.with_array[1:1]", "two"),
+    ("/namespaced::hash/with_array[1:1]", "two"),
 ]
 
 # Define a set of multiple-match inputs that are used for multiple tests
@@ -149,6 +152,12 @@ multi_matche_tests = [
     ("complex.hash_of_hashes[.^child].children.first", ["ichi", "shi", "shichi", "ju"]),
     (r"complex.hash_of_hashes[.^child].children[first%ichi]", ["ichi", "shichi"]),
     (r"&topArrayAnchor[.%original]", ["An original value", "Another original value"]),
+    ("namespaced::hash.with_array[0:2]", [["one", "two"]]),
+    ("/namespaced::hash/with_array[0:2]", [["one", "two"]]),
+    ("&topHashAnchor[key1:key2]", ["value 1", "value 2"]),
+    ("/&topHashAnchor[key1:key2]", ["value 1", "value 2"]),
+    ("namespaced::hash.with_array_of_hashes[0:2].id", [1, 2]),
+    ("/namespaced::hash/with_array_of_hashes[0:2]/id", [1, 2]),
 ]
 
 @pytest.fixture
@@ -365,6 +374,8 @@ def test_happy_multiple_get_nodes_req(yamlpath, yamldata, search, compare):
     ("namespaced::hash.with_array_of_hashes[ref>=1.41F].id", "Invalid index"),
     ("namespaced::hash.with_array_of_hashes[ref<1.41F].id", "Invalid index"),
     ("namespaced::hash.with_array_of_hashes[ref<=1.41F].id", "Invalid index"),
+    ("namespaced::hash.with_array[1:4F]", "borked"),
+    ("/namespaced::hash/with_array[4F:1]", "borken"),
 ])
 def test_unhappy_singular_get_leaf_nodes(yamlpath, yamldata, search, compare):
     with pytest.raises(YAMLPathException):
@@ -502,6 +513,11 @@ def test_nonexistant_path_search_method(yamlpath, yamldata):
     for _ in yamlpath._search(yamldata["top_scalar"], [True, PathSearchMethods.DNF, ".", "top_scalar"]):
       pass
 
+def test_nonexistant_path_search_method_operator():
+  from yamlpath.enums import PathSearchMethods
+  with pytest.raises(NotImplementedError):
+    _ = PathSearchMethods.to_operator("non-existant")
+
 def test_nonexistant_path_segment_types(yamlpath, yamldata):
   from enum import Enum
   from yamlpath.enums import PathSegmentTypes
@@ -511,6 +527,21 @@ def test_nonexistant_path_segment_types(yamlpath, yamldata):
   with pytest.raises(NotImplementedError):
     for _ in yamlpath._get_elements_by_ref(yamldata, (PathSegmentTypes.DNF, False)):
       pass
+
+@pytest.mark.parametrize("sep,val", [
+  ('.', PathSeperators.DOT),
+  ('/', PathSeperators.FSLASH),
+  ("DOT", PathSeperators.DOT),
+  ("FSLASH", PathSeperators.FSLASH),
+  (PathSeperators.DOT, PathSeperators.DOT),
+  (PathSeperators.FSLASH, PathSeperators.FSLASH),
+])
+def test_seperators_from_str(sep, val):
+  assert val == PathSeperators.from_str(sep)
+
+def test_bad_separator_from_str():
+  with pytest.raises(NameError):
+    _ = PathSeperators.from_str("DNF")
 
 def test_append_list_element_value_error(yamlpath):
   with pytest.raises(ValueError):
@@ -545,3 +576,9 @@ def test_update_value(yamlpath, yamldata, newval, newform):
 def test_bad_update_value(yamlpath, yamldata, newval, newform):
   with pytest.raises(SystemExit):
     yamlpath._update_value(yamldata, yamldata["top_scalar"], newval, newform)
+
+def test_yamlpath_exception():
+  try:
+    raise YAMLPathException("meh", "/some/path", "/some")
+  except YAMLPathException as ex:
+    _ = str(ex)
