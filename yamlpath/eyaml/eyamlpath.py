@@ -5,7 +5,7 @@ Copyright 2018, 2019 William W. Kimball, Jr. MBA MSIS
 import re
 from subprocess import run, PIPE, CalledProcessError
 from os import access, sep, X_OK
-from distutils.spawn import find_executable
+from shutil import which
 
 from yamlpath.enums import YAMLValueFormats
 from yamlpath.exceptions import EYAMLCommandException
@@ -312,7 +312,7 @@ class EYAMLPath(YAMLPath):
             return None
 
         if str(binary).find(sep) < 0:
-            binary = find_executable(binary)
+            binary = which(binary)
             if not binary:
                 return None
 
