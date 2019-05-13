@@ -10,7 +10,7 @@ Enhancements:
 * The separator used for identifying Hash sub-keys can now be customized.  If
   you prefer your paths to look like "/hash/sub/key" rather than "hash.sub.key",
   you can now have it your way.  For now, only . and / are allowed.  The
-  seperator cab be either strictly specified or automatically inferred by
+  seperator can be either strictly specified or automatically inferred by
   whether the first character of a given YAML Path is /.  Command-line tools
   like yaml-get and yaml-set have a new --pathsep argument for this; the default
   is "auto" and can be set to "fslash" (/) or "dot" (.).
