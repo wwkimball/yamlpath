@@ -2,6 +2,8 @@
 
 Copyright 2019 William W. Kimball, Jr. MBA MSIS
 """
+
+
 class YAMLPathException(Exception):
     """Occurs when a YAML Path is illegal or fails to lead to a YAML node."""
 
