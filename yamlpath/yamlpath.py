@@ -350,10 +350,12 @@ class YAMLPath:
             return
 
         reftyp = ref[0]
-        refele = ref[1][1]
+        refori = ref[1][0]
+        refesc = ref[1][1]
+        refune = ref[1][2]
         if reftyp == PathSegmentTypes.KEY:
-            if isinstance(data, dict) and refele in data:
-                yield data[refele]
+            if isinstance(data, dict) and refesc in data:
+                yield data[refesc]
             elif isinstance(data, list):
                 # Pass-through search against possible Array-of-Hashes
                 for rec in data:
@@ -362,11 +364,11 @@ class YAMLPath:
                             yield node
         elif (
             reftyp == PathSegmentTypes.INDEX
-            and isinstance(refele, str)
-            and ':' in refele
+            and isinstance(refesc, str)
+            and ':' in refesc
         ):
             # Array index or Hash key slice
-            refparts = refele.split(':', 1)
+            refparts = refesc.split(':', 1)
             min_match = refparts[0]
             max_match = refparts[1]
             if isinstance(data, list):
@@ -375,8 +377,9 @@ class YAMLPath:
                     intmax = int(max_match)
                 except ValueError:
                     raise YAMLPathException(
-                        "{} is not an integer array slice".format(str(refele))
-                        , str(ref)
+                        "{} is not an integer array slice".format(str(refesc))
+                        , refori
+                        , refune
                     )
 
                 if intmin == intmax and len(data) > intmin:
@@ -390,11 +393,12 @@ class YAMLPath:
                         yield val
         elif reftyp == PathSegmentTypes.INDEX:
             try:
-                intele = int(refele)
+                intele = int(refesc)
             except ValueError:
                 raise YAMLPathException(
-                    "{} is not an integer array index".format(str(refele))
-                    , str(ref)
+                    "{} is not an integer array index".format(str(refesc))
+                    , refori
+                    , refune
                 )
 
             if isinstance(data, list) and len(data) > intele:
@@ -402,14 +406,14 @@ class YAMLPath:
         elif reftyp == PathSegmentTypes.ANCHOR:
             if isinstance(data, list):
                 for ele in data:
-                    if hasattr(ele, "anchor") and refele == ele.anchor.value:
+                    if hasattr(ele, "anchor") and refesc == ele.anchor.value:
                         yield ele
             elif isinstance(data, dict):
                 for _, val in data.items():
-                    if hasattr(val, "anchor") and refele == val.anchor.value:
+                    if hasattr(val, "anchor") and refesc == val.anchor.value:
                         yield val
         elif reftyp == PathSegmentTypes.SEARCH:
-            for match in self._search(data, refele):
+            for match in self._search(data, refesc):
                 if match is not None:
                     yield match
         else:

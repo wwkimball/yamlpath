@@ -1,12 +1,25 @@
 1.2.1
+Enhancements:
+* Some exception/error messages have been updated to print the entire original
+  -- albeit parsed -- YAML Path rather than just the present segment under
+  evaluation.
+
 Bug Fixes:
 * yaml-get version 1.0.2 now converts new-lines into "\n" character sequences
   when writing output so that multi-line values remain one-result-per-line.
 * Use of escape symbols for unusual characters (where demarcation would usually
-  be preferred) is now preserved.  Thus, these two search phrases are now
+  be more intuitive) is now preserved.  Thus, these two search phrases are now
   identical:
     array[.%" can't "]
     array[.%\ can\'t\ ]
+* The issue preventing some YAML Paths from being printable after parsing has
+  been fixed.  Valid, parsed YAML Paths now correctly print into a re-parsable
+  form even with weird sequences and escapes.  Note that superfluous whitespace
+  and other symbols are still removed or escaped when the YAML Path is printed,
+  so:
+    term [ key == "Superfluous spaces aren\'t kept." ]
+  correctly parses and prints as:
+    term[key=Superfluous\ spaces\ aren\'t\ kept.]
 
 1.2.0
 Enhancements:
