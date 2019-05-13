@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="yamlpath",
-    version="1.2.0",
+    version="1.2.1",
     description="Generally-useful YAML and EYAML tools employing a human-friendly YAML Path",
     long_description=long_description,
     long_description_content_type="text/markdown",

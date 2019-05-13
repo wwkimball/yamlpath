@@ -10,7 +10,7 @@ from ruamel.yaml.scalarbool import ScalarBoolean
 from ruamel.yaml.scalarfloat import ScalarFloat
 from ruamel.yaml.scalarint import ScalarInt
 
-from yamlpath import YAMLPath
+from yamlpath import YAMLPath, Parser
 from yamlpath.exceptions import YAMLPathException
 from yamlpath.enums import (
     YAMLValueFormats,
@@ -161,11 +161,14 @@ multi_matche_tests = [
 ]
 
 @pytest.fixture
-def yamlpath():
-    """Returns a YAMLPath with a quiet logger."""
+def quiet_logger():
     args = SimpleNamespace(verbose=False, quiet=True, debug=False)
-    logger = ConsolePrinter(args)
-    return YAMLPath(logger)
+    return ConsolePrinter(args)
+
+@pytest.fixture
+def yamlpath(quiet_logger):
+    """Returns a YAMLPath with a quiet logger."""
+    return YAMLPath(quiet_logger)
 
 @pytest.fixture
 def yamldata():
@@ -525,7 +528,7 @@ def test_nonexistant_path_segment_types(yamlpath, yamldata):
   PathSegmentTypes = Enum('PathSegmentTypes', names)
 
   with pytest.raises(NotImplementedError):
-    for _ in yamlpath._get_elements_by_ref(yamldata, (PathSegmentTypes.DNF, False)):
+    for _ in yamlpath._get_elements_by_ref(yamldata, (PathSegmentTypes.DNF, ("", False, False))):
       pass
 
 @pytest.mark.parametrize("sep,val", [
@@ -549,12 +552,12 @@ def test_append_list_element_value_error(yamlpath):
 
 def test_get_elements_by_bad_ref(yamlpath, yamldata):
   with pytest.raises(YAMLPathException):
-    for _ in yamlpath._get_elements_by_ref(yamldata, (PathSegmentTypes.INDEX, "4F")):
+    for _ in yamlpath._get_elements_by_ref(yamldata, (PathSegmentTypes.INDEX, ("bad_index[4F]", "4F", "4F"))):
       pass
 
 def test_get_elements_by_none_refs(yamlpath, yamldata):
   tally = 0
-  for _ in yamlpath._get_elements_by_ref(None, (PathSegmentTypes.INDEX, "4F")):
+  for _ in yamlpath._get_elements_by_ref(None, (PathSegmentTypes.INDEX, ("bad_index[4F]", "4F", "4F"))):
     tally += 1
 
   for _ in yamlpath._get_elements_by_ref(yamldata, None):
@@ -582,3 +585,8 @@ def test_yamlpath_exception():
     raise YAMLPathException("meh", "/some/path", "/some")
   except YAMLPathException as ex:
     _ = str(ex)
+
+def test_premade_parser(quiet_logger):
+  premade = Parser(quiet_logger)
+  preload = YAMLPath(quiet_logger, parser=premade)
+  assert preload.parser == premade

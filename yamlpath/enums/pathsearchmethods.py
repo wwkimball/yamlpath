@@ -1,4 +1,7 @@
-"""Implements the PathSearchMethods enumeration."""
+"""Implements the PathSearchMethods enumeration.
+
+Copyright 2019 William W. Kimball, Jr. MBA MSIS
+"""
 from enum import Enum, auto
 
 
