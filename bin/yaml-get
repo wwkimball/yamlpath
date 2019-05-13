@@ -31,7 +31,7 @@ from yamlpath.eyaml import EYAMLPath
 from yamlpath.wrappers import ConsolePrinter
 
 # Implied Constants
-MY_VERSION = "1.0.1"
+MY_VERSION = "1.0.2"
 
 def processcli():
     """Process command-line arguments."""
@@ -169,7 +169,7 @@ def main():
         if isinstance(node, list) or isinstance(node, dict):
             print(json.dumps(node))
         else:
-            print("{}".format(node))
+            print("{}".format(str(node).replace("\n", r"\n")))
 
 if __name__ == "__main__":
     main()

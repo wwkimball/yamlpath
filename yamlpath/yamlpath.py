@@ -165,16 +165,17 @@ class YAMLPath:
         Raises:  N/A
         """
         if data is None or yaml_path is None:
-            return None
+            return
 
         matches = 0
         if yaml_path:
             (curtyp, curele) = curref = yaml_path.popleft()
+            unstripped_ele = curele[2]
 
             self.log.debug(
                 ("YAMLPath::_get_nodes:  Seeking element <{}>{} in data of"
                  + " type {}:"
-                ).format(curtyp, curele, type(data))
+                ).format(curtyp, unstripped_ele, type(data))
             )
             self.log.debug(data)
             self.log.debug("")
@@ -184,16 +185,16 @@ class YAMLPath:
                 if node is not None:
                     matches += 1
                     self.log.debug(
-                        ("YAMLPath::_get_nodes:  Found element {} in the data;"
-                            + " recursing into it..."
-                        ).format(curele)
+                        ("YAMLPath::_get_nodes:  Found element <{}>{} in the"
+                         + " data and recursing into it...")
+                        .format(curtyp, unstripped_ele)
                     )
                     for epn in self._get_nodes(node, yaml_path.copy()):
                         if epn is not None:
                             yield epn
 
             if not matches:
-                return None
+                return
 
         if not matches:
             self.log.debug(
@@ -336,7 +337,8 @@ class YAMLPath:
 
         Positional Parameters:
           1. data (ruamel.yaml data) The parsed YAML data to process
-          2. ref (tuple(PathSegmentTypes,any)) A YAML Path segment
+          2. ref (tuple(PathSegmentTypes,(str,any,any))) A YAML Path segment
+             reference
 
         Returns:  (object) At least one YAML Node or None
 
@@ -348,10 +350,12 @@ class YAMLPath:
             return
 
         reftyp = ref[0]
-        refele = ref[1]
+        refori = ref[1][0]
+        refesc = ref[1][1]
+        refune = ref[1][2]
         if reftyp == PathSegmentTypes.KEY:
-            if isinstance(data, dict) and refele in data:
-                yield data[refele]
+            if isinstance(data, dict) and refesc in data:
+                yield data[refesc]
             elif isinstance(data, list):
                 # Pass-through search against possible Array-of-Hashes
                 for rec in data:
@@ -360,11 +364,11 @@ class YAMLPath:
                             yield node
         elif (
             reftyp == PathSegmentTypes.INDEX
-            and isinstance(refele, str)
-            and ':' in refele
+            and isinstance(refesc, str)
+            and ':' in refesc
         ):
             # Array index or Hash key slice
-            refparts = refele.split(':', 1)
+            refparts = refesc.split(':', 1)
             min_match = refparts[0]
             max_match = refparts[1]
             if isinstance(data, list):
@@ -373,8 +377,9 @@ class YAMLPath:
                     intmax = int(max_match)
                 except ValueError:
                     raise YAMLPathException(
-                        "{} is not an integer array slice".format(str(refele))
-                        , str(ref)
+                        "{} is not an integer array slice".format(str(refesc))
+                        , refori
+                        , refune
                     )
 
                 if intmin == intmax and len(data) > intmin:
@@ -388,11 +393,12 @@ class YAMLPath:
                         yield val
         elif reftyp == PathSegmentTypes.INDEX:
             try:
-                intele = int(refele)
+                intele = int(refesc)
             except ValueError:
                 raise YAMLPathException(
-                    "{} is not an integer array index".format(str(refele))
-                    , str(ref)
+                    "{} is not an integer array index".format(str(refesc))
+                    , refori
+                    , refune
                 )
 
             if isinstance(data, list) and len(data) > intele:
@@ -400,14 +406,14 @@ class YAMLPath:
         elif reftyp == PathSegmentTypes.ANCHOR:
             if isinstance(data, list):
                 for ele in data:
-                    if hasattr(ele, "anchor") and refele == ele.anchor.value:
+                    if hasattr(ele, "anchor") and refesc == ele.anchor.value:
                         yield ele
             elif isinstance(data, dict):
                 for _, val in data.items():
-                    if hasattr(val, "anchor") and refele == val.anchor.value:
+                    if hasattr(val, "anchor") and refesc == val.anchor.value:
                         yield val
         elif reftyp == PathSegmentTypes.SEARCH:
-            for match in self._search(data, refele):
+            for match in self._search(data, refesc):
                 if match is not None:
                     yield match
         else:
@@ -611,11 +617,14 @@ class YAMLPath:
 
         if path:
             (curtyp, curele) = curref = path.popleft()
+            original_path = curele[0]
+            stripped_ele = curele[1]
+            unstripped_ele = curele[2]
 
             self.log.debug(
                 ("YAMLPath::_ensure_path:  Seeking element <{}>{} in data of"
                  + " type {}:"
-                ).format(curtyp, curele, type(data))
+                ).format(curtyp, unstripped_ele, type(data))
             )
             self.log.debug(data)
             self.log.debug("")
@@ -626,9 +635,9 @@ class YAMLPath:
                 if node is not None:
                     matched_nodes += 1
                     self.log.debug(
-                        ("YAMLPath::_ensure_path:  Found element {} in the"
+                        ("YAMLPath::_ensure_path:  Found element <{}>{} in the"
                             + " data; recursing into it..."
-                        ).format(curele)
+                        ).format(curtyp, unstripped_ele)
                     )
                     for epn in self._ensure_path(node, path.copy(), value):
                         if epn is not None:
@@ -640,9 +649,9 @@ class YAMLPath:
             ):
                 # Add the missing element
                 self.log.debug(
-                    ("YAMLPath::_ensure_path:  Element {} is unknown in the"
-                     + " data!"
-                    ).format(curele)
+                    ("YAMLPath::_ensure_path:  Element <{}>{} is unknown in"
+                     + " the data!"
+                    ).format(curtyp, unstripped_ele)
                 )
                 if isinstance(data, list):
                     self.log.debug(
@@ -651,7 +660,7 @@ class YAMLPath:
                     if curtyp is PathSegmentTypes.ANCHOR:
                         new_val = self._default_for_child(path, value)
                         new_ele = self._append_list_element(
-                            data, new_val, curele
+                            data, new_val, stripped_ele
                         )
                         for node in self._ensure_path(new_ele, path, value):
                             if node is not None:
@@ -659,29 +668,23 @@ class YAMLPath:
                                 yield node
                     elif (
                         curtyp is PathSegmentTypes.INDEX
-                        and isinstance(curele, int)
+                        and isinstance(stripped_ele, int)
                     ):
-                        for _ in range(len(data) - 1, curele):
+                        for _ in range(len(data) - 1, stripped_ele):
                             new_val = self._default_for_child(path, value)
                             self._append_list_element(data, new_val)
                         for node in self._ensure_path(
-                            data[curele], path, value
+                            data[stripped_ele], path, value
                         ):
                             if node is not None:
                                 matched_nodes += 1
                                 yield node
                     else:
-                        restore_path = path.copy()
-                        restore_path.appendleft(curref)
-                        restore_path = self.parser.str_path(restore_path)
-                        throw_element = deque()
-                        throw_element.append(curref)
-                        throw_element = self.parser.str_path(throw_element)
                         raise YAMLPathException(
                             "Cannot add {} subreference to lists"
                             .format(str(curtyp))
-                            , restore_path
-                            , throw_element
+                            , original_path
+                            , unstripped_ele
                         )
                 elif isinstance(data, dict):
                     self.log.debug(
@@ -690,40 +693,30 @@ class YAMLPath:
                     if curtyp is PathSegmentTypes.ANCHOR:
                         raise NotImplementedError
                     elif curtyp is PathSegmentTypes.KEY:
-                        data[curele] = self._default_for_child(path, value)
+                        data[stripped_ele] = self._default_for_child(
+                            path, value
+                        )
                         for node in self._ensure_path(
-                            data[curele], path, value
+                            data[stripped_ele], path, value
                         ):
                             if node is not None:
                                 matched_nodes += 1
                                 yield node
                     else:
-                        restore_path = path.copy()
-                        restore_path.appendleft(curref)
-                        restore_path = self.parser.str_path(restore_path)
-                        throw_element = deque()
-                        throw_element.append(curref)
-                        throw_element = self.parser.str_path(throw_element)
                         raise YAMLPathException(
                             "Cannot add {} subreference to dictionaries".format(
                                 str(curtyp)
                             ),
-                            restore_path,
-                            throw_element
+                            original_path,
+                            unstripped_ele
                         )
                 else:
-                    restore_path = path.copy()
-                    restore_path.appendleft(curref)
-                    restore_path = self.parser.str_path(restore_path)
-                    throw_element = deque()
-                    throw_element.append(curref)
-                    throw_element = self.parser.str_path(throw_element)
                     raise YAMLPathException(
                         "Cannot add {} subreference to scalars".format(
                             str(curtyp)
                         ),
-                        restore_path,
-                        throw_element
+                        original_path,
+                        unstripped_ele
                     )
 
         else:

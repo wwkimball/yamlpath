@@ -16,7 +16,9 @@ class Parser:
     """Parse YAML Paths into iterable queue components."""
 
     # Cache parsed YAML Path results across instances to avoid repeated parsing
-    _static_parsings = {}
+    _stripped_static_parsings = {}
+    _unstripped_static_parsings = {}
+    _combined_static_parsings = {}
 
     def __init__(self, logger, **kwargs):
         """Init this class.
@@ -85,6 +87,10 @@ class Parser:
 
         Raises:  N/A
         """
+        self.log.debug(
+            "Parser::str_path:  Building stringified <{}>{}..."
+            .format(type(yaml_path), yaml_path)
+        )
         parsed_path = self.parse_path(yaml_path)
         add_sep = False
         ppath = ""
@@ -94,7 +100,8 @@ class Parser:
         if pathsep == '/':
             ppath = "/"
 
-        for (ptype, element_id) in parsed_path:
+        for (ptype, element_vers) in parsed_path:
+            element_id = element_vers[2]
             if ptype == PathSegmentTypes.KEY:
                 if add_sep:
                     ppath += pathsep
@@ -118,7 +125,13 @@ class Parser:
                 if method == PathSearchMethods.REGEX:
                     safe_term = "/{}/".format(term.replace("/", r"\/"))
                 else:
-                    safe_term = str(term).replace(" ", r"\ ")
+                    # Replace unescaped spaces with escaped spaces
+                    safe_term = r"\ ".join(
+                        list(map(
+                            lambda ele: ele.replace(" ", r"\ ")
+                            , term.split(r"\ ")
+                        ))
+                    )
                 ppath += (
                     "["
                     + str(attr)
@@ -130,14 +143,79 @@ class Parser:
 
             add_sep = True
 
+        self.log.debug(
+            "Parser::str_path:  Finished building <{}>{} from <{}>{}."
+            .format(type(ppath), ppath, type(yaml_path), yaml_path)
+        )
         return ppath
 
     def parse_path(self, yaml_path):
+        """Parses a user's YAML Path into a queue form of its elements, each
+        identified by its type.  See README.md for sample YAML Paths.  Each
+        tuple in the deque indicates:
+          1. The PathSegmentTypes of the element
+          2. A tuple providing:
+             1. The original YAML Path, unparsed (for error reporting)
+             2. The escape-stripped version of the element
+             3. The non-stripped version of the same element
+
+        Positional Parameters:
+          1. yaml_path (any) The stringified YAML Path to parse
+
+        Returns:  (deque) an empty queue or a queue of tuples, each identifying
+        (type, (stripped_element, unstripped_element)).  When yaml_path is
+        already a list it is blindly converted into a deque and returned.  When
+        yaml_path is already a deque, it is blindly returned as-is.
+
+        Raises:
+          YAMLPathException when yaml_path is invalid
+        """
+        self.log.debug("Parser::parse_path:  Parsing {}...".format(yaml_path))
+
+        if yaml_path is None:
+            return deque()
+        elif isinstance(yaml_path, deque):
+            return yaml_path
+        elif isinstance(yaml_path, list):
+            return deque(yaml_path)
+        elif isinstance(yaml_path, dict):
+            raise YAMLPathException(
+                "YAML paths must be strings, queues, or lists",
+                yaml_path
+            )
+
+        if yaml_path in Parser._combined_static_parsings:
+            return Parser._combined_static_parsings[yaml_path].copy()
+
+        stripped_path = self._parse_path(yaml_path, True)
+        unstripped_path = self._parse_path(yaml_path, False)
+        combined_path = deque()
+
+        for sref, uref in zip(stripped_path, unstripped_path):
+            styp = sref[0]
+            sele = sref[1]
+            uele = uref[1]
+            combined_path.append(
+                (styp, (yaml_path, sele, uele))
+            )
+
+        Parser._combined_static_parsings[yaml_path] = combined_path
+
+        self.log.debug(
+            "Parser::parse_path:  Combined {} into:".format(yaml_path)
+        )
+        self.log.debug(combined_path)
+
+        return combined_path.copy()
+
+    def _parse_path(self, yaml_path, strip_escapes=True):
         r"""Breaks apart a stringified YAML Path into component elements, each
         identified by its type.  See README.md for sample YAML Paths.
 
         Positional Parameters:
           1. yaml_path (any) The stringified YAML Path to parse
+          2. strip_escapes (bool) True = Remove leading \ symbols, leaving only
+             the "escaped" symbol.  False = Leave all leading \ symbols intact.
 
         Returns:  (deque) an empty queue or a queue of tuples, each identifying
         (type, element) unless yaml_path is already a list or a deque.  If
@@ -149,7 +227,7 @@ class Parser:
           YAMLPathException when yaml_path is invalid
         """
         self.log.debug(
-            "Parser::parse_path:  Evaluating {}...".format(yaml_path)
+            "Parser::_parse_path:  Evaluating {}...".format(yaml_path)
         )
 
         path_elements = deque()
@@ -171,8 +249,12 @@ class Parser:
             return path_elements
 
         # Don't parse a path that has already been seen
-        if yaml_path in Parser._static_parsings:
-            return Parser._static_parsings[yaml_path].copy()
+        if strip_escapes:
+            if yaml_path in Parser._stripped_static_parsings:
+                return Parser._stripped_static_parsings[yaml_path].copy()
+        else:
+            if yaml_path in Parser._unstripped_static_parsings:
+                return Parser._unstripped_static_parsings[yaml_path].copy()
 
         # Infer the path seperator
         pathsep = self._infer_pathsep(yaml_path)
@@ -196,6 +278,7 @@ class Parser:
 
             if escape_next:
                 # Pass-through; capture this escaped character
+                escape_next = False
                 pass
 
             elif capturing_regex:
@@ -219,7 +302,8 @@ class Parser:
             elif c == "\\":
                 # Escape the next character
                 escape_next = True
-                continue
+                if strip_escapes:
+                    continue
 
             elif (
                 c == " "
@@ -471,7 +555,6 @@ class Parser:
 
             element_id += c
             seeking_anchor_mark = False
-            escape_next = False
 
         # Check for unterminated RegExes
         if capturing_regex:
@@ -496,16 +579,14 @@ class Parser:
             path_elements.append((element_type, element_id))
 
         self.log.debug(
-            "Parser::parse_path:  Parsed {} into:".format(yaml_path)
+            "Parser::_parse_path:  Parsed {} into:".format(yaml_path)
         )
         self.log.debug(path_elements)
 
-        # Cache the parsed results
-        Parser._static_parsings[yaml_path] = path_elements
-        str_path = self.str_path(path_elements)
-        if not str_path == yaml_path:
-            # The stringified YAML Path differs from the user version but has
-            # exactly the same parsed result, so cache it, too
-            Parser._static_parsings[str_path] = path_elements
+        # Cache the parsed results.
+        if strip_escapes:
+            Parser._stripped_static_parsings[yaml_path] = path_elements
+        else:
+            Parser._unstripped_static_parsings[yaml_path] = path_elements
 
         return path_elements.copy()
