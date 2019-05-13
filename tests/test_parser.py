@@ -6,7 +6,7 @@ from collections import deque
 from yamlpath.parser import Parser
 from yamlpath.exceptions import YAMLPathException
 from yamlpath.wrappers import ConsolePrinter
-from yamlpath.enums import PathSeperators
+from yamlpath.enums import PathSeperators, PathSegmentTypes
 
 @pytest.fixture
 def parser():
@@ -145,3 +145,40 @@ def test_pretyped_pathsep(pathsep, compare):
 def test_bad_pathsep():
     with pytest.raises(YAMLPathException):
         _ = Parser(None, pathsep="no such seperator!")
+
+@pytest.mark.parametrize("yaml_path,strip_escapes", [
+    ("some.hash.key", True),
+    ("some.hash.key", False),
+    ("/some/hash/key", True),
+    ("/some/hash/key", False),
+])
+def test_repeat_parsings(parser, yaml_path, strip_escapes):
+    orig = parser._parse_path(yaml_path, strip_escapes)
+    comp = parser._parse_path(yaml_path, strip_escapes)
+    assert orig == comp
+
+def test_no_dict_parsings(parser):
+    with pytest.raises(YAMLPathException):
+        _ = parser._parse_path({})
+
+def test_list_to_deque_parsing(parser):
+    parsed_list = [
+        (PathSegmentTypes.KEY, 'aliases'),
+        (PathSegmentTypes.ANCHOR, 'secretIdentity')
+    ]
+    verify_queue = deque([
+        (PathSegmentTypes.KEY, 'aliases'),
+        (PathSegmentTypes.ANCHOR, 'secretIdentity')
+    ])
+    assert verify_queue == parser._parse_path(parsed_list)
+
+def test_deque_to_deque_parsings(parser):
+    verify_queue = deque([
+        (PathSegmentTypes.KEY, 'aliases'),
+        (PathSegmentTypes.ANCHOR, 'secretIdentity')
+    ])
+    assert verify_queue == parser._parse_path(verify_queue)
+
+def test_none_to_empty_deque_parsings(parser):
+    verify_queue = deque()
+    assert verify_queue == parser._parse_path(None)
