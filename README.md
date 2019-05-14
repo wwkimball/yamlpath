@@ -28,7 +28,7 @@ Contents:
 ## Introduction
 
 This project presents and utilizes YAML Paths, which are a human-friendly means
-of identifying one or more nodes within a [YAML](https://yaml.org/),
+of identifying one or more nodes within [YAML](https://yaml.org/),
 [EYAML](https://github.com/voxpupuli/hiera-eyaml), or compatible data structures
 like JSON.  Both dot-notation (inspired by
 [Hiera](https://github.com/puppetlabs/hiera)) and forward-slash-notation
