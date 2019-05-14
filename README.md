@@ -192,7 +192,8 @@ Python's "standard" YAML library -- ruamel.yaml is [objectively better than
 PyYAML](https://yaml.readthedocs.io/en/latest/pyyaml.html).
 
 Should PyYAML ever merge with -- or at least, catch up with -- ruamel.yaml, this
-project can be (lightly) adapted to depend on it, instead:
+project can be (lightly) adapted to depend on it, instead.  These conversations
+may offer some insight into when or whether this might happen:
 
 * [Is this time to pass the baton?](https://github.com/yaml/pyyaml/issues/31)
 * [Rebase off ruamel? - many new valuable features](https://github.com/yaml/pyyaml/issues/46)
