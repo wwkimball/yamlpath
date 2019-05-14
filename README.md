@@ -29,11 +29,11 @@ Contents:
 
 This project presents and utilizes YAML Paths, which are a human-friendly means
 of identifying one or more nodes within a [YAML](https://yaml.org/),
-[EYAML](https://github.com/voxpupuli/hiera-eyaml), or compatible data structure.
-Both dot-notation (influenced by [Hiera](https://github.com/puppetlabs/hiera))
-and forward-slash-notation (influenced by
-[XPath](https://www.w3schools.com/xml/xml_xpath.asp)) are supported.  The
-[libraries](#libraries) (modules) and several [command-line tool
+[EYAML](https://github.com/voxpupuli/hiera-eyaml), or compatible data structures
+like JSON.  Both dot-notation (inspired by
+[Hiera](https://github.com/puppetlabs/hiera)) and forward-slash-notation
+(influenced by [XPath](https://www.w3schools.com/xml/xml_xpath.asp)) are
+supported.  The [libraries](#libraries) (modules) and several [command-line tool
 implementations](#command-line-tools) are provided.  So, you can build YAML Path
 right into your own application or easily use its capabilities right away from
 the command-line.
@@ -46,10 +46,10 @@ the data structure using the same query.
 
 Other "yaml-path" projects exist but they fill different needs for much more
 narrow applications.  This implementation was created specifically to enable
-selecting and editing YAML -- and compatible -- data of any complexity via an
-intuitive, expressive syntax.  Starting with the ubiquitous -- albeit limited --
-dot-notation for accessing Hash members, this YAML Path solution grew to include
-new syntax for:
+selecting and editing YAML -- and compatible, like JSON -- data of any
+complexity via an intuitive, expressive syntax.  Starting with the ubiquitous --
+albeit limited -- dot-notation for accessing Hash members, this YAML Path
+solution grew to include new syntax for:
 
 * Array elements
 * Anchors by name
@@ -88,7 +88,8 @@ sensitive::accounts:
           access_level: 500
 ```
 
-This YAML data sample contains these single-result YAML Paths:
+This YAML data sample contains these single-result YAML Paths (note there are
+multiple ways to represent the same YAML Path):
 
 Dot Notation                                                           | Forward-Slash Notation
 -----------------------------------------------------------------------|------------------------------------------------------------------
@@ -97,16 +98,16 @@ Dot Notation                                                           | Forward
 `configuration::application.'general.settings'.slash\\key`             | `/configuration::application/general.settings/slash\\key`
 `configuration::application.'general.settings'.'a.dotted.subkey'[0]`   | `/configuration::application/general.settings/a.dotted.subkey[0]`
 `configuration::application.'general.settings'.'a.dotted.subkey'[1]`   | `/configuration::application/general.settings/a.dotted.subkey[1]`
-`configuration::application.'general.settings'.'a.dotted.subkey'[2]`   | `/configuration::application/general.settings/a.dotted.subkey[2]`
+`configuration::application.'general.settings'.'a.dotted.subkey'.2`    | `/configuration::application/general.settings/a.dotted.subkey/2`
 `sensitive::accounts.database.app_user`                                | `/sensitive::accounts/database/app_user`
 `sensitive::accounts.database.app_pass`                                | `/sensitive::accounts/database/app_pass`
 `sensitive::accounts.application.db.users[0].name`                     | `/sensitive::accounts/application/db/users[0]/name`
 `sensitive::accounts.application.db.users[0].pass`                     | `/sensitive::accounts/application/db/users[0]/pass`
-`sensitive::accounts.application.db.users[0].access_level`             | `/sensitive::accounts/application/db/users[0]/access_level`
+`sensitive::accounts.application.db.users.0.access_level`              | `/sensitive::accounts/application/db/users/0/access_level`
 `sensitive::accounts.application.db.users[name=admin].name`            | `/sensitive::accounts/application/db/users[name=admin]/name`
 `sensitive::accounts.application.db.users[name=admin].pass`            | `/sensitive::accounts/application/db/users[name=admin]/pass`
 `sensitive::accounts.application.db.users[name=admin].access_level`    | `/sensitive::accounts/application/db/users[name=admin]/access_level`
-`sensitive::accounts.application.db.users[1].name`                     | `/sensitive::accounts/application/db/users[1]/name`
+`sensitive::accounts.application.db.users.1.name`                      | `/sensitive::accounts/application/db/users/1/name`
 `sensitive::accounts.application.db.users[1].pass`                     | `/sensitive::accounts/application/db/users[1]/pass`
 `sensitive::accounts.application.db.users[1].access_level`             | `/sensitive::accounts/application/db/users[1]/access_level`
 `sensitive::accounts.application.db.users[name=username].name`         | `/sensitive::accounts/application/db/users[name=username]/name`
@@ -151,7 +152,11 @@ YAML Path understands these forms:
   * Multi-level matching: `hash[name%admin].pass[encrypted!^ENC\[]` or `/hash[name%admin]/pass[encrypted!^ENC\[]`
 * Array element searches with all of the search methods above via `.` (yields any matching elements): `array[.>9000]` or `/array[.>9000]`
 * Hash key-name searches with all of the search methods above via `.` (yields their values, not the keys themselves): `hash[.^app_]`
-* Complex combinations: `some::deep.hierarchy[with!=""].'any.valid'[.$yaml][data%structure].or[!complexity=~/^.{4}$/][2]` or `/some::deep/hierarchy[with!=""]/any.valid[.$yaml][data%structure]/or[!complexity=~/^.{4}$/][2]`
+* Array-of-Hashes Match-All:  Omit a selector for the elements of an Array-of-Hashes and all Hash elements will be yielded (or searched when there is more to the path).  For example, `warriors[1].power_level` or `/warriors[1]/power_level` will return the power_level attribute of only the second Hash in an Array-of-Hashes while `warriors.power_level` or `/warriors/power_level` will return the power_level attribute of every Hash in the same Array-of-Hashes.  Of course these results can be filtered in multiple ways, like `warriors[power_level>9000]`, `/warriors[power_level>9000]`, `warriors.power_level[.>9000]`, and `/warriors/power_level[.>9000]` all yield only warriors with power_levels over 9,000.
+* Complex combinations: `some::deep.hierarchy[with!=""].'any.valid'[.=~/(yaml|json)/][data%structure].or.complexity[4].2` or `/some::deep/hierarchy[with!=""]/any.valid[.=~/(yaml|json)/][data%structure]/or/complexity[4]/2`
+
+This implementation of YAML Path encourages creativity.  Use whichever notation
+and forms that make the most sense to you in each application.
 
 ## Installing
 
