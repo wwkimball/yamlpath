@@ -1,3 +1,11 @@
+1.2.2
+Enhancements:
+* Array element selection can now be specified by either the usual [#] notation
+  or a bare integer.  Thus, the following are all identical:
+  array[1]
+  array.1
+  /array/1
+
 1.2.1
 Enhancements:
 * Some exception/error messages have been updated to print the entire original

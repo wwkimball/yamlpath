@@ -357,11 +357,17 @@ class YAMLPath:
             if isinstance(data, dict) and refesc in data:
                 yield data[refesc]
             elif isinstance(data, list):
-                # Pass-through search against possible Array-of-Hashes
-                for rec in data:
-                    for node in self._get_elements_by_ref(rec, ref):
-                        if node is not None:
-                            yield node
+                try:
+                    # Try using the ref as a bare Array index
+                    intele = int(refesc)
+                    if len(data) > intele:
+                        yield data[intele]
+                except ValueError:
+                    # Pass-through search against possible Array-of-Hashes
+                    for rec in data:
+                        for node in self._get_elements_by_ref(rec, ref):
+                            if node is not None:
+                                yield node
         elif (
             reftyp == PathSegmentTypes.INDEX
             and isinstance(refesc, str)
