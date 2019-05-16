@@ -73,7 +73,7 @@ class YAMLPath:
         default_value = kwargs.pop("default_value", None)
 
         if data is None or yaml_path is None:
-            return None
+            return
 
         path = self.parser.parse_path(yaml_path)
         if mustexist:
@@ -424,45 +424,6 @@ class YAMLPath:
         else:
             raise NotImplementedError
 
-    def _append_list_element(self, data, value=None, anchor=None):
-        """Appends a new element to an ruamel.yaml presented list, preserving
-        any tailing comment for the former last element of the same list.
-
-        Positional Parameters:
-          1. data (ruamel.yaml data) The parsed YAML data to process
-          2. value (any) The value of the element to append
-          3. anchor (str) An Anchor or Alias name for the new element
-
-        Returns:  (object) The newly appended element node
-
-        Raises:  N/A
-        """
-
-        if anchor is not None and value is not None:
-            value = YAMLPath.wrap_type(value)
-            if not hasattr(value, "anchor"):
-                raise ValueError(
-                    "Impossible to add an Anchor to value:  {}".format(value)
-                )
-            value.yaml_set_anchor(anchor)
-
-        old_tail_pos = len(data) - 1
-        data.append(value)
-        new_element = data[-1]
-
-        # Note that ruamel.yaml will inexplicably add a newline before the tail
-        # element irrespective of this ca handling.  This issue appears to be
-        # uncontrollable, from here.
-        if hasattr(data, "ca") and old_tail_pos in data.ca.items:
-            old_comment = data.ca.items[old_tail_pos][0]
-            if old_comment is not None:
-                data.ca.items[old_tail_pos][0] = None
-                data.ca.items[old_tail_pos + 1] = [
-                    old_comment, None, None, None
-                ]
-
-        return new_element
-
     def _search(self, data, terms):
         """Searches the top level of given YAML data for all matching dictionary
         entries.
@@ -618,7 +579,7 @@ class YAMLPath:
             self.log.debug(
                 "YAMLPath::_ensure_path:  Bailing out on None data/path!"
             )
-            return data
+            return
 
         if path:
             (curtyp, curele) = curref = path.popleft()
@@ -664,7 +625,7 @@ class YAMLPath:
                     )
                     if curtyp is PathSegmentTypes.ANCHOR:
                         new_val = self._default_for_child(path, value)
-                        new_ele = self._append_list_element(
+                        new_ele = self.append_list_element(
                             data, new_val, stripped_ele
                         )
                         for node in self._ensure_path(new_ele, path, value):
@@ -677,7 +638,7 @@ class YAMLPath:
                     ):
                         for _ in range(len(data) - 1, stripped_ele):
                             new_val = self._default_for_child(path, value)
-                            self._append_list_element(data, new_val)
+                            self.append_list_element(data, new_val)
                         for node in self._ensure_path(
                             data[stripped_ele], path, value
                         ):
@@ -697,7 +658,8 @@ class YAMLPath:
                     )
                     if curtyp is PathSegmentTypes.ANCHOR:
                         raise NotImplementedError
-                    elif curtyp is PathSegmentTypes.KEY:
+
+                    if curtyp is PathSegmentTypes.KEY:
                         data[stripped_ele] = self._default_for_child(
                             path, value
                         )
@@ -766,6 +728,46 @@ class YAMLPath:
             default_value = ScalarFloat("inf")
 
         return default_value
+
+    @staticmethod
+    def append_list_element(data, value=None, anchor=None):
+        """Appends a new element to an ruamel.yaml presented list, preserving
+        any tailing comment for the former last element of the same list.
+
+        Positional Parameters:
+          1. data (ruamel.yaml data) The parsed YAML data to process
+          2. value (any) The value of the element to append
+          3. anchor (str) An Anchor or Alias name for the new element
+
+        Returns:  (object) The newly appended element node
+
+        Raises:  N/A
+        """
+
+        if anchor is not None and value is not None:
+            value = YAMLPath.wrap_type(value)
+            if not hasattr(value, "anchor"):
+                raise ValueError(
+                    "Impossible to add an Anchor to value:  {}".format(value)
+                )
+            value.yaml_set_anchor(anchor)
+
+        old_tail_pos = len(data) - 1
+        data.append(value)
+        new_element = data[-1]
+
+        # Note that ruamel.yaml will inexplicably add a newline before the tail
+        # element irrespective of this ca handling.  This issue appears to be
+        # uncontrollable, from here.
+        if hasattr(data, "ca") and old_tail_pos in data.ca.items:
+            old_comment = data.ca.items[old_tail_pos][0]
+            if old_comment is not None:
+                data.ca.items[old_tail_pos][0] = None
+                data.ca.items[old_tail_pos + 1] = [
+                    old_comment, None, None, None
+                ]
+
+        return new_element
 
     @staticmethod
     def wrap_type(value):
