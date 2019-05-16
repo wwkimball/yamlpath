@@ -28,7 +28,7 @@ Contents:
 ## Introduction
 
 This project presents and utilizes YAML Paths, which are a human-friendly means
-of identifying one or more nodes within a [YAML](https://yaml.org/),
+of identifying one or more nodes within [YAML](https://yaml.org/),
 [EYAML](https://github.com/voxpupuli/hiera-eyaml), or compatible data structures
 like JSON.  Both dot-notation (inspired by
 [Hiera](https://github.com/puppetlabs/hiera)) and forward-slash-notation
@@ -212,11 +212,9 @@ This list will not be aggressively updated but rather, from time to time as
 in/compatibility reports come in from users of this project.  At present, known
 and tested compatible versions include:
 
-YAML Path Version | ruamel.yaml Min | Max
-------------------|-----------------|---------
-1.0.x             | 0.15.92         | 0.15.94
-1.1.x             | 0.15.92         | 0.15.94
-1.2.x             | 0.15.92         | 0.15.94
+YAML Path Version Range | ruamel.yaml Version Range
+------------------------|--------------------------
+1.0.x - 1.2.x           | >= 0.15.95
 
 You may find other compatible versions outside these ranges.  If you do, please
 drop a note so this table can be updated!

@@ -154,3 +154,27 @@ complex:
     yaml = YAML()
     yaml_data = yaml.load(data)
     yaml.dump(yaml_data, sys.stdout)
+
+def test_newlines_before_anchored_list_comments(capsys):
+  yamldoc = """---
+aliases:
+  # First-element comment
+  - &firstEntry First entry
+  # Second-element comment
+  - &secondEntry Second entry
+
+  # Third-element comment is
+  # a multi-line value
+  - &thirdEntry Third entry
+"""
+
+  yaml = YAML()
+  yaml.indent(mapping=2, sequence=4, offset=2)
+  yaml.explicit_start = True
+  yaml.preserve_quotes = True
+  yaml.width = sys.maxsize
+  yamldata = yaml.load(yamldoc)
+  yaml.dump(yamldata, sys.stdout)
+
+  console = capsys.readouterr()
+  assert yamldoc == console.out
