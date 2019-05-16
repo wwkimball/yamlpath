@@ -27,10 +27,14 @@ setuptools.setup(
         "bin/yaml-get",
         "bin/yaml-set",
     ],
+    python_requires='>3.6.0',
     install_requires=[
-        "ruamel.yaml",
+        "ruamel.yaml>=0.15.95",
     ],
-    tests_require=["pytest"],
+    tests_require=[
+        "pytest",
+        "pytest-cov",
+    ],
     include_package_data=True,
     zip_safe=False
 )
