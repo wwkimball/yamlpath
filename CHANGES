@@ -1,3 +1,8 @@
+1.2.3
+Enhancements:
+* Set minimum compatible versions of Python and ruamel.yaml in order to ensure
+  users experience the expected behaviors.
+
 1.2.2
 Enhancements:
 * Array element selection can now be specified by either the usual [#] notation
