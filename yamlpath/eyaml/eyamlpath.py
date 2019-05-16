@@ -79,9 +79,6 @@ class EYAMLPath(YAMLPath):
                     if eyp is not None:
                         yield eyp
 
-        else:
-            yield None
-
     def decrypt_eyaml(self, value):
         """Decrypts an EYAML value.
 

@@ -5,4 +5,4 @@ Copyright 2019 William W. Kimball, Jr. MBA MSIS
 
 
 class EYAMLCommandException(Exception):
-    pass
+    """Exception to raise when an EYAML command executation fails."""

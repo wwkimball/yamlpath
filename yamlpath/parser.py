@@ -67,7 +67,7 @@ class Parser:
         elif not yaml_path:
             self.pathsep = PathSeperators.DOT
             seperator = '.'
-        elif '/' == yaml_path[0]:
+        elif yaml_path[0] == '/':
             self.pathsep = PathSeperators.FSLASH
             seperator = '/'
 
@@ -279,7 +279,6 @@ class Parser:
             if escape_next:
                 # Pass-through; capture this escaped character
                 escape_next = False
-                pass
 
             elif capturing_regex:
                 if c == demarc_stack[-1]:

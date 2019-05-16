@@ -4,7 +4,6 @@ Copyright 2018, 2019 William W. Kimball, Jr. MBA MSIS
 """
 from sys import maxsize
 import re
-from collections import deque
 from distutils.util import strtobool
 
 from ruamel.yaml.comments import CommentedSeq, CommentedMap

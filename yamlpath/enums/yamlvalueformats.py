@@ -44,5 +44,4 @@ class YAMLValueFormats(Enum):
         check = str(name).upper()
         if check in YAMLValueFormats.get_names():
             return YAMLValueFormats[check]
-        else:
-            raise NameError("YAMLValueFormats has no such item, " + check)
+        raise NameError("YAMLValueFormats has no such item, " + check)
