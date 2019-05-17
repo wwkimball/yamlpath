@@ -67,7 +67,7 @@ class Parser:
         elif not yaml_path:
             self.pathsep = PathSeperators.DOT
             seperator = '.'
-        elif '/' == yaml_path[0]:
+        elif yaml_path[0] == '/':
             self.pathsep = PathSeperators.FSLASH
             seperator = '/'
 
@@ -174,11 +174,11 @@ class Parser:
 
         if yaml_path is None:
             return deque()
-        elif isinstance(yaml_path, deque):
+        if isinstance(yaml_path, deque):
             return yaml_path
-        elif isinstance(yaml_path, list):
+        if isinstance(yaml_path, list):
             return deque(yaml_path)
-        elif isinstance(yaml_path, dict):
+        if isinstance(yaml_path, dict):
             raise YAMLPathException(
                 "YAML paths must be strings, queues, or lists",
                 yaml_path
@@ -234,11 +234,11 @@ class Parser:
 
         if yaml_path is None:
             return path_elements
-        elif isinstance(yaml_path, deque):
+        if isinstance(yaml_path, deque):
             return yaml_path
-        elif isinstance(yaml_path, list):
+        if isinstance(yaml_path, list):
             return deque(yaml_path)
-        elif isinstance(yaml_path, dict):
+        if isinstance(yaml_path, dict):
             raise YAMLPathException(
                 "YAML paths must be strings, queues, or lists",
                 yaml_path
@@ -279,7 +279,6 @@ class Parser:
             if escape_next:
                 # Pass-through; capture this escaped character
                 escape_next = False
-                pass
 
             elif capturing_regex:
                 if c == demarc_stack[-1]:

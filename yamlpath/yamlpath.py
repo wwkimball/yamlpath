@@ -4,7 +4,6 @@ Copyright 2018, 2019 William W. Kimball, Jr. MBA MSIS
 """
 from sys import maxsize
 import re
-from collections import deque
 from distutils.util import strtobool
 
 from ruamel.yaml.comments import CommentedSeq, CommentedMap
@@ -74,7 +73,7 @@ class YAMLPath:
         default_value = kwargs.pop("default_value", None)
 
         if data is None or yaml_path is None:
-            return None
+            return
 
         path = self.parser.parse_path(yaml_path)
         if mustexist:
@@ -136,7 +135,7 @@ class YAMLPath:
             for node in self._get_nodes(data, path):
                 if node is not None:
                     found_nodes += 1
-                    self._update_value(data, node, value, value_format)
+                    self.update_node(data, node, value, value_format)
 
             if found_nodes < 1:
                 raise YAMLPathException(
@@ -150,7 +149,7 @@ class YAMLPath:
             )
             for node in self._ensure_path(data, path, value):
                 if node is not None:
-                    self._update_value(data, node, value, value_format)
+                    self.update_node(data, node, value, value_format)
 
     def _get_nodes(self, data, yaml_path):
         """Generates zero or more matching, pre-existing nodes from YAML data
@@ -205,131 +204,6 @@ class YAMLPath:
             self.log.debug("")
 
             yield data
-
-    def _update_value(self, data, source_node, value, value_format):
-        """Recursively updates the value of a YAML Node and any references to it
-        within the entire YAML data structure (Anchors and Aliases, if any).
-
-        Positional Parameters:
-          1. data (ruamel.yaml data) The parsed YAML data to process
-          2. source_node (object) The YAML Node to update
-          3. value (any) The new value to assign to the source_node and
-             its references
-          4. value_format (YAMLValueFormats) the YAML representation of the
-             value
-
-        Returns: N/A
-
-        Raises:
-          No Exception but it will terminate the program after printing
-          a console error when value_format is illegal for the given value or
-          is unknown.
-        """
-        # Change val has already been made to obj in data.  When obj is either
-        # an Anchor or an Alias, all other references to it must also receive
-        # an identical update so they are kept in synchronization.  In addition,
-        # if obj is a child of a parent that is an Anchor or Alias, all
-        # references to that parent must also be updated.
-        def update_refs(data, reference_node, replacement_node):
-            if isinstance(data, dict):
-                for i, k in [
-                    (idx, key) for idx, key in
-                        enumerate(data.keys()) if key is reference_node
-                ]:
-                    data.insert(i, replacement_node, data.pop(k))
-                for k, val in data.non_merged_items():
-                    if val is reference_node:
-                        data[k] = replacement_node
-                    else:
-                        update_refs(val, reference_node, replacement_node)
-            elif isinstance(data, list):
-                for idx, item in enumerate(data):
-                    if item is reference_node:
-                        data[idx] = replacement_node
-                    else:
-                        update_refs(item, reference_node, replacement_node)
-
-        newtype = type(source_node)
-        newval = value
-        new_node = None
-        valform = YAMLValueFormats.DEFAULT
-
-        if isinstance(value_format, YAMLValueFormats):
-            valform = value_format
-        else:
-            strform = str(value_format)
-            try:
-                valform = YAMLValueFormats.from_str(strform)
-            except NameError:
-                raise NameError(
-                    "Unknown YAML Value Format:  {}".format(strform)
-                    + ".  Please specify one of:  "
-                    + ", ".join(
-                        [l.lower() for l in YAMLValueFormats.get_names()]
-                    )
-                )
-
-        if valform == YAMLValueFormats.BARE:
-            newtype = PlainScalarString
-            newval = str(value)
-        elif valform == YAMLValueFormats.DQUOTE:
-            newtype = DoubleQuotedScalarString
-            newval = str(value)
-        elif valform == YAMLValueFormats.SQUOTE:
-            newtype = SingleQuotedScalarString
-            newval = str(value)
-        elif valform == YAMLValueFormats.FOLDED:
-            newtype = FoldedScalarString
-            newval = str(value)
-        elif valform == YAMLValueFormats.LITERAL:
-            newtype = LiteralScalarString
-            newval = str(value)
-        elif valform == YAMLValueFormats.BOOLEAN:
-            newtype = ScalarBoolean
-            if isinstance(value, bool):
-                newval = value
-            else:
-                newval = strtobool(value)
-        elif valform == YAMLValueFormats.FLOAT:
-            try:
-                newval = float(value)
-            except ValueError:
-                self.log.error(
-                    "Not a floating-point precision number:  {}".format(value)
-                    , 1
-                )
-
-            strval = str(value)
-            precision = 0
-            width = len(strval)
-            lastdot = strval.rfind(".")
-            if -1 < lastdot:
-                precision = strval.rfind(".")
-
-            if hasattr(source_node, "anchor"):
-                new_node = ScalarFloat(
-                    newval
-                    , anchor=source_node.anchor.value
-                    , prec=precision
-                    , width=width
-                )
-            else:
-                new_node = ScalarFloat(newval, prec=precision, width=width)
-        elif valform == YAMLValueFormats.INT:
-            newtype = ScalarInt
-
-            try:
-                newval = int(value)
-            except ValueError:
-                self.log.critical("Not an integer:  {}".format(value), 1)
-
-        if new_node is None:
-            if hasattr(source_node, "anchor"):
-                new_node = newtype(newval, anchor=source_node.anchor.value)
-            else:
-                new_node = newtype(newval)
-
-        update_refs(data, source_node, new_node)
 
     def _get_elements_by_ref(self, data, ref):
         """Returns zero or more referenced YALM Nodes or None when the given
@@ -424,45 +298,6 @@ class YAMLPath:
                     yield match
         else:
             raise NotImplementedError
-
-    def _append_list_element(self, data, value=None, anchor=None):
-        """Appends a new element to an ruamel.yaml presented list, preserving
-        any tailing comment for the former last element of the same list.
-
-        Positional Parameters:
-          1. data (ruamel.yaml data) The parsed YAML data to process
-          2. value (any) The value of the element to append
-          3. anchor (str) An Anchor or Alias name for the new element
-
-        Returns:  (object) The newly appended element node
-
-        Raises:  N/A
-        """
-
-        if anchor is not None and value is not None:
-            value = YAMLPath.wrap_type(value)
-            if not hasattr(value, "anchor"):
-                raise ValueError(
-                    "Impossible to add an Anchor to value:  {}".format(value)
-                )
-            value.yaml_set_anchor(anchor)
-
-        old_tail_pos = len(data) - 1
-        data.append(value)
-        new_element = data[-1]
-
-        # Note that ruamel.yaml will inexplicably add a newline before the tail
-        # element irrespective of this ca handling.  This issue appears to be
-        # uncontrollable, from here.
-        if hasattr(data, "ca") and old_tail_pos in data.ca.items:
-            old_comment = data.ca.items[old_tail_pos][0]
-            if old_comment is not None:
-                data.ca.items[old_tail_pos][0] = None
-                data.ca.items[old_tail_pos + 1] = [
-                    old_comment, None, None, None
-                ]
-
-        return new_element
 
     def _search(self, data, terms):
         """Searches the top level of given YAML data for all matching dictionary
@@ -619,7 +454,7 @@ class YAMLPath:
             self.log.debug(
                 "YAMLPath::_ensure_path:  Bailing out on None data/path!"
             )
-            return data
+            return
 
         if path:
             (curtyp, curele) = curref = path.popleft()
@@ -664,8 +499,8 @@ class YAMLPath:
                         "YAMLPath::_ensure_path:  Dealing with a list"
                     )
                     if curtyp is PathSegmentTypes.ANCHOR:
-                        new_val = self._default_for_child(path, value)
-                        new_ele = self._append_list_element(
+                        new_val = self.default_for_child(path, value)
+                        new_ele = self.append_list_element(
                             data, new_val, stripped_ele
                         )
                         for node in self._ensure_path(new_ele, path, value):
@@ -677,8 +512,8 @@ class YAMLPath:
                         and isinstance(stripped_ele, int)
                     ):
                         for _ in range(len(data) - 1, stripped_ele):
-                            new_val = self._default_for_child(path, value)
-                            self._append_list_element(data, new_val)
+                            new_val = self.default_for_child(path, value)
+                            self.append_list_element(data, new_val)
                         for node in self._ensure_path(
                             data[stripped_ele], path, value
                         ):
@@ -698,8 +533,9 @@ class YAMLPath:
                     )
                     if curtyp is PathSegmentTypes.ANCHOR:
                         raise NotImplementedError
-                    elif curtyp is PathSegmentTypes.KEY:
-                        data[stripped_ele] = self._default_for_child(
+
+                    if curtyp is PathSegmentTypes.KEY:
+                        data[stripped_ele] = self.default_for_child(
                             path, value
                         )
                         for node in self._ensure_path(
@@ -710,9 +546,8 @@ class YAMLPath:
                                 yield node
                     else:
                         raise YAMLPathException(
-                            "Cannot add {} subreference to dictionaries".format(
-                                str(curtyp)
-                            ),
+                            "Cannot add {} subreference to dictionaries"
+                            .format(str(curtyp)),
                             original_path,
                             unstripped_ele
                         )
@@ -736,7 +571,7 @@ class YAMLPath:
             yield data
 
     @staticmethod
-    def _default_for_child(yaml_path, value=None):
+    def default_for_child(yaml_path, value=None):
         """Identifies and returns the most appropriate default value for the
         next entry in a YAML Path, should it not already exist.
 
@@ -767,6 +602,46 @@ class YAMLPath:
             default_value = ScalarFloat("inf")
 
         return default_value
+
+    @staticmethod
+    def append_list_element(data, value=None, anchor=None):
+        """Appends a new element to an ruamel.yaml presented list, preserving
+        any tailing comment for the former last element of the same list.
+
+        Positional Parameters:
+          1. data (ruamel.yaml data) The parsed YAML data to process
+          2. value (any) The value of the element to append
+          3. anchor (str) An Anchor or Alias name for the new element
+
+        Returns:  (object) The newly appended element node
+
+        Raises:  N/A
+        """
+
+        if anchor is not None and value is not None:
+            value = YAMLPath.wrap_type(value)
+            if not hasattr(value, "anchor"):
+                raise ValueError(
+                    "Impossible to add an Anchor to value:  {}".format(value)
+                )
+            value.yaml_set_anchor(anchor)
+
+        old_tail_pos = len(data) - 1
+        data.append(value)
+        new_element = data[-1]
+
+        # Note that ruamel.yaml will inexplicably add a newline before the tail
+        # element irrespective of this ca handling.  This issue appears to be
+        # uncontrollable, from here.
+        if hasattr(data, "ca") and old_tail_pos in data.ca.items:
+            old_comment = data.ca.items[old_tail_pos][0]
+            if old_comment is not None:
+                data.ca.items[old_tail_pos][0] = None
+                data.ca.items[old_tail_pos + 1] = [
+                    old_comment, None, None, None
+                ]
+
+        return new_element
 
     @staticmethod
     def wrap_type(value):
@@ -816,3 +691,142 @@ class YAMLPath:
         if hasattr(node, "anchor"):
             return type(node)(clone_value, anchor=node.anchor.value)
         return type(node)(clone_value)
+
+    @staticmethod
+    def make_new_node(source_node, value, value_format):
+        """Creates a new data node given a value and its presumed format.
+        """
+        new_node = None
+        new_type = type(source_node)
+        new_value = value
+        valform = YAMLValueFormats.DEFAULT
+
+        if isinstance(value_format, YAMLValueFormats):
+            valform = value_format
+        else:
+            strform = str(value_format)
+            try:
+                valform = YAMLValueFormats.from_str(strform)
+            except NameError:
+                raise NameError(
+                    "Unknown YAML Value Format:  {}".format(strform)
+                    + ".  Please specify one of:  "
+                    + ", ".join(
+                        [l.lower() for l in YAMLValueFormats.get_names()]
+                    )
+                )
+
+        if valform == YAMLValueFormats.BARE:
+            new_type = PlainScalarString
+            new_value = str(value)
+        elif valform == YAMLValueFormats.DQUOTE:
+            new_type = DoubleQuotedScalarString
+            new_value = str(value)
+        elif valform == YAMLValueFormats.SQUOTE:
+            new_type = SingleQuotedScalarString
+            new_value = str(value)
+        elif valform == YAMLValueFormats.FOLDED:
+            new_type = FoldedScalarString
+            new_value = str(value)
+        elif valform == YAMLValueFormats.LITERAL:
+            new_type = LiteralScalarString
+            new_value = str(value)
+        elif valform == YAMLValueFormats.BOOLEAN:
+            new_type = ScalarBoolean
+            if isinstance(value, bool):
+                new_value = value
+            else:
+                new_value = strtobool(value)
+        elif valform == YAMLValueFormats.FLOAT:
+            try:
+                new_value = float(value)
+            except ValueError:
+                raise ValueError(
+                    "The requested value format is {}, but '{}' cannot be cast\
+                     to a floating-point number.".format(valform, value)
+                )
+
+            strval = str(value)
+            precision = 0
+            width = len(strval)
+            lastdot = strval.rfind(".")
+            if -1 < lastdot:
+                precision = strval.rfind(".")
+
+            if hasattr(source_node, "anchor"):
+                new_node = ScalarFloat(
+                    new_value
+                    , anchor=source_node.anchor.value
+                    , prec=precision
+                    , width=width
+                )
+            else:
+                new_node = ScalarFloat(new_value, prec=precision, width=width)
+        elif valform == YAMLValueFormats.INT:
+            new_type = ScalarInt
+
+            try:
+                new_value = int(value)
+            except ValueError:
+                raise ValueError(
+                    "The requested value format is {}, but '{}' cannot be cast\
+                     to an integer number.".format(valform, value)
+                )
+        else:
+            # Punt to whatever the best type may be
+            new_type = type(YAMLPath.wrap_type(value))
+
+        if new_node is None:
+            if hasattr(source_node, "anchor"):
+                new_node = new_type(new_value, anchor=source_node.anchor.value)
+            else:
+                new_node = new_type(new_value)
+
+        return new_node
+
+    @staticmethod
+    def update_node(data, source_node, value, value_format):
+        """Recursively updates the value of a YAML Node and any references to it
+        within the entire YAML data structure (Anchors and Aliases, if any).
+
+        Positional Parameters:
+          1. data (ruamel.yaml data) The parsed YAML data to process
+          2. source_node (object) The YAML Node to update
+          3. value (any) The new value to assign to the source_node and
+             its references
+          4. value_format (YAMLValueFormats) the YAML representation of the
+             value
+
+        Returns: N/A
+
+        Raises:
+          No Exception but it will terminate the program after printing
+          a console error when value_format is illegal for the given value or
+          is unknown.
+        """
+        # Change val has already been made to obj in data.  When obj is either
+        # an Anchor or an Alias, all other references to it must also receive
+        # an identical update so they are kept in synchronization.  In addition,
+        # if obj is a child of a parent that is an Anchor or Alias, all
+        # references to that parent must also be updated.
+        def update_refs(data, reference_node, replacement_node):
+            if isinstance(data, dict):
+                for i, k in [
+                    (idx, key) for idx, key in
+                        enumerate(data.keys()) if key is reference_node
+                ]:
+                    data.insert(i, replacement_node, data.pop(k))
+                for k, val in data.non_merged_items():
+                    if val is reference_node:
+                        data[k] = replacement_node
+                    else:
+                        update_refs(val, reference_node, replacement_node)
+            elif isinstance(data, list):
+                for idx, item in enumerate(data):
+                    if item is reference_node:
+                        data[idx] = replacement_node
+                    else:
+                        update_refs(item, reference_node, replacement_node)
+
+        new_node = YAMLPath.make_new_node(source_node, value, value_format)
+        update_refs(data, source_node, new_node)

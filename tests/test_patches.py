@@ -10,13 +10,13 @@ from yamlpath.wrappers import ConsolePrinter
 
 @pytest.fixture
 def yamlpath_fixture():
-    """Returns a YAMLPath with a quiet logger."""
-    args = SimpleNamespace(verbose=False, quiet=True, debug=False)
-    logger = ConsolePrinter(args)
-    return YAMLPath(logger)
+        """Returns a YAMLPath with a quiet logger."""
+        args = SimpleNamespace(verbose=False, quiet=True, debug=False)
+        logger = ConsolePrinter(args)
+        return YAMLPath(logger)
 
 def test_yaml_dump(yamlpath_fixture):
-    data = """---
+        data = """---
 aliases:
   - &test_scalarstring This is a scalar string.
   - &test_foldedstring >-
@@ -151,12 +151,12 @@ complex:
         second: ju ichi
         third: ji ni
 """
-    yaml = YAML()
-    yaml_data = yaml.load(data)
-    yaml.dump(yaml_data, sys.stdout)
+        yaml = YAML()
+        yaml_data = yaml.load(data)
+        yaml.dump(yaml_data, sys.stdout)
 
 def test_newlines_before_anchored_list_comments(capsys):
-  yamldoc = """---
+    yamldoc = """---
 aliases:
   # First-element comment
   - &firstEntry First entry
@@ -168,13 +168,45 @@ aliases:
   - &thirdEntry Third entry
 """
 
-  yaml = YAML()
-  yaml.indent(mapping=2, sequence=4, offset=2)
-  yaml.explicit_start = True
-  yaml.preserve_quotes = True
-  yaml.width = sys.maxsize
-  yamldata = yaml.load(yamldoc)
-  yaml.dump(yamldata, sys.stdout)
+    yaml = YAML()
+    yaml.indent(mapping=2, sequence=4, offset=2)
+    yaml.explicit_start = True
+    yaml.preserve_quotes = True
+    yaml.width = sys.maxsize
+    yamldata = yaml.load(yamldoc)
+    yaml.dump(yamldata, sys.stdout)
 
-  console = capsys.readouterr()
-  assert yamldoc == console.out
+    console = capsys.readouterr()
+    assert yamldoc == console.out
+
+def test_newlines_between_anchored_multiline_list_elements(capsys):
+    yamldoc = """---
+aliases:
+  # Folded-element comment
+  # for a multi-line value
+  - &FoldedEntry >
+    THIS IS A
+    FOLDED, MULTI-LINE
+    VALUE
+
+  # Literal-element comment
+  # for a multi-line value
+  - &literalEntry |
+    THIS IS A
+    LITERAL, MULTI-LINE
+    VALUE
+
+  # Plain-element comment
+  - &plainEntry Plain entry
+"""
+
+    yaml = YAML()
+    yaml.indent(mapping=2, sequence=4, offset=2)
+    yaml.explicit_start = True
+    yaml.preserve_quotes = True
+    yaml.width = sys.maxsize
+    yamldata = yaml.load(yamldoc)
+    yaml.dump(yamldata, sys.stdout)
+
+    console = capsys.readouterr()
+    assert yamldoc == console.out

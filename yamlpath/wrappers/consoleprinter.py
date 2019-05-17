@@ -3,8 +3,9 @@ Other implementations can easily wrap Python's standard logger/warning modules,
 but this one does not because those are overkill for *simple* STDOUT/STDERR
 printing (that must support squelching).
 
-Requires a dictionary on init which has the following entries:
-  quiet:  <Boolean> suppresses all output except ConsolePrinter::error().
+Requires an object on init which has the following properties:
+  quiet:  <Boolean> suppresses all output except ConsolePrinter::error() and
+          ::critical().
   verbose:  <Boolean> allows output from ConsolePrinter::verbose().
   debug:  <Boolean> allows output from ConsolePrinter::debug().
 

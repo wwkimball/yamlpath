@@ -318,26 +318,32 @@ complex:
     yaml = YAML()
     return yaml.load(data)
 
-def test_empty_get_nodes(yamlpath, yamldata):
-    for node in yamlpath.get_nodes(yamldata, None):
+@pytest.mark.parametrize("mustexist", [
+    (True),
+    (False),
+])
+def test_get_none_path_to_nodes_public(yamlpath, yamldata, mustexist):
+    for node in yamlpath.get_nodes(yamldata, None, mustexist=mustexist):
         assert node == None
 
-    for node in yamlpath._get_nodes(yamldata, None):
+@pytest.mark.parametrize("mustexist", [
+    (True),
+    (False),
+])
+def test_get_none_data_to_nodes_public(yamlpath, yamldata, mustexist):
+    for node in yamlpath.get_nodes(None, "top_scalar", mustexist=mustexist):
         assert node == None
 
-    for node in yamlpath._ensure_path(yamldata, None):
-        assert node == None
-
-    for node in yamlpath.get_nodes(yamldata, None, mustexist=True):
-        assert node == None
-
-    for node in yamlpath.get_nodes(None, "top_scalar"):
-        assert node == None
-
+def test_get_none_data_to_nodes_private(yamlpath, yamldata):
     for node in yamlpath._get_nodes(None, "top_scalar"):
         assert node == None
 
-    for node in yamlpath.get_nodes(None, "top_scalar", mustexist=True):
+def test_get_none_path_to_nodes_private(yamlpath, yamldata):
+    for node in yamlpath._get_nodes(yamldata, None):
+        assert node == None
+
+def test_ensure_none_path(yamlpath, yamldata):
+    for node in yamlpath._ensure_path(yamldata, None):
         assert node == None
 
 def test_empty_set_nodes(yamlpath, yamldata):
@@ -495,7 +501,7 @@ def test_wrap_type(val, typ):
   assert isinstance(YAMLPath.wrap_type(val), typ)
 
 def test_default_for_child_none(yamlpath):
-  assert isinstance(yamlpath._default_for_child(None, ""), str)
+  assert isinstance(yamlpath.default_for_child(None, ""), str)
 
 @pytest.mark.parametrize("path,typ", [
   ([(True, False)], ScalarBoolean),
@@ -504,7 +510,7 @@ def test_default_for_child_none(yamlpath):
   ([(float, 1.1)], ScalarFloat),
 ])
 def test_default_for_child(yamlpath, path, typ):
-  assert isinstance(yamlpath._default_for_child(path, path[0][1]), typ)
+  assert isinstance(yamlpath.default_for_child(path, path[0][1]), typ)
 
 def test_notimplementeds(yamlpath, yamldata):
   with pytest.raises(NotImplementedError):
@@ -556,7 +562,7 @@ def test_bad_separator_from_str():
 
 def test_append_list_element_value_error(yamlpath):
   with pytest.raises(ValueError):
-    yamlpath._append_list_element([], PathSearchMethods, "anchor")
+    yamlpath.append_list_element([], PathSearchMethods, "anchor")
 
 def test_get_elements_by_bad_ref(yamlpath, yamldata):
   with pytest.raises(YAMLPathException):
@@ -578,15 +584,15 @@ def test_get_elements_by_none_refs(yamlpath, yamldata):
   (1.1, YAMLValueFormats.FLOAT),
 ])
 def test_update_value(yamlpath, yamldata, newval, newform):
-  yamlpath._update_value(yamldata, yamldata["top_scalar"], newval, newform)
+  yamlpath.update_node(yamldata, yamldata["top_scalar"], newval, newform)
 
 @pytest.mark.parametrize("newval,newform", [
   ("4F", YAMLValueFormats.INT),
   ("4.F", YAMLValueFormats.FLOAT),
 ])
 def test_bad_update_value(yamlpath, yamldata, newval, newform):
-  with pytest.raises(SystemExit):
-    yamlpath._update_value(yamldata, yamldata["top_scalar"], newval, newform)
+  with pytest.raises(ValueError):
+    yamlpath.update_node(yamldata, yamldata["top_scalar"], newval, newform)
 
 def test_yamlpath_exception():
   try:

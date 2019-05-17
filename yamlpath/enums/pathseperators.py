@@ -47,11 +47,19 @@ class PathSeperators(Enum):
 
         if check in PathSeperators.get_names():
             return PathSeperators[check]
-        else:
-            raise NameError("PathSeperators has no such item, " + check)
+        raise NameError("PathSeperators has no such item, " + check)
 
     @staticmethod
     def to_seperator(name):
+        """Converts an enum member into its equivalent YAML Path seperator.
+
+        Positional Parameters:
+          1. name (PathSeperators) A member of the PathSeperators enum
+
+        Returns: (str) The equivalent YAML Path seperator
+
+        Raises:  N/A
+        """
         seperator = '.'
         if name == PathSeperators.FSLASH:
             seperator = '/'
