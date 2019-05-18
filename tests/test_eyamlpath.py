@@ -6,12 +6,12 @@ from subprocess import run, CalledProcessError
 from ruamel.yaml import YAML
 
 import yamlpath.patches
-from yamlpath.eyaml import EYAMLPath
+from yamlpath.eyaml import EYAMLProcessor
 from yamlpath.wrappers import ConsolePrinter
 from yamlpath.exceptions import EYAMLCommandException
 
 requireseyaml = pytest.mark.skipif(
-    EYAMLPath.get_eyaml_executable("eyaml") is None
+    EYAMLProcessor.get_eyaml_executable("eyaml") is None
     , reason="The 'eyaml' command must be installed and accessible on the PATH"
         + " to test and use EYAML features.  Try:  'gem install hiera-eyaml'"
         + " after intalling ruby and rubygems."
@@ -22,7 +22,7 @@ def eyamlpath_f():
     """Returns an EYAMLPath with a quiet logger."""
     args = SimpleNamespace(verbose=False, quiet=True, debug=False)
     logger = ConsolePrinter(args)
-    return EYAMLPath(logger)
+    return EYAMLProcessor(logger)
 
 @requireseyaml
 @pytest.fixture
@@ -171,7 +171,7 @@ FktE6rH8a+8SwO+TGw==
     with open(old_public_key_file, 'w') as key_file:
         key_file.write(old_public_key)
 
-    eyaml_cmd = EYAMLPath.get_eyaml_executable("eyaml")
+    eyaml_cmd = EYAMLProcessor.get_eyaml_executable("eyaml")
     run(
         "{} createkeys --pkcs7-private-key={} --pkcs7-public-key={}"
         .format(eyaml_cmd, new_private_key_file, new_public_key_file).split()
@@ -202,7 +202,7 @@ def test_find_eyaml_paths(eyamlpath_f, eyamldata):
 
 @pytest.fixture
 def force_subprocess_run_cpe(monkeypatch):
-    import yamlpath.eyaml.eyamlpath as break_module
+    import yamlpath.eyaml.eyamlprocessor as break_module
 
     def fake_run(*args, **kwargs):
         raise CalledProcessError(42, "bad eyaml")
@@ -211,7 +211,7 @@ def force_subprocess_run_cpe(monkeypatch):
 
 @pytest.fixture
 def force_no_access(monkeypatch):
-    import yamlpath.eyaml.eyamlpath as break_module
+    import yamlpath.eyaml.eyamlprocessor as break_module
 
     def fake_access(*args, **kwargs):
         return False
@@ -249,10 +249,10 @@ def test_happy_set_eyaml_value(eyamlpath_f, eyamldata, eyamlkeys, search, compar
         encvalue = encnode
         break
 
-    assert EYAMLPath.is_eyaml_value(encvalue)
+    assert EYAMLProcessor.is_eyaml_value(encvalue)
 
 def test_none_eyaml_value():
-    assert False == EYAMLPath.is_eyaml_value(None)
+    assert False == EYAMLProcessor.is_eyaml_value(None)
 
 @pytest.mark.parametrize("exe", [
     ("/no/such/file/anywhere"),
@@ -260,7 +260,7 @@ def test_none_eyaml_value():
     (None),
 ])
 def test_impossible_eyaml_exe(exe):
-    assert None == EYAMLPath.get_eyaml_executable(exe)
+    assert None == EYAMLProcessor.get_eyaml_executable(exe)
 
 def test_not_can_run_eyaml(eyamlpath_f):
     eyamlpath_f.eyaml = None
@@ -308,4 +308,4 @@ def test_decrypt_calledprocesserror(eyamlpath_f, force_subprocess_run_cpe):
 
 @requireseyaml
 def test_non_executable(eyamlkeys, force_no_access):
-    assert EYAMLPath.get_eyaml_executable(str(eyamlkeys[0])) is None
+    assert EYAMLProcessor.get_eyaml_executable(str(eyamlkeys[0])) is None

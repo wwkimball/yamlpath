@@ -27,7 +27,7 @@ from yamlpath.enums import (
 from yamlpath.parser import Parser
 
 
-class YAMLPath:
+class Processor:
     """Query and update YAML data via robust YAML Paths."""
 
     def __init__(self, logger, **kwargs):
@@ -619,7 +619,7 @@ class YAMLPath:
         """
 
         if anchor is not None and value is not None:
-            value = YAMLPath.wrap_type(value)
+            value = Processor.wrap_type(value)
             if not hasattr(value, "anchor"):
                 raise ValueError(
                     "Impossible to add an Anchor to value:  {}".format(value)
@@ -774,7 +774,7 @@ class YAMLPath:
                 )
         else:
             # Punt to whatever the best type may be
-            new_type = type(YAMLPath.wrap_type(value))
+            new_type = type(Processor.wrap_type(value))
 
         if new_node is None:
             if hasattr(source_node, "anchor"):
@@ -828,5 +828,5 @@ class YAMLPath:
                     else:
                         update_refs(item, reference_node, replacement_node)
 
-        new_node = YAMLPath.make_new_node(source_node, value, value_format)
+        new_node = Processor.make_new_node(source_node, value, value_format)
         update_refs(data, source_node, new_node)

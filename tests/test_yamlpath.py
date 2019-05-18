@@ -10,7 +10,7 @@ from ruamel.yaml.scalarbool import ScalarBoolean
 from ruamel.yaml.scalarfloat import ScalarFloat
 from ruamel.yaml.scalarint import ScalarInt
 
-from yamlpath import YAMLPath, Parser
+from yamlpath import Processor, Parser
 from yamlpath.exceptions import YAMLPathException
 from yamlpath.enums import (
     YAMLValueFormats,
@@ -176,7 +176,7 @@ def quiet_logger():
 @pytest.fixture
 def yamlpath(quiet_logger):
     """Returns a YAMLPath with a quiet logger."""
-    return YAMLPath(quiet_logger)
+    return Processor(quiet_logger)
 
 @pytest.fixture
 def yamldata():
@@ -498,7 +498,7 @@ def test_bad_value_format(yamlpath, yamldata):
     (SimpleNamespace(), SimpleNamespace),
 ])
 def test_wrap_type(val, typ):
-  assert isinstance(YAMLPath.wrap_type(val), typ)
+  assert isinstance(Processor.wrap_type(val), typ)
 
 def test_default_for_child_none(yamlpath):
   assert isinstance(yamlpath.default_for_child(None, ""), str)
@@ -602,5 +602,5 @@ def test_yamlpath_exception():
 
 def test_premade_parser(quiet_logger):
   premade = Parser(quiet_logger)
-  preload = YAMLPath(quiet_logger, parser=premade)
+  preload = Processor(quiet_logger, parser=premade)
   assert preload.parser == premade

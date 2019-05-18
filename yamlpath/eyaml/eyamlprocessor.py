@@ -9,10 +9,10 @@ from shutil import which
 
 from yamlpath.enums import YAMLValueFormats
 from yamlpath.exceptions import EYAMLCommandException
-from yamlpath.yamlpath import YAMLPath
+from yamlpath import Processor
 
 
-class EYAMLPath(YAMLPath):
+class EYAMLProcessor(Processor):
     """Extend YAMLPath to understand EYAML values."""
 
     def __init__(self, logger, **kwargs):
@@ -285,7 +285,7 @@ class EYAMLPath(YAMLPath):
 
         Raises:  N/A
         """
-        binary = EYAMLPath.get_eyaml_executable(self.eyaml)
+        binary = EYAMLProcessor.get_eyaml_executable(self.eyaml)
         if binary is None:
             return False
         self.eyaml = binary

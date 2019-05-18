@@ -5,7 +5,7 @@ from types import SimpleNamespace
 from ruamel.yaml import YAML
 
 import yamlpath.patches
-from yamlpath import YAMLPath
+from yamlpath import Processor
 from yamlpath.wrappers import ConsolePrinter
 
 @pytest.fixture
@@ -13,7 +13,7 @@ def yamlpath_fixture():
         """Returns a YAMLPath with a quiet logger."""
         args = SimpleNamespace(verbose=False, quiet=True, debug=False)
         logger = ConsolePrinter(args)
-        return YAMLPath(logger)
+        return Processor(logger)
 
 def test_yaml_dump(yamlpath_fixture):
         data = """---
