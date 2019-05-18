@@ -2,4 +2,4 @@
 import yamlpath.exceptions
 import yamlpath.enums
 from yamlpath.processor import Processor
-from yamlpath.parser import Parser
+from yamlpath.path import Path
