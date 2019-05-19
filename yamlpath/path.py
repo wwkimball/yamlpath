@@ -11,6 +11,7 @@ from yamlpath.enums import (
     PathSearchMethods,
     PathSeperators,
 )
+from yamlpath.types import SearchTerms
 
 
 class Path:
@@ -28,7 +29,7 @@ class Path:
         """Init this class.
 
         Positional Parameters:
-          1. logger (ConsolePrinter) Instance of ConsolePrinter or any similar
+          1. logger (ConsolePrinter) Instance of ConsolePrinter or any subclass
              wrapper (say, around stdlib logging modules)
 
         Returns:  N/A
@@ -91,25 +92,7 @@ class Path:
                 else:
                     ppath += "&{}".format(element_id)
             elif ptype == PathSegmentTypes.SEARCH:
-                invert, method, attr, term = element_id
-                if method == PathSearchMethods.REGEX:
-                    safe_term = "/{}/".format(term.replace("/", r"\/"))
-                else:
-                    # Replace unescaped spaces with escaped spaces
-                    safe_term = r"\ ".join(
-                        list(map(
-                            lambda ele: ele.replace(" ", r"\ ")
-                            , term.split(r"\ ")
-                        ))
-                    )
-                ppath += (
-                    "["
-                    + str(attr)
-                    + ("!" if invert else "")
-                    + PathSearchMethods.to_operator(method)
-                    + safe_term
-                    + "]"
-                )
+                ppath += str(element_id)
 
             add_sep = True
 
@@ -191,7 +174,8 @@ class Path:
     @property
     def escaped(self) -> deque:
         r"""Accessor for the escaped, parsed version of this YAML Path.  Any
-        leading \ symbols are stripped out.
+        leading \ symbols are stripped out.  This is the parsed YAML Path used
+        for processing YAML data.
 
         Positional Parameters:  N/A
 
@@ -207,7 +191,8 @@ class Path:
     @property
     def unescaped(self) -> deque:
         r"""Accessor for the unescaped, parsed version of this YAML Path.  Any
-        leading \ symbols are preserved.
+        leading \ symbols are preserved.  This is the print and log friendly
+        version of the parsed YAML Path.
 
         Positional Parameters:  N/A
 
@@ -515,10 +500,8 @@ class Path:
 
                     path_segments.append((
                         segment_type,
-                        [search_inverted,
-                         search_method,
-                         search_attr,
-                         segment_id]
+                        SearchTerms(search_inverted, search_method,
+                                    search_attr, segment_id)
                     ))
                 else:
                     path_segments.append((segment_type, segment_id))
