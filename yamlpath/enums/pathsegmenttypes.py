@@ -11,3 +11,4 @@ class PathSegmentTypes(Enum):
     INDEX = auto()
     KEY = auto()
     SEARCH = auto()
+    SUBPATH = auto()

@@ -97,6 +97,8 @@ class Path:
                     ppath += "&{}".format(segment_attrs)
             elif segment_type == PathSegmentTypes.SEARCH:
                 ppath += str(segment_attrs)
+            elif segment_type == PathSegmentTypes.SUBPATH:
+                ppath += "({})".format(segment_attrs)
 
             add_sep = True
 
@@ -241,6 +243,7 @@ class Path:
         seeking_regex_delim: bool = False
         capturing_regex: bool = False
         pathsep: str = PathSeperators.to_seperator(self.seperator)
+        subpath_level: int = 0
 
         # Empty paths yield empty queues
         if not yaml_path:
@@ -340,6 +343,26 @@ class Path:
                     # Fresh demarcated value
                     demarc_stack.append(char)
                     demarc_count += 1
+                    continue
+
+            elif char == "(":
+                subpath_level += 1
+                demarc_stack.append(char)
+                demarc_count += 1
+                segment_type = PathSegmentTypes.SUBPATH
+                continue
+
+            elif subpath_level > 0:
+                if (
+                    demarc_count > 0
+                    and char == ")"
+                    and demarc_stack[-1] == "("
+                ):
+                    subpath_level -= 1
+                    demarc_count -= 1
+                    demarc_stack.pop()
+                    path_segments.append((segment_type, segment_id))
+                    segment_id = ""
                     continue
 
             elif demarc_count == 0 and char == "[":
@@ -535,6 +558,13 @@ class Path:
 
             segment_id += char
             seeking_anchor_mark = False
+
+        # Check for unmatched subpath demarcations
+        if subpath_level > 0:
+            raise YAMLPathException(
+                "YAML Path contains an unmatched () pair.",
+                yaml_path
+            )
 
         # Check for unterminated RegExes
         if capturing_regex:

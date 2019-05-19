@@ -257,6 +257,17 @@ class Processor:
         elif segment_type == PathSegmentTypes.SEARCH:
             for match in self._search(data, stripped_attrs):
                 yield match
+        elif segment_type == PathSegmentTypes.SUBPATH:
+            subpath = Path(unstripped_attrs)
+            results = []
+            for node in self._get_required_nodes(data, subpath):
+                results.append(node)
+            yield results
+            # subsegs = subpath.escaped
+            # for subidx in range(len(subsegs)):
+            #     for node in self._get_nodes_by_path_segment(data, subpath,
+            #                                                 subidx):
+            #         yield node
         else:
             raise NotImplementedError
 
