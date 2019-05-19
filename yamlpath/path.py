@@ -98,11 +98,7 @@ class Path:
             elif segment_type == PathSegmentTypes.SEARCH:
                 ppath += str(segment_attrs)
             elif segment_type == PathSegmentTypes.COLLECTOR:
-                subpath = Path(segment_attrs)
-                print("-\n--\n---\n----\n-----")
-                print(subpath)
-                print("-----\n----\n---\n--\n-")
-                ppath += "({})".format(subpath)
+                ppath += "({})".format(Path(segment_attrs))
 
             add_sep = True
 
