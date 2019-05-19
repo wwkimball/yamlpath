@@ -97,7 +97,7 @@ class Path:
                     ppath += "&{}".format(segment_attrs)
             elif segment_type == PathSegmentTypes.SEARCH:
                 ppath += str(segment_attrs)
-            elif segment_type == PathSegmentTypes.SUBPATH:
+            elif segment_type == PathSegmentTypes.COLLECTOR:
                 ppath += "({})".format(segment_attrs)
 
             add_sep = True
@@ -349,7 +349,7 @@ class Path:
                 subpath_level += 1
                 demarc_stack.append(char)
                 demarc_count += 1
-                segment_type = PathSegmentTypes.SUBPATH
+                segment_type = PathSegmentTypes.COLLECTOR
                 continue
 
             elif subpath_level > 0:

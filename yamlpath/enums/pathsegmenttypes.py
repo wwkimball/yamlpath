@@ -8,7 +8,7 @@ from enum import Enum, auto
 class PathSegmentTypes(Enum):
     """Supported YAML Path segments"""
     ANCHOR = auto()
+    COLLECTOR = auto()
     INDEX = auto()
     KEY = auto()
     SEARCH = auto()
-    SUBPATH = auto()
