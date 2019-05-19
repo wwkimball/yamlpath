@@ -5,7 +5,6 @@ Copyright 2019 William W. Kimball, Jr. MBA MSIS
 from collections import deque
 from typing import List, Optional, Union
 
-from yamlpath.wrappers import ConsolePrinter
 from yamlpath.enums import (
     PathSegmentTypes,
     PathSearchMethods,
@@ -17,7 +16,7 @@ from yamlpath.types import SearchTerms
 class Path:
     """Encapsulate a YAML Path and its parsing logic.  This will keep track of:
       * the original, unparsed, and unmodified YAML Path;
-      * its path seperator;
+      * its segment seperator (inferred or manually specified);
       * the unescaped, parsed representation of the YAML Path; and
       * the escaped, parsed representation of the YAML Path.
 
@@ -25,19 +24,20 @@ class Path:
     only when necessary.
     """
 
-    def __init__(self, logger: ConsolePrinter,
-                 yaml_path: Union["Path", str] = "", **kwargs) -> None:
+    def __init__(self, yaml_path: Union["Path", str] = "", **kwargs) -> None:
         """Init this class.
 
         Positional Parameters:
-          1. logger (ConsolePrinter) Instance of ConsolePrinter or any subclass
-             wrapper (say, around stdlib logging modules)
+          1. yaml_path (Union["Path", str]) The YAML Path to parse or copy
+
+        Optional Parameters:
+          1. pathsep (PathSeperators) Forced YAML Path segment seperator; set
+             only when automatic inference fails
 
         Returns:  N/A
 
         Raises:  N/A
         """
-        self.logger: ConsolePrinter = logger
         self._seperator: PathSeperators = kwargs.pop("pathsep",
                                                      PathSeperators.AUTO)
         self._original: str = ""
@@ -241,10 +241,6 @@ class Path:
         seeking_regex_delim: bool = False
         capturing_regex: bool = False
         pathsep: str = PathSeperators.to_seperator(self.seperator)
-
-        self.logger.debug(
-            "Path::_parse_path:  Evaluating {}...".format(yaml_path)
-        )
 
         # Empty paths yield empty queues
         if not yaml_path:
@@ -561,10 +557,5 @@ class Path:
             if segment_type is None:
                 segment_type = PathSegmentTypes.KEY
             path_segments.append((segment_type, segment_id))
-
-        self.logger.debug(
-            "Path::_parse_path:  Parsed {} into:".format(yaml_path)
-        )
-        self.logger.debug(path_segments)
 
         return path_segments

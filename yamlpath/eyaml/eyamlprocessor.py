@@ -63,10 +63,10 @@ class EYAMLProcessor(Processor):
                     tmp_path = build_path + str(i) + "]"
 
                 if self.is_eyaml_value(ele):
-                    yield Path(self.logger, tmp_path)
+                    yield Path(tmp_path)
 
                 for eyp in self._find_eyaml_paths(ele, tmp_path):
-                    yield Path(self.logger, eyp)
+                    yield Path(eyp)
 
         elif isinstance(data, CommentedMap):
             if build_path:
@@ -75,10 +75,10 @@ class EYAMLProcessor(Processor):
             for k, val in data.non_merged_items():
                 tmp_path = build_path + str(k)
                 if self.is_eyaml_value(val):
-                    yield Path(self.logger, tmp_path)
+                    yield Path(tmp_path)
 
                 for eyp in self._find_eyaml_paths(val, tmp_path):
-                    yield Path(self.logger, eyp)
+                    yield Path(eyp)
 
     def find_eyaml_paths(self) -> Generator[Path, None, None]:
         """Recursively generates a set of stringified YAML Paths, each entry

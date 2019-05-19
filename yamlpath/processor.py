@@ -76,7 +76,7 @@ class Processor:
             return
 
         if isinstance(yaml_path, str):
-            yaml_path = Path(self.logger, yaml_path, **kwargs)
+            yaml_path = Path(yaml_path, **kwargs)
 
         if mustexist:
             matched_nodes = 0
@@ -128,7 +128,7 @@ class Processor:
             return
 
         if isinstance(yaml_path, str):
-            yaml_path = Path(self.logger, yaml_path, **kwargs)
+            yaml_path = Path(yaml_path, **kwargs)
 
         mustexist: bool = kwargs.pop("mustexist", False)
         value_format: YAMLValueFormats = kwargs.pop("value_format",
