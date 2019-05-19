@@ -83,8 +83,10 @@ class Processor:
             for node in self._get_required_nodes(self.data, yaml_path):
                 matched_nodes += 1
                 self.logger.debug(
-                    "Processor::get_nodes:  Relaying required node:"
+                    "Processor::get_nodes:  Relaying required node <{}>:"
+                    .format(type(node))
                 )
+                self.logger.debug(node)
                 yield node
 
             if matched_nodes < 1:
@@ -95,8 +97,10 @@ class Processor:
         else:
             for node in self._get_optional_nodes(self.data, yaml_path, default_value):
                 self.logger.debug(
-                    "Processor::get_nodes:  Relaying optional node:"
+                    "Processor::get_nodes:  Relaying optional node <{}>:"
+                    .format(type(node))
                 )
+                self.logger.debug(node)
                 yield node
 
     def set_value(self, yaml_path: Union[Path, str],
