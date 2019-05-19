@@ -23,15 +23,15 @@ from os.path import isfile
 from ruamel.yaml import YAML
 from ruamel.yaml.parser import ParserError
 
+from yamlpath import Path
 from yamlpath.exceptions import YAMLPathException, EYAMLCommandException
 from yamlpath.enums import PathSeperators
-from yamlpath.parser import Parser
-from yamlpath.eyaml import EYAMLPath
+from yamlpath.eyaml import EYAMLProcessor
 
 from yamlpath.wrappers import ConsolePrinter
 
 # Implied Constants
-MY_VERSION = "1.0.2"
+MY_VERSION = "1.0.3"
 
 def processcli():
     """Process command-line arguments."""
@@ -116,14 +116,7 @@ def main():
     args = processcli()
     log = ConsolePrinter(args)
     validateargs(args, log)
-    parser = Parser(log, pathsep=args.pathsep)
-    processor = EYAMLPath(
-        log,
-        eyaml=args.eyaml,
-        publickey=args.publickey,
-        privatekey=args.privatekey,
-        parser=parser
-    )
+    yaml_path = Path(log, args.query, pathsep=args.pathsep)
 
     # Prep the YAML parser
     yaml = YAML()
@@ -145,18 +138,12 @@ def main():
 
     # Seek the queried value(s)
     discovered_nodes = []
+    processor = EYAMLProcessor(log, yaml_data, eyaml=args.eyaml,
+        publickey=args.publickey, privatekey=args.privatekey)
     try:
-        yaml_path = parser.str_path(args.query)
-    except YAMLPathException as ex:
-        log.critical(ex, 1)
-
-    try:
-        for node in processor.get_eyaml_values(
-            yaml_data, yaml_path, mustexist=True
-        ):
-            if node is not None:
-                log.debug("Got {} from {}.".format(node, yaml_path))
-                discovered_nodes.append(node)
+        for node in processor.get_eyaml_values(yaml_path, mustexist=True):
+            log.debug("Got {} from {}.".format(node, yaml_path))
+            discovered_nodes.append(node)
     except YAMLPathException as ex:
         log.critical(ex, 1)
     except EYAMLCommandException as ex:

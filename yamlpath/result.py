@@ -27,4 +27,3 @@ class Result:
         Raises:  N/A
         """
         self._path = yaml_path
-

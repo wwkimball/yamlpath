@@ -25,7 +25,8 @@ class Path:
     only when necessary.
     """
 
-    def __init__(self, logger: ConsolePrinter, path: str = None) -> None:
+    def __init__(self, logger: ConsolePrinter, path: str = None,
+            **kwargs) -> None:
         """Init this class.
 
         Positional Parameters:
@@ -37,7 +38,7 @@ class Path:
         Raises:  N/A
         """
         self.logger = logger
-        self._seperator = PathSeperators.AUTO
+        self._seperator = kwargs.pop("pathsep", PathSeperators.AUTO)
         self._original = None
         self._unescaped = None
         self._escaped = None
@@ -62,7 +63,7 @@ class Path:
         if self._stringified is not None:
             return self._stringified
 
-        parsed_path = self.unescaped
+        segments = self.unescaped
         pathsep = PathSeperators.to_seperator(self.seperator)
         add_sep = False
         ppath = ""
@@ -71,28 +72,27 @@ class Path:
         if self.seperator is PathSeperators.FSLASH:
             ppath = "/"
 
-        for (ptype, element_vers) in parsed_path:
-            element_id = element_vers[2]
-            if ptype == PathSegmentTypes.KEY:
+        for (segment_type, segment_attrs) in segments:
+            if segment_type == PathSegmentTypes.KEY:
                 if add_sep:
                     ppath += pathsep
 
                 ppath += (
-                    element_id
+                    segment_attrs
                     .replace(pathsep, "\\{}".format(pathsep))
                     .replace("&", r"\&")
                     .replace("[", r"\[")
                     .replace("]", r"\]")
                 )
-            elif ptype == PathSegmentTypes.INDEX:
-                ppath += "[{}]".format(element_id)
-            elif ptype == PathSegmentTypes.ANCHOR:
+            elif segment_type == PathSegmentTypes.INDEX:
+                ppath += "[{}]".format(segment_attrs)
+            elif segment_type == PathSegmentTypes.ANCHOR:
                 if add_sep:
-                    ppath += "[&{}]".format(element_id)
+                    ppath += "[&{}]".format(segment_attrs)
                 else:
-                    ppath += "&{}".format(element_id)
-            elif ptype == PathSegmentTypes.SEARCH:
-                ppath += str(element_id)
+                    ppath += "&{}".format(segment_attrs)
+            elif segment_type == PathSegmentTypes.SEARCH:
+                ppath += str(segment_attrs)
 
             add_sep = True
 

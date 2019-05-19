@@ -5,7 +5,7 @@ Copyright 2018, 2019 William W. Kimball, Jr. MBA MSIS
 from sys import maxsize
 import re
 from distutils.util import strtobool
-from typing import Any, Generator
+from typing import Any, Generator, Union
 
 from ruamel.yaml.comments import CommentedSeq, CommentedMap
 from ruamel.yaml.scalarstring import (
@@ -48,7 +48,7 @@ class Processor:
         self.logger = logger
         self.data = data
 
-    def get_nodes(self, yaml_path: Path,
+    def get_nodes(self, yaml_path: Union[Path, str],
                   **kwargs) -> Generator[Any, None, None]:
         """Retrieves zero or more node at YAML Path in YAML data.
 
@@ -71,8 +71,11 @@ class Processor:
         mustexist = kwargs.pop("mustexist", False)
         default_value = kwargs.pop("default_value", None)
 
-        if self.data is None or yaml_path is None:
+        if self.data is None:
             return
+
+        if isinstance(yaml_path, str):
+            yaml_path = Path(self.logger, yaml_path, **kwargs)
 
         if mustexist:
             matched_nodes = 0
@@ -95,7 +98,8 @@ class Processor:
                 )
                 yield node
 
-    def set_value(self, yaml_path: Path, value: Any, **kwargs) -> None:
+    def set_value(self, yaml_path: Union[Path, str],
+                  value: Any, **kwargs) -> None:
         """Sets the value of zero or more nodes at YAML Path in YAML data.
 
         Positional Parameters:
@@ -115,8 +119,11 @@ class Processor:
         Raises:
             YAMLPathException when YAML Path is invalid
         """
-        if self.data is None or yaml_path is None:
+        if self.data is None:
             return
+
+        if isinstance(yaml_path, str):
+            yaml_path = Path(self.logger, yaml_path, **kwargs)
 
         mustexist = kwargs.pop("mustexist", False)
         value_format = kwargs.pop("value_format", YAMLValueFormats.DEFAULT)
@@ -159,7 +166,7 @@ class Processor:
           NotImplementedError when ref indicates an unknown
           PathSegmentTypes value.
         """
-        if data is None or yaml_path is None:
+        if data is None:
             return
 
         segments = yaml_path.escaped
@@ -396,7 +403,7 @@ class Processor:
 
         Raises:  N/A
         """
-        if data is None or yaml_path is None:
+        if data is None:
             return
 
         segments = yaml_path.escaped
@@ -449,7 +456,7 @@ class Processor:
             an element that does not exist in data and this code isn't
             yet prepared to add it.
         """
-        if data is None or yaml_path is None:
+        if data is None:
             self.logger.debug(
                 "YAMLPath::_ensure_path:  Bailing out on None data/path!"
             )
@@ -614,7 +621,8 @@ class Processor:
         update_refs(self.data, source_node, new_node)
 
     @staticmethod
-    def default_for_child(yaml_path: Path, depth: int, value: Any = None) -> Any:
+    def default_for_child(yaml_path: Path, depth: int,
+                          value: Any = None) -> Any:
         """Identifies and returns the most appropriate default value for the
         next entry in a YAML Path, should it not already exist.
 
@@ -626,11 +634,12 @@ class Processor:
 
         Raises:  N/A
         """
-        if yaml_path is None or not yaml_path:
-            return value
-
         default_value = value
-        typ = yaml_path[depth][0]
+        segments = yaml_path.escaped
+        if not (segments and len(segments) > depth):
+            return default_value
+
+        typ = segments[depth][0]
         if typ == PathSegmentTypes.INDEX:
             default_value = CommentedSeq()
         elif typ == PathSegmentTypes.KEY:
