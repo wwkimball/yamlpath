@@ -13,7 +13,7 @@ class Result:
     was returned and the selector is invalid within the source data.  Adding
     this Result handler enables YAML Paths to express further processing on the
     virtual output.  Further, set logic becomes possible, like:
-        `(((path) - (path)) + (path))/2`
+        `(((/path) - (/path)) + (/path))/2`
     """
 
     def __init__(self, yaml_path: Path) -> None:

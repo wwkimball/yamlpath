@@ -155,7 +155,7 @@ class Processor:
                 "Processor::set_value:  Seeking optional node at {}."
                 .format(yaml_path)
             )
-            for node in self._get_optional_nodes(yaml_path, value):
+            for node in self._get_optional_nodes(self.data, yaml_path, value):
                 self._update_node(node, value, value_format)
 
     def _get_nodes_by_path_segment(self, data: Any,
@@ -445,8 +445,9 @@ class Processor:
 
             yield data
 
-    def _get_optional_nodes(self, data: Any, yaml_path: Path, depth: int = 0,
-                            value: Any = None) -> Generator[Any, None, None]:
+    def _get_optional_nodes(self, data: Any, yaml_path: Path,
+                            value: Any = None,
+                            depth: int = 0) -> Generator[Any, None, None]:
         """Returns zero or more pre-existing nodes matching a YAML Path, or
         exactly one new node at the end of the YAML Path if it had to be
         created.
@@ -493,8 +494,8 @@ class Processor:
                         + " data; recursing into it..."
                     ).format(segment_type, unstripped_attrs)
                 )
-                for epn in self._get_optional_nodes(node, yaml_path,
-                        depth + 1, value):
+                for epn in self._get_optional_nodes(node, yaml_path, value,
+                        depth + 1):
                     yield epn
 
             if (matched_nodes < 1
@@ -515,7 +516,7 @@ class Processor:
                         new_ele = self.append_list_element(data, new_val,
                             stripped_attrs)
                         for node in self._get_optional_nodes(new_ele,
-                                yaml_path, depth + 1, value):
+                                yaml_path, value, depth + 1):
                             matched_nodes += 1
                             yield node
                     elif (
@@ -527,7 +528,7 @@ class Processor:
                                 depth + 1, value)
                             self.append_list_element(data, new_val)
                         for node in self._get_optional_nodes(
-                            data[stripped_attrs], yaml_path, depth + 1, value
+                            data[stripped_attrs], yaml_path, value, depth + 1
                         ):
                             matched_nodes += 1
                             yield node
@@ -550,7 +551,7 @@ class Processor:
                             yaml_path, depth + 1, value
                         )
                         for node in self._get_optional_nodes(
-                            data[stripped_attrs], yaml_path, depth + 1, value
+                            data[stripped_attrs], yaml_path, value, depth + 1
                         ):
                             matched_nodes += 1
                             yield node

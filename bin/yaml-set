@@ -26,15 +26,16 @@ from shutil import copy2
 from ruamel.yaml import YAML
 from ruamel.yaml.parser import ParserError
 
+from yamlpath import Path
 from yamlpath.exceptions import YAMLPathException, EYAMLCommandException
-from yamlpath.eyaml import EYAMLPath
+from yamlpath.eyaml import EYAMLProcessor
 from yamlpath.enums import YAMLValueFormats, PathSeperators
 
 import yamlpath.patches
 from yamlpath.wrappers import ConsolePrinter
 
 # Implied Constants
-MY_VERSION = "1.0.2"
+MY_VERSION = "1.0.3"
 
 def processcli():
     """Process command-line arguments."""
@@ -178,13 +179,7 @@ def main():
     args = processcli()
     log = ConsolePrinter(args)
     validateargs(args, log)
-    processor = EYAMLPath(
-        log,
-        eyaml=args.eyaml,
-        publickey=args.publickey,
-        privatekey=args.privatekey,
-        pathsep=args.pathsep,
-    )
+    change_path = Path(log, args.change, pathsep=args.pathsep)
     backup_file = args.yaml_file + ".bak"
 
     # Obtain the replacement value
@@ -224,21 +219,12 @@ def main():
 
     # Load the present value at the specified YAML Path
     change_nodes = []
+    old_format = YAMLValueFormats.DEFAULT
+    processor = EYAMLProcessor(log, yaml_data, eyaml=args.eyaml,
+        publickey=args.publickey, privatekey=args.privatekey)
     try:
-        change_path = processor.parser.str_path(args.change)
-    except YAMLPathException as ex:
-        log.critical(ex, 1)
-
-    try:
-        for node in processor.get_nodes(
-            yaml_data
-            , change_path
-            , mustexist=args.mustexist
-            , default_value=("" if new_value else " ")
-        ):
-            if node is None:
-                continue
-
+        for node in processor.get_nodes(change_path, mustexist=args.mustexist,
+                default_value=("" if new_value else " ")):
             log.debug('Got "{}" from {}.'.format(node, change_path))
             if processor.is_eyaml_value(node):
                 old_value = processor.decrypt_eyaml(node)
@@ -283,17 +269,17 @@ def main():
 
     # Save the old value, if desired and possible
     if args.saveto:
-        # Only one can be saved; otherwise it is impossible to meaningfully convey
-        # to the end-user from exactly which other YAML node each saved value came.
+        # Only one can be saved; otherwise it is impossible to meaningfully
+        # convey to the end-user from exactly which other YAML node each saved
+        # value came.
         if len(change_nodes) > 1:
             log.critical(
-                "It is impossible to meaningly save more than one matched value."
-                    + "  Please omit --saveto or set --change to affect exactly one"
-                    + " value."
-                , 1
-            )
+                "It is impossible to meaningly save more than one matched"
+                 + " value.  Please omit --saveto or set --change to affect"
+                 + " exactly one value.", 1)
 
-        log.verbose("Saving the old value to {}.".format(args.saveto))
+        saveto_path = Path(log, args.saveto, pathsep=args.pathsep)
+        log.verbose("Saving the old value to {}.".format(saveto_path))
 
         # Folded EYAML values have their embedded newlines converted to spaces
         # when read.  As such, writing them back out breaks their original
@@ -305,17 +291,13 @@ def main():
             (old_format is YAMLValueFormats.FOLDED
                 or old_format is YAMLValueFormats.LITERAL
             )
-            and EYAMLPath.is_eyaml_value(old_value)
+            and EYAMLProcessor.is_eyaml_value(old_value)
         ):
             old_value = old_value.replace(" ", "\n")
 
         try:
-            processor.set_value(
-                yaml_data,
-                args.saveto,
-                processor.clone_node(old_value),
-                value_format=old_format,
-            )
+            processor.set_value(saveto_path, processor.clone_node(old_value),
+                value_format=old_format)
         except YAMLPathException as ex:
             log.critical(ex, 1)
 
@@ -330,11 +312,16 @@ def main():
                 "Unknown YAML value format ,{}.".format(args.format), 1
             )
 
+        # If the user hasn't specified a format, use the same format as the
+        # value being replaced, if known.
+        if format_type is YAMLValueFormats.DEFAULT:
+            format_type = old_format
+
         if format_type in [YAMLValueFormats.FOLDED, YAMLValueFormats.LITERAL]:
             output_type = "block"
         try:
             processor.set_eyaml_value(
-                yaml_data, change_path, new_value
+                change_path, new_value
                 , output=output_type
                 , mustexist=False
             )
