@@ -6,7 +6,9 @@ import re
 from subprocess import run, PIPE, CalledProcessError
 from os import access, sep, X_OK
 from shutil import which
-from typing import Any, Generator, Union
+from typing import Any, Generator, Optional
+
+from ruamel.yaml.comments import CommentedSeq, CommentedMap
 
 from yamlpath.enums import YAMLValueFormats
 from yamlpath.exceptions import EYAMLCommandException
@@ -34,10 +36,10 @@ class EYAMLProcessor(Processor):
 
         Raises:  N/A
         """
-        self.eyaml = kwargs.pop("eyaml", "eyaml")
-        self.publickey = kwargs.pop("publickey", None)
-        self.privatekey = kwargs.pop("privatekey", None)
-        super().__init__(logger, data, **kwargs)
+        self.eyaml: str = kwargs.pop("eyaml", "eyaml")
+        self.publickey: str = kwargs.pop("publickey", None)
+        self.privatekey: str = kwargs.pop("privatekey", None)
+        super().__init__(logger, data)
 
     def _find_eyaml_paths(self, data: Any,
                           build_path: str = "") -> Generator[Path, None, None]:
@@ -52,7 +54,7 @@ class EYAMLProcessor(Processor):
 
         Raises:  N/A
         """
-        if isinstance(data, list):
+        if isinstance(data, CommentedSeq):
             build_path += "["
             for i, ele in enumerate(data):
                 if hasattr(ele, "anchor") and ele.anchor.value is not None:
@@ -66,7 +68,7 @@ class EYAMLProcessor(Processor):
                 for eyp in self._find_eyaml_paths(ele, tmp_path):
                     yield Path(self.logger, eyp)
 
-        elif isinstance(data, dict):
+        elif isinstance(data, CommentedMap):
             if build_path:
                 build_path += "."
 
@@ -255,7 +257,7 @@ class EYAMLProcessor(Processor):
         )
 
     def get_eyaml_values(self, yaml_path: Path,
-                         **kwargs) -> Generator[Path, None, None]:
+                         **kwargs) -> Generator[str, None, None]:
         """Retrieves and decrypts zero or more EYAML nodes from YAML data at a
         YAML Path.
 
@@ -304,7 +306,7 @@ class EYAMLProcessor(Processor):
         return True
 
     @staticmethod
-    def get_eyaml_executable(binary: str = "eyaml") -> Union[str, None]:
+    def get_eyaml_executable(binary: str = "eyaml") -> Optional[str]:
         """Returns the full executable path to an eyaml binary or None when it
         cannot be found or is not executable.
 
@@ -317,11 +319,11 @@ class EYAMLProcessor(Processor):
 
         Raises:  N/A
         """
-        if binary is None or not binary:
+        if not binary:
             return None
 
-        if str(binary).find(sep) < 0:
-            binary = which(binary)
+        if binary.find(sep) < 0:
+            binary = str(which(binary))
             if not binary:
                 return None
 
@@ -340,6 +342,6 @@ class EYAMLProcessor(Processor):
 
         Raises:  N/A
         """
-        if value is None:
+        if not isinstance(value, str):
             return False
         return value.replace("\n", "").replace(" ", "").startswith("ENC[")

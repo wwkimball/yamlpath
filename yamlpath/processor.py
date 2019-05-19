@@ -45,8 +45,8 @@ class Processor:
 
         Raises:  N/A
         """
-        self.logger = logger
-        self.data = data
+        self.logger: ConsolePrinter = logger
+        self.data: Any = data
 
     def get_nodes(self, yaml_path: Union[Path, str],
                   **kwargs) -> Generator[Any, None, None]:
@@ -68,8 +68,9 @@ class Processor:
         Raises:
             YAMLPathException when YAML Path is invalid
         """
-        mustexist = kwargs.pop("mustexist", False)
-        default_value = kwargs.pop("default_value", None)
+        mustexist: bool = kwargs.pop("mustexist", False)
+        default_value: Any = kwargs.pop("default_value", None)
+        node: Any
 
         if self.data is None:
             return
@@ -82,7 +83,7 @@ class Processor:
             for node in self._get_required_nodes(self.data, yaml_path):
                 matched_nodes += 1
                 self.logger.debug(
-                    "YAMLPath::get_nodes:  Relaying required node:"
+                    "Processor::get_nodes:  Relaying required node:"
                 )
                 yield node
 
@@ -94,7 +95,7 @@ class Processor:
         else:
             for node in self._get_optional_nodes(self.data, yaml_path, default_value):
                 self.logger.debug(
-                    "YAMLPath::get_nodes:  Relaying optional node:"
+                    "Processor::get_nodes:  Relaying optional node:"
                 )
                 yield node
 
@@ -125,11 +126,14 @@ class Processor:
         if isinstance(yaml_path, str):
             yaml_path = Path(self.logger, yaml_path, **kwargs)
 
-        mustexist = kwargs.pop("mustexist", False)
-        value_format = kwargs.pop("value_format", YAMLValueFormats.DEFAULT)
+        mustexist: bool = kwargs.pop("mustexist", False)
+        value_format: YAMLValueFormats = kwargs.pop("value_format",
+                                                    YAMLValueFormats.DEFAULT)
+        node: Any
+
         if mustexist:
             self.logger.debug(
-                "YAMLPath::set_value:  Seeking required node at {}."
+                "Processor::set_value:  Seeking required node at {}."
                 .format(yaml_path)
             )
             found_nodes = 0
@@ -144,7 +148,7 @@ class Processor:
                 )
         else:
             self.logger.debug(
-                "YAMLPath::set_value:  Seeking optional node at {}."
+                "Processor::set_value:  Seeking optional node at {}."
                 .format(yaml_path)
             )
             for node in self._get_optional_nodes(yaml_path, value):
@@ -152,7 +156,7 @@ class Processor:
 
     def _get_nodes_by_path_segment(self, data: Any,
                                    yaml_path: Path, segment_index: int,
-                                  ) -> Generator[any, None, None]:
+                                  ) -> Generator[Any, None, None]:
         """Returns zero or more referenced YALM Nodes.
 
         Positional Parameters:
@@ -269,12 +273,12 @@ class Processor:
         def search_matches(method: PathSearchMethods, needle: str,
                            haystack: Any) -> bool:
             self.logger.debug(
-                ("YAMLPath::_search::search_matches:  Searching for {}{}"
+                ("Processor::_search::search_matches:  Searching for {}{}"
                  + " using {} against {}:"
                 ).format(type(needle), needle, method, type(haystack))
             )
             self.logger.debug(haystack)
-            matches = None
+            matches: bool = False
 
             if method is PathSearchMethods.EQUALS:
                 if isinstance(haystack, int):
@@ -390,7 +394,7 @@ class Processor:
                 yield data
 
     def _get_required_nodes(self, data: Any, yaml_path: Path,
-                            depth: int = 0) -> Generator[any, None, None]:
+                            depth: int = 0) -> Generator[Any, None, None]:
         """Generates zero or more pre-existing nodes from YAML data matching a
         YAML Path.
 
@@ -410,7 +414,7 @@ class Processor:
         if segments and len(segments) > depth:
             (segment_type, unstripped_attrs) = yaml_path.unescaped[depth]
             self.logger.debug(
-                ("YAMLPath::_get_nodes:  Seeking segment <{}>{} in data of"
+                ("Processor::_get_required_nodes:  Seeking segment <{}>{} in data of"
                  + " type {}:")
                  .format(segment_type, unstripped_attrs, type(data))
             )
@@ -420,7 +424,7 @@ class Processor:
             for node in self._get_nodes_by_path_segment(
                     data, yaml_path, depth):
                 self.logger.debug(
-                    ("YAMLPath::_get_nodes:  Found node <{}>{} in the"
+                    ("Processor::_get_required_nodes:  Found node <{}>{} in the"
                         + " data and recursing into it...")
                     .format(segment_type, unstripped_attrs)
                 )
@@ -429,7 +433,7 @@ class Processor:
                     yield subnode
         else:
             self.logger.debug(
-                "YAMLPath::_get_nodes:  Finally returning data of type {}:"
+                "Processor::_get_required_nodes:  Finally returning data of type {}:"
                 .format(type(data))
             )
             self.logger.debug(data)
@@ -458,7 +462,7 @@ class Processor:
         """
         if data is None:
             self.logger.debug(
-                "YAMLPath::_ensure_path:  Bailing out on None data/path!"
+                "Processor::_get_optional_nodes:  Bailing out on None data/path!"
             )
             return
 
@@ -468,7 +472,7 @@ class Processor:
             stripped_attrs = segments[depth][1]
 
             self.logger.debug(
-                ("YAMLPath::_ensure_path:  Seeking element <{}>{} in data of"
+                ("Processor::_get_optional_nodes:  Seeking element <{}>{} in data of"
                  + " type {}:"
                 ).format(segment_type, unstripped_attrs, type(data))
             )
@@ -481,7 +485,7 @@ class Processor:
                     depth):
                 matched_nodes += 1
                 self.logger.debug(
-                    ("YAMLPath::_ensure_path:  Found element <{}>{} in the"
+                    ("Processor::_get_optional_nodes:  Found element <{}>{} in the"
                         + " data; recursing into it..."
                     ).format(segment_type, unstripped_attrs)
                 )
@@ -493,13 +497,13 @@ class Processor:
                     and segment_type is not PathSegmentTypes.SEARCH):
                 # Add the missing element
                 self.logger.debug(
-                    ("YAMLPath::_ensure_path:  Element <{}>{} is unknown in"
+                    ("Processor::_get_optional_nodes:  Element <{}>{} is unknown in"
                      + " the data!"
                     ).format(segment_type, unstripped_attrs)
                 )
                 if isinstance(data, list):
                     self.logger.debug(
-                        "YAMLPath::_ensure_path:  Dealing with a list"
+                        "Processor::_get_optional_nodes:  Dealing with a list"
                     )
                     if segment_type is PathSegmentTypes.ANCHOR:
                         new_val = self.default_for_child(yaml_path, depth + 1,
@@ -532,7 +536,7 @@ class Processor:
                         )
                 elif isinstance(data, dict):
                     self.logger.debug(
-                        "YAMLPath::_ensure_path:  Dealing with a dictionary"
+                        "Processor::_get_optional_nodes:  Dealing with a dictionary"
                     )
                     if segment_type is PathSegmentTypes.ANCHOR:
                         raise NotImplementedError
@@ -564,7 +568,7 @@ class Processor:
 
         else:
             self.logger.debug(
-                ("YAMLPath::_ensure_path:  Finally returning data of type"
+                ("Processor::_get_optional_nodes:  Finally returning data of type"
                  + " {}:"
                 ).format(type(data))
             )
@@ -587,19 +591,15 @@ class Processor:
 
         Returns: N/A
 
-        Raises:
-          No Exception but it will terminate the program after printing
-          a console error when value_format is illegal for the given value or
-          is unknown.
+        Raises: N/A
         """
-        # Change val has already been made to obj in data.  When obj is either
-        # an Anchor or an Alias, all other references to it must also receive
-        # an identical update so they are kept in synchronization.  In addition,
-        # if obj is a child of a parent that is an Anchor or Alias, all
-        # references to that parent must also be updated.
+        # Change replacement_node has already been made to reference_node in
+        # data.  When reference_node is either an Anchor or an Alias, all other
+        # references to it must also receive an identical update so they are
+        # kept in synchronization.
         def update_refs(data: Any, reference_node: Any,
                         replacement_node: Any) -> None:
-            if isinstance(data, dict):
+            if isinstance(data, CommentedMap):
                 for i, k in [
                     (idx, key) for idx, key in
                         enumerate(data.keys()) if key is reference_node
@@ -610,7 +610,7 @@ class Processor:
                         data[k] = replacement_node
                     else:
                         update_refs(val, reference_node, replacement_node)
-            elif isinstance(data, list):
+            elif isinstance(data, CommentedSeq):
                 for idx, item in enumerate(data):
                     if item is reference_node:
                         data[idx] = replacement_node

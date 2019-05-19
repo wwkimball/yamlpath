@@ -3,9 +3,9 @@
 Copyright 2019 William W. Kimball, Jr. MBA MSIS
 """
 from collections import deque
+from typing import List, Optional, Union
 
 from yamlpath.wrappers import ConsolePrinter
-from yamlpath.exceptions import YAMLPathException
 from yamlpath.enums import (
     PathSegmentTypes,
     PathSearchMethods,
@@ -25,8 +25,8 @@ class Path:
     only when necessary.
     """
 
-    def __init__(self, logger: ConsolePrinter, path: str = None,
-            **kwargs) -> None:
+    def __init__(self, logger: ConsolePrinter,
+                 yaml_path: Union["Path", str] = "", **kwargs) -> None:
         """Init this class.
 
         Positional Parameters:
@@ -37,14 +37,18 @@ class Path:
 
         Raises:  N/A
         """
-        self.logger = logger
-        self._seperator = kwargs.pop("pathsep", PathSeperators.AUTO)
-        self._original = None
-        self._unescaped = None
-        self._escaped = None
-        self._stringified = None
+        self.logger: ConsolePrinter = logger
+        self._seperator: PathSeperators = kwargs.pop("pathsep",
+                                                     PathSeperators.AUTO)
+        self._original: str = ""
+        self._unescaped: deque = deque()
+        self._escaped: deque = deque()
+        self._stringified: str = ""
 
-        self.original = path
+        if isinstance(yaml_path, Path):
+            self.original = yaml_path.original
+        else:
+            self.original = yaml_path
 
     def __str__(self) -> str:
         """Returns the printable, user-friendly version of a YAML Path.
@@ -60,7 +64,7 @@ class Path:
 
         Raises:  N/A
         """
-        if self._stringified is not None:
+        if self._stringified:
             return self._stringified
 
         segments = self.unescaped
@@ -99,6 +103,10 @@ class Path:
         self._stringified = ppath
         return ppath
 
+    def __repr__(self) -> str:
+        """Generates an eval()-safe representation of this object."""
+        return "{}('{}')".format(self.__class__.__name__, self._original)
+
     @property
     def original(self) -> str:
         """Original YAML Path accesor.
@@ -124,13 +132,13 @@ class Path:
         """
         # Check for empty paths
         if not str(value).strip():
-            value = None
+            value = ""
 
         self._original = value
         self._seperator = PathSeperators.AUTO
-        self._unescaped = None
-        self._escaped = None
-        self._stringified = None
+        self._unescaped = deque()
+        self._escaped = deque()
+        self._stringified = ""
 
     @property
     def seperator(self) -> PathSeperators:
@@ -143,7 +151,7 @@ class Path:
         Raises:  N/A
         """
         if (self._seperator is PathSeperators.AUTO
-                and self._original is not None):
+                and self._original):
             if self._original[0] == '/':
                 self._seperator = PathSeperators.FSLASH
             else:
@@ -169,7 +177,7 @@ class Path:
         # Only build a new stringified version when this value changes
         if not value == old_value:
             self._seperator = value
-            self._stringified = None
+            self._stringified = ""
 
     @property
     def escaped(self) -> deque:
@@ -183,7 +191,7 @@ class Path:
 
         Raises:  N/A
         """
-        if self._escaped is None:
+        if not self._escaped:
             self._escaped = self._parse_path(True)
 
         return self._escaped.copy()
@@ -200,7 +208,7 @@ class Path:
 
         Raises:  N/A
         """
-        if self._unescaped is None:
+        if not self._unescaped:
             self._unescaped = self._parse_path(False)
 
         return self._unescaped.copy()
@@ -219,25 +227,27 @@ class Path:
         Raises:
           YAMLPathException when yaml_path is invalid
         """
-        yaml_path = self.original
-        path_segments = deque()
-        segment_id = ""
-        segment_type = None
-        demarc_stack = []
-        escape_next = False
-        search_inverted = False
-        search_method = None
-        search_attr = ""
-        seeking_regex_delim = False
-        capturing_regex = False
-        pathsep = PathSeperators.to_seperator(self.seperator)
+        from yamlpath.exceptions import YAMLPathException
+
+        yaml_path: str = self.original
+        path_segments: deque = deque()
+        segment_id: str = ""
+        segment_type: Optional[PathSegmentTypes] = None
+        demarc_stack: List[str] = []
+        escape_next: bool = False
+        search_inverted: bool = False
+        search_method: Optional[PathSearchMethods] = None
+        search_attr: str = ""
+        seeking_regex_delim: bool = False
+        capturing_regex: bool = False
+        pathsep: str = PathSeperators.to_seperator(self.seperator)
 
         self.logger.debug(
-            "Parser::_parse_path:  Evaluating {}...".format(yaml_path)
+            "Path::_parse_path:  Evaluating {}...".format(yaml_path)
         )
 
-        # None paths yield empty queues
-        if yaml_path is None:
+        # Empty paths yield empty queues
+        if not yaml_path:
             return path_segments
 
         # Infer the first possible position for a top-level Anchor mark
@@ -491,7 +501,8 @@ class Path:
                             , yaml_path
                         )
                     path_segments.append((segment_type, idx))
-                elif segment_type is PathSegmentTypes.SEARCH:
+                elif (segment_type is PathSegmentTypes.SEARCH
+                        and search_method is not None):
                     # Undemarcate the search term, if it is so
                     if segment_id and segment_id[0] in ["'", '"']:
                         leading_mark = segment_id[0]
@@ -552,7 +563,7 @@ class Path:
             path_segments.append((segment_type, segment_id))
 
         self.logger.debug(
-            "Parser::_parse_path:  Parsed {} into:".format(yaml_path)
+            "Path::_parse_path:  Parsed {} into:".format(yaml_path)
         )
         self.logger.debug(path_segments)
 

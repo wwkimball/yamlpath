@@ -2,15 +2,15 @@
 
 Copyright 2019 William W. Kimball, Jr. MBA MSIS
 """
+from typing import Union
+
+from yamlpath import Path
 
 
 class YAMLPathException(Exception):
     """Occurs when a YAML Path is illegal or fails to lead to a YAML node."""
 
-    def __init__(
-            self,
-            user_message: str,
-            yaml_path: str,
+    def __init__(self, user_message: str, yaml_path: Union[Path, str],
             segment: str = None) -> None:
         self.user_message = user_message
         self.yaml_path = yaml_path
@@ -33,10 +33,10 @@ class YAMLPathException(Exception):
         if self.segment is None:
             message = "{} in {}".format(
                 self.user_message,
-                self.yaml_path)
+                repr(self.yaml_path))
         else:
             message = "{} at {} in {}".format(
                 self.user_message,
                 self.segment,
-                self.yaml_path)
+                repr(self.yaml_path))
         return message
