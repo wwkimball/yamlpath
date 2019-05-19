@@ -31,12 +31,12 @@ class YAMLPathException(Exception):
     def __str__(self):
         message = ""
         if self.segment is None:
-            message = "{} in {}".format(
+            message = "{}, '{}'.".format(
                 self.user_message,
-                repr(self.yaml_path))
+                self.yaml_path)
         else:
-            message = "{} at {} in {}".format(
+            message = "{} at '{}' in '{}'".format(
                 self.user_message,
                 self.segment,
-                repr(self.yaml_path))
+                self.yaml_path)
         return message
