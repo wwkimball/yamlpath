@@ -8,14 +8,15 @@
 Contents:
 
 1. [Introduction](#introduction)
-2. [Installing](#installing)
-3. [Supported YAML Path Forms](#supported-yaml-path-forms)
-4. [Based on ruamel.yaml and Python 3](#based-on-ruamelyaml-and-python-3)
+2. [Illustration](#illustration)
+3. [Installing](#installing)
+4. [Supported YAML Path Forms](#supported-yaml-path-forms)
+5. [Based on ruamel.yaml and Python 3](#based-on-ruamelyaml-and-python-3)
    1. [Compatible ruamel.yaml Versions](#compatible-ruamelyaml-versions)
-5. [The Files of This Project](#the-files-of-this-project)
+6. [The Files of This Project](#the-files-of-this-project)
    1. [Command-Line Tools](#command-line-tools)
    2. [Libraries](#libraries)
-6. [Basic Usage](#basic-usage)
+7. [Basic Usage](#basic-usage)
    1. [Basic Usage:  Command-Line Tools](#basic-usage--command-line-tools)
       1. [Rotate Your EYAML Keys](#rotate-your-eyaml-keys)
       2. [Get a YAML Value](#get-a-yaml-value)
@@ -30,7 +31,7 @@ Contents:
 This project presents and utilizes YAML Paths, which are a human-friendly means
 of identifying one or more nodes within [YAML](https://yaml.org/),
 [EYAML](https://github.com/voxpupuli/hiera-eyaml), or compatible data structures
-like JSON.  Both dot-notation (inspired by
+like [JSON](https://www.json.org/).  Both dot-notation (inspired by
 [Hiera](https://github.com/puppetlabs/hiera)) and forward-slash-notation
 (influenced by [XPath](https://www.w3schools.com/xml/xml_xpath.asp)) are
 supported.  The [libraries](#libraries) (modules) and several [command-line tool
@@ -42,19 +43,13 @@ This implementation of YAML Path is a query language in addition to a node
 descriptor.  With it, you can select a single precise node or search for any
 number of nodes which match criteria that can be expressed in several ways.
 Keys, values, and elements can all be searched at any number of levels within
-the data structure using the same query.
+the data structure using the same query.  Collectors can be used to search
+disparate, virtual subsets of the source data.
 
-Other "yaml-path" projects exist but they fill different needs for much more
-narrow applications.  This implementation was created specifically to enable
-selecting and editing YAML -- and compatible, like JSON -- data of any
-complexity via an intuitive, expressive syntax.  Starting with the ubiquitous --
-albeit limited -- dot-notation for accessing Hash members, this YAML Path
-solution grew to include new syntax for:
+For an exploration of YAML Path, please visit the
+[project Wiki](https://github.com/wwkimball/yamlpath/wiki).
 
-* Array elements
-* Anchors by name
-* Search expressions for single or multiple matches
-* Forward-slash (XPath-like) notation
+## Illustration
 
 To illustrate some of these concepts, consider this sample YAML data:
 
@@ -123,40 +118,46 @@ Dot Notation                                                                    
 `sensitive::accounts.application.db.users[name=admin].access_level`                   | `/sensitive::accounts/application/db/users[name=admin]/access_level`
 `sensitive::accounts.application.db.users[access_level<500].name`                     | `/sensitive::accounts/application/db/users[access_level<500]/name`
 
-## Supported YAML Path Forms
+## Supported YAML Path Segments
 
-YAML Path understands these forms:
+A YAML Path *segment* is the text between seperators which identifies a parent
+or leaf node within the data structure.  For dot-notation, a path like
+`hash.key` identifies two segments:  `hash` (a parent node) and `key` (a leaf
+node).  The same path in forward-slash notation would be:  `/hash/key`.
 
-* Top-level Array element selection: `[#]` or `/[#]` where `#` is the 0-based element number (`#` can also be negative, causing the element to be selected from the end of the Array)
-* Top-level Hash key selection: `key` or `/key`
-* Top-level (Hash) Anchor lookups: `&anchor_name` or `/&anchor_name` (the `&` is required to indicate you are seeking an Anchor by name)
+YAML Path understands these segment types:
+
+* Top-level Array element selection: `[#]` or just `#` where `#` is the 0-based element number; `#` can also be negative, causing the element to be selected from the end of the Array
+* Top-level Hash key selection: `key`
+* Top-level (Hash) Anchor lookups: `&anchor_name` (the `&` is required to indicate you are seeking an Anchor by name)
 * Hash sub-keys:  `hash.child.key` or `/hash/child/key`
 * Demarcation for dotted Hash keys:  `hash.'dotted.child.key'` or `hash."dotted.child.key"` (not necessary when using forward-slash notation, `/hash/dotted.child.key`)
-* Named Array element selection:  `array[#]` or `/array[#]` where `array` is the name of the Hash key containing Array data and `#` is the 0-based element number (`#` can also be negative, causing the element to be selected from the end of the Array)
-* Anchor lookups in named Arrays:  `array[&anchor_name]` or `/array[&anchor_name]` where `array` is the name of the Hash key containing Array data and the `&` is required to indicate you are seeking an Anchor by name
-* Array slicing: `array[start#:stop#]` or `/array[start#:stop#]` where `start#` is the first, zero-based element and `stop#` is the last element to select (either or both can be negative, causing the elements to be selected from the end of the Array)
+* Named Array element selection:  `array[#]`, `array.#`, `/array[#]`, or `/array/#` where `array` is the name of the Hash key containing Array data and `#` is the 0-based element number (`#` can also be negative, causing the element to be selected from the end of the Array)
+* Anchor lookups in named Arrays:  `array[&anchor_name]`  where `array` is the name of the Hash key containing Array data and both of the `[]` pair and `&` are required to indicate you are seeking an Anchor by name within an Array
+* Array slicing: `array[start#:stop#]` where `start#` is the first inclusive, zero-based element and `stop#` is the last exclusive element to select; either or both can be negative, causing the elements to be selected from the end of the Array; when `start#` and `stop#` are identical, it is the same as `array[start#]`
 * Hash slicing: `hash[min:max]` or `/hash[min:max]` where `min` and `max` are alphanumeric terms between which the Hash's keys are compared
-* Escape symbol recognition:  `hash.dotted\.child\.key` or `/hash/dotted.child.key`, and `keys_with_\\slashes` or `/keys_with_\\slashes`
+* Escape symbol recognition:  `hash.dotted\.child\.key` or `/hash/whacked\/child\/key`, and `keys_with_\\slashes`
 * Hash attribute searches (which can return zero or more matches):
-  * Exact match:  `hash[name=admin]` or `/hash[name=admin]`
-  * Starts With match:  `hash[name^adm]` or `/hash[name^adm]`
-  * Ends With match:  `hash[name$min]` or `/hash[name$min]`
-  * Contains match:  `hash[name%dmi]` or `/hash[name%dmi]`
-  * Less Than match: `hash[access_level<500]` or `/hash[access_level<500]`
-  * Greater Than match: `hash[access_level>0]` or `/hash[access_level>0]`
-  * Less Than or Equal match: `hash[access_level<=100]` or `/hash[access_level<=100]`
-  * Greater Than or Equal match: `hash[access_level>=0]` or `/hash[access_level>=0]`
-  * Regular Expression matches using any delimiter you choose (other than `/`, if you need something else): `hash[access_level=~/^\D+$/]` or `/hash[access_level=~/^\D+$/]` and `hash[containing=~"/path/values"]` or `/hash[containing=~"/path/values"]`
-  * Invert any match with `!`, like: `hash[name!=admin]` or `/hash[name!=admin]`
-  * Demarcate and/or escape expression values, like: `hash[full\ name="Some User\'s Name"]` or `/hash[full\ name="Some User\'s Name"]`
+  * Exact match:  `hash[name=admin]`
+  * Starts With match:  `hash[name^adm]`
+  * Ends With match:  `hash[name$min]`
+  * Contains match:  `hash[name%dmi]`
+  * Less Than match: `hash[access_level<500]`
+  * Greater Than match: `hash[access_level>0]`
+  * Less Than or Equal match: `hash[access_level<=100]`
+  * Greater Than or Equal match: `hash[access_level>=0]`
+  * Regular Expression matches using any delimiter you choose (other than `/`, if you need something else): `hash[access_level=~/^\D+$/]` or `/hash[access_level=~/^\D+$/]` and `hash[containing=~"/path/values"]` or `/hash[containing=~"/path/values"]`; for forward-slash notation, using `/` as the Regular Expression delimiter is safe because the surrounding `[]` delimiters protect them and while odd, you can also use either `[` or `]` as the Regular Expression delimiter for the same reason; white-space cannot be used as the Regular Expression delimiter
+  * Invert any match with `!`, like: `hash[name!=admin]`
+  * Demarcate and/or escape expression values, like: `hash[full\ name="Some User\'s Name"]`
   * Multi-level matching: `hash[name%admin].pass[encrypted!^ENC\[]` or `/hash[name%admin]/pass[encrypted!^ENC\[]`
 * Array element searches with all of the search methods above via `.` (yields any matching elements): `array[.>9000]` or `/array[.>9000]`
 * Hash key-name searches with all of the search methods above via `.` (yields their values, not the keys themselves): `hash[.^app_]`
 * Array-of-Hashes Match-All:  Omit a selector for the elements of an Array-of-Hashes and all Hash elements will be yielded (or searched when there is more to the path).  For example, `warriors[1].power_level` or `/warriors[1]/power_level` will return the power_level attribute of only the second Hash in an Array-of-Hashes while `warriors.power_level` or `/warriors/power_level` will return the power_level attribute of every Hash in the same Array-of-Hashes.  Of course these results can be filtered in multiple ways, like `warriors[power_level>9000]`, `/warriors[power_level>9000]`, `warriors.power_level[.>9000]`, and `/warriors/power_level[.>9000]` all yield only warriors with power_levels over 9,000.
+* Collectors: `(structure[arrays%users])`; the `()` pair collects matching nodes into a virtual data Array which can be further searched, like `(structure[arrays%users]).name` or `/(structure[arrays%users])/name`; it is also useful for converting otherwise multi-line results into a single-line JSON Array
 * Complex combinations: `some::deep.hierarchy[with!=""].'any.valid'[.=~/(yaml|json)/][data%structure].or.complexity[4].2` or `/some::deep/hierarchy[with!=""]/any.valid[.=~/(yaml|json)/][data%structure]/or/complexity[4]/2`
 
 This implementation of YAML Path encourages creativity.  Use whichever notation
-and forms that make the most sense to you in each application.
+and segment types that make the most sense to you in each application.
 
 ## Installing
 
@@ -214,7 +215,7 @@ and tested compatible versions include:
 
 YAML Path Version Range | ruamel.yaml Version Range
 ------------------------|--------------------------
-1.0.x - 1.2.x           | >= 0.15.95
+1.0.x - 1.2.x           | >= 0.15.96
 
 You may find other compatible versions outside these ranges.  If you do, please
 drop a note so this table can be updated!
@@ -568,7 +569,7 @@ from ruamel.yaml import YAML
 from ruamel.yaml.parser import ParserError
 
 from yamlpath.exceptions import YAMLPathException
-from yamlpath.eyaml import EYAMLPath
+from yamlpath.eyaml import EYAMLProcessor
 from yamlpath.enums import YAMLValueFormats
 
 import yamlpath.patches
@@ -578,7 +579,6 @@ from yamlpath.wrappers import ConsolePrinter
 # processor.
 args = processcli()
 log = ConsolePrinter(args)
-processor = EYAMLPath(log)
 
 # Prep the YAML parser
 yaml = YAML()
@@ -594,6 +594,8 @@ try:
         yaml_data = yaml.load(f)
 except ParserError as e:
     log.error("YAML parsing error {}:  {}".format(str(e.problem_mark).lstrip(), e.problem))
+
+processor = EYAMLProcessor(log, yaml_data)
 ```
 
 #### Searching for YAML Nodes
@@ -607,10 +609,12 @@ working with a single result or many, you must consume the Generator output with
 a pattern similar to:
 
 ```python
-yaml_path = "see.documentation.above.for.many.samples"
+from yamlpath import Path
+
+yaml_path = Path("see.documentation.above.for.many.samples")
 try:
-    for node in yh.get_eyaml_values(yaml_data, yaml_path):
-        log.debug("Got {} from {}.".format(node, yaml_path))
+    for node in processor.get_eyaml_values(yaml_path):
+        log.debug("Got {} from '{}'.".format(node, yaml_path))
 
         # Do something with each node...
 except YAMLPathException as ex:
@@ -631,7 +635,7 @@ to `EYAMLCommandException`.
 
 ```python
 try:
-    yh.set_value(yaml_data, yaml_path, new_value)
+    processor.set_value(yaml_path, new_value)
 except YAMLPathException as ex:
     log.critical(ex, 119)
 except EYAMLCommandException as ex:
