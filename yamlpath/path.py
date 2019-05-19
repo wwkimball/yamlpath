@@ -98,7 +98,11 @@ class Path:
             elif segment_type == PathSegmentTypes.SEARCH:
                 ppath += str(segment_attrs)
             elif segment_type == PathSegmentTypes.COLLECTOR:
-                ppath += "({})".format(segment_attrs)
+                subpath = Path(segment_attrs)
+                print("-\n--\n---\n----\n-----")
+                print(subpath)
+                print("-----\n----\n---\n--\n-")
+                ppath += "({})".format(subpath)
 
             add_sep = True
 
@@ -350,7 +354,10 @@ class Path:
                 demarc_stack.append(char)
                 demarc_count += 1
                 segment_type = PathSegmentTypes.COLLECTOR
-                continue
+
+                # Preserve nested collectors
+                if subpath_level == 1:
+                    continue
 
             elif subpath_level > 0:
                 if (
@@ -361,9 +368,11 @@ class Path:
                     subpath_level -= 1
                     demarc_count -= 1
                     demarc_stack.pop()
-                    path_segments.append((segment_type, segment_id))
-                    segment_id = ""
-                    continue
+
+                    if subpath_level < 1:
+                        path_segments.append((segment_type, segment_id))
+                        segment_id = ""
+                        continue
 
             elif demarc_count == 0 and char == "[":
                 # Array INDEX/SLICE or SEARCH
