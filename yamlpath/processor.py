@@ -298,6 +298,10 @@ class Processor:
 
                 next_segment_idx += 1
 
+            # Don't unnecessarily wrap single-match results within lists
+            if len(results) == 1:
+                results = results[0]
+
             yield results
         else:
             raise NotImplementedError
