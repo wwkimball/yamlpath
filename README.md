@@ -40,11 +40,12 @@ right into your own application or easily use its capabilities right away from
 the command-line.
 
 This implementation of YAML Path is a query language in addition to a node
-descriptor.  With it, you can select a single precise node or search for any
-number of nodes which match criteria that can be expressed in several ways.
-Keys, values, and elements can all be searched at any number of levels within
-the data structure using the same query.  Collectors can be used to search
-disparate, virtual subsets of the source data.
+descriptor.  With it, you can describe or select a single precise node or
+search for any number of nodes which match criteria that can be expressed in
+several ways.  Keys, values, and elements can all be searched at any number of
+levels within the data structure using the same query.  Collectors can also be
+used to gather and further select from otherwise disparate parts of the source
+data.
 
 For an exploration of YAML Path, please visit the
 [project Wiki](https://github.com/wwkimball/yamlpath/wiki).
@@ -58,7 +59,7 @@ To illustrate some of these concepts, consider this sample YAML data:
 # Sample YAML data
 aliases:
   - &commonUsername username
-  - &commonPassword 5uP3r 53kr17 P@55\/\/0rD
+  - &commonPassword 5uP3r 53Kr17 P@55\/\/0rD
 
 configuration::application:
   'general.settings':
@@ -153,7 +154,7 @@ YAML Path understands these segment types:
 * Array element searches with all of the search methods above via `.` (yields any matching elements): `array[.>9000]` or `/array[.>9000]`
 * Hash key-name searches with all of the search methods above via `.` (yields their values, not the keys themselves): `hash[.^app_]`
 * Array-of-Hashes Match-All:  Omit a selector for the elements of an Array-of-Hashes and all Hash elements will be yielded (or searched when there is more to the path).  For example, `warriors[1].power_level` or `/warriors[1]/power_level` will return the power_level attribute of only the second Hash in an Array-of-Hashes while `warriors.power_level` or `/warriors/power_level` will return the power_level attribute of every Hash in the same Array-of-Hashes.  Of course these results can be filtered in multiple ways, like `warriors[power_level>9000]`, `/warriors[power_level>9000]`, `warriors.power_level[.>9000]`, and `/warriors/power_level[.>9000]` all yield only warriors with power_levels over 9,000.
-* Collectors: `(structure[arrays%users])`; the `()` pair collects matching nodes into a virtual data Array which can be further searched, like `(structure[arrays%users]).name` or `/(structure[arrays%users])/name`; it is also useful for converting otherwise multi-line results into a single-line JSON Array
+* Collectors: `((path1)+((path2)-(path3)))`; concatenation and exclusion operators are supported -- `+` and `-`, respectively -- and each `()` pair collects matching nodes into a virtual data Array which can be further searched, like `(structure[arrays%users]).name` or `/(structure[arrays%users])/name`; collectors are also useful for converting otherwise multi-line results into a single Array
 * Complex combinations: `some::deep.hierarchy[with!=""].'any.valid'[.=~/(yaml|json)/][data%structure].or.complexity[4].2` or `/some::deep/hierarchy[with!=""]/any.valid[.=~/(yaml|json)/][data%structure]/or/complexity[4]/2`
 
 This implementation of YAML Path encourages creativity.  Use whichever notation
@@ -610,6 +611,7 @@ a pattern similar to:
 
 ```python
 from yamlpath import Path
+from yamlpath.exceptions import YAMLPathException, EYAMLCommandException
 
 yaml_path = Path("see.documentation.above.for.many.samples")
 try:
@@ -634,6 +636,8 @@ dump the call stack in front of your users.  When using EYAML, the same applies
 to `EYAMLCommandException`.
 
 ```python
+from yamlpath.exceptions import YAMLPathException, EYAMLCommandException
+
 try:
     processor.set_value(yaml_path, new_value)
 except YAMLPathException as ex:
