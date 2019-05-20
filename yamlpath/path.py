@@ -9,8 +9,9 @@ from yamlpath.enums import (
     PathSegmentTypes,
     PathSearchMethods,
     PathSeperators,
+    CollectorOperators,
 )
-from yamlpath.types import SearchTerms
+from yamlpath.types import SearchTerms, CollectorTerms
 
 
 class Path:
@@ -98,7 +99,7 @@ class Path:
             elif segment_type == PathSegmentTypes.SEARCH:
                 ppath += str(segment_attrs)
             elif segment_type == PathSegmentTypes.COLLECTOR:
-                ppath += "({})".format(Path(segment_attrs))
+                ppath += str(segment_attrs)
 
             add_sep = True
 
@@ -366,7 +367,8 @@ class Path:
                     demarc_stack.pop()
 
                     if subpath_level < 1:
-                        path_segments.append((segment_type, segment_id))
+                        path_segments.append(
+                            (segment_type, CollectorTerms(segment_id)))
                         segment_id = ""
                         continue
 

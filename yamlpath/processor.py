@@ -26,8 +26,9 @@ from yamlpath.enums import (
     YAMLValueFormats,
     PathSegmentTypes,
     PathSearchMethods,
+    CollectorOperators,
 )
-from yamlpath.types import SearchTerms
+from yamlpath.types import SearchTerms, CollectorTerms
 
 
 class Processor:
@@ -178,7 +179,8 @@ class Processor:
             return
 
         segments = yaml_path.escaped
-        if not (segments and len(segments) > segment_index):
+        segment_len = len(segments)
+        if not (segments and segment_len > segment_index):
             return
 
         segment = segments[segment_index]
@@ -258,10 +260,43 @@ class Processor:
             for match in self._search(data, stripped_attrs):
                 yield match
         elif segment_type == PathSegmentTypes.COLLECTOR:
-            subpath = Path(unstripped_attrs)
+            terms: CollectorTerms = stripped_attrs
+            operation = terms.operation
+            if not operation is CollectorOperators.NONE:
+                return
+
+            expression = terms.expression
+            subpath = Path(expression)
             results = []
             for node in self._get_required_nodes(data, subpath):
                 results.append(node)
+
+            # As long as each next segment is an ADDITION or SUBTRACTION
+            # COLLECTOR, keep combining the results.
+            next_segment_idx = segment_index + 1
+            while next_segment_idx < segment_len:
+                (peek_type, peek_attrs) = segments[next_segment_idx]
+                if peek_type == PathSegmentTypes.COLLECTOR:
+                    peek_terms: CollectorTerms = peek_attrs
+                    peek_operation: CollectorOperators = peek_terms.operation
+                    peek_path: Path = Path(peek_terms.expression)
+                    if peek_operation == CollectorOperators.ADDITION:
+                        add_results = []
+                        for node in self._get_required_nodes(data, peek_path):
+                            add_results.append(node)
+                        results += add_results
+                    elif peek_operation == CollectorOperators.SUBTRACTION:
+                        rem_results = []
+                        for node in self._get_required_nodes(data, peek_path):
+                            rem_results.append(node)
+                        results = [e for e in results if e not in rem_results]
+                    else:
+                        break
+                else:
+                    break
+
+                next_segment_idx += 1
+
             yield results
         else:
             raise NotImplementedError
