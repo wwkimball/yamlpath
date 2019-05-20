@@ -263,6 +263,7 @@ class Processor:
             terms: CollectorTerms = stripped_attrs
             operation = terms.operation
             if not operation is CollectorOperators.NONE:
+                yield data
                 return
 
             expression = terms.expression

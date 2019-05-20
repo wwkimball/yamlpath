@@ -244,7 +244,9 @@ class Path:
         seeking_regex_delim: bool = False
         capturing_regex: bool = False
         pathsep: str = PathSeperators.to_seperator(self.seperator)
-        subpath_level: int = 0
+        collector_level: int = 0
+        collector_operator: CollectorOperators = CollectorOperators.NONE
+        seeking_collector_operator: bool = False
 
         # Empty paths yield empty queues
         if not yaml_path:
@@ -312,6 +314,14 @@ class Path:
                 segment_type = PathSegmentTypes.ANCHOR
                 continue
 
+            elif seeking_collector_operator and char in ['+', '-']:
+                seeking_collector_operator = False
+                if char == '+':
+                    collector_operator = CollectorOperators.ADDITION
+                elif char == '-':
+                    collector_operator = CollectorOperators.SUBTRACTION
+                continue
+
             elif char in ['"', "'"]:
                 # Found a string demarcation mark
                 if demarc_count > 0:
@@ -347,29 +357,32 @@ class Path:
                     continue
 
             elif char == "(":
-                subpath_level += 1
+                seeking_collector_operator = False
+                collector_level += 1
                 demarc_stack.append(char)
                 demarc_count += 1
                 segment_type = PathSegmentTypes.COLLECTOR
 
                 # Preserve nested collectors
-                if subpath_level == 1:
+                if collector_level == 1:
                     continue
 
-            elif subpath_level > 0:
+            elif collector_level > 0:
                 if (
                     demarc_count > 0
                     and char == ")"
                     and demarc_stack[-1] == "("
                 ):
-                    subpath_level -= 1
+                    collector_level -= 1
                     demarc_count -= 1
                     demarc_stack.pop()
 
-                    if subpath_level < 1:
-                        path_segments.append(
-                            (segment_type, CollectorTerms(segment_id)))
+                    if collector_level < 1:
+                        path_segments.append((segment_type,
+                            CollectorTerms(segment_id, collector_operator)))
                         segment_id = ""
+                        collector_operator = CollectorOperators.NONE
+                        seeking_collector_operator = True
                         continue
 
             elif demarc_count == 0 and char == "[":
@@ -565,18 +578,19 @@ class Path:
 
             segment_id += char
             seeking_anchor_mark = False
+            seeking_collector_operator = False
 
         # Check for unmatched subpath demarcations
-        if subpath_level > 0:
+        if collector_level > 0:
             raise YAMLPathException(
-                "YAML Path contains an unmatched () pair.",
+                "YAML Path contains an unmatched () collector pair",
                 yaml_path
             )
 
         # Check for unterminated RegExes
         if capturing_regex:
             raise YAMLPathException(
-                "YAML Path contains an unterminated Regular Expression.",
+                "YAML Path contains an unterminated Regular Expression",
                 yaml_path
             )
 
