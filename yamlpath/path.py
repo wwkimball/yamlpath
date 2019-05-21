@@ -153,12 +153,8 @@ class Path:
 
         Raises:  N/A
         """
-        if (self._seperator is PathSeperators.AUTO
-                and self._original):
-            if self._original[0] == '/':
-                self._seperator = PathSeperators.FSLASH
-            else:
-                self._seperator = PathSeperators.DOT
+        if self._seperator is PathSeperators.AUTO:
+            self._seperator = PathSeperators.infer_seperator(self._original)
 
         return self._seperator
 

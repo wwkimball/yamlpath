@@ -11,10 +11,23 @@ class CollectorTerms:
     def __init__(self, expression: str,
                  operation: CollectorOperators = CollectorOperators.NONE
                 ) -> None:
-        self.operation = operation
-        self.expression = expression
+        self._expression: str = expression
+        self._operation: CollectorOperators = operation
 
     def __str__(self) -> str:
-        from yamlpath import Path
         operator: str = CollectorOperators.to_operator(self.operation)
-        return "{}({})".format(operator, Path(self.expression))
+        return "{}({})".format(operator, self.expression)
+
+    @property
+    def operation(self) -> CollectorOperators:
+        """
+        Gets the operation for this Collector, indicating whether its results
+        are independent, added to the prior Collector, or removed from the
+        prior Collector.
+        """
+        return self._operation
+
+    @property
+    def expression(self) -> str:
+        """Gets the Collector expression, which is a stringified YAML Path."""
+        return self._expression

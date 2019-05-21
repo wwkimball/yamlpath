@@ -1,4 +1,5 @@
-"""Implements an EYAML-capable version of YAMLPath.
+"""
+Implements an EYAML-capable version of YAML Path.
 
 Copyright 2018, 2019 William W. Kimball, Jr. MBA MSIS
 """
@@ -6,10 +7,11 @@ import re
 from subprocess import run, PIPE, CalledProcessError
 from os import access, sep, X_OK
 from shutil import which
-from typing import Any, Generator, Optional
+from typing import Any, Generator, List, Optional
 
 from ruamel.yaml.comments import CommentedSeq, CommentedMap
 
+from yamlpath.eyaml.enums import EYAMLOutputFormats
 from yamlpath.enums import YAMLValueFormats
 from yamlpath.exceptions import EYAMLCommandException
 from yamlpath.wrappers import ConsolePrinter
@@ -17,95 +19,109 @@ from yamlpath import Processor, Path
 
 
 class EYAMLProcessor(Processor):
-    """Extend Processor to understand EYAML values."""
+    """
+    Extend Processor to understand EYAML values.
 
-    def __init__(self, logger: ConsolePrinter, data: Any, **kwargs):
-        """Init this class.
+    Note that due to a bug in the eyaml command at the time of this writing,
+    either both or neither of the public and private keys must be set.  So,
+    even though you would normally need only the public key to encrypt values,
+    you must also supply the private key, anyway.
 
-        Positional Parameters:
-          1. logger (ConsoleWriter) Instance of ConsoleWriter
+    Parameters:
+        1. logger (ConsolePrinter) Instance of ConsolePrinter or subclass
+        2. data (Any) Parsed YAML data
+        3. binary (str) The external eyaml command to use when performing data
+           encryption or decryption; if no path is provided, the command will
+           be sought on the system PATH.  Defaut:  "eyaml'
+        4. **kwargs (Optional[str]) can contain the following keyword
+           parameters:
+           1. publickey (Optional[str]) Fully-qualified path to the public key
+              for use with data encryption
+           2. privatekey (Optional[str]) Fully-qualified path to the public key
+              for use with data decryption
 
-        Optional Keyword Parameters:
-          1. eyaml (str) The eyaml executable to use
-          2. publickey (str) An EYAML public key file; when used,
-             privatekey must also be set
-          3. privatekey (str) An EYAML private key file; when used,
-             publickey must also be set
+    Returns:  N/A
 
-        Returns:  N/A
+    Raises:  N/A
+    """
 
-        Raises:  N/A
-        """
-        self.eyaml: str = kwargs.pop("eyaml", "eyaml")
-        self.publickey: str = kwargs.pop("publickey", None)
-        self.privatekey: str = kwargs.pop("privatekey", None)
+    def __init__(self, logger: ConsolePrinter, data: Any,
+                 binary: str = "eyaml", **kwargs: Optional[str]) -> None:
+        self.eyaml: str = binary
+        self.publickey: Optional[str] = kwargs.pop("publickey", None)
+        self.privatekey: Optional[str] = kwargs.pop("privatekey", None)
         super().__init__(logger, data)
 
+    # pylint: disable=locally-disabled,too-many-branches
     def _find_eyaml_paths(self, data: Any,
                           build_path: str = "") -> Generator[Path, None, None]:
-        """Recursively generates a set of stringified YAML Paths, each entry
+        """
+        Recursively generates a set of stringified YAML Paths, each entry
         leading to an EYAML value within the evaluated YAML data.
 
-        Positional Parameters:
-          1. data (ruamel.yaml data) The parsed YAML data to process
-          2. yaml_path (any) The YAML Path under construction
+        Parameters:
+            1. data (Any) The parsed YAML data to process
+            2. build_path (str) A YAML Path under construction
 
-        Returns:  (str or None) each YAML Path entry as they are discovered
+        Returns:  (Generator[Path, None, None]) each YAML Path entry as they
+            are discovered
 
         Raises:  N/A
         """
         if isinstance(data, CommentedSeq):
             build_path += "["
-            for i, ele in enumerate(data):
+            for idx, ele in enumerate(data):
                 if hasattr(ele, "anchor") and ele.anchor.value is not None:
                     tmp_path = build_path + "&" + ele.anchor.value + "]"
                 else:
-                    tmp_path = build_path + str(i) + "]"
+                    tmp_path = build_path + str(idx) + "]"
 
                 if self.is_eyaml_value(ele):
                     yield Path(tmp_path)
-
-                for eyp in self._find_eyaml_paths(ele, tmp_path):
-                    yield Path(eyp)
+                else:
+                    for subpath in self._find_eyaml_paths(ele, tmp_path):
+                        yield subpath
 
         elif isinstance(data, CommentedMap):
             if build_path:
                 build_path += "."
 
-            for k, val in data.non_merged_items():
-                tmp_path = build_path + str(k)
+            for key, val in data.non_merged_items():
+                tmp_path = build_path + str(key)
                 if self.is_eyaml_value(val):
                     yield Path(tmp_path)
-
-                for eyp in self._find_eyaml_paths(val, tmp_path):
-                    yield Path(eyp)
+                else:
+                    for subpath in self._find_eyaml_paths(val, tmp_path):
+                        yield subpath
 
     def find_eyaml_paths(self) -> Generator[Path, None, None]:
-        """Recursively generates a set of stringified YAML Paths, each entry
+        """
+        Recursively generates a set of stringified YAML Paths, each entry
         leading to an EYAML value within the evaluated YAML data.
 
-        Positional Parameters:
-          1. data (ruamel.yaml data) The parsed YAML data to process
-          2. yaml_path (any) The YAML Path under construction
+        Parameters:  N/A
 
-        Returns:  (str or None) each YAML Path entry as they are discovered
+        Returns:  (Generator[Path, None, None]) each YAML Path entry as they
+            are discovered
 
         Raises:  N/A
         """
-        for node in self._find_eyaml_paths(self.data):
-            yield node
+        # Initiate the scan from the data root
+        for path in self._find_eyaml_paths(self.data):
+            yield path
 
     def decrypt_eyaml(self, value: str) -> str:
-        """Decrypts an EYAML value.
+        """
+        Decrypts an EYAML value.
 
-        Positional Parameters:
-          1. value (any) The EYAML value to decrypt
+        Parameters:
+            1. value (str) The EYAML value to decrypt
 
         Returns:  (str) The decrypted value or the original value if it was not
         actually encrypted.
 
         Raises:
-          EYAMLCommandException when the eyaml binary cannot be utilized.
+            - `EYAMLCommandException` when the eyaml binary cannot be utilized
         """
         if not self.is_eyaml_value(value):
             return value
@@ -113,22 +129,22 @@ class EYAMLProcessor(Processor):
         if not self._can_run_eyaml():
             raise EYAMLCommandException("No accessible eyaml command.")
 
-        cmdstr = self.eyaml + " decrypt --quiet --stdin"
+        cmdstr: str = self.eyaml + " decrypt --quiet --stdin"
         if self.publickey:
             cmdstr += " --pkcs7-public-key={}".format(self.publickey)
         if self.privatekey:
             cmdstr += " --pkcs7-private-key={}".format(self.privatekey)
 
-        cmd = cmdstr.split()
-        cleanval = str(value).replace("\n", "").replace(" ", "").rstrip()
-        bval = (cleanval + "\n").encode("ascii")
+        cmd: List[str] = cmdstr.split()
+        cleanval: str = str(value).replace("\n", "").replace(" ", "").rstrip()
+        bval: bytes = (cleanval + "\n").encode("ascii")
         self.logger.debug(
             "EYAMLPath::decrypt_eyaml:  About to execute {} against:\n{}"
             .format(cmdstr, cleanval)
         )
 
         try:
-            retval = run(
+            retval: str = run(
                 cmd,
                 stdout=PIPE,
                 input=bval
@@ -152,20 +168,21 @@ class EYAMLProcessor(Processor):
 
         return retval
 
-    def encrypt_eyaml(self, value: str, output: str = "string") -> str:
-        """Encrypts a value via EYAML.
+    def encrypt_eyaml(self, value: str,
+                      output: EYAMLOutputFormats = EYAMLOutputFormats.STRING
+                     ) -> str:
+        """
+        Encrypts a value via EYAML.
 
-        Positional Parameters:
-          1. value (any) the value to encrypt
-          2. output (string) one of "string" or "block"; "string" causes
-             the EYAML representation to be one single line while
-             "block" results in a folded-string variant
+        Parameters:
+            1. value (str) the value to encrypt
+            2. output (EYAMLOutputFormats) the output format of the encryption
 
         Returns:  (str) The encrypted result or the original value if it was
         already an EYAML encryption.
 
         Raises:
-          EYAMLCommandException when the eyaml binary cannot be utilized.
+            - `EYAMLCommandException` when the eyaml binary cannot be utilized.
         """
         if self.is_eyaml_value(value):
             return value

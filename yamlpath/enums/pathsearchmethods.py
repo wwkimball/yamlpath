@@ -1,4 +1,5 @@
-"""Implements the PathSearchMethods enumeration.
+"""
+Implements the PathSearchMethods enumeration.
 
 Copyright 2019 William W. Kimball, Jr. MBA MSIS
 """
@@ -6,7 +7,36 @@ from enum import Enum, auto
 
 
 class PathSearchMethods(Enum):
-    """Supported methods for search YAML Path segments"""
+    """
+    Supported methods for searching YAML Path segments.  These include:
+
+    `CONTAINS`
+        Matches when the haystack contains the needle.
+
+    `ENDS_WITH`
+        Matches when the haystack ends with the needle.
+
+    `EQUALS`
+        Matches when the haystack and needle are identical.
+
+    `STARTS_WITH`
+        Matches when the haystack starts with the needle.
+
+    `GREATER_THAN`
+        Matches when the needle is greater than the haystack.
+
+    `LESS_THAN`
+        Matches when the needle is less than the haystack.
+
+    `GREATER_THAN_OR_EQUAL`
+        Matches when the needle is greater than or equal to the haystack.
+
+    `LESS_THAN_OR_EQUAL`
+        Matches when the needle is less than or equal to the haystack.
+
+    `REGEX`
+        Matches when the needle Regular Expression matches the haystack.
+    """
     CONTAINS = auto()
     ENDS_WITH = auto()
     EQUALS = auto()
@@ -18,17 +48,17 @@ class PathSearchMethods(Enum):
     REGEX = auto()
 
     @staticmethod
-    def to_operator(method):
-        """Converts a value of this enumeration into a human-friendly
-        operator.
+    def to_operator(method: "PathSearchMethods") -> str:
+        """
+        Converts a value of this enumeration into a human-friendly operator.
 
-        Positional Parameters:
+        Parameters:
             1. method (PathSearchMethods) The enumeration value to convert
 
         Returns: (str) The operator
 
         Raises:
-            NotImplementedError when method is unknown to this method.
+            - `NotImplementedError` when method is unknown to this method.
         """
         operator = ""
         if method is PathSearchMethods.EQUALS:
