@@ -1,4 +1,5 @@
-"""YAML Path Collector segment terms.
+"""
+YAML Path Collector segment terms.
 
 Copyright 2019 William W. Kimball, Jr. MBA MSIS
 """

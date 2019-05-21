@@ -1,3 +1,4 @@
+# pylint: disable=too-many-lines
 """
 YAML Path processor based on ruamel.yaml.
 
@@ -29,7 +30,6 @@ from yamlpath.enums import (
     CollectorOperators,
     PathSeperators,
 )
-from yamlpath.types import PathSegment
 from yamlpath.path import Path, SearchTerms, CollectorTerms
 
 
@@ -202,10 +202,10 @@ class Processor:
         if not (segments and len(segments) > segment_index):
             return
 
-        (segment_type, stripped_attrs) = segment = segments[segment_index]
+        (segment_type, stripped_attrs) = segments[segment_index]
 
         if segment_type == PathSegmentTypes.KEY:
-            nodes = self._get_nodes_by_key(data, segment)
+            nodes = self._get_nodes_by_key(data, yaml_path, segment_index)
         elif segment_type == PathSegmentTypes.INDEX:
             nodes = self._get_nodes_by_index(data, yaml_path, segment_index)
         elif segment_type == PathSegmentTypes.ANCHOR:
@@ -219,16 +219,16 @@ class Processor:
                 segment_type == PathSegmentTypes.COLLECTOR
                 and isinstance(stripped_attrs, CollectorTerms)
         ):
-            nodes = self._get_nodes_by_collector(yaml_path, segment_index,
-                                                 data, stripped_attrs)
+            nodes = self._get_nodes_by_collector(data, yaml_path,
+                                                 segment_index, stripped_attrs)
         else:
             raise NotImplementedError
 
         for node in nodes:
             yield node
 
-    def _get_nodes_by_key(self, data: Any,
-                          segment: PathSegment) -> Generator[Any, None, None]:
+    def _get_nodes_by_key(self, data: Any, yaml_path: Path,
+                          segment_index: int) -> Generator[Any, None, None]:
         """
         Returns zero or more nodes identified by a dict key found at a specific
         segment of a YAML Path within the present data context.
@@ -242,7 +242,7 @@ class Processor:
 
         Raises:  N/A
         """
-        (_, stripped_attrs) = segment
+        (_, stripped_attrs) = yaml_path.escaped[segment_index]
         str_stripped = str(stripped_attrs)
 
         self.logger.debug(
@@ -372,11 +372,11 @@ class Processor:
 
         Parameters:
             1. data (Any) The parsed YAML data to process
-            2. terms (SearchTerms) A SearchTerms object with these properties:
-                * inverted (bool) true = Return a NON-matching node
-                * method (PathSearchMethods) the search method
-                * attribute (str) the dictionary key to the value to check
-                * term (Any) the term to match
+            2. terms (SearchTerms) The search terms
+
+        Returns:  (Generator[Any, None, None]) Each node as they are matched
+
+        Raises:  N/A
         """
         def search_matches(method: PathSearchMethods, needle: str,
                            haystack: Any) -> bool:
@@ -508,17 +508,18 @@ class Processor:
                 yield data
 
     def _get_nodes_by_collector(
-            self, yaml_path: Path, segment_index: int, data: Any,
+            self, data: Any, yaml_path: Path, segment_index: int,
             terms: CollectorTerms
     ) -> Generator[Any, None, None]:
         """
-        Returns zero or more nodes within a given data context that match a
-        YAML Path found at a specific segment of an outer YAML Path.
+        Returns zero or more nodes within a given data context that match an
+        inner YAML Path found at a specific segment of an outer YAML Path.
 
         Parameters:
             1. data (ruamel.yaml data) The parsed YAML data to process
             2. yaml_path (Path) The YAML Path being processed
             3. segment_index (int) Segment index of the YAML Path to process
+            4. terms (CollectorTerms) The collector terms
 
         Returns:  (Generator[Any, None, None]) Each node as they are matched
 
@@ -568,15 +569,17 @@ class Processor:
 
     def _get_required_nodes(self, data: Any, yaml_path: Path,
                             depth: int = 0) -> Generator[Any, None, None]:
-        """Generates zero or more pre-existing nodes from YAML data matching a
+        """
+        Generates zero or more pre-existing nodes from YAML data matching a
         YAML Path.
 
         Parameters:
-          1. data (ruamel.yaml data) The parsed YAML data to process
-          2. yaml_path (yamlpath.Path) The pre-parsed YAML Path to follow
-          3. depth (int) Index within yaml_path to process
+          1. data (Any) The parsed YAML data to process
+          2. yaml_path (Path) The pre-parsed YAML Path to follow
+          3. depth (int) Index within yaml_path to process; default=0
 
-        Returns:  (any) The requested YAML nodes as they are matched or None
+        Returns:  (Generator[Any, None, None]) The requested YAML nodes as they
+            are matched or None
 
         Raises:  N/A
         """
@@ -619,22 +622,25 @@ class Processor:
     def _get_optional_nodes(self, data: Any, yaml_path: Path,
                             value: Any = None,
                             depth: int = 0) -> Generator[Any, None, None]:
-        """Returns zero or more pre-existing nodes matching a YAML Path, or
-        exactly one new node at the end of the YAML Path if it had to be
-        created.
+        """
+        Returns zero or more pre-existing nodes matching a YAML Path.  Will
+        create nodes that are missing, as long as any missing segments are
+        deterministic (SEARCH and COLLECTOR segments are non-deterministic).
 
         Parameters:
-          1. data (ruamel.yaml data) The parsed YAML data to process
-          2. path (deque) The pre-parsed YAML Path to follow
-          3. value (any) The value to assign to the element
+            1. data (Any) The parsed YAML data to process
+            2. yaml_path (Path) The pre-parsed YAML Path to follow
+            3. value (Any) The value to assign to the element
+            4. depth (int) For recursion, this identifies which segment of
+               yaml_path to evaluate; default=0
 
-        Returns:  (object) The specified node(s)
+        Returns:  (Generator[Any, None, None]) Each node as they are matched
 
         Raises:
-          YAMLPathException when the YAML Path is invalid.
-          NotImplementedError when a segment of the YAML Path indicates
-            an element that does not exist in data and this code isn't
-            yet prepared to add it.
+            - `YAMLPathException` when the YAML Path is invalid.
+            - `NotImplementedError` when a segment of the YAML Path indicates
+              an element that does not exist in data and this code isn't
+              yet prepared to add it.
         """
         if data is None:
             self.logger.debug(
@@ -794,7 +800,7 @@ class Processor:
                         replacement_node: Any) -> None:
             if isinstance(data, CommentedMap):
                 for i, k in [
-                    (idx, key) for idx, key in
+                        (idx, key) for idx, key in
                         enumerate(data.keys()) if key is reference_node
                 ]:
                     data.insert(i, replacement_node, data.pop(k))
@@ -816,14 +822,16 @@ class Processor:
     @staticmethod
     def default_for_child(yaml_path: Path, depth: int,
                           value: Any = None) -> Any:
-        """Identifies and returns the most appropriate default value for the
-        next entry in a YAML Path, should it not already exist.
+        """
+        Identifies and returns the most appropriate default value for the next
+        entry in a YAML Path, should it not already exist.
 
         Parameters:
-          1. yaml_path (deque) The pre-parsed YAML Path to follow
-          2. value (any) The final expected value for the final YAML Path entry
+            1. yaml_path (deque) The pre-parsed YAML Path to follow
+            2. depth (int) Index of the YAML Path segment to evaluate
+            3. value (Any) The expected value for the final YAML Path entry
 
-        Returns:  (any) The most appropriate default value
+        Returns:  (Any) The most appropriate default value
 
         Raises:  N/A
         """
@@ -851,19 +859,19 @@ class Processor:
     @staticmethod
     def append_list_element(data: Any, value: Any = None,
                             anchor: str = None) -> Any:
-        """Appends a new element to an ruamel.yaml presented list, preserving
-        any tailing comment for the former last element of the same list.
+        """
+        Appends a new element to an ruamel.yaml presented list, preserving any
+        tailing comment for the former last element of the same list.
 
         Parameters:
-          1. data (ruamel.yaml data) The parsed YAML data to process
-          2. value (any) The value of the element to append
-          3. anchor (str) An Anchor or Alias name for the new element
+            1. data (Any) The parsed YAML data to process
+            2. value (Any) The value of the element to append
+            3. anchor (str) An Anchor or Alias name for the new element
 
-        Returns:  (object) The newly appended element node
+        Returns:  (Any) The newly appended element node
 
         Raises:  N/A
         """
-
         if anchor is not None and value is not None:
             value = Processor.wrap_type(value)
             if not hasattr(value, "anchor"):
@@ -891,13 +899,14 @@ class Processor:
 
     @staticmethod
     def wrap_type(value: Any) -> Any:
-        """Wraps a value in one of the ruamel.yaml wrapper types.
+        """
+        Wraps a value in one of the ruamel.yaml wrapper types.
 
         Parameters:
-          1. value (any) The value to wrap.
+            1. value (Any) The value to wrap.
 
-        Returns: (any) The wrapped value or the original value when a better
-          wrapper could not be identified.
+        Returns: (Any) The wrapped value or the original value when a better
+            wrapper could not be identified.
 
         Raises:  N/A
         """
@@ -920,12 +929,19 @@ class Processor:
 
     @staticmethod
     def clone_node(node: Any) -> Any:
-        """Duplicates a YAML Data node.
+        """
+        Duplicates a YAML Data node.  This is necessary because otherwise,
+        Python would treat any copies of a value as references to each other
+        such that changes to one automatically affect all copies.  This is not
+        desired when an original value must be duplicated elsewhere in the data
+        and then the original changed without impacting the copy.
 
         Parameters:
-          1. node (object) The node to clone.
+            1. node (Any) The node to clone.
 
-        Returns: (object) Clone of the given node
+        Returns: (Any) Clone of the given node
+
+        Raises:  N/A
         """
         # Clone str values lest the new node change whenever the original node
         # changes, which defeates the intention of preserving the present,
@@ -941,7 +957,23 @@ class Processor:
     @staticmethod
     def make_new_node(source_node: Any, value: Any,
                       value_format: YAMLValueFormats) -> Any:
-        """Creates a new data node given a value and its presumed format."""
+        """
+        Creates a new data node based on a sample node, effectively duplicaing
+        the type of the node but giving it a different value.
+
+        Parameters:
+            1. source_node (Any) The node from which to copy type
+            2. value (Any) The value to assign to the new node
+            3. value_format (YAMLValueFormats) The YAML presentation format to
+               apply to value when it is dumped
+
+        Returns: (Any) The new node
+
+        Raises:
+            - `NameError` when value_format is invalid
+            - `ValueError' when the new value is not numeric and value_format
+              requires it to be so
+        """
         new_node = None
         new_type = type(source_node)
         new_value = value
