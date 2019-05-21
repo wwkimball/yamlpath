@@ -1,11 +1,12 @@
-"""YAML Path processor based on ruamel.yaml.
+"""
+YAML Path processor based on ruamel.yaml.
 
 Copyright 2018, 2019 William W. Kimball, Jr. MBA MSIS
 """
 from sys import maxsize
 import re
 from distutils.util import strtobool
-from typing import Any, Generator, Union
+from typing import Any, Generator, List, Union
 
 from ruamel.yaml.comments import CommentedSeq, CommentedMap
 from ruamel.yaml.scalarstring import (
@@ -19,7 +20,6 @@ from ruamel.yaml.scalarbool import ScalarBoolean
 from ruamel.yaml.scalarfloat import ScalarFloat
 from ruamel.yaml.scalarint import ScalarInt
 
-from yamlpath import Path
 from yamlpath.wrappers import ConsolePrinter
 from yamlpath.exceptions import YAMLPathException
 from yamlpath.enums import (
@@ -27,60 +27,68 @@ from yamlpath.enums import (
     PathSegmentTypes,
     PathSearchMethods,
     CollectorOperators,
+    PathSeperators,
 )
-from yamlpath.types import SearchTerms, CollectorTerms
+from yamlpath.types import PathSegment
+from yamlpath.path import Path, SearchTerms, CollectorTerms
 
 
 class Processor:
-    """Query and update YAML data via robust YAML Paths."""
+    """
+    Query and update YAML data via robust YAML Paths.
+
+    Parameters:
+        1. logger (ConsolePrinter) Instance of ConsoleWriter or subclass
+        2. data (Any) Parsed YAML data
+
+    Returns:  N/A
+
+    Raises:  N/A
+    """
 
     def __init__(self, logger: ConsolePrinter, data: Any) -> None:
-        """Init this class.
-
-        Positional Parameters:
-          1. logger (ConsoleWriter) Instance of ConsoleWriter or any similar
-             wrapper (say, around stdlib logging modules)
-          2. data (any) Parsed YAML data
-
-        Returns:  N/A
-
-        Raises:  N/A
-        """
         self.logger: ConsolePrinter = logger
         self.data: Any = data
 
     def get_nodes(self, yaml_path: Union[Path, str],
-                  **kwargs) -> Generator[Any, None, None]:
-        """Retrieves zero or more node at YAML Path in YAML data.
+                  **kwargs: Any) -> Generator[Any, None, None]:
+        """
+        Retrieves zero or more node at YAML Path in YAML data.
 
-        Positional Parameters:
-          1. yaml_path (yamlpath.Path) The YAML Path to evaluate
+        Parameters:
+            1. yaml_path (Union[Path, str]) The YAML Path to evaluate
 
-        Optional Parameters:
-          1. mustexist (Boolean) Indicate whether yaml_path must exist
-             in data prior to this query (lest an Exception be raised);
-             default=False
-          2. default_value (any) The value to set at yaml_path should
-             it not already exist in data and mustexist is False;
-             default=None
+        Keyword Parameters:
+            * mustexist (bool) Indicate whether yaml_path must exist
+              in data prior to this query (lest an Exception be raised);
+              default=False
+            * default_value (Any) The value to set at yaml_path should
+              it not already exist in data and mustexist is False;
+              default=None
+            * pathsep (PathSeperators) Forced YAML Path segment seperator; set
+              only when automatic inference fails;
+              default = PathSeperators.AUTO
 
         Returns:  (Generator) The requested YAML nodes as they are matched
 
         Raises:
-            YAMLPathException when YAML Path is invalid
+            - `YAMLPathException` when YAML Path is invalid
         """
         mustexist: bool = kwargs.pop("mustexist", False)
         default_value: Any = kwargs.pop("default_value", None)
-        node: Any
+        pathsep: PathSeperators = kwargs.pop("pathsep", PathSeperators.AUTO)
+        node: Any = None
 
         if self.data is None:
             return
 
         if isinstance(yaml_path, str):
-            yaml_path = Path(yaml_path, **kwargs)
+            yaml_path = Path(yaml_path, pathsep)
+        elif pathsep is not PathSeperators.AUTO:
+            yaml_path.seperator = pathsep
 
         if mustexist:
-            matched_nodes = 0
+            matched_nodes: int = 0
             for node in self._get_required_nodes(self.data, yaml_path):
                 matched_nodes += 1
                 self.logger.debug(
@@ -96,7 +104,9 @@ class Processor:
                     yaml_path
                 )
         else:
-            for node in self._get_optional_nodes(self.data, yaml_path, default_value):
+            for node in self._get_optional_nodes(
+                    self.data, yaml_path, default_value
+            ):
                 self.logger.debug(
                     "Processor::get_nodes:  Relaying optional node <{}>:"
                     .format(type(node))
@@ -106,42 +116,49 @@ class Processor:
 
     def set_value(self, yaml_path: Union[Path, str],
                   value: Any, **kwargs) -> None:
-        """Sets the value of zero or more nodes at YAML Path in YAML data.
+        """
+        Sets the value of zero or more nodes at YAML Path in YAML data.
 
-        Positional Parameters:
-          1. yaml_path (yamlpath.Path) The YAML Path to evaluate
-          2. value (any) The value to set
+        Parameters:
+            1. yaml_path (Union[Path, str]) The YAML Path to evaluate
+            2. value (Any) The value to set
 
-        Optional Parameters:
-          1. mustexist (Boolean) Indicate whether yaml_path must exist
-             in data prior to this query (lest an Exception be raised);
-             default=False
-          2. value_format (YAMLValueFormats) The demarcation or visual
-             representation to use when writing the data;
-             default=YAMLValueFormats.DEFAULT
+        Keyword Parameters:
+            * mustexist (bool) Indicate whether yaml_path must exist
+              in data prior to this query (lest an Exception be raised);
+              default=False
+            * value_format (YAMLValueFormats) The demarcation or visual
+              representation to use when writing the data;
+              default=YAMLValueFormats.DEFAULT
+            * pathsep (PathSeperators) Forced YAML Path segment seperator; set
+              only when automatic inference fails;
+              default = PathSeperators.AUTO
 
         Returns:  N/A
 
         Raises:
-            YAMLPathException when YAML Path is invalid
+            - `YAMLPathException` when YAML Path is invalid
         """
         if self.data is None:
             return
 
-        if isinstance(yaml_path, str):
-            yaml_path = Path(yaml_path, **kwargs)
-
         mustexist: bool = kwargs.pop("mustexist", False)
         value_format: YAMLValueFormats = kwargs.pop("value_format",
                                                     YAMLValueFormats.DEFAULT)
-        node: Any
+        pathsep: PathSeperators = kwargs.pop("pathsep", PathSeperators.AUTO)
+        node: Any = None
+
+        if isinstance(yaml_path, str):
+            yaml_path = Path(yaml_path, pathsep)
+        elif pathsep is not PathSeperators.AUTO:
+            yaml_path.seperator = pathsep
 
         if mustexist:
             self.logger.debug(
                 "Processor::set_value:  Seeking required node at {}."
                 .format(yaml_path)
             )
-            found_nodes = 0
+            found_nodes: int = 0
             for node in self._get_required_nodes(self.data, yaml_path):
                 found_nodes += 1
                 self._update_node(node, value, value_format)
@@ -159,68 +176,135 @@ class Processor:
             for node in self._get_optional_nodes(self.data, yaml_path, value):
                 self._update_node(node, value, value_format)
 
+    # pylint: disable=locally-disabled,too-many-branches
     def _get_nodes_by_path_segment(self, data: Any,
                                    yaml_path: Path, segment_index: int,
                                   ) -> Generator[Any, None, None]:
-        """Returns zero or more referenced YALM Nodes.
+        """
+        Returns zero or more nodes identified by one segment of a YAML Path
+        within the present data context.
 
-        Positional Parameters:
-          1. data (ruamel.yaml data) The parsed YAML data to process
-          2. yaml_path (yamlpath.Path) THe YAML Path being processed
-          3. path_index (int) Segment index of the YAML Path to process
+        Parameters:
+            1. data (ruamel.yaml data) The parsed YAML data to process
+            2. yaml_path (yamlpath.Path) The YAML Path being processed
+            3. segment_index (int) Segment index of the YAML Path to process
 
-        Returns:  (any) At least one YAML Node
+        Returns:  (Generator[Any, None, None]) Each node as they are matched
 
         Raises:
-          NotImplementedError when ref indicates an unknown
-          PathSegmentTypes value.
+            - `NotImplementedError` when the segment indicates an unknown
+              PathSegmentTypes value.
         """
         if data is None:
             return
 
         segments = yaml_path.escaped
-        segment_len = len(segments)
-        if not (segments and segment_len > segment_index):
+        if not (segments and len(segments) > segment_index):
             return
 
-        segment = segments[segment_index]
-        (segment_type, stripped_attrs) = segment
-        (_, unstripped_attrs) = yaml_path.unescaped[segment_index]
+        (segment_type, stripped_attrs) = segment = segments[segment_index]
 
         if segment_type == PathSegmentTypes.KEY:
-            if isinstance(data, dict) and stripped_attrs in data:
-                yield data[stripped_attrs]
-            elif isinstance(data, list):
-                try:
-                    # Try using the ref as a bare Array index
-                    idx = int(stripped_attrs)
-                    if len(data) > idx:
-                        yield data[idx]
-                except ValueError:
-                    # Pass-through search against possible Array-of-Hashes
-                    for element in data:
-                        for node in self._get_nodes_by_path_segment(
-                                element, yaml_path, segment_index):
-                            yield node
+            nodes = self._get_nodes_by_key(data, segment)
+        elif segment_type == PathSegmentTypes.INDEX:
+            nodes = self._get_nodes_by_index(data, yaml_path, segment_index)
+        elif segment_type == PathSegmentTypes.ANCHOR:
+            nodes = self._get_nodes_by_anchor(data, yaml_path, segment_index)
         elif (
-            segment_type == PathSegmentTypes.INDEX
-            and isinstance(stripped_attrs, str)
-            and ':' in stripped_attrs
+                segment_type == PathSegmentTypes.SEARCH
+                and isinstance(stripped_attrs, SearchTerms)
         ):
+            nodes = self._get_nodes_by_search(data, stripped_attrs)
+        elif (
+                segment_type == PathSegmentTypes.COLLECTOR
+                and isinstance(stripped_attrs, CollectorTerms)
+        ):
+            nodes = self._get_nodes_by_collector(yaml_path, segment_index,
+                                                 data, stripped_attrs)
+        else:
+            raise NotImplementedError
+
+        for node in nodes:
+            yield node
+
+    def _get_nodes_by_key(self, data: Any,
+                          segment: PathSegment) -> Generator[Any, None, None]:
+        """
+        Returns zero or more nodes identified by a dict key found at a specific
+        segment of a YAML Path within the present data context.
+
+        Parameters:
+            1. data (ruamel.yaml data) The parsed YAML data to process
+            2. yaml_path (yamlpath.Path) The YAML Path being processed
+            3. segment_index (int) Segment index of the YAML Path to process
+
+        Returns:  (Generator[Any, None, None]) Each node as they are matched
+
+        Raises:  N/A
+        """
+        (_, stripped_attrs) = segment
+        str_stripped = str(stripped_attrs)
+
+        self.logger.debug(
+            "Processor::_get_nodes_by_key:  Seeking KEY node at {}."
+            .format(str_stripped)
+        )
+
+        if isinstance(data, dict) and stripped_attrs in data:
+            yield data[stripped_attrs]
+        elif isinstance(data, list):
+            try:
+                # Try using the ref as a bare Array index
+                idx = int(str_stripped)
+                if len(data) > idx:
+                    yield data[idx]
+            except ValueError:
+                # Pass-through search against possible Array-of-Hashes
+                for element in data:
+                    for node in self._get_nodes_by_path_segment(
+                            element, yaml_path, segment_index):
+                        yield node
+
+    # pylint: disable=locally-disabled,too-many-locals
+    def _get_nodes_by_index(self, data: Any, yaml_path: Path,
+                            segment_index: int) -> Generator[Any, None, None]:
+        """
+        Returns zero or more nodes identified by a list element index found at
+        a specific segment of a YAML Path within the present data context.
+
+        Parameters:
+            1. data (Any) The parsed YAML data to process
+            2. yaml_path (Path) The YAML Path being processed
+            3. segment_index (int) Segment index of the YAML Path to process
+
+        Returns:  (Generator[Any, None, None]) Each node as they are matched
+
+        Raises:  N/A
+        """
+        (_, stripped_attrs) = yaml_path.escaped[segment_index]
+        (_, unstripped_attrs) = yaml_path.unescaped[segment_index]
+        str_stripped = str(stripped_attrs)
+
+        self.logger.debug(
+            "Processor::_get_nodes_by_index:  Seeking INDEX node at {}."
+            .format(str_stripped)
+        )
+
+        if ':' in str_stripped:
             # Array index or Hash key slice
-            slice_parts = stripped_attrs.split(':', 1)
-            min_match = slice_parts[0]
-            max_match = slice_parts[1]
+            slice_parts: List[str] = str_stripped.split(':', 1)
+            min_match: str = slice_parts[0]
+            max_match: str = slice_parts[1]
             if isinstance(data, list):
                 try:
-                    intmin = int(min_match)
-                    intmax = int(max_match)
+                    intmin: int = int(min_match)
+                    intmax: int = int(max_match)
                 except ValueError:
                     raise YAMLPathException(
                         "{} is not an integer array slice"
-                        .format(str(stripped_attrs))
+                        .format(str_stripped)
                         , yaml_path
-                        , unstripped_attrs
+                        , str(unstripped_attrs)
                     )
 
                 if intmin == intmax and len(data) > intmin:
@@ -232,94 +316,68 @@ class Processor:
                 for key, val in data.items():
                     if min_match <= key <= max_match:
                         yield val
-        elif segment_type == PathSegmentTypes.INDEX:
+        else:
             try:
-                idx = int(stripped_attrs)
+                idx: int = int(str_stripped)
             except ValueError:
                 raise YAMLPathException(
                     "{} is not an integer array index"
-                    .format(str(stripped_attrs))
+                    .format(str_stripped)
                     , yaml_path
-                    , unstripped_attrs
+                    , str(unstripped_attrs)
                 )
 
             if isinstance(data, list) and len(data) > idx:
                 yield data[idx]
-        elif segment_type == PathSegmentTypes.ANCHOR:
-            if isinstance(data, list):
-                for ele in data:
-                    if (hasattr(ele, "anchor")
-                            and stripped_attrs == ele.anchor.value):
-                        yield ele
-            elif isinstance(data, dict):
-                for _, val in data.items():
-                    if (hasattr(val, "anchor")
-                            and stripped_attrs == val.anchor.value):
-                        yield val
-        elif segment_type == PathSegmentTypes.SEARCH:
-            for match in self._search(data, stripped_attrs):
-                yield match
-        elif segment_type == PathSegmentTypes.COLLECTOR:
-            terms: CollectorTerms = stripped_attrs
-            operation = terms.operation
-            if not operation is CollectorOperators.NONE:
-                yield data
-                return
 
-            expression = terms.expression
-            subpath = Path(expression)
-            results = []
-            for node in self._get_required_nodes(data, subpath):
-                results.append(node)
-
-            # As long as each next segment is an ADDITION or SUBTRACTION
-            # COLLECTOR, keep combining the results.
-            next_segment_idx = segment_index + 1
-            while next_segment_idx < segment_len:
-                (peek_type, peek_attrs) = segments[next_segment_idx]
-                if peek_type == PathSegmentTypes.COLLECTOR:
-                    peek_terms: CollectorTerms = peek_attrs
-                    peek_operation: CollectorOperators = peek_terms.operation
-                    peek_path: Path = Path(peek_terms.expression)
-                    if peek_operation == CollectorOperators.ADDITION:
-                        add_results = []
-                        for node in self._get_required_nodes(data, peek_path):
-                            add_results.append(node)
-                        results += add_results
-                    elif peek_operation == CollectorOperators.SUBTRACTION:
-                        rem_results = []
-                        for node in self._get_required_nodes(data, peek_path):
-                            rem_results.append(node)
-                        results = [e for e in results if e not in rem_results]
-                    else:
-                        break
-                else:
-                    break
-
-                next_segment_idx += 1
-
-            # Don't unnecessarily wrap single-match results within lists
-            if len(results) == 1:
-                results = results[0]
-
-            yield results
-        else:
-            raise NotImplementedError
-
-    def _search(self, data: Any,
-                terms: SearchTerms) -> Generator[Any, None, None]:
-        """Searches the top level of given YAML data for all matching dictionary
-        entries.
-
-        Positional Parameters:
-          1. data (ruamel.yaml data) The parsed YAML data to process
-          2. terms (SearchTerms) A SearchTerms with these properties:
-             * inverted (Boolean) true = Return a NON-matching node
-             * method (PathSearchMethods) the search method
-             * attribute (str) the dictionary key to the value to check
-             * term (any) the term to match
+    def _get_nodes_by_anchor(self, data: Any, yaml_path: Path,
+                             segment_index: int) -> Generator[Any, None, None]:
         """
+        Returns zero or more nodes identified by an Anchor name found at a
+        specific segment of a YAML Path within the present data context.
 
+        Parameters:
+            1. data (Any) The parsed YAML data to process
+            2. yaml_path (Path) The YAML Path being processed
+            3. segment_index (int) Segment index of the YAML Path to process
+
+        Returns:  (Generator[Any, None, None]) Each node as they are matched
+
+        Raises:  N/A
+        """
+        (_, stripped_attrs) = yaml_path.escaped[segment_index]
+
+        self.logger.debug(
+            "Processor::_get_nodes_by_anchor:  Seeking ANCHOR node at {}."
+            .format(stripped_attrs)
+        )
+
+        if isinstance(data, list):
+            for ele in data:
+                if (hasattr(ele, "anchor")
+                        and stripped_attrs == ele.anchor.value):
+                    yield ele
+        elif isinstance(data, dict):
+            for _, val in data.items():
+                if (hasattr(val, "anchor")
+                        and stripped_attrs == val.anchor.value):
+                    yield val
+
+    # pylint: disable=locally-disabled,too-many-statements
+    def _get_nodes_by_search(self, data: Any,
+                             terms: SearchTerms) -> Generator[Any, None, None]:
+        """
+        Searches the the current data context for all nodes matching a search
+        expression.
+
+        Parameters:
+            1. data (Any) The parsed YAML data to process
+            2. terms (SearchTerms) A SearchTerms object with these properties:
+                * inverted (bool) true = Return a NON-matching node
+                * method (PathSearchMethods) the search method
+                * attribute (str) the dictionary key to the value to check
+                * term (Any) the term to match
+        """
         def search_matches(method: PathSearchMethods, needle: str,
                            haystack: Any) -> bool:
             self.logger.debug(
@@ -409,6 +467,12 @@ class Processor:
 
             return matches
 
+        self.logger.debug(
+            ("Processor::_get_nodes_by_search:  Seeking SEARCH nodes matching"
+             + " {}.")
+            .format(terms)
+        )
+
         invert = terms.inverted
         method = terms.method
         attr = terms.attribute
@@ -443,12 +507,71 @@ class Processor:
             if (matches and not invert) or (invert and not matches):
                 yield data
 
+    def _get_nodes_by_collector(
+            self, yaml_path: Path, segment_index: int, data: Any,
+            terms: CollectorTerms
+    ) -> Generator[Any, None, None]:
+        """
+        Returns zero or more nodes within a given data context that match a
+        YAML Path found at a specific segment of an outer YAML Path.
+
+        Parameters:
+            1. data (ruamel.yaml data) The parsed YAML data to process
+            2. yaml_path (Path) The YAML Path being processed
+            3. segment_index (int) Segment index of the YAML Path to process
+
+        Returns:  (Generator[Any, None, None]) Each node as they are matched
+
+        Raises:  N/A
+        """
+        if not terms.operation is CollectorOperators.NONE:
+            yield data
+            return
+
+        results = []
+        for node in self._get_required_nodes(data, Path(terms.expression)):
+            results.append(node)
+
+        # As long as each next segment is an ADDITION or SUBTRACTION
+        # COLLECTOR, keep combining the results.
+        segments = yaml_path.escaped
+        next_segment_idx = segment_index + 1
+        while next_segment_idx < len(segments):
+            (peek_type, peek_attrs) = segments[next_segment_idx]
+            if (
+                    peek_type is PathSegmentTypes.COLLECTOR
+                    and isinstance(peek_attrs, CollectorTerms)
+            ):
+                peek_path: Path = Path(peek_attrs.expression)
+                if peek_attrs.operation == CollectorOperators.ADDITION:
+                    add_results = []
+                    for node in self._get_required_nodes(data, peek_path):
+                        add_results.append(node)
+                    results += add_results
+                elif peek_attrs.operation == CollectorOperators.SUBTRACTION:
+                    rem_results = []
+                    for node in self._get_required_nodes(data, peek_path):
+                        rem_results.append(node)
+                    results = [e for e in results if e not in rem_results]
+                else:
+                    break
+            else:
+                break
+
+            next_segment_idx += 1
+
+        # Don't unnecessarily wrap single-match results within lists
+        if len(results) == 1:
+            results = results[0]
+
+        yield results
+
     def _get_required_nodes(self, data: Any, yaml_path: Path,
                             depth: int = 0) -> Generator[Any, None, None]:
         """Generates zero or more pre-existing nodes from YAML data matching a
         YAML Path.
 
-        Positional Parameters:
+        Parameters:
           1. data (ruamel.yaml data) The parsed YAML data to process
           2. yaml_path (yamlpath.Path) The pre-parsed YAML Path to follow
           3. depth (int) Index within yaml_path to process
@@ -463,10 +586,11 @@ class Processor:
         segments = yaml_path.escaped
         if segments and len(segments) > depth:
             (segment_type, unstripped_attrs) = yaml_path.unescaped[depth]
+            except_segment = str(unstripped_attrs)
             self.logger.debug(
-                ("Processor::_get_required_nodes:  Seeking segment <{}>{} in data of"
-                 + " type {}:")
-                 .format(segment_type, unstripped_attrs, type(data))
+                ("Processor::_get_required_nodes:  Seeking segment <{}>{} in"
+                 + " data of type {}:")
+                .format(segment_type, except_segment, type(data))
             )
             self.logger.debug(data)
             self.logger.debug("")
@@ -474,16 +598,17 @@ class Processor:
             for node in self._get_nodes_by_path_segment(
                     data, yaml_path, depth):
                 self.logger.debug(
-                    ("Processor::_get_required_nodes:  Found node <{}>{} in the"
-                        + " data and recursing into it...")
-                    .format(segment_type, unstripped_attrs)
+                    ("Processor::_get_required_nodes:  Found node <{}>{} in"
+                     + " the data and recursing into it...")
+                    .format(segment_type, except_segment)
                 )
                 for subnode in self._get_required_nodes(
                         node, yaml_path, depth + 1):
                     yield subnode
         else:
             self.logger.debug(
-                "Processor::_get_required_nodes:  Finally returning data of type {}:"
+                ("Processor::_get_required_nodes:  Finally returning data of"
+                 + " type {}:")
                 .format(type(data))
             )
             self.logger.debug(data)
@@ -498,7 +623,7 @@ class Processor:
         exactly one new node at the end of the YAML Path if it had to be
         created.
 
-        Positional Parameters:
+        Parameters:
           1. data (ruamel.yaml data) The parsed YAML data to process
           2. path (deque) The pre-parsed YAML Path to follow
           3. value (any) The value to assign to the element
@@ -513,7 +638,8 @@ class Processor:
         """
         if data is None:
             self.logger.debug(
-                "Processor::_get_optional_nodes:  Bailing out on None data/path!"
+                "Processor::_get_optional_nodes:  Bailing out on None"
+                + " data/path!"
             )
             return
 
@@ -521,60 +647,73 @@ class Processor:
         if segments and len(segments) > depth:
             (segment_type, unstripped_attrs) = yaml_path.unescaped[depth]
             stripped_attrs = segments[depth][1]
+            except_segment = str(unstripped_attrs)
 
             self.logger.debug(
-                ("Processor::_get_optional_nodes:  Seeking element <{}>{} in data of"
-                 + " type {}:"
-                ).format(segment_type, unstripped_attrs, type(data))
+                ("Processor::_get_optional_nodes:  Seeking element <{}>{} in"
+                 + " data of type {}:"
+                ).format(segment_type, except_segment, type(data))
             )
             self.logger.debug(data)
             self.logger.debug("")
 
             # The next element may not exist; this method ensures that it does
             matched_nodes = 0
-            for node in self._get_nodes_by_path_segment(data, yaml_path,
-                    depth):
+            for node in self._get_nodes_by_path_segment(
+                    data, yaml_path, depth
+            ):
                 matched_nodes += 1
                 self.logger.debug(
-                    ("Processor::_get_optional_nodes:  Found element <{}>{} in the"
-                        + " data; recursing into it..."
-                    ).format(segment_type, unstripped_attrs)
+                    ("Processor::_get_optional_nodes:  Found element <{}>{} in"
+                     + " the data; recursing into it..."
+                    ).format(segment_type, except_segment)
                 )
-                for epn in self._get_optional_nodes(node, yaml_path, value,
-                        depth + 1):
+                for epn in self._get_optional_nodes(
+                        node, yaml_path, value, depth + 1
+                ):
                     yield epn
 
-            if (matched_nodes < 1
-                    and segment_type is not PathSegmentTypes.SEARCH):
+            if (
+                    matched_nodes < 1
+                    and segment_type is not PathSegmentTypes.SEARCH
+            ):
                 # Add the missing element
                 self.logger.debug(
-                    ("Processor::_get_optional_nodes:  Element <{}>{} is unknown in"
-                     + " the data!"
-                    ).format(segment_type, unstripped_attrs)
+                    ("Processor::_get_optional_nodes:  Element <{}>{} is"
+                     + " unknown in the data!"
+                    ).format(segment_type, except_segment)
                 )
                 if isinstance(data, list):
                     self.logger.debug(
                         "Processor::_get_optional_nodes:  Dealing with a list"
                     )
-                    if segment_type is PathSegmentTypes.ANCHOR:
-                        new_val = self.default_for_child(yaml_path, depth + 1,
-                            value)
-                        new_ele = self.append_list_element(data, new_val,
-                            stripped_attrs)
-                        for node in self._get_optional_nodes(new_ele,
-                                yaml_path, value, depth + 1):
+                    if (
+                            segment_type is PathSegmentTypes.ANCHOR
+                            and isinstance(stripped_attrs, str)
+                    ):
+                        new_val = self.default_for_child(
+                            yaml_path, depth + 1, value
+                        )
+                        new_ele = self.append_list_element(
+                            data, new_val, stripped_attrs
+                        )
+                        for node in self._get_optional_nodes(
+                                new_ele, yaml_path, value, depth + 1
+                        ):
                             matched_nodes += 1
                             yield node
                     elif (
-                        segment_type is PathSegmentTypes.INDEX
-                        and isinstance(stripped_attrs, int)
+                            segment_type is PathSegmentTypes.INDEX
+                            and isinstance(stripped_attrs, int)
                     ):
                         for _ in range(len(data) - 1, stripped_attrs):
-                            new_val = self.default_for_child(yaml_path,
-                                depth + 1, value)
+                            new_val = self.default_for_child(
+                                yaml_path, depth + 1, value
+                            )
                             self.append_list_element(data, new_val)
                         for node in self._get_optional_nodes(
-                            data[stripped_attrs], yaml_path, value, depth + 1
+                                data[stripped_attrs], yaml_path, value,
+                                depth + 1
                         ):
                             matched_nodes += 1
                             yield node
@@ -583,11 +722,12 @@ class Processor:
                             "Cannot add {} subreference to lists"
                             .format(str(segment_type))
                             , yaml_path
-                            , unstripped_attrs
+                            , except_segment
                         )
                 elif isinstance(data, dict):
                     self.logger.debug(
-                        "Processor::_get_optional_nodes:  Dealing with a dictionary"
+                        "Processor::_get_optional_nodes:  Dealing with a"
+                        + " dictionary"
                     )
                     if segment_type is PathSegmentTypes.ANCHOR:
                         raise NotImplementedError
@@ -597,7 +737,8 @@ class Processor:
                             yaml_path, depth + 1, value
                         )
                         for node in self._get_optional_nodes(
-                            data[stripped_attrs], yaml_path, value, depth + 1
+                                data[stripped_attrs], yaml_path, value,
+                                depth + 1
                         ):
                             matched_nodes += 1
                             yield node
@@ -606,7 +747,7 @@ class Processor:
                             "Cannot add {} subreference to dictionaries"
                             .format(str(segment_type)),
                             yaml_path,
-                            unstripped_attrs
+                            except_segment
                         )
                 else:
                     raise YAMLPathException(
@@ -614,13 +755,13 @@ class Processor:
                             str(segment_type)
                         ),
                         yaml_path,
-                        unstripped_attrs
+                        except_segment
                     )
 
         else:
             self.logger.debug(
-                ("Processor::_get_optional_nodes:  Finally returning data of type"
-                 + " {}:"
+                ("Processor::_get_optional_nodes:  Finally returning data of"
+                 + " type {}:"
                 ).format(type(data))
             )
             self.logger.debug(data)
@@ -629,10 +770,11 @@ class Processor:
 
     def _update_node(self, source_node: Any, value: Any,
                      value_format: YAMLValueFormats) -> None:
-        """Recursively updates the value of a YAML Node and any references to it
+        """
+        Recursively updates the value of a YAML Node and any references to it
         within the entire YAML data structure (Anchors and Aliases, if any).
 
-        Positional Parameters:
+        Parameters:
           1. data (ruamel.yaml data) The parsed YAML data to process
           2. source_node (object) The YAML Node to update
           3. value (any) The new value to assign to the source_node and
@@ -677,7 +819,7 @@ class Processor:
         """Identifies and returns the most appropriate default value for the
         next entry in a YAML Path, should it not already exist.
 
-        Positional Parameters:
+        Parameters:
           1. yaml_path (deque) The pre-parsed YAML Path to follow
           2. value (any) The final expected value for the final YAML Path entry
 
@@ -712,7 +854,7 @@ class Processor:
         """Appends a new element to an ruamel.yaml presented list, preserving
         any tailing comment for the former last element of the same list.
 
-        Positional Parameters:
+        Parameters:
           1. data (ruamel.yaml data) The parsed YAML data to process
           2. value (any) The value of the element to append
           3. anchor (str) An Anchor or Alias name for the new element
@@ -751,7 +893,7 @@ class Processor:
     def wrap_type(value: Any) -> Any:
         """Wraps a value in one of the ruamel.yaml wrapper types.
 
-        Positional Parameters:
+        Parameters:
           1. value (any) The value to wrap.
 
         Returns: (any) The wrapped value or the original value when a better
@@ -780,7 +922,7 @@ class Processor:
     def clone_node(node: Any) -> Any:
         """Duplicates a YAML Data node.
 
-        Positional Parameters:
+        Parameters:
           1. node (object) The node to clone.
 
         Returns: (object) Clone of the given node

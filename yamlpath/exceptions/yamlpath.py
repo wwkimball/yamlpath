@@ -5,7 +5,7 @@ Copyright 2019 William W. Kimball, Jr. MBA MSIS
 """
 from typing import Optional, Union
 
-from yamlpath import Path
+from yamlpath.path import Path
 
 
 class YAMLPathException(Exception):

@@ -13,6 +13,7 @@ from yamlpath.enums import (
     CollectorOperators,
 )
 from yamlpath.path import SearchTerms, CollectorTerms
+from yamlpath.types import PathSegment
 
 
 class Path:
@@ -70,7 +71,7 @@ class Path:
                     ppath += pathsep
 
                 ppath += (
-                    segment_attrs
+                    str(segment_attrs)
                     .replace(pathsep, "\\{}".format(pathsep))
                     .replace("&", r"\&")
                     .replace("[", r"\[")
@@ -163,16 +164,17 @@ class Path:
 
         Raises:  N/A
         """
-        old_value = self._seperator
+        old_value: PathSeperators = self._seperator
 
-        # Only build a new stringified version when this value changes
+        # Reset all representations when this changes
         if not value == old_value:
             self._seperator = value
+            self._escaped = deque()
+            self._unescaped = deque()
             self._stringified = ""
 
     @property
-    def escaped(self) -> Deque[PathSegmentTypes,
-                               Union[str, CollectorTerms, SearchTerms]]:
+    def escaped(self) -> Deque[PathSegment]:
         r"""
         Accessor for the escaped, parsed version of this YAML Path.
 
@@ -191,8 +193,7 @@ class Path:
         return self._escaped.copy()
 
     @property
-    def unescaped(self) -> Deque[PathSegmentTypes,
-                                 Union[str, CollectorTerms, SearchTerms]]:
+    def unescaped(self) -> Deque[PathSegment]:
         r"""
         Accessor for the unescaped, parsed version of this YAML Path.  Any
         leading \ symbols are preserved.  This is the print and log friendly
@@ -212,8 +213,7 @@ class Path:
     # pylint: disable=locally-disabled,too-many-locals,too-many-branches,too-many-statements
     def _parse_path(self,
                     strip_escapes: bool = True
-                   ) -> Deque[PathSegmentTypes,
-                              Union[str, CollectorTerms, SearchTerms]]:
+                   ) -> Deque[PathSegment]:
         r"""
         Breaks apart a stringified YAML Path into component segments, each
         identified by its type.  See README.md for sample YAML Paths.

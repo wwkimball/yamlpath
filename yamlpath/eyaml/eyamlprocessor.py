@@ -11,11 +11,12 @@ from typing import Any, Generator, List, Optional
 
 from ruamel.yaml.comments import CommentedSeq, CommentedMap
 
+from yamlpath.path import Path
 from yamlpath.eyaml.enums import EYAMLOutputFormats
 from yamlpath.enums import YAMLValueFormats
 from yamlpath.exceptions import EYAMLCommandException
 from yamlpath.wrappers import ConsolePrinter
-from yamlpath import Processor, Path
+from yamlpath import Processor
 
 
 class EYAMLProcessor(Processor):
