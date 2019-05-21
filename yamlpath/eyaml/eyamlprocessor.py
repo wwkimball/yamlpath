@@ -129,7 +129,7 @@ class EYAMLProcessor(Processor):
         if not self._can_run_eyaml():
             raise EYAMLCommandException("No accessible eyaml command.")
 
-        cmdstr: str = self.eyaml + " decrypt --quiet --stdin"
+        cmdstr: str = "{} decrypt --quiet --stdin".format(self.eyaml)
         if self.publickey:
             cmdstr += " --pkcs7-public-key={}".format(self.publickey)
         if self.privatekey:
@@ -192,21 +192,22 @@ class EYAMLProcessor(Processor):
                 "The eyaml binary is not executable at {}.".format(self.eyaml)
             )
 
-        cmdstr = self.eyaml + " encrypt --quiet --stdin --output=" + output
+        cmdstr: str = ("{} encrypt --quiet --stdin --output={}"
+                       .format(self.eyaml, output))
         if self.publickey:
             cmdstr += " --pkcs7-public-key={}".format(self.publickey)
         if self.privatekey:
             cmdstr += " --pkcs7-private-key={}".format(self.privatekey)
 
-        cmd = cmdstr.split()
+        cmd: List[str] = cmdstr.split()
         self.logger.debug(
             "EYAMLPath::encrypt_eyaml:  About to execute:  {}"
             .format(" ".join(cmd))
         )
-        bval = (value + "\n").encode("ascii")
+        bval: bytes = (value + "\n").encode("ascii")
 
         try:
-            retval = (
+            retval: str = (
                 run(cmd, stdout=PIPE, input=bval, check=True)
                 .stdout
                 .decode('ascii')
@@ -225,7 +226,7 @@ class EYAMLProcessor(Processor):
                  + " EYAML keys.").format(self.eyaml)
             )
 
-        if output == "block":
+        if output is EYAMLOutputFormats.BLOCK:
             retval = re.sub(r" +", "", retval) + "\n"
 
         self.logger.debug(
@@ -233,37 +234,33 @@ class EYAMLProcessor(Processor):
         )
         return retval
 
-    def set_eyaml_value(self, yaml_path: Path, value: Any, **kwargs) -> None:
-        """Encrypts a value and stores the result to zero or more nodes
-        specified via YAML Path.
+    def set_eyaml_value(self, yaml_path: Path, value: str,
+                        output: EYAMLOutputFormats = EYAMLOutputFormats.STRING,
+                        mustexist: bool = False) -> None:
+        """
+        Encrypts a value and stores the result to zero or more nodes specified
+        via YAML Path.
 
-        Positional Parameters:
-          1. data (ruamel.yaml data) The parsed YAML data to process
-          2. yaml_path (any) The YAML Path specifying which node to
-             encrypt
-          3. value (any) The value to encrypt
-
-        Optional Parameters:
-          1. output (string) one of "string" or "block"; "string" causes
-             the EYAML representation to be one single line while
-             "block" results in a folded-string variant
-          2. mustexist (Boolean) Indicates whether YAML Path must
-             specify a pre-existing node
+        Parameters:
+            1. yaml_path (Path) The YAML Path specifying which nodes are to
+               receive the encrypted value
+            2. value (any) The value to encrypt
+            3. output (EYAMLOutputFormats) the output format of the encryption
+            4. mustexist (bool) Indicates whether YAML Path must
+                specify a pre-existing node
 
         Returns:  N/A
 
         Raises:
-            YAMLPathException when YAML Path is invalid
+            - `YAMLPathException` when YAML Path is invalid
         """
         self.logger.verbose(
             "Encrypting value(s) for {}."
             .format(yaml_path)
         )
-        output = kwargs.pop("output", "string")
-        mustexist = kwargs.pop("mustexist", False)
-        encval = self.encrypt_eyaml(value, output)
-        emit_format = YAMLValueFormats.FOLDED
-        if output == "string":
+        encval: str = self.encrypt_eyaml(value, output)
+        emit_format: YAMLValueFormats = YAMLValueFormats.FOLDED
+        if output is EYAMLOutputFormats.STRING:
             emit_format = YAMLValueFormats.DEFAULT
 
         self.set_value(
@@ -273,50 +270,49 @@ class EYAMLProcessor(Processor):
             value_format=emit_format
         )
 
-    def get_eyaml_values(self, yaml_path: Path,
-                         **kwargs) -> Generator[str, None, None]:
-        """Retrieves and decrypts zero or more EYAML nodes from YAML data at a
+    def get_eyaml_values(self, yaml_path: Path, mustexist: bool = False,
+                         default_value: str = ""
+                        ) -> Generator[str, None, None]:
+        """
+        Retrieves and decrypts zero or more EYAML nodes from YAML data at a
         YAML Path.
 
-        Positional Parameters:
-          1. data (ruamel.yaml data) The parsed YAML data to process
-          2. yaml_path (any) The YAML Path specifying which node to
-             decrypt
+        Parameters:
+            1. yaml_path (Path) The YAML Path specifying which nodes to decrypt
+            2. mustexist (bool) Indicates whether YAML Path must specify a
+               pre-existing node; when False, the node will be created when
+               missing
+            3. default_value (str) The default value to add to the YAML data
+               when `mustexist=False` and yaml_path points to a non-existent
+               node
 
-        Optional Parameters:
-          1. mustexist (Boolean) Indicates whether YAML Path must
-             specify a pre-existing node
-          2. default_value (any) The default value to add to the YAML data when
-             mustexist=False and yaml_path points to a non-existent node
-
-        Returns:  (str) The decrypted value or None when YAML Path specifies a
-        non-existant node.
+        Returns:  (str) The decrypted value or `default_value` when YAML Path
+            specifies a non-existant node
 
         Raises:
-            YAMLPathException when YAML Path is invalid
+            - `YAMLPathException` when YAML Path is invalid
         """
         self.logger.verbose(
             "Decrypting value(s) at {}.".format(yaml_path)
         )
-        mustexist = kwargs.pop("mustexist", False)
-        default_value = kwargs.pop("default_value", None)
         for node in self.get_nodes(yaml_path, mustexist=mustexist,
-                default_value=default_value):
-            plain_text = self.decrypt_eyaml(node)
+                                   default_value=default_value):
+            plain_text: str = self.decrypt_eyaml(node)
             yield plain_text
 
     def _can_run_eyaml(self) -> bool:
-        """Indicates whether this instance is capable of running the eyaml
-        binary as specified via its eyaml property.
+        """
+        Indicates whether this instance is capable of running the eyaml binary
+        as specified via its eyaml property.
 
-        Positional Parameters:  N/A
+        Parameters:  N/A
 
-        Returns:  (Boolean) true when the present eyaml property indicates an
-        executable; false, otherwise
+        Returns:  (bool) True when the present eyaml property indicates an
+        executable; False, otherwise
 
         Raises:  N/A
         """
-        binary = EYAMLProcessor.get_eyaml_executable(self.eyaml)
+        binary: Optional[str] = EYAMLProcessor.get_eyaml_executable(self.eyaml)
         if binary is None:
             return False
         self.eyaml = binary
@@ -324,15 +320,16 @@ class EYAMLProcessor(Processor):
 
     @staticmethod
     def get_eyaml_executable(binary: str = "eyaml") -> Optional[str]:
-        """Returns the full executable path to an eyaml binary or None when it
+        """
+        Returns the full executable path to an eyaml binary or None when it
         cannot be found or is not executable.
 
-        Positional Parameters:
-          1. binary (str) The executable to test.  If an absolute or relative
-             path is not provided, the system PATH will be searched for a match
-             to test.
+        Parameters:
+            1. binary (str) The executable to test; if an absolute or relative
+               path is not provided, the system PATH will be searched for a
+               match to test
 
-        Returns: (str) None or the executable eyaml binary path.
+        Returns: (str) None or the executable eyaml binary path
 
         Raises:  N/A
         """
@@ -350,12 +347,13 @@ class EYAMLProcessor(Processor):
 
     @staticmethod
     def is_eyaml_value(value: str) -> bool:
-        """Indicates whether a value is EYAML-encrypted.
+        """
+        Indicates whether a value is EYAML-encrypted.
 
-        Positional Parameters:
-          1. value (any) The value to check
+        Parameters:
+            1. value (any) The value to check
 
-        Returns:  (Boolean) true when the value is encrypted; false, otherwise
+        Returns:  (bool) True when the value is encrypted; False, otherwise
 
         Raises:  N/A
         """
