@@ -1,9 +1,10 @@
-"""YAML Path.
+"""
+Implements YAML Path.
 
 Copyright 2019 William W. Kimball, Jr. MBA MSIS
 """
 from collections import deque
-from typing import List, Optional, Union
+from typing import Deque, List, Optional, Union
 
 from yamlpath.enums import (
     PathSegmentTypes,
@@ -11,11 +12,14 @@ from yamlpath.enums import (
     PathSeperators,
     CollectorOperators,
 )
-from yamlpath.types import SearchTerms, CollectorTerms
+from yamlpath.path import SearchTerms, CollectorTerms
 
 
 class Path:
-    """Encapsulate a YAML Path and its parsing logic.  This will keep track of:
+    """
+    Encapsulate a YAML Path and its parsing logic.
+
+    This will keep track of:
       * the original, unparsed, and unmodified YAML Path;
       * its segment seperator (inferred or manually specified);
       * the unescaped, parsed representation of the YAML Path; and
@@ -23,24 +27,20 @@ class Path:
 
     Parsing operations are lazy and property setting smartly tiggers re-parsing
     only when necessary.
+
+    Parameters:
+        1. yaml_path (Union["Path", str]) The YAML Path to parse or copy
+        2. pathsep (PathSeperators) Forced YAML Path segment seperator; set
+            only when automatic inference fails
+
+    Returns:  N/A
+
+    Raises:  N/A
     """
 
-    def __init__(self, yaml_path: Union["Path", str] = "", **kwargs) -> None:
-        """Init this class.
-
-        Positional Parameters:
-          1. yaml_path (Union["Path", str]) The YAML Path to parse or copy
-
-        Optional Parameters:
-          1. pathsep (PathSeperators) Forced YAML Path segment seperator; set
-             only when automatic inference fails
-
-        Returns:  N/A
-
-        Raises:  N/A
-        """
-        self._seperator: PathSeperators = kwargs.pop("pathsep",
-                                                     PathSeperators.AUTO)
+    def __init__(self, yaml_path: Union["Path", str] = "",
+                 pathsep: PathSeperators = PathSeperators.AUTO) -> None:
+        self._seperator: PathSeperators = pathsep
         self._original: str = ""
         self._unescaped: deque = deque()
         self._escaped: deque = deque()
@@ -52,26 +52,13 @@ class Path:
             self.original = yaml_path
 
     def __str__(self) -> str:
-        """Returns the printable, user-friendly version of a YAML Path.
-
-        Positional Parameters:
-          1. yaml_path (any) The YAML Path to convert
-
-        Optional Parameters:
-          1. pathsep (string) A PathSeperators value for controlling the YAML
-             Path seperator
-
-        Returns:  (str) The stringified YAML Path
-
-        Raises:  N/A
-        """
         if self._stringified:
             return self._stringified
 
         segments = self.unescaped
-        pathsep = PathSeperators.to_seperator(self.seperator)
-        add_sep = False
-        ppath = ""
+        pathsep: str = PathSeperators.to_seperator(self.seperator)
+        add_sep: bool = False
+        ppath: str = ""
 
         # FSLASH seperator requires a path starting with a /
         if self.seperator is PathSeperators.FSLASH:
@@ -108,11 +95,13 @@ class Path:
 
     def __repr__(self) -> str:
         """Generates an eval()-safe representation of this object."""
-        return "{}('{}')".format(self.__class__.__name__, self._original)
+        return ("{}('{}', '{}')".format(self.__class__.__name__,
+                                        self.original, self.seperator))
 
     @property
     def original(self) -> str:
-        """Original YAML Path accesor.
+        """
+        Original YAML Path accessor.
 
         Positional Parameters:  N/A
 
@@ -124,10 +113,11 @@ class Path:
 
     @original.setter
     def original(self, value: str) -> None:
-        """Original YAML Path mutator.
+        """
+        Original YAML Path mutator.
 
-        Positional Parameters:
-          1. value (str) A YAML Path in string form
+        Parameters:
+            1. value (str) A YAML Path in string form
 
         Returns:  N/A
 
@@ -145,9 +135,10 @@ class Path:
 
     @property
     def seperator(self) -> PathSeperators:
-        """Accessor for the seperator used to demarcate YAML Path segments.
+        """
+        Accessor for the seperator used to demarcate YAML Path segments.
 
-        Positional Parameters:  N/A
+        Parameters:  N/A
 
         Returns:  (PathSeperators) The segment demarcation symbol
 
@@ -160,12 +151,13 @@ class Path:
 
     @seperator.setter
     def seperator(self, value: PathSeperators) -> None:
-        """Mutator for the seperator used to demarcate YAML Path segments.
-        This only affects __str__ and only when the new value differs from the
+        """
+        Mutator for the seperator used to demarcate YAML Path segments.  This
+        only affects __str__ and only when the new value differs from the
         seperator already inferred from the original YAML Path.
 
-        Positional Parameters:
-          1. value (PathSeperators) The segment demarcation symbol
+        Parameters:
+            1. value (PathSeperators) The segment demarcation symbol
 
         Returns:  N/A
 
@@ -179,12 +171,15 @@ class Path:
             self._stringified = ""
 
     @property
-    def escaped(self) -> deque:
-        r"""Accessor for the escaped, parsed version of this YAML Path.  Any
-        leading \ symbols are stripped out.  This is the parsed YAML Path used
-        for processing YAML data.
+    def escaped(self) -> Deque[PathSegmentTypes,
+                               Union[str, CollectorTerms, SearchTerms]]:
+        r"""
+        Accessor for the escaped, parsed version of this YAML Path.
 
-        Positional Parameters:  N/A
+        Any leading \ symbols are stripped out.  This is the parsed YAML Path
+        used for processing YAML data.
+
+        Parameters:  N/A
 
         Returns:  (deque) The escaped, parsed version of this YAML Path
 
@@ -196,12 +191,14 @@ class Path:
         return self._escaped.copy()
 
     @property
-    def unescaped(self) -> deque:
-        r"""Accessor for the unescaped, parsed version of this YAML Path.  Any
+    def unescaped(self) -> Deque[PathSegmentTypes,
+                                 Union[str, CollectorTerms, SearchTerms]]:
+        r"""
+        Accessor for the unescaped, parsed version of this YAML Path.  Any
         leading \ symbols are preserved.  This is the print and log friendly
         version of the parsed YAML Path.
 
-        Positional Parameters:  N/A
+        Parameters:  N/A
 
         Returns:  (deque) The unescaped, parsed version of this YAML Path
 
@@ -212,19 +209,25 @@ class Path:
 
         return self._unescaped.copy()
 
-    def _parse_path(self, strip_escapes: bool = True) -> deque:
-        r"""Breaks apart a stringified YAML Path into component segments, each
+    # pylint: disable=locally-disabled,too-many-locals,too-many-branches,too-many-statements
+    def _parse_path(self,
+                    strip_escapes: bool = True
+                   ) -> Deque[PathSegmentTypes,
+                              Union[str, CollectorTerms, SearchTerms]]:
+        r"""
+        Breaks apart a stringified YAML Path into component segments, each
         identified by its type.  See README.md for sample YAML Paths.
 
-        Positional Parameters:
-          1. strip_escapes (bool) True = Remove leading \ symbols, leaving only
-             the "escaped" symbol.  False = Leave all leading \ symbols intact.
+        Parameters:
+            1. strip_escapes (bool) True = Remove leading \ symbols, leaving
+               only the "escaped" symbol.  False = Leave all leading \ symbols
+               intact.
 
         Returns:  (deque) an empty queue or a queue of tuples, each identifying
           (PathSegmentTypes, segment_attributes).
 
         Raises:
-          YAMLPathException when yaml_path is invalid
+            - `YAMLPathException` when the YAML Path is invalid
         """
         from yamlpath.exceptions import YAMLPathException
 
@@ -255,6 +258,7 @@ class Path:
         seeking_anchor_mark = yaml_path[first_anchor_pos] == "&"
 
         # Parse the YAML Path
+        # pylint: disable=locally-disabled,too-many-nested-blocks
         for char in yaml_path:
             demarc_count = len(demarc_stack)
 
@@ -287,11 +291,9 @@ class Path:
                     continue
 
             elif (
-                char == " "
-                and (
-                    (demarc_count < 1)
-                    or (not demarc_stack[-1] in ["'", '"'])
-                )
+                    char == " "
+                    and (demarc_count < 1
+                         or demarc_stack[-1] not in ["'", '"'])
             ):
                 # Ignore unescaped, non-demarcated whitespace
                 continue
@@ -365,17 +367,18 @@ class Path:
 
             elif collector_level > 0:
                 if (
-                    demarc_count > 0
-                    and char == ")"
-                    and demarc_stack[-1] == "("
+                        demarc_count > 0
+                        and char == ")"
+                        and demarc_stack[-1] == "("
                 ):
                     collector_level -= 1
                     demarc_count -= 1
                     demarc_stack.pop()
 
                     if collector_level < 1:
-                        path_segments.append((segment_type,
-                            CollectorTerms(segment_id, collector_operator)))
+                        path_segments.append(
+                            (segment_type,
+                             CollectorTerms(segment_id, collector_operator)))
                         segment_id = ""
                         collector_operator = CollectorOperators.NONE
                         seeking_collector_operator = True
@@ -401,9 +404,9 @@ class Path:
                 continue
 
             elif (
-                demarc_count > 0
-                and demarc_stack[-1] == "["
-                and char in ["=", "^", "$", "%", "!", ">", "<", "~"]
+                    demarc_count > 0
+                    and demarc_stack[-1] == "["
+                    and char in ["=", "^", "$", "%", "!", ">", "<", "~"]
             ):
                 # Hash attribute search
                 if char == "!":
@@ -457,8 +460,8 @@ class Path:
                     else:
                         raise YAMLPathException(
                             ("Unexpected use of {} operator.  Please try =~ if"
-                                + " you mean to search with a Regular"
-                                + " Expression."
+                             + " you mean to search with a Regular"
+                             + " Expression."
                             ).format(char)
                             , yaml_path
                         )
@@ -519,14 +522,14 @@ class Path:
                     continue
 
             elif (
-                demarc_count > 0
-                and char == "]"
-                and demarc_stack[-1] == "["
+                    demarc_count > 0
+                    and char == "]"
+                    and demarc_stack[-1] == "["
             ):
                 # Store the INDEX, SLICE, or SEARCH parameters
                 if (
-                    segment_type is PathSegmentTypes.INDEX
-                    and ':' not in segment_id
+                        segment_type is PathSegmentTypes.INDEX
+                        and ':' not in segment_id
                 ):
                     try:
                         idx = int(segment_id)
@@ -536,8 +539,10 @@ class Path:
                             , yaml_path
                         )
                     path_segments.append((segment_type, idx))
-                elif (segment_type is PathSegmentTypes.SEARCH
-                        and search_method is not None):
+                elif (
+                        segment_type is PathSegmentTypes.SEARCH
+                        and search_method is not None
+                ):
                     # Undemarcate the search term, if it is so
                     if segment_id and segment_id[0] in ["'", '"']:
                         leading_mark = segment_id[0]
