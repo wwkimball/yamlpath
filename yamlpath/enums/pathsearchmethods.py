@@ -8,7 +8,7 @@ from enum import Enum, auto
 
 class PathSearchMethods(Enum):
     """
-    Supported methods for searching YAML Path segments.  These include:
+    Supported selfs for searching YAML Path segments.  These include:
 
     `CONTAINS`
         Matches when the haystack contains the needle.
@@ -47,39 +47,25 @@ class PathSearchMethods(Enum):
     LESS_THAN_OR_EQUAL = auto()
     REGEX = auto()
 
-    @staticmethod
-    def to_operator(method: "PathSearchMethods") -> str:
-        """
-        Converts a value of this enumeration into a human-friendly operator.
-
-        Parameters:
-            1. method (PathSearchMethods) The enumeration value to convert
-
-        Returns: (str) The operator
-
-        Raises:
-            - `NotImplementedError` when method is unknown to this method.
-        """
-        operator = ""
-        if method is PathSearchMethods.EQUALS:
-            operator = "="
-        elif method is PathSearchMethods.STARTS_WITH:
-            operator = "^"
-        elif method is PathSearchMethods.ENDS_WITH:
-            operator = "$"
-        elif method is PathSearchMethods.CONTAINS:
-            operator = "%"
-        elif method is PathSearchMethods.LESS_THAN:
-            operator = "<"
-        elif method is PathSearchMethods.GREATER_THAN:
-            operator = ">"
-        elif method is PathSearchMethods.LESS_THAN_OR_EQUAL:
-            operator = "<="
-        elif method is PathSearchMethods.GREATER_THAN_OR_EQUAL:
-            operator = ">="
-        elif method is PathSearchMethods.REGEX:
-            operator = "=~"
-        else:
-            raise NotImplementedError
+    def __str__(self) -> str:
+        operator = ''
+        if self is PathSearchMethods.EQUALS:
+            operator = '='
+        elif self is PathSearchMethods.STARTS_WITH:
+            operator = '^'
+        elif self is PathSearchMethods.ENDS_WITH:
+            operator = '$'
+        elif self is PathSearchMethods.CONTAINS:
+            operator = '%'
+        elif self is PathSearchMethods.LESS_THAN:
+            operator = '<'
+        elif self is PathSearchMethods.GREATER_THAN:
+            operator = '>'
+        elif self is PathSearchMethods.LESS_THAN_OR_EQUAL:
+            operator = '<='
+        elif self is PathSearchMethods.GREATER_THAN_OR_EQUAL:
+            operator = '>='
+        elif self is PathSearchMethods.REGEX:
+            operator = '=~'
 
         return operator

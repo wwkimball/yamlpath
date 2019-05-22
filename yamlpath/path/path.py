@@ -57,7 +57,7 @@ class Path:
             return self._stringified
 
         segments = self.unescaped
-        pathsep: str = PathSeperators.to_seperator(self.seperator)
+        pathsep: str = str(self.seperator)
         add_sep: bool = False
         ppath: str = ""
 
@@ -242,7 +242,7 @@ class Path:
         search_attr: str = ""
         seeking_regex_delim: bool = False
         capturing_regex: bool = False
-        pathsep: str = PathSeperators.to_seperator(self.seperator)
+        pathsep: str = str(self.seperator)
         collector_level: int = 0
         collector_operator: CollectorOperators = CollectorOperators.NONE
         seeking_collector_operator: bool = False

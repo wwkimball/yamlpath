@@ -50,7 +50,7 @@ class YAMLPathException(Exception):
                 self.user_message,
                 self.yaml_path)
         else:
-            message = "{} at '{}' in '{}'".format(
+            message = "{} at '{}' in '{}'.".format(
                 self.user_message,
                 self.segment,
                 self.yaml_path)

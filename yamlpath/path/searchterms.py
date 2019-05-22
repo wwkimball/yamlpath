@@ -32,7 +32,7 @@ class SearchTerms:
             "["
             + str(self.attribute)
             + ("!" if self.inverted else "")
-            + PathSearchMethods.to_operator(self.method)
+            + str(self.method)
             + safe_term
             + "]"
         )

@@ -14,7 +14,7 @@ from ruamel.yaml.comments import CommentedSeq, CommentedMap
 from yamlpath.path import Path
 from yamlpath.eyaml.enums import EYAMLOutputFormats
 from yamlpath.enums import YAMLValueFormats
-from yamlpath.exceptions import EYAMLCommandException
+from yamlpath.eyaml.exceptions import EYAMLCommandException
 from yamlpath.wrappers import ConsolePrinter
 from yamlpath import Processor
 
@@ -31,15 +31,15 @@ class EYAMLProcessor(Processor):
     Parameters:
         1. logger (ConsolePrinter) Instance of ConsolePrinter or subclass
         2. data (Any) Parsed YAML data
-        3. binary (str) The external eyaml command to use when performing data
-           encryption or decryption; if no path is provided, the command will
-           be sought on the system PATH.  Defaut:  "eyaml'
-        4. **kwargs (Optional[str]) can contain the following keyword
+        3. **kwargs (Optional[str]) can contain the following keyword
            parameters:
-           1. publickey (Optional[str]) Fully-qualified path to the public key
-              for use with data encryption
-           2. privatekey (Optional[str]) Fully-qualified path to the public key
-              for use with data decryption
+           * binary (str) The external eyaml command to use when performing
+             data encryption or decryption; if no path is provided, the command
+             will be sought on the system PATH.  Defaut="eyaml"
+           * publickey (Optional[str]) Fully-qualified path to the public key
+             for use with data encryption
+           * privatekey (Optional[str]) Fully-qualified path to the public key
+             for use with data decryption
 
     Returns:  N/A
 
@@ -47,8 +47,8 @@ class EYAMLProcessor(Processor):
     """
 
     def __init__(self, logger: ConsolePrinter, data: Any,
-                 binary: str = "eyaml", **kwargs: Optional[str]) -> None:
-        self.eyaml: str = binary
+                 **kwargs: Optional[str]) -> None:
+        self.eyaml: Optional[str] = kwargs.pop("binary", "eyaml")
         self.publickey: Optional[str] = kwargs.pop("publickey", None)
         self.privatekey: Optional[str] = kwargs.pop("privatekey", None)
         super().__init__(logger, data)
@@ -320,7 +320,7 @@ class EYAMLProcessor(Processor):
         return True
 
     @staticmethod
-    def get_eyaml_executable(binary: str = "eyaml") -> Optional[str]:
+    def get_eyaml_executable(binary: Optional[str] = "eyaml") -> Optional[str]:
         """
         Returns the full executable path to an eyaml binary or None when it
         cannot be found or is not executable.
@@ -334,13 +334,14 @@ class EYAMLProcessor(Processor):
 
         Raises:  N/A
         """
-        if not binary:
+        if binary is None or not binary:
             return None
 
         if binary.find(sep) < 0:
-            binary = str(which(binary))
-            if not binary:
+            binary = which(binary)
+            if binary is None:
                 return None
+            binary = str(binary)
 
         if access(binary, X_OK):
             return binary

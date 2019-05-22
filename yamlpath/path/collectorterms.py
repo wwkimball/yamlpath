@@ -16,7 +16,7 @@ class CollectorTerms:
         self._operation: CollectorOperators = operation
 
     def __str__(self) -> str:
-        operator: str = CollectorOperators.to_operator(self.operation)
+        operator: str = str(self.operation)
         return "{}({})".format(operator, self.expression)
 
     @property

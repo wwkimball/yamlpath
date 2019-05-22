@@ -31,6 +31,14 @@ class CollectorOperators(Enum):
     NONE = auto()
     SUBTRACTION = auto()
 
+    def __str__(self) -> str:
+        operator: str = ''
+        if self is CollectorOperators.ADDITION:
+            operator = '+'
+        elif self is CollectorOperators.SUBTRACTION:
+            operator = '-'
+        return operator
+
     @staticmethod
     def get_names() -> List[str]:
         """
@@ -45,35 +53,9 @@ class CollectorOperators(Enum):
         return [entry.name.upper() for entry in CollectorOperators]
 
     @staticmethod
-    def to_operator(name: "CollectorOperators") -> str:
-        """
-        Converts a value of this enumeration into a human-friendly operator.
-
-        Parameters:
-            1. name (CollectorOperators) The enumeration value to convert
-
-        Returns: (str) The operator
-
-        Raises:
-            - `NameError` when name is unknown to this method.
-        """
-        operator: str = ''
-        if name is CollectorOperators.NONE:
-            operator = ''
-        elif name is CollectorOperators.ADDITION:
-            operator = '+'
-        elif name is CollectorOperators.SUBTRACTION:
-            operator = '-'
-        else:
-            raise NameError(
-                "CollectorOperators has no such item:  {}"
-                .format(name))
-
-        return operator
-
-    @staticmethod
     def from_operator(operator: str) -> "CollectorOperators":
-        """Converts a string value to a value of this enumeration, if valid.
+        """
+        Converts a string value to a value of this enumeration, if valid.
 
         Parameters:
             1. operator (str) The name to convert
