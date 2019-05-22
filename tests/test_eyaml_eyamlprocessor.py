@@ -6,8 +6,8 @@ from subprocess import run, CalledProcessError
 from ruamel.yaml import YAML
 
 import yamlpath.patches
-from yamlpath.eyaml import EYAMLProcessor
 from yamlpath.eyaml.enums import EYAMLOutputFormats
+from yamlpath.eyaml import EYAMLProcessor
 from yamlpath.wrappers import ConsolePrinter
 from yamlpath.eyaml.exceptions import EYAMLCommandException
 
