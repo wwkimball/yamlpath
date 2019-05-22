@@ -166,12 +166,11 @@ class Path:
         """
         old_value: PathSeperators = self._seperator
 
-        # Reset all representations when this changes
+        # This changes only the stringified representation
         if not value == old_value:
             self._seperator = value
-            self._escaped = deque()
-            self._unescaped = deque()
             self._stringified = ""
+            self._stringified = str(self)
 
     @property
     def escaped(self) -> Deque[PathSegment]:
