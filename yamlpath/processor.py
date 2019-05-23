@@ -308,7 +308,7 @@ class Processor:
                     )
 
                 if intmin == intmax and len(data) > intmin:
-                    yield data[intmin]
+                    yield [data[intmin]]
                 else:
                     yield data[intmin:intmax]
 
@@ -532,6 +532,8 @@ class Processor:
         results = []
         for node in self._get_required_nodes(data, Path(terms.expression)):
             results.append(node)
+        if len(results) == 1:   # Flatten arrays
+            results = results[0]
 
         # As long as each next segment is an ADDITION or SUBTRACTION
         # COLLECTOR, keep combining the results.
@@ -548,14 +550,23 @@ class Processor:
                     add_results = []
                     for node in self._get_required_nodes(data, peek_path):
                         add_results.append(node)
+                    if len(add_results) == 1:   # Flatten arrays
+                        add_results = add_results[0]
                     results += add_results
                 elif peek_attrs.operation == CollectorOperators.SUBTRACTION:
                     rem_results = []
                     for node in self._get_required_nodes(data, peek_path):
                         rem_results.append(node)
+                    if len(rem_results) == 1:   # Flatten arrays
+                        rem_results = rem_results[0]
                     results = [e for e in results if e not in rem_results]
                 else:
-                    break
+                    raise YAMLPathException(
+                        "Adjoining Collectors without an operator has no"
+                        + " meaning; try + or - between them"
+                        , yaml_path
+                        , str(peek_path)
+                    )
             else:
                 break
 
