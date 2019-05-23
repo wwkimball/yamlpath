@@ -7,7 +7,7 @@ from yamlpath.path import Path
 class Test_path_Path():
     """Tests for the Path class."""
 
-    @pytest.mark.parametrize("path,pathsep,output", [
+    @pytest.mark.parametrize("yamlpath,pathsep,output", [
         (Path(""), PathSeperators.AUTO, ""),
         (Path("abc"), PathSeperators.AUTO, "abc"),
         ("abc", PathSeperators.AUTO, "abc"),
@@ -28,9 +28,9 @@ class Test_path_Path():
         ("/abc[def%1]", PathSeperators.AUTO, "/abc[def%1]"),
         ("abc[def%'ghi']", PathSeperators.AUTO, "abc[def%ghi]"),
     ])
-    def test_str(self, path, pathsep, output):
+    def test_str(self, yamlpath, pathsep, output):
         # Test twice to include cache hits
-        testpath = Path(path, pathsep)
+        testpath = Path(yamlpath, pathsep)
         assert output == str(testpath) == str(testpath)
 
     def test_repr(self):

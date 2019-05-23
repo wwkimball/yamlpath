@@ -3,6 +3,10 @@ import pytest
 from types import SimpleNamespace
 
 from ruamel.yaml import YAML
+from ruamel.yaml.scalarstring import PlainScalarString
+from ruamel.yaml.scalarbool import ScalarBoolean
+from ruamel.yaml.scalarfloat import ScalarFloat
+from ruamel.yaml.scalarint import ScalarInt
 
 from yamlpath.exceptions import YAMLPathException
 from yamlpath.enums import (
@@ -26,8 +30,13 @@ class Test_Processor():
 
     def test_get_none_data_nodes(self, logger_f):
         processor = Processor(logger_f, None)
+        yamlpath = Path("abc")
         matches = 0
-        for node in processor.get_nodes("abc"):
+        for node in processor.get_nodes(yamlpath, mustexist=False):
+            matches += 1
+        for node in processor.get_nodes(yamlpath, mustexist=True):
+            matches += 1
+        for node in processor._get_required_nodes(None, yamlpath):
             matches += 1
         assert matches == 0
 
@@ -54,13 +63,14 @@ class Test_Processor():
         ("squads[.>=charlie]", [3.3, 4.4], True, None),
         ("squads[.<bravo]", [1.1], True, None),
         ("squads[.<=bravo]", [1.1, 2.2], True, None),
-        ("squads[.=~/^\w{6,}$/]", [3.3], True, None),
+        (r"squads[.=~/^\w{6,}$/]", [3.3], True, None),
         ("squads[alpha=1.1]", [1.1], True, None),
         ("(&arrayOfHashes.step)+(/rollback_hashes/on_condition/failure/step)-(disabled_steps)", [[1, 4]], True, None),
         ("(&arrayOfHashes.step)+((/rollback_hashes/on_condition/failure/step)-(disabled_steps))", [[1, 2, 4]], True, None),
         ("(disabled_steps)+(&arrayOfHashes.step)", [[2, 3, 1, 2]], True, None),
         ("(&arrayOfHashes.step)+(disabled_steps)[1]", [2], True, None),
         ("((&arrayOfHashes.step)[1])", [2], True, None),
+        ("does.not.previously.exist[7]", ["Huzzah!"], False, "Huzzah!"),
     ])
     def test_get_nodes(self, logger_f, yamlpath, results, mustexist, default):
         yamldata = """---
@@ -292,3 +302,94 @@ class Test_Processor():
         with pytest.raises(YAMLPathException) as ex:
             nodes = list(processor.get_nodes("(&arrayOfHashes.step)(disabled_steps)"))
         assert -1 < str(ex.value).find("has no meaning")
+
+    def test_no_attrs_to_arrays_error(self, logger_f):
+        yamldata = """---
+        array:
+          - one
+          - two
+        """
+        yaml = YAML()
+        data = yaml.load(yamldata)
+        processor = Processor(logger_f, data)
+
+        with pytest.raises(YAMLPathException) as ex:
+            nodes = list(processor.get_nodes("array.attr"))
+        assert -1 < str(ex.value).find("Cannot add")
+
+    def test_no_anchors_to_hashes(self, logger_f):
+        yamldata = """---
+        hash:
+          key: value
+        """
+        yaml = YAML()
+        data = yaml.load(yamldata)
+        processor = Processor(logger_f, data)
+
+        with pytest.raises(NotImplementedError) as ex:
+            nodes = list(processor.get_nodes("hash[&anchor]"))
+
+    def test_no_index_to_hashes(self, logger_f):
+        yamldata = """---
+        hash:
+          key: value
+        """
+        yaml = YAML()
+        data = yaml.load(yamldata)
+        processor = Processor(logger_f, data)
+
+        with pytest.raises(YAMLPathException) as ex:
+            nodes = list(processor.get_nodes("hash[6]"))
+        assert -1 < str(ex.value).find("Cannot add")
+
+    def test_no_attrs_to_scalars(self, logger_f):
+        yamldata = """---
+        scalar: value
+        """
+        yaml = YAML()
+        data = yaml.load(yamldata)
+        processor = Processor(logger_f, data)
+
+        with pytest.raises(YAMLPathException) as ex:
+            nodes = list(processor.get_nodes("scalar[6]"))
+        assert -1 < str(ex.value).find("Cannot add")
+
+        with pytest.raises(YAMLPathException) as ex:
+            nodes = list(processor.get_nodes("scalar.key"))
+        assert -1 < str(ex.value).find("Cannot add")
+
+    @pytest.mark.skip(reason="Not Implemented; deferred to a later release")
+    def test_key_anchors(self, logger_f):
+        yamldata = """---
+        anchorKeys:
+          &keyOne value: 1
+          &keyTwo value: 2
+
+        hash:
+          *keyOne :
+            subval: 1.1
+          *keyTwo :
+            subval: 2.2
+        """
+        yaml = YAML()
+        data = yaml.load(yamldata)
+        processor = Processor(logger_f, data)
+
+        yamlpath = Path("anchorKeys[&keyTwo]")
+        processor.set_value(yamlpath, "value: 3")
+        matchtally = 0
+        for node in processor.get_nodes(yamlpath):
+            assert node == value
+            matchtally += 1
+        assert matchtally == 1
+
+    @pytest.mark.parametrize("yamlpath,value,checktype", [
+        (Path("array[0]"), False, ScalarBoolean),
+        (Path("array[0]"), "", PlainScalarString),
+        (Path("array[0]"), 1, ScalarInt),
+        (Path("array[0]"), 1.1, ScalarFloat),
+    ])
+    def test_default_for_child(self, yamlpath, value, checktype):
+        compval = Processor.default_for_child(yamlpath, 1, value)
+        #raise NameError("Got value, {}, from Path({}).".format(compval, yamlpath))
+        assert isinstance(compval, checktype)

@@ -532,7 +532,15 @@ class Processor:
         results = []
         for node in self._get_required_nodes(data, Path(terms.expression)):
             results.append(node)
-        if len(results) == 1 and isinstance(results[0], list):   # Flatten arrays
+
+        # This may end up being a bad idea for some cases, but this method will
+        # unwrap all lists that look like `[[value]]` into just `[value]`.
+        # When this isn't done, Collector syntax gets burdensome because
+        # `(...)[0]` becomes necessary in too many use-cases.  This will be an
+        # issue when the user actually expects a list-of-lists as output,
+        # though I haven't yet come up with any use-case where that is what I
+        # really wanted to get from the query.
+        if len(results) == 1 and isinstance(results[0], list):
             results = results[0]
 
         # As long as each next segment is an ADDITION or SUBTRACTION
@@ -550,15 +558,27 @@ class Processor:
                     add_results = []
                     for node in self._get_required_nodes(data, peek_path):
                         add_results.append(node)
-                    if len(add_results) == 1 and isinstance(add_results[0], list):   # Flatten arrays
+
+                    # Flatten [[val1,val2]] into [val1,val2] so the following
+                    # concatentation won't require the caller to specify
+                    # `()+()[0]`.
+                    if (len(add_results) == 1
+                            and isinstance(add_results[0], list)):
                         add_results = add_results[0]
+
                     results += add_results
                 elif peek_attrs.operation == CollectorOperators.SUBTRACTION:
                     rem_results = []
                     for node in self._get_required_nodes(data, peek_path):
                         rem_results.append(node)
-                    if len(rem_results) == 1 and isinstance(rem_results[0], list):   # Flatten arrays
+
+                    # Flatten [[val1,val2]] into [val1,val2] so the following
+                    # concatentation won't require the caller to specify
+                    # `()-()[0]`.
+                    if (len(rem_results) == 1
+                            and isinstance(rem_results[0], list)):
                         rem_results = rem_results[0]
+
                     results = [e for e in results if e not in rem_results]
                 else:
                     raise YAMLPathException(
@@ -572,7 +592,12 @@ class Processor:
 
             next_segment_idx += 1
 
-        # Don't unnecessarily wrap single-match results within lists
+        # FIXME: Prove whether flattening the result causes problems.
+        # As a courtesy, flatten the final result so `[single-result]` becomes
+        # `single-result`.  This directly contradicts the idea that `()` will
+        # "always" produce a list, so it might be a bad idea.  For now, it is
+        # proving to reduce [0] clutter from YAML Paths **as long as the user
+        # anticipates there will be exactly one result from the Collector**.
         if len(results) == 1:
             results = results[0]
 
