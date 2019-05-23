@@ -60,6 +60,7 @@ class Test_Processor():
         ("(&arrayOfHashes.step)+((/rollback_hashes/on_condition/failure/step)-(disabled_steps))", [[1, 2, 4]], True, None),
         ("(disabled_steps)+(&arrayOfHashes.step)", [[2, 3, 1, 2]], True, None),
         ("(&arrayOfHashes.step)+(disabled_steps)[1]", [2], True, None),
+        ("((&arrayOfHashes.step)[1])", [2], True, None),
     ])
     def test_get_nodes(self, logger_f, yamlpath, results, mustexist, default):
         yamldata = """---
