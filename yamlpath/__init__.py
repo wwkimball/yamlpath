@@ -1,3 +1,3 @@
 """Core YAML Path classes."""
-from .yamlpath import YAMLPath
-from .processor import Processor
+from yamlpath.yamlpath import YAMLPath
+from yamlpath.processor import Processor
