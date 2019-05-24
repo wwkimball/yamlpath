@@ -21,6 +21,7 @@ from ruamel.yaml.scalarbool import ScalarBoolean
 from ruamel.yaml.scalarfloat import ScalarFloat
 from ruamel.yaml.scalarint import ScalarInt
 
+from yamlpath import YAMLPath
 from yamlpath.path import SearchTerms, CollectorTerms
 from yamlpath.wrappers import ConsolePrinter
 from yamlpath.exceptions import YAMLPathException
@@ -31,7 +32,6 @@ from yamlpath.enums import (
     CollectorOperators,
     PathSeperators,
 )
-from yamlpath import YAMLPath
 
 # FIXME:  Scalars wipe out Arrays
 class Processor:
