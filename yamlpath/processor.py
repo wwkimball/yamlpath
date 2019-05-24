@@ -32,7 +32,7 @@ from yamlpath.enums import (
 )
 from yamlpath.path import Path, SearchTerms, CollectorTerms
 
-
+# FIXME:  Scalars wipe out Arrays
 class Processor:
     """
     Query and update YAML data via robust YAML Paths.
@@ -250,8 +250,17 @@ class Processor:
             .format(str_stripped)
         )
 
-        if isinstance(data, dict) and stripped_attrs in data:
-            yield data[stripped_attrs]
+        if isinstance(data, dict):
+            if stripped_attrs in data:
+                yield data[stripped_attrs]
+            else:
+                # Check for a string/int type mismatch
+                try:
+                    intkey = int(stripped_attrs)
+                    if intkey in data:
+                        yield data[intkey]
+                except ValueError:
+                    pass
         elif isinstance(data, list):
             try:
                 # Try using the ref as a bare Array index
@@ -592,16 +601,9 @@ class Processor:
 
             next_segment_idx += 1
 
-        # FIXME: Prove whether flattening the result causes problems.
-        # As a courtesy, flatten the final result so `[single-result]` becomes
-        # `single-result`.  This directly contradicts the idea that `()` will
-        # "always" produce a list, so it might be a bad idea.  For now, it is
-        # proving to reduce [0] clutter from YAML Paths **as long as the user
-        # anticipates there will be exactly one result from the Collector**.
-        if len(results) == 1:
-            results = results[0]
-
-        yield results
+        # yield only when there are results
+        if results:
+            yield results
 
     def _get_required_nodes(self, data: Any, yaml_path: Path,
                             depth: int = 0) -> Generator[Any, None, None]:
@@ -745,16 +747,30 @@ class Processor:
                             matched_nodes += 1
                             yield node
                     elif (
-                            segment_type is PathSegmentTypes.INDEX
-                            and isinstance(stripped_attrs, int)
+                            segment_type in [
+                                PathSegmentTypes.INDEX,
+                                PathSegmentTypes.KEY]
                     ):
-                        for _ in range(len(data) - 1, stripped_attrs):
+                        if isinstance(stripped_attrs, int):
+                            newidx = stripped_attrs
+                        else:
+                            try:
+                                newidx = int(stripped_attrs)
+                            except ValueError:
+                                raise YAMLPathException(
+                                    ("Cannot add non-integer {} subreference"
+                                     + " to lists")
+                                    .format(str(segment_type))
+                                    , yaml_path
+                                    , except_segment
+                                )
+                        for _ in range(len(data) - 1, newidx):
                             new_val = self.default_for_child(
                                 yaml_path, depth + 1, value
                             )
                             self.append_list_element(data, new_val)
                         for node in self._get_optional_nodes(
-                                data[stripped_attrs], yaml_path, value,
+                                data[newidx], yaml_path, value,
                                 depth + 1
                         ):
                             matched_nodes += 1
@@ -995,7 +1011,7 @@ class Processor:
                       value_format: YAMLValueFormats) -> Any:
         """
         Creates a new data node based on a sample node, effectively duplicaing
-        the type of the node but giving it a different value.
+        the type and anchor of the node but giving it a different value.
 
         Parameters:
             1. source_node (Any) The node from which to copy type
@@ -1056,8 +1072,9 @@ class Processor:
                 new_value = float(value)
             except ValueError:
                 raise ValueError(
-                    "The requested value format is {}, but '{}' cannot be cast\
-                     to a floating-point number.".format(valform, value)
+                    ("The requested value format is {}, but '{}' cannot be"
+                     + " cast to a floating-point number.")
+                    .format(valform, value)
                 )
 
             strval = str(value)
@@ -1083,8 +1100,9 @@ class Processor:
                 new_value = int(value)
             except ValueError:
                 raise ValueError(
-                    "The requested value format is {}, but '{}' cannot be cast\
-                     to an integer number.".format(valform, value)
+                    ("The requested value format is {}, but '{}' cannot be"
+                     + " cast to an integer number.")
+                    .format(valform, value)
                 )
         else:
             # Punt to whatever the best type may be

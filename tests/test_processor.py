@@ -3,6 +3,7 @@ import pytest
 from types import SimpleNamespace
 
 from ruamel.yaml import YAML
+from ruamel.yaml.comments import CommentedSeq, CommentedMap
 from ruamel.yaml.scalarstring import PlainScalarString
 from ruamel.yaml.scalarbool import ScalarBoolean
 from ruamel.yaml.scalarfloat import ScalarFloat
@@ -69,8 +70,9 @@ class Test_Processor():
         ("(&arrayOfHashes.step)+((/rollback_hashes/on_condition/failure/step)-(disabled_steps))", [[1, 2, 4]], True, None),
         ("(disabled_steps)+(&arrayOfHashes.step)", [[2, 3, 1, 2]], True, None),
         ("(&arrayOfHashes.step)+(disabled_steps)[1]", [2], True, None),
-        ("((&arrayOfHashes.step)[1])", [2], True, None),
+        ("((&arrayOfHashes.step)[1])[0]", [2], True, None),
         ("does.not.previously.exist[7]", ["Huzzah!"], False, "Huzzah!"),
+        ("/number_keys/1", ["one"], True, None),
     ])
     def test_get_nodes(self, logger_f, yamlpath, results, mustexist, default):
         yamldata = """---
@@ -97,6 +99,10 @@ class Test_Processor():
           bravo: 2.2
           charlie: 3.3
           delta: 4.4
+        number_keys:
+          1: one
+          2: two
+          3: three
         """
         yaml = YAML()
         processor = Processor(logger_f, yaml.load(yamldata))
@@ -132,7 +138,7 @@ class Test_Processor():
         ("/floats/[.>=4.F]", True),
         ("/floats/[.<=4.F]", True),
     ])
-    def test_get_impossible_nodes(self, logger_f, yamlpath, mustexist):
+    def test_get_impossible_nodes_error(self, logger_f, yamlpath, mustexist):
         yamldata = """---
         ints:
           - 1
@@ -164,15 +170,23 @@ class Test_Processor():
     @pytest.mark.parametrize("yamlpath,value,tally,mustexist,vformat,pathsep", [
         ("aliases[&testAnchor]", "Updated Value", 1, True, YAMLValueFormats.DEFAULT, PathSeperators.AUTO),
         (Path("top_scalar"), "New top-level value", 1, False, YAMLValueFormats.DEFAULT, PathSeperators.DOT),
+        ("/top_array/2", 42, 1, False, YAMLValueFormats.INT, PathSeperators.FSLASH),
     ])
     def test_set_value(self, logger_f, yamlpath, value, tally, mustexist, vformat, pathsep):
         yamldata = """---
         aliases:
           - &testAnchor Initial Value
+        top_array:
+          # Comment 1
+          - 1
+          # Comment 2
+          - 2
+        # Comment N
         top_scalar: Top-level plain scalar string
         """
         yaml = YAML()
-        processor = Processor(logger_f, yaml.load(yamldata))
+        data = yaml.load(yamldata)
+        processor = Processor(logger_f, data)
         processor.set_value(yamlpath, value, mustexist=mustexist, value_format=vformat, pathsep=pathsep)
         matchtally = 0
         for node in processor.get_nodes(yamlpath, mustexist=mustexist):
@@ -180,7 +194,7 @@ class Test_Processor():
             matchtally += 1
         assert matchtally == tally
 
-    def test_cannot_set_nonexistent_required_node(self, logger_f):
+    def test_cannot_set_nonexistent_required_node_error(self, logger_f):
         yamldata = """---
         key: value
         """
@@ -214,7 +228,7 @@ class Test_Processor():
         yaml.dump(data, sys.stdout)
         assert -1 == capsys.readouterr().out.find("abc")
 
-    def test_get_nodes_by_unknown_path_segment(self, logger_f):
+    def test_get_nodes_by_unknown_path_segment_error(self, logger_f):
         from collections import deque
         from enum import Enum
         from yamlpath.enums import PathSegmentTypes
@@ -236,7 +250,7 @@ class Test_Processor():
         with pytest.raises(NotImplementedError):
             nodes = list(processor._get_nodes_by_path_segment(data, path, 0))
 
-    def test_non_int_slice(self, logger_f):
+    def test_non_int_slice_error(self, logger_f):
         yamldata = """---
         - step: 1
         - step: 2
@@ -250,7 +264,7 @@ class Test_Processor():
             processor.set_value("[1:4F]", "")
         assert -1 < str(ex.value).find("is not an integer array slice")
 
-    def test_non_int_array_index(self, logger_f):
+    def test_non_int_array_index_error(self, logger_f):
         from collections import deque
         yamldata = """---
         - 1
@@ -272,7 +286,7 @@ class Test_Processor():
             nodes = list(processor._get_nodes_by_index(data, path, 0))
         assert -1 < str(ex.value).find("is not an integer array index")
 
-    def test_nonexistant_path_search_method(self, logger_f):
+    def test_nonexistant_path_search_method_error(self, logger_f):
         from enum import Enum
         from yamlpath.enums import PathSearchMethods
         names = [m.name for m in PathSearchMethods] + ['DNF']
@@ -317,7 +331,7 @@ class Test_Processor():
             nodes = list(processor.get_nodes("array.attr"))
         assert -1 < str(ex.value).find("Cannot add")
 
-    def test_no_anchors_to_hashes(self, logger_f):
+    def test_no_anchors_to_hashes_error(self, logger_f):
         yamldata = """---
         hash:
           key: value
@@ -329,7 +343,13 @@ class Test_Processor():
         with pytest.raises(NotImplementedError) as ex:
             nodes = list(processor.get_nodes("hash[&anchor]"))
 
-    def test_no_index_to_hashes(self, logger_f):
+    def test_no_index_to_hashes_error(self, logger_f):
+        # Using [#] syntax is a disambiguated INDEX ELEMENT NUMBER.  In
+        # DICTIONARY context, this would create an ambiguous request to access
+        # either the #th value or a value whose key is the literal #.  As such,
+        # an error is deliberately generated when [#] syntax is used against
+        # dictionaries.  When you actually want a DICTIONARY KEY that happens
+        # to be an integer, omit the square braces, [].
         yamldata = """---
         hash:
           key: value
@@ -342,7 +362,21 @@ class Test_Processor():
             nodes = list(processor.get_nodes("hash[6]"))
         assert -1 < str(ex.value).find("Cannot add")
 
-    def test_no_attrs_to_scalars(self, logger_f):
+    def test_get_nodes_array_impossible_type_error(self, logger_f):
+        yamldata = """---
+        array:
+          - 1
+          - 2
+        """
+        yaml = YAML()
+        data = yaml.load(yamldata)
+        processor = Processor(logger_f, data)
+
+        with pytest.raises(YAMLPathException) as ex:
+            nodes = list(processor.get_nodes(r"/array/(.=~/^.{3,4}$/)", default_value="New value"))
+        assert -1 < str(ex.value).find("Cannot add")
+
+    def test_no_attrs_to_scalars_errors(self, logger_f):
         yamldata = """---
         scalar: value
         """
@@ -383,6 +417,8 @@ class Test_Processor():
             matchtally += 1
         assert matchtally == 1
 
+    # FIXME:  The default_for_child method is no longer serving its overloaded purpose
+    @pytest.mark.xfail
     @pytest.mark.parametrize("yamlpath,value,checktype", [
         (Path("array[0]"), False, ScalarBoolean),
         (Path("array[0]"), "", PlainScalarString),
@@ -393,3 +429,61 @@ class Test_Processor():
         compval = Processor.default_for_child(yamlpath, 1, value)
         #raise NameError("Got value, {}, from Path({}).".format(compval, yamlpath))
         assert isinstance(compval, checktype)
+
+    def test_anchorless_list_element_error(self):
+        with pytest.raises(ValueError) as ex:
+            Processor.append_list_element({}, Path("foo"), "bar")
+        assert -1 < str(ex.value).find("Impossible to add an Anchor")
+
+    @pytest.mark.parametrize("value,checktype", [
+        ([], CommentedSeq),
+        ({}, CommentedMap),
+        ("", PlainScalarString),
+        (1, ScalarInt),
+        (1.1, ScalarFloat),
+        (True, ScalarBoolean),
+        (SimpleNamespace(), SimpleNamespace),
+    ])
+    def test_wrap_type(self, value, checktype):
+        assert isinstance(Processor.wrap_type(value), checktype)
+
+    @pytest.mark.parametrize("yamlpath", [
+        ("/aliases[&anchoredAlias]"),
+        ("/nonanchored"),
+    ])
+    def test_clone_node(self, logger_f, yamlpath):
+        yamldata = """---
+        aliases:
+          - &anchoredAlias value
+        nonanchored: key
+        """
+        yaml = YAML()
+        data = yaml.load(yamldata)
+        processor = Processor(logger_f, data)
+        for node in processor.get_nodes(yamlpath):
+            assert node == Processor.clone_node(node)
+
+    @pytest.mark.parametrize("source,value,check,vformat", [
+        ("", " ", " ", YAMLValueFormats.BARE),
+        ("", '" "', '" "', YAMLValueFormats.DQUOTE),
+        ("", "' '", "' '", YAMLValueFormats.SQUOTE),
+        ("", " ", " ", YAMLValueFormats.FOLDED),
+        ("", " ", " ", YAMLValueFormats.LITERAL),
+        (True, False, False, YAMLValueFormats.BOOLEAN),
+        (True, "no", False, YAMLValueFormats.BOOLEAN),
+        (1.1, 1.2, 1.2, YAMLValueFormats.FLOAT),
+        (ScalarFloat(1.1, anchor="test"), 1.2, 1.2, YAMLValueFormats.FLOAT),
+        (1, 2, 2, YAMLValueFormats.INT),
+    ])
+    def test_make_new_node(self, source, value, check, vformat):
+        assert check == Processor.make_new_node(source, value, vformat)
+
+    @pytest.mark.parametrize("source,value,vformat,etype,estr", [
+        ("", " ", "DNF", NameError, "Unknown YAML Value Format"),
+        (1.1, "4F", YAMLValueFormats.FLOAT, ValueError, "cannot be cast to a floating-point number"),
+        (1, "4F", YAMLValueFormats.INT, ValueError, "cannot be cast to an integer number"),
+    ])
+    def test_make_new_node_errors(self, source, value, vformat, etype, estr):
+        with pytest.raises(etype) as ex:
+            value == Processor.make_new_node(source, value, vformat)
+        assert -1 < str(ex.value).find(estr)
