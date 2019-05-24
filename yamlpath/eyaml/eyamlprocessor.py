@@ -11,7 +11,7 @@ from typing import Any, Generator, List, Optional
 
 from ruamel.yaml.comments import CommentedSeq, CommentedMap
 
-from yamlpath.path import Path
+from yamlpath import YAMLPath
 from yamlpath.eyaml.enums import EYAMLOutputFormats
 from yamlpath.enums import YAMLValueFormats
 from yamlpath.eyaml.exceptions import EYAMLCommandException
@@ -55,7 +55,7 @@ class EYAMLProcessor(Processor):
 
     # pylint: disable=locally-disabled,too-many-branches
     def _find_eyaml_paths(self, data: Any,
-                          build_path: str = "") -> Generator[Path, None, None]:
+                          build_path: str = "") -> Generator[YAMLPath, None, None]:
         """
         Recursively generates a set of stringified YAML Paths, each entry
         leading to an EYAML value within the evaluated YAML data.
@@ -78,7 +78,7 @@ class EYAMLProcessor(Processor):
                     tmp_path = build_path + str(idx) + "]"
 
                 if self.is_eyaml_value(ele):
-                    yield Path(tmp_path)
+                    yield YAMLPath(tmp_path)
                 else:
                     for subpath in self._find_eyaml_paths(ele, tmp_path):
                         yield subpath
@@ -90,12 +90,12 @@ class EYAMLProcessor(Processor):
             for key, val in data.non_merged_items():
                 tmp_path = build_path + str(key)
                 if self.is_eyaml_value(val):
-                    yield Path(tmp_path)
+                    yield YAMLPath(tmp_path)
                 else:
                     for subpath in self._find_eyaml_paths(val, tmp_path):
                         yield subpath
 
-    def find_eyaml_paths(self) -> Generator[Path, None, None]:
+    def find_eyaml_paths(self) -> Generator[YAMLPath, None, None]:
         """
         Recursively generates a set of stringified YAML Paths, each entry
         leading to an EYAML value within the evaluated YAML data.
@@ -235,7 +235,7 @@ class EYAMLProcessor(Processor):
         )
         return retval
 
-    def set_eyaml_value(self, yaml_path: Path, value: str,
+    def set_eyaml_value(self, yaml_path: YAMLPath, value: str,
                         output: EYAMLOutputFormats = EYAMLOutputFormats.STRING,
                         mustexist: bool = False) -> None:
         """
@@ -271,7 +271,7 @@ class EYAMLProcessor(Processor):
             value_format=emit_format
         )
 
-    def get_eyaml_values(self, yaml_path: Path, mustexist: bool = False,
+    def get_eyaml_values(self, yaml_path: YAMLPath, mustexist: bool = False,
                          default_value: str = ""
                         ) -> Generator[str, None, None]:
         """

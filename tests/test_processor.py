@@ -17,7 +17,8 @@ from yamlpath.enums import (
     YAMLValueFormats,
 )
 from yamlpath.wrappers import ConsolePrinter
-from yamlpath.path import Path, SearchTerms
+from yamlpath.path import SearchTerms
+from yamlpath import YAMLPath
 from yamlpath import Processor
 
 @pytest.fixture
@@ -31,7 +32,7 @@ class Test_Processor():
 
     def test_get_none_data_nodes(self, logger_f):
         processor = Processor(logger_f, None)
-        yamlpath = Path("abc")
+        yamlpath = YAMLPath("abc")
         matches = 0
         for node in processor.get_nodes(yamlpath, mustexist=False):
             matches += 1
@@ -121,7 +122,7 @@ class Test_Processor():
         """
         yaml = YAML()
         processor = Processor(logger_f, yaml.load(yamldata))
-        yamlpath = Path("aliases[&firstAlias]")
+        yamlpath = YAMLPath("aliases[&firstAlias]")
         for node in processor.get_nodes(yamlpath, pathsep=PathSeperators.FSLASH):
             assert node == "Anchored Scalar Value"
 
@@ -169,7 +170,7 @@ class Test_Processor():
 
     @pytest.mark.parametrize("yamlpath,value,tally,mustexist,vformat,pathsep", [
         ("aliases[&testAnchor]", "Updated Value", 1, True, YAMLValueFormats.DEFAULT, PathSeperators.AUTO),
-        (Path("top_scalar"), "New top-level value", 1, False, YAMLValueFormats.DEFAULT, PathSeperators.DOT),
+        (YAMLPath("top_scalar"), "New top-level value", 1, False, YAMLValueFormats.DEFAULT, PathSeperators.DOT),
         ("/top_array/2", 42, 1, False, YAMLValueFormats.INT, PathSeperators.FSLASH),
     ])
     def test_set_value(self, logger_f, yamlpath, value, tally, mustexist, vformat, pathsep):
@@ -212,7 +213,7 @@ class Test_Processor():
         yaml = YAML()
         data = yaml.load(yamldata)
         processor = Processor(logger_f, data)
-        nodes = list(processor._get_nodes_by_path_segment(data, Path("abc"), 0))
+        nodes = list(processor._get_nodes_by_path_segment(data, YAMLPath("abc"), 0))
         yaml.dump(data, sys.stdout)
         assert -1 == capsys.readouterr().out.find("abc")
 
@@ -224,7 +225,7 @@ class Test_Processor():
         yaml = YAML()
         data = yaml.load(yamldata)
         processor = Processor(logger_f, data)
-        nodes = list(processor._get_nodes_by_path_segment(data, Path("abc"), 10))
+        nodes = list(processor._get_nodes_by_path_segment(data, YAMLPath("abc"), 10))
         yaml.dump(data, sys.stdout)
         assert -1 == capsys.readouterr().out.find("abc")
 
@@ -241,7 +242,7 @@ class Test_Processor():
         yaml = YAML()
         data = yaml.load(yamldata)
         processor = Processor(logger_f, data)
-        path = Path("abc")
+        path = YAMLPath("abc")
         stringified = str(path)     # Force Path to parse
         path._escaped = deque([
             (PathSegmentTypes.DNF, "abc"),
@@ -271,7 +272,7 @@ class Test_Processor():
         """
         yaml = YAML()
         data = yaml.load(yamldata)
-        path = Path("[0]")
+        path = YAMLPath("[0]")
         processor = Processor(logger_f, data)
         strp = str(path)
 
@@ -409,7 +410,7 @@ class Test_Processor():
         data = yaml.load(yamldata)
         processor = Processor(logger_f, data)
 
-        yamlpath = Path("anchorKeys[&keyTwo]")
+        yamlpath = YAMLPath("anchorKeys[&keyTwo]")
         processor.set_value(yamlpath, "value: 3")
         matchtally = 0
         for node in processor.get_nodes(yamlpath):
@@ -420,10 +421,10 @@ class Test_Processor():
     # FIXME:  The default_for_child method is no longer serving its overloaded purpose
     @pytest.mark.xfail
     @pytest.mark.parametrize("yamlpath,value,checktype", [
-        (Path("array[0]"), False, ScalarBoolean),
-        (Path("array[0]"), "", PlainScalarString),
-        (Path("array[0]"), 1, ScalarInt),
-        (Path("array[0]"), 1.1, ScalarFloat),
+        (YAMLPath("array[0]"), False, ScalarBoolean),
+        (YAMLPath("array[0]"), "", PlainScalarString),
+        (YAMLPath("array[0]"), 1, ScalarInt),
+        (YAMLPath("array[0]"), 1.1, ScalarFloat),
     ])
     def test_default_for_child(self, yamlpath, value, checktype):
         compval = Processor.default_for_child(yamlpath, 1, value)
@@ -432,7 +433,7 @@ class Test_Processor():
 
     def test_anchorless_list_element_error(self):
         with pytest.raises(ValueError) as ex:
-            Processor.append_list_element({}, Path("foo"), "bar")
+            Processor.append_list_element({}, YAMLPath("foo"), "bar")
         assert -1 < str(ex.value).find("Impossible to add an Anchor")
 
     @pytest.mark.parametrize("value,checktype", [

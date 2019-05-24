@@ -16,7 +16,7 @@ from yamlpath.path import SearchTerms, CollectorTerms
 from yamlpath.types import PathSegment
 
 
-class Path:
+class YAMLPath:
     """
     Encapsulate a YAML Path and its parsing logic.
 
@@ -47,7 +47,7 @@ class Path:
         self._escaped: deque = deque()
         self._stringified: str = ""
 
-        if isinstance(yaml_path, Path):
+        if isinstance(yaml_path, YAMLPath):
             self.original = yaml_path.original
         else:
             self.original = yaml_path

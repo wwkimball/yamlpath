@@ -21,6 +21,7 @@ from ruamel.yaml.scalarbool import ScalarBoolean
 from ruamel.yaml.scalarfloat import ScalarFloat
 from ruamel.yaml.scalarint import ScalarInt
 
+from yamlpath.path import SearchTerms, CollectorTerms
 from yamlpath.wrappers import ConsolePrinter
 from yamlpath.exceptions import YAMLPathException
 from yamlpath.enums import (
@@ -30,7 +31,7 @@ from yamlpath.enums import (
     CollectorOperators,
     PathSeperators,
 )
-from yamlpath.path import Path, SearchTerms, CollectorTerms
+from yamlpath import YAMLPath
 
 # FIXME:  Scalars wipe out Arrays
 class Processor:
@@ -50,7 +51,7 @@ class Processor:
         self.logger: ConsolePrinter = logger
         self.data: Any = data
 
-    def get_nodes(self, yaml_path: Union[Path, str],
+    def get_nodes(self, yaml_path: Union[YAMLPath, str],
                   **kwargs: Any) -> Generator[Any, None, None]:
         """
         Retrieves zero or more node at YAML Path in YAML data.
@@ -83,7 +84,7 @@ class Processor:
             return
 
         if isinstance(yaml_path, str):
-            yaml_path = Path(yaml_path, pathsep)
+            yaml_path = YAMLPath(yaml_path, pathsep)
         elif pathsep is not PathSeperators.AUTO:
             yaml_path.seperator = pathsep
 
@@ -114,7 +115,7 @@ class Processor:
                 self.logger.debug(node)
                 yield node
 
-    def set_value(self, yaml_path: Union[Path, str],
+    def set_value(self, yaml_path: Union[YAMLPath, str],
                   value: Any, **kwargs) -> None:
         """
         Sets the value of zero or more nodes at YAML Path in YAML data.
@@ -149,7 +150,7 @@ class Processor:
         node: Any = None
 
         if isinstance(yaml_path, str):
-            yaml_path = Path(yaml_path, pathsep)
+            yaml_path = YAMLPath(yaml_path, pathsep)
         elif pathsep is not PathSeperators.AUTO:
             yaml_path.seperator = pathsep
 
@@ -178,7 +179,7 @@ class Processor:
 
     # pylint: disable=locally-disabled,too-many-branches
     def _get_nodes_by_path_segment(self, data: Any,
-                                   yaml_path: Path, segment_index: int,
+                                   yaml_path: YAMLPath, segment_index: int,
                                   ) -> Generator[Any, None, None]:
         """
         Returns zero or more nodes identified by one segment of a YAML Path
@@ -227,7 +228,7 @@ class Processor:
         for node in nodes:
             yield node
 
-    def _get_nodes_by_key(self, data: Any, yaml_path: Path,
+    def _get_nodes_by_key(self, data: Any, yaml_path: YAMLPath,
                           segment_index: int) -> Generator[Any, None, None]:
         """
         Returns zero or more nodes identified by a dict key found at a specific
@@ -256,7 +257,7 @@ class Processor:
             else:
                 # Check for a string/int type mismatch
                 try:
-                    intkey = int(stripped_attrs)
+                    intkey = int(str(stripped_attrs))
                     if intkey in data:
                         yield data[intkey]
                 except ValueError:
@@ -275,7 +276,7 @@ class Processor:
                         yield node
 
     # pylint: disable=locally-disabled,too-many-locals
-    def _get_nodes_by_index(self, data: Any, yaml_path: Path,
+    def _get_nodes_by_index(self, data: Any, yaml_path: YAMLPath,
                             segment_index: int) -> Generator[Any, None, None]:
         """
         Returns zero or more nodes identified by a list element index found at
@@ -339,7 +340,7 @@ class Processor:
             if isinstance(data, list) and len(data) > idx:
                 yield data[idx]
 
-    def _get_nodes_by_anchor(self, data: Any, yaml_path: Path,
+    def _get_nodes_by_anchor(self, data: Any, yaml_path: YAMLPath,
                              segment_index: int) -> Generator[Any, None, None]:
         """
         Returns zero or more nodes identified by an Anchor name found at a
@@ -517,7 +518,7 @@ class Processor:
                 yield data
 
     def _get_nodes_by_collector(
-            self, data: Any, yaml_path: Path, segment_index: int,
+            self, data: Any, yaml_path: YAMLPath, segment_index: int,
             terms: CollectorTerms
     ) -> Generator[Any, None, None]:
         """
@@ -539,7 +540,7 @@ class Processor:
             return
 
         results = []
-        for node in self._get_required_nodes(data, Path(terms.expression)):
+        for node in self._get_required_nodes(data, YAMLPath(terms.expression)):
             results.append(node)
 
         # This may end up being a bad idea for some cases, but this method will
@@ -562,7 +563,7 @@ class Processor:
                     peek_type is PathSegmentTypes.COLLECTOR
                     and isinstance(peek_attrs, CollectorTerms)
             ):
-                peek_path: Path = Path(peek_attrs.expression)
+                peek_path: YAMLPath = YAMLPath(peek_attrs.expression)
                 if peek_attrs.operation == CollectorOperators.ADDITION:
                     add_results = []
                     for node in self._get_required_nodes(data, peek_path):
@@ -605,7 +606,7 @@ class Processor:
         if results:
             yield results
 
-    def _get_required_nodes(self, data: Any, yaml_path: Path,
+    def _get_required_nodes(self, data: Any, yaml_path: YAMLPath,
                             depth: int = 0) -> Generator[Any, None, None]:
         """
         Generates zero or more pre-existing nodes from YAML data matching a
@@ -657,7 +658,7 @@ class Processor:
 
             yield data
 
-    def _get_optional_nodes(self, data: Any, yaml_path: Path,
+    def _get_optional_nodes(self, data: Any, yaml_path: YAMLPath,
                             value: Any = None,
                             depth: int = 0) -> Generator[Any, None, None]:
         """
@@ -755,7 +756,7 @@ class Processor:
                             newidx = stripped_attrs
                         else:
                             try:
-                                newidx = int(stripped_attrs)
+                                newidx = int(str(stripped_attrs))
                             except ValueError:
                                 raise YAMLPathException(
                                     ("Cannot add non-integer {} subreference"
@@ -872,7 +873,7 @@ class Processor:
         update_refs(self.data, source_node, new_node)
 
     @staticmethod
-    def default_for_child(yaml_path: Path, depth: int,
+    def default_for_child(yaml_path: YAMLPath, depth: int,
                           value: Any = None) -> Any:
         """
         Identifies and returns the most appropriate default value for the next

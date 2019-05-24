@@ -5,7 +5,7 @@ Copyright 2019 William W. Kimball, Jr. MBA MSIS
 """
 from typing import Optional, Union
 
-from yamlpath.path import Path
+from yamlpath import YAMLPath
 
 
 class YAMLPathException(Exception):
@@ -25,10 +25,10 @@ class YAMLPathException(Exception):
     Raises:  N/A
     """
 
-    def __init__(self, user_message: str, yaml_path: Union[Path, str],
+    def __init__(self, user_message: str, yaml_path: Union[YAMLPath, str],
                  segment: Optional[str] = None) -> None:
         self.user_message: str = user_message
-        self.yaml_path: Union[Path, str] = yaml_path
+        self.yaml_path: Union[YAMLPath, str] = yaml_path
         self.segment: Optional[str] = segment
 
         super(YAMLPathException, self).__init__(
