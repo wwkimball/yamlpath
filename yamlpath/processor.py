@@ -33,7 +33,7 @@ from yamlpath.enums import (
     PathSeperators,
 )
 
-# FIXME:  Scalars wipe out Arrays
+
 class Processor:
     """
     Query and update YAML data via robust YAML Paths.
