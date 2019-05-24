@@ -3,9 +3,7 @@ Express an issue with a YAML Path.
 
 Copyright 2019 William W. Kimball, Jr. MBA MSIS
 """
-from typing import Optional, Union
-
-from yamlpath import YAMLPath
+from typing import Optional
 
 
 class YAMLPathException(Exception):
@@ -15,8 +13,7 @@ class YAMLPathException(Exception):
 
     Parameters:
         - user_message (str) The message to convey to the user
-        - yaml_path (Union[Path, str]) The YAML Path which lead to the
-          exception
+        - yaml_path (str) The stringified YAML Path which lead to the exception
         - segment (Optional[str]) The segment of the YAML Path which triggered
           the exception, if available
 
@@ -25,10 +22,10 @@ class YAMLPathException(Exception):
     Raises:  N/A
     """
 
-    def __init__(self, user_message: str, yaml_path: Union[YAMLPath, str],
+    def __init__(self, user_message: str, yaml_path: str,
                  segment: Optional[str] = None) -> None:
         self.user_message: str = user_message
-        self.yaml_path: Union[YAMLPath, str] = yaml_path
+        self.yaml_path: str = yaml_path
         self.segment: Optional[str] = segment
 
         super(YAMLPathException, self).__init__(

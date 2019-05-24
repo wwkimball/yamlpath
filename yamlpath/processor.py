@@ -102,7 +102,7 @@ class Processor:
             if matched_nodes < 1:
                 raise YAMLPathException(
                     "Required YAML Path does not match any nodes",
-                    yaml_path
+                    str(yaml_path)
                 )
         else:
             for node in self._get_optional_nodes(
@@ -167,7 +167,7 @@ class Processor:
             if found_nodes < 1:
                 raise YAMLPathException(
                     "No nodes matched required YAML Path",
-                    yaml_path
+                    str(yaml_path)
                 )
         else:
             self.logger.debug(
@@ -312,9 +312,9 @@ class Processor:
                 except ValueError:
                     raise YAMLPathException(
                         "{} is not an integer array slice"
-                        .format(str_stripped)
-                        , yaml_path
-                        , str(unstripped_attrs)
+                        .format(str_stripped),
+                        str(yaml_path),
+                        str(unstripped_attrs)
                     )
 
                 if intmin == intmax and len(data) > intmin:
@@ -332,9 +332,9 @@ class Processor:
             except ValueError:
                 raise YAMLPathException(
                     "{} is not an integer array index"
-                    .format(str_stripped)
-                    , yaml_path
-                    , str(unstripped_attrs)
+                    .format(str_stripped),
+                    str(yaml_path),
+                    str(unstripped_attrs)
                 )
 
             if isinstance(data, list) and len(data) > idx:
@@ -593,9 +593,9 @@ class Processor:
                 else:
                     raise YAMLPathException(
                         "Adjoining Collectors without an operator has no"
-                        + " meaning; try + or - between them"
-                        , yaml_path
-                        , str(peek_path)
+                        + " meaning; try + or - between them",
+                        str(yaml_path),
+                        str(peek_path)
                     )
             else:
                 break
@@ -762,9 +762,9 @@ class Processor:
                                 raise YAMLPathException(
                                     ("Cannot add non-integer {} subreference"
                                      + " to lists")
-                                    .format(str(segment_type))
-                                    , yaml_path
-                                    , except_segment
+                                    .format(str(segment_type)),
+                                    str(yaml_path),
+                                    except_segment
                                 )
                         for _ in range(len(data) - 1, newidx):
                             new_val = self.default_for_child(
@@ -780,9 +780,9 @@ class Processor:
                     else:
                         raise YAMLPathException(
                             "Cannot add {} subreference to lists"
-                            .format(str(segment_type))
-                            , yaml_path
-                            , except_segment
+                            .format(str(segment_type)),
+                            str(yaml_path),
+                            except_segment
                         )
                 elif isinstance(data, dict):
                     self.logger.debug(
@@ -806,7 +806,7 @@ class Processor:
                         raise YAMLPathException(
                             "Cannot add {} subreference to dictionaries"
                             .format(str(segment_type)),
-                            yaml_path,
+                            str(yaml_path),
                             except_segment
                         )
                 else:
@@ -814,7 +814,7 @@ class Processor:
                         "Cannot add {} subreference to scalars".format(
                             str(segment_type)
                         ),
-                        yaml_path,
+                        str(yaml_path),
                         except_segment
                     )
 
