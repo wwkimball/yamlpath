@@ -26,8 +26,9 @@ from shutil import copy2
 from ruamel.yaml import YAML
 from ruamel.yaml.parser import ParserError
 
-from yamlpath import Path
-from yamlpath.exceptions import YAMLPathException, EYAMLCommandException
+from yamlpath import YAMLPath
+from yamlpath.exceptions import YAMLPathException
+from yamlpath.eyaml.exceptions import EYAMLCommandException
 from yamlpath.eyaml import EYAMLProcessor
 from yamlpath.enums import YAMLValueFormats, PathSeperators
 
@@ -171,7 +172,7 @@ def main():
     args = processcli()
     log = ConsolePrinter(args)
     validateargs(args, log)
-    change_path = Path(args.change, pathsep=args.pathsep)
+    change_path = YAMLPath(args.change, pathsep=args.pathsep)
     backup_file = args.yaml_file + ".bak"
 
     # Obtain the replacement value
@@ -273,7 +274,7 @@ def main():
                  + " value.  Please omit --saveto or set --change to affect"
                  + " exactly one value.", 1)
 
-        saveto_path = Path(args.saveto, pathsep=args.pathsep)
+        saveto_path = YAMLPath(args.saveto, pathsep=args.pathsep)
         log.verbose("Saving the old value to {}.".format(saveto_path))
 
         # Folded EYAML values have their embedded newlines converted to spaces

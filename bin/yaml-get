@@ -23,8 +23,9 @@ from os.path import isfile
 from ruamel.yaml import YAML
 from ruamel.yaml.parser import ParserError
 
-from yamlpath import Path
-from yamlpath.exceptions import YAMLPathException, EYAMLCommandException
+from yamlpath import YAMLPath
+from yamlpath.exceptions import YAMLPathException
+from yamlpath.eyaml.exceptions import EYAMLCommandException
 from yamlpath.enums import PathSeperators
 from yamlpath.eyaml import EYAMLProcessor
 
@@ -118,7 +119,7 @@ def main():
     args = processcli()
     log = ConsolePrinter(args)
     validateargs(args, log)
-    yaml_path = Path(args.query, pathsep=args.pathsep)
+    yaml_path = YAMLPath(args.query, pathsep=args.pathsep)
 
     # Prep the YAML parser
     yaml = YAML()

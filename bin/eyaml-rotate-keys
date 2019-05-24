@@ -22,7 +22,7 @@ from ruamel.yaml import YAML
 from ruamel.yaml.parser import ParserError
 from ruamel.yaml.scalarstring import FoldedScalarString
 
-from yamlpath.exceptions import EYAMLCommandException
+from yamlpath.eyaml.exceptions import EYAMLCommandException
 from yamlpath.eyaml import EYAMLProcessor
 
 import yamlpath.patches
