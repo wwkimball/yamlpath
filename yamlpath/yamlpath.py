@@ -30,7 +30,7 @@ class YAMLPath:
     only when necessary.
 
     Parameters:
-        1. yaml_path (Union["Path", str]) The YAML Path to parse or copy
+        1. yaml_path (Union["YAMLPath", str]) The YAML Path to parse or copy
         2. pathsep (PathSeperators) Forced YAML Path segment seperator; set
             only when automatic inference fails
 
@@ -39,7 +39,7 @@ class YAMLPath:
     Raises:  N/A
     """
 
-    def __init__(self, yaml_path: Union["Path", str] = "",
+    def __init__(self, yaml_path: Union["YAMLPath", str] = "",
                  pathsep: PathSeperators = PathSeperators.AUTO) -> None:
         self._seperator: PathSeperators = pathsep
         self._original: str = ""

@@ -54,8 +54,9 @@ class EYAMLProcessor(Processor):
         super().__init__(logger, data)
 
     # pylint: disable=locally-disabled,too-many-branches
-    def _find_eyaml_paths(self, data: Any,
-                          build_path: str = "") -> Generator[YAMLPath, None, None]:
+    def _find_eyaml_paths(
+            self, data: Any, build_path: str = ""
+    ) -> Generator[YAMLPath, None, None]:
         """
         Recursively generates a set of stringified YAML Paths, each entry
         leading to an EYAML value within the evaluated YAML data.

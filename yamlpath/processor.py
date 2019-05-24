@@ -689,6 +689,7 @@ class Processor:
             return
 
         segments = yaml_path.escaped
+        # pylint: disable=locally-disabled,too-many-nested-blocks
         if segments and len(segments) > depth:
             (segment_type, unstripped_attrs) = yaml_path.unescaped[depth]
             stripped_attrs = segments[depth][1]

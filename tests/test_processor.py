@@ -18,8 +18,8 @@ from yamlpath.enums import (
 )
 from yamlpath.wrappers import ConsolePrinter
 from yamlpath.path import SearchTerms
-from yamlpath import YAMLPath
-from yamlpath import Processor
+from yamlpath import YAMLPath, Processor
+
 
 @pytest.fixture
 def logger_f():
