@@ -33,6 +33,7 @@ from yamlpath.eyaml import EYAMLProcessor
 from yamlpath.enums import YAMLValueFormats, PathSeperators
 
 import yamlpath.patches
+from yamlpath.func import clone_node
 from yamlpath.wrappers import ConsolePrinter
 
 # Implied Constants
@@ -305,7 +306,7 @@ def main():
 
         try:
             processor.set_value(
-                saveto_path, processor.clone_node(old_value),
+                saveto_path, clone_node(old_value),
                 value_format=old_format)
         except YAMLPathException as ex:
             log.critical(ex, 1)

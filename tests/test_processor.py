@@ -3,11 +3,6 @@ import pytest
 from types import SimpleNamespace
 
 from ruamel.yaml import YAML
-from ruamel.yaml.comments import CommentedSeq, CommentedMap
-from ruamel.yaml.scalarstring import PlainScalarString
-from ruamel.yaml.scalarbool import ScalarBoolean
-from ruamel.yaml.scalarfloat import ScalarFloat
-from ruamel.yaml.scalarint import ScalarInt
 
 from yamlpath.exceptions import YAMLPathException
 from yamlpath.enums import (
@@ -417,74 +412,3 @@ class Test_Processor():
             assert node == value
             matchtally += 1
         assert matchtally == 1
-
-    # FIXME:  The default_for_child method is no longer serving its overloaded purpose
-    @pytest.mark.xfail
-    @pytest.mark.parametrize("yamlpath,value,checktype", [
-        (YAMLPath("array[0]"), False, ScalarBoolean),
-        (YAMLPath("array[0]"), "", PlainScalarString),
-        (YAMLPath("array[0]"), 1, ScalarInt),
-        (YAMLPath("array[0]"), 1.1, ScalarFloat),
-    ])
-    def test_default_for_child(self, yamlpath, value, checktype):
-        compval = Processor.default_for_child(yamlpath, 1, value)
-        #raise NameError("Got value, {}, from Path({}).".format(compval, yamlpath))
-        assert isinstance(compval, checktype)
-
-    def test_anchorless_list_element_error(self):
-        with pytest.raises(ValueError) as ex:
-            Processor.append_list_element({}, YAMLPath("foo"), "bar")
-        assert -1 < str(ex.value).find("Impossible to add an Anchor")
-
-    @pytest.mark.parametrize("value,checktype", [
-        ([], CommentedSeq),
-        ({}, CommentedMap),
-        ("", PlainScalarString),
-        (1, ScalarInt),
-        (1.1, ScalarFloat),
-        (True, ScalarBoolean),
-        (SimpleNamespace(), SimpleNamespace),
-    ])
-    def test_wrap_type(self, value, checktype):
-        assert isinstance(Processor.wrap_type(value), checktype)
-
-    @pytest.mark.parametrize("yamlpath", [
-        ("/aliases[&anchoredAlias]"),
-        ("/nonanchored"),
-    ])
-    def test_clone_node(self, logger_f, yamlpath):
-        yamldata = """---
-        aliases:
-          - &anchoredAlias value
-        nonanchored: key
-        """
-        yaml = YAML()
-        data = yaml.load(yamldata)
-        processor = Processor(logger_f, data)
-        for node in processor.get_nodes(yamlpath):
-            assert node == Processor.clone_node(node)
-
-    @pytest.mark.parametrize("source,value,check,vformat", [
-        ("", " ", " ", YAMLValueFormats.BARE),
-        ("", '" "', '" "', YAMLValueFormats.DQUOTE),
-        ("", "' '", "' '", YAMLValueFormats.SQUOTE),
-        ("", " ", " ", YAMLValueFormats.FOLDED),
-        ("", " ", " ", YAMLValueFormats.LITERAL),
-        (True, False, False, YAMLValueFormats.BOOLEAN),
-        (True, "no", False, YAMLValueFormats.BOOLEAN),
-        (1.1, 1.2, 1.2, YAMLValueFormats.FLOAT),
-        (ScalarFloat(1.1, anchor="test"), 1.2, 1.2, YAMLValueFormats.FLOAT),
-        (1, 2, 2, YAMLValueFormats.INT),
-    ])
-    def test_make_new_node(self, source, value, check, vformat):
-        assert check == Processor.make_new_node(source, value, vformat)
-
-    @pytest.mark.parametrize("source,value,vformat,etype,estr", [
-        ("", " ", "DNF", NameError, "Unknown YAML Value Format"),
-        (1.1, "4F", YAMLValueFormats.FLOAT, ValueError, "cannot be cast to a floating-point number"),
-        (1, "4F", YAMLValueFormats.INT, ValueError, "cannot be cast to an integer number"),
-    ])
-    def test_make_new_node_errors(self, source, value, vformat, etype, estr):
-        with pytest.raises(etype) as ex:
-            value == Processor.make_new_node(source, value, vformat)
-        assert -1 < str(ex.value).find(estr)
