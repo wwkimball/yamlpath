@@ -4,9 +4,9 @@ Enhancements:
   Path)" -- parenthesis () are used to demarcate each Collector -- resulting in
   a list of zero or more matches for the sub-query.  Operators between
   Collectors include + and -, like "(...)+(...)", "(...)-(...)", and nested
-  Collectors like "(...)-((...)+(...))".  Collectors may appear anywhere within
-  the outer YAML Path, effectively setting the point within the data at which
-  each Collector is rooted.
+  Collectors are possible, like "(...)-((...)+(...))".  Collectors may appear
+  anywhere within the outer YAML Path, effectively setting the point within the
+  data at which each Collector is rooted.
 * A major code refactoring was undertaken to break YAMLPath out as its own class
   and improve code quality (per mypy and pylint).
 
