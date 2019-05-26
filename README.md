@@ -28,26 +28,25 @@ Contents:
 
 ## Introduction
 
-This project presents and utilizes YAML Paths, which are a human-friendly means
-of identifying one or more nodes within [YAML](https://yaml.org/),
+This project presents and utilizes YAML Paths, which are a powerful, intuitive
+means of identifying one *or more* nodes within [YAML](https://yaml.org/),
 [EYAML](https://github.com/voxpupuli/hiera-eyaml), or compatible data structures
 like [JSON](https://www.json.org/).  Both dot-notation (inspired by
 [Hiera](https://github.com/puppetlabs/hiera)) and forward-slash-notation
 (influenced by [XPath](https://www.w3schools.com/xml/xml_xpath.asp)) are
 supported.  The [libraries](#libraries) (modules) and several [command-line tool
-implementations](#command-line-tools) are provided.  So, you can build YAML Path
-right into your own application or easily use its capabilities right away from
-the command-line.
+implementations](#command-line-tools) are provided.  With these, you can build
+YAML Path support right into your own application or easily use its capabilities
+right away from the command-line to retrieve or update YAML/Compatible data.
 
-This implementation of YAML Path is a query language in addition to a node
-descriptor.  With it, you can describe or select a single precise node or
-search for any number of nodes which match criteria that can be expressed in
-several ways.  Keys, values, and elements can all be searched at any number of
-levels within the data structure using the same query.  Collectors can also be
-used to gather and further select from otherwise disparate parts of the source
-data.
+This implementation of YAML Path is a *query language* in addition to a *node
+descriptor*.  With it, you can describe or select a single precise node or
+search for any number of nodes that match some criteria.  Keys, values, and
+elements can all be searched at any number of levels within the data structure
+using the same query.  Collectors can also be used to gather and further select
+from otherwise disparate parts of the source data.
 
-For an exploration of YAML Path, please visit the
+For a deeper exploration of YAML Path's capabilities, please visit the
 [project Wiki](https://github.com/wwkimball/yamlpath/wiki).
 
 ## Illustration

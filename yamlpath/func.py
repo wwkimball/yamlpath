@@ -1,5 +1,7 @@
 """
 Collection of general helper functions.
+
+Copyright 2018, 2019 William W. Kimball, Jr. MBA MSIS
 """
 from distutils.util import strtobool
 from typing import Any
@@ -38,10 +40,10 @@ def build_next_node(yaml_path: YAMLPath, depth: int,
 
     Raises:  N/A
     """
-    default_value = value
+    default_value = wrap_type(value)
     segments = yaml_path.escaped
     if not (segments and len(segments) > depth):
-        return wrap_type(default_value)
+        return default_value
 
     typ = segments[depth][0]
     if typ == PathSegmentTypes.INDEX:

@@ -718,8 +718,8 @@ class Processor:
                 # Add the missing element
                 self.logger.debug(
                     ("Processor::_get_optional_nodes:  Element <{}>{} is"
-                     + " unknown in the data!"
-                    ).format(segment_type, except_segment)
+                     + " unknown in the data!  Applying default, <{}>{}."
+                    ).format(segment_type, except_segment, type(value), value)
                 )
                 if isinstance(data, list):
                     self.logger.debug(
