@@ -1,17 +1,11 @@
 #!/usr/bin/env python3
+# pylint: disable=locally-disabled,invalid-name
 """
 Changes one or more values in a YAML file at a specified YAML Path.  Matched
 values can be checked before they are replaced to mitigate accidental change.
 When matching singular results, the value can be archived to another key
 before it is replaced.  Further, EYAML can be employed to encrypt the new
-values and/or decrypt an old value before checking them.
-
-Requirements:
-1. Python >= 3.6
-   * CentOS:  yum -y install epel-release \
-       && yum -y install python36 python36-pip
-2. The ruamel.yaml module, version >= 0.15
-   * CentOS:  pip3 install ruamel.yaml
+values and/or decrypt old values before checking them.
 
 Copyright 2018, 2019 William W. Kimball, Jr. MBA MSIS
 """

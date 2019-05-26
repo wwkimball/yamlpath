@@ -552,23 +552,24 @@ credit to the source).  That said, here's a general flow/synopsis.
 #### Initialize ruamel.yaml and These Helpers
 
 Your preferences may differ, but I use this setup for round-trip YAML parsing
-and editing with ruamel.yaml.  I also use `EYAMLPath` in virtually all cases
-rather than `YAMLPath`, but you can do the opposite if you are absolutely
-certain that your data will never be EYAML encrypted.
+and editing with ruamel.yaml.  When you need to process EYAML encrypted data,
+replace `yamlpath.Processor` with `yamlpath.eyaml.EYAMLProcessor` and add error
+handling for `yamlpath.eyaml.EYAMLCommandException`.
 
-Note that `import yamlpath.patches` is entirely optional; I wrote and use it to
+Note that `import yamlpath.patches` is entirely optional.  I wrote and use it to
 block ruamel.yaml's Emitter from injecting unnecessary newlines into folded
 values (it improperly converts every single new-line into two for left-flushed
-multi-line values, at the time of this writing).  Since block output EYAML
+multi-line values, at the time of this writing).  Since "block" output EYAML
 values are left-flushed multi-line folded strings, this fix is necessary when
-using EYAML features.
+using EYAML features.  At least, until ruamel.yaml has its own fix for this
+issue.
 
 Note also that these examples use `ConsolePrinter` to handle STDOUT and STDERR
 messaging.  You don't have to.  However, some kind of logger must be passed to
 these libraries so they can write messages _somewhere_.  Your custom message
-handler or logger must provide the same API as ConsolePrinter; review the header
-documentation in [consoleprinter.py](yamlpath/wrappers/consoleprinter.py) for
-details.  Generally speaking, it would be trivial to write your own custom
+handler or logger must provide the same API as `ConsolePrinter`; review the
+header documentation in [consoleprinter.py](yamlpath/wrappers/consoleprinter.py)
+for details.  Generally speaking, it would be trivial to write your own custom
 wrapper for Python's standard logging facilities if you require targets other
 than STDOUT and STDERR.
 
@@ -580,16 +581,13 @@ from ruamel.yaml.parser import ParserError
 
 import yamlpath.patches
 from yamlpath.wrappers import ConsolePrinter
-from yamlpath.exceptions import YAMLPathException
-from yamlpath.enums import YAMLValueFormats
-from yamlpath.eyaml import EYAMLProcessor
+from yamlpath import Processor
 
-# Process command-line arguments, initialize the output writer and the YAMLPath
-# processor.
+# Process command-line arguments and initialize the output writer
 args = processcli()
 log = ConsolePrinter(args)
 
-# Prep the YAML parser
+# Prep the YAML parser and round-trip editor (tweak to your needs)
 yaml = YAML()
 yaml.indent(mapping=2, sequence=4, offset=2)
 yaml.explicit_start = True
@@ -602,49 +600,50 @@ try:
     with open(args.yaml_file, 'r') as f:
         yaml_data = yaml.load(f)
 except ParserError as e:
-    log.error("YAML parsing error {}:  {}".format(str(e.problem_mark).lstrip(), e.problem))
+    log.error("YAML parsing error {}:  {}"
+        .format(str(e.problem_mark).lstrip(), e.problem))
 
-processor = EYAMLProcessor(log, yaml_data)
+# Pass the log writer and parsed YAML data to the YAMLPath processor
+processor = Processor(log, yaml_data)
+
+# At this point, the processor is ready to handle YAMLPaths
 ```
 
 #### Searching for YAML Nodes
 
 These libraries use [Generators](https://wiki.python.org/moin/Generators) to get
-nodes from parsed YAML data.  Identify which node(s) to get via
-[YAML Path](#yaml-path) strings.  You should also catch `YAMLPathException`s
+nodes from parsed YAML data.  Identify which node(s) to get via YAML Path
+strings.  You should also catch `yamlpath.exceptions.YAMLPathException`s
 unless you prefer Python's native stack traces.  When using EYAML, you should
-also catch `EYAMLCommandException`s for the same reason.  Whether you are
-working with a single result or many, you must consume the Generator output with
-a pattern similar to:
+also catch `yamlpath.eyaml.exceptions.EYAMLCommandException`s for the same
+reason.  Whether you are working with a single result or many, you should
+consume the Generator output with a pattern similar to:
 
 ```python
-from yamlpath import Path
-from yamlpath.exceptions import YAMLPathException, EYAMLCommandException
+from yamlpath import YAMLPath
+from yamlpath.exceptions import YAMLPathException
 
-yaml_path = Path("see.documentation.above.for.many.samples")
+yaml_path = YAMLPath("see.documentation.above.for.many.samples")
 try:
-    for node in processor.get_eyaml_values(yaml_path):
+    for node in processor.get_nodes(yaml_path):
         log.debug("Got {} from '{}'.".format(node, yaml_path))
-
         # Do something with each node...
 except YAMLPathException as ex:
     # If merely retrieving data, this exception may be deemed non-critical
     # unless your later code absolutely depends upon a result.
     log.error(ex)
-except EYAMLCommandException as ex:
-    log.critical(ex, 120)
 ```
 
 #### Changing Values
 
-At its simplest, you only need to supply the pre-parsed YAML data, the YAML
-Path to one or more nodes to update, and the value to apply to them.  Catching
-`YAMLPathException` is optional but usually preferred over allowing Python to
-dump the call stack in front of your users.  When using EYAML, the same applies
-to `EYAMLCommandException`.
+At its simplest, you only need to supply the the YAML Path to one or more nodes
+to update, and the value to apply to them.  Catching
+`yamlpath.exceptions.YAMLPathException` is optional but usually preferred over
+allowing Python to dump the call stack in front of your users.  When using
+EYAML, the same applies to `yamlpath.eyaml.exceptions.EYAMLCommandException`.
 
 ```python
-from yamlpath.exceptions import YAMLPathException, EYAMLCommandException
+from yamlpath.exceptions import YAMLPathException
 
 try:
     processor.set_value(yaml_path, new_value)

@@ -1,17 +1,11 @@
 #!/usr/bin/env python3
-################################################################################
-# Rotates the encryption keys used for all EYAML values within a set of YAML
-# files, decrypting with old keys and re-encrypting using replacement keys.
-#
-# Requirements:
-# 1. Python >= 3.6
-#    * CentOS:  yum -y install epel-release \
-#        && yum -y install python36 python36-pip
-# 2. The ruamel.yaml module, version >= 0.15
-#    * CentOS:  pip3 install ruamel.yaml
-#
-# Copyright 2018, 2019 William W. Kimball, Jr. MBA MSIS
-################################################################################
+# pylint: disable=locally-disabled,invalid-name
+"""
+Rotates the encryption keys used for all EYAML values within a set of YAML
+files, decrypting with old keys and re-encrypting using replacement keys.
+
+Copyright 2018, 2019 William W. Kimball, Jr. MBA MSIS
+"""
 import sys
 import argparse
 from shutil import copy2
@@ -35,40 +29,40 @@ def processcli():
     """Process command-line arguments."""
     parser = argparse.ArgumentParser(
         description="Rotates the encryption keys used for all EYAML values"
-            + " within a set of YAML files, decrypting with old keys and"
-            + " re-encrypting using replacement keys.",
+        + " within a set of YAML files, decrypting with old keys and"
+        + " re-encrypting using replacement keys.",
         epilog="Any YAML_FILEs lacking EYAML values will not be modified (or"
-            + " backed up, even when -b/--backup is specified)."
+        + " backed up, even when -b/--backup is specified)."
     )
     parser.add_argument("-V", "--version", action="version",
                         version="%(prog)s " + MY_VERSION)
 
     noise_group = parser.add_mutually_exclusive_group()
     noise_group.add_argument("-d", "--debug", action="store_true",
-                            help="output debugging details")
+                             help="output debugging details")
     noise_group.add_argument("-v", "--verbose", action="store_true",
-                            help="increase output verbosity")
+                             help="increase output verbosity")
     noise_group.add_argument("-q", "--quiet", action="store_true",
-                            help="suppress all output except errors")
+                             help="suppress all output except errors")
 
     parser.add_argument("-b", "--backup", action="store_true",
                         help="save a backup of each modified YAML_FILE with an"
-                            + " extra .bak file-extension")
+                        + " extra .bak file-extension")
     parser.add_argument("-x", "--eyaml", default="eyaml",
                         help="the eyaml binary to use when it isn't on the"
-                            + " PATH")
+                        + " PATH")
 
     key_group = parser.add_argument_group(
         "EYAML_KEYS", "All key arguments are required"
     )
     key_group.add_argument("-r", "--newprivatekey", required=True,
-                        help="the new EYAML private key")
+                           help="the new EYAML private key")
     key_group.add_argument("-u", "--newpublickey", required=True,
-                        help="the new EYAML public key")
+                           help="the new EYAML public key")
     key_group.add_argument("-i", "--oldprivatekey", required=True,
-                        help="the old EYAML private key")
+                           help="the old EYAML private key")
     key_group.add_argument("-c", "--oldpublickey", required=True,
-                        help="the old EYAML public key")
+                           help="the old EYAML public key")
 
     parser.add_argument("yaml_files", metavar="YAML_FILE", nargs="+",
                         help="one or more YAML files containing EYAML values")
@@ -137,7 +131,7 @@ def main():
                 yaml_data = yaml.load(fhnd)
         except ParserError as ex:
             log.error("YAML parsing error {}:  {}"
-                .format(str(ex.problem_mark).lstrip(), ex.problem))
+                      .format(str(ex.problem_mark).lstrip(), ex.problem))
             continue
 
         # Process all EYAML values
@@ -191,7 +185,7 @@ def main():
         if file_changed:
             if args.backup:
                 log.verbose("Saving a backup of {} to {}."
-                    .format(yaml_file, backup_file))
+                            .format(yaml_file, backup_file))
                 if exists(backup_file):
                     remove(backup_file)
                 copy2(yaml_file, backup_file)
