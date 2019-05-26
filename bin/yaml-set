@@ -37,7 +37,7 @@ from yamlpath.func import clone_node
 from yamlpath.wrappers import ConsolePrinter
 
 # Implied Constants
-MY_VERSION = "1.0.3"
+MY_VERSION = "1.0.4"
 
 def processcli():
     """Process command-line arguments."""
@@ -91,7 +91,8 @@ def processcli():
         help="check the value before replacing it")
     parser.add_argument(
         "-s", "--saveto", metavar="YAML_PATH",
-        help="save the old value to YAML_PATH before replacing it")
+        help="save the old value to YAML_PATH before replacing it; implies\
+              --mustexist")
     parser.add_argument(
         "-m", "--mustexist", action="store_true",
         help="require that the --change YAML_PATH already exist in YAML_FILE")
@@ -230,7 +231,7 @@ def main():
         publickey=args.publickey, privatekey=args.privatekey)
     try:
         for node in processor.get_nodes(
-                change_path, mustexist=args.mustexist,
+                change_path, mustexist=(args.mustexist or args.saveto),
                 default_value=("" if new_value else " ")):
             log.debug('Got "{}" from {}.'.format(node, change_path))
             change_nodes.append(node)
