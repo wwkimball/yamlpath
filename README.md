@@ -183,8 +183,8 @@ YAML Path understands these segment types:
   attribute of every Hash in the same Array-of-Hashes.  Of course these results
   can be filtered in multiple ways, like `warriors[power_level>9000]`,
   `/warriors[power_level>9000]`, `warriors.power_level[.>9000]`, and
-  `/warriors/power_level[.>9000]` all yield only warriors with power_levels
-  over 9,000.
+  `/warriors/power_level[.>9000]` all yield only the power_level from *all*
+  warriors with power_levels over 9,000 within the same array of warrior hashes.
 * Collectors:  Placing any portion of the YAML Path within parenthesis defines a
   virtual list collector, like `(YAML Path)`; concatenation and exclusion
   operators are supported -- `+` and `-`, respectively -- along with nesting,
