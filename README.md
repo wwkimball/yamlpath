@@ -51,22 +51,6 @@ To illustrate some of these concepts, consider these samples:
 
 ```yaml
 ---
-aliases:
-  - &first_anchor Simple string value
-```
-
-With YAML Path, you can select this anchored value by any of these equivalent
-expressions:
-
-1. `aliases[0]` (explicit array element number)
-2. `aliases.0` (implicit array element number in dot-notation)
-3. `aliases[&first_anchor]` (search by Anchor name)
-4. `/aliases[0]` (same as 1 but in forward-slash notation)
-5. `/aliases/0` (same as 2 but in forward-slash notation)
-6. `/aliases[&first_anchor]` (same as 3 but in forward-slash notation)
-
-```yaml
----
 hash:
   child_attr:
     key: 5280
@@ -79,6 +63,27 @@ This value, `5280`, can be identified via YAML Path as any of:
    yield its value)
 3. `/hash/child_attr/key` (same as 1 but in forward-slash notation)
 4. `/hash/child_attr[.=key]` (same as 2 but in forward-slash notation)
+
+```yaml
+---
+aliases:
+  - &first_anchor Simple string value
+```
+
+With YAML Path, you can select this anchored value by any of these equivalent
+expressions:
+
+1. `aliases[0]` (explicit array element number)
+2. `aliases.0` (implicit array element number in dot-notation)
+3. `aliases[&first_anchor]` (search by Anchor name)
+4. `aliases[.^Simple]` (search for any elements starting with "Simple")
+5. `aliases[.%string]` (search for any elements containing "string")
+6. `aliases[.$value]` (search for any elements ending with "value")
+7. `aliases[.=~/^(\b[Ss][a-z]+\s){2}[a-z]+$/]` (search for any elements matching
+   a complex Regular Expression, which happens to match the example)
+8. `/aliases[0]` (same as 1 but in forward-slash notation)
+9. `/aliases/0` (same as 2 but in forward-slash notation)
+10. `/aliases[&first_anchor]` (same as 3 but in forward-slash notation)
 
 ```yaml
 ---
@@ -201,7 +206,9 @@ and segment types that make the most sense to you in each application.
 This project requires [Python](https://www.python.org/) 3.6.  Most operating
 systems and distributions have access to Python 3 even if only Python 2 -- or
 no Python, at all -- came pre-installed.  It is generally safe to have more
-than one version of Python on your system at the same time.
+than one version of Python on your system at the same time, especially when
+using
+[virtual Python environments](https://docs.python.org/3/library/venv.html).
 
 Each published version of this project can be installed from
 [PyPI](https://pypi.org/) using `pip`.  Note that on systems with more than one
@@ -214,8 +221,8 @@ pip3 install yamlpath
 
 EYAML support is entirely optional.  You do not need EYAML to use YAML Path.
 That YAML Path supports EYAML is a service to a substantial audience:  Puppet
-users.  At the time of this writing, EYAML (classified as a Hiera back-end
-plug-in) is available only as a Ruby Gem.  That said, it provides a
+users.  At the time of this writing, EYAML (classified as a Hiera
+back-end/plug-in) is available only as a Ruby Gem.  That said, it provides a
 command-line tool, `eyaml`, which can be employed by this otherwise Python
 project.  To enjoy EYAML support, install compatible versions of ruby and
 rubygems, then execute:
@@ -224,6 +231,10 @@ rubygems, then execute:
 gem install hiera-eyaml
 ```
 
+If this puts the `eyaml` command on your system `PATH`, nothing more need be
+done apart from generating or obtaining your encryption keys.  Otherwise, you
+can tell YAML Path library and tools where to find the `eyaml` command.
+
 ## Based on ruamel.yaml and Python 3
 
 In order to support the best available YAML editing capability (so called,
@@ -231,7 +242,9 @@ round-trip editing with support for comment preservation), this project is based
 on [ruamel.yaml](https://bitbucket.org/ruamel/yaml/overview) for
 Python 3.6.  While ruamel.yaml is based on PyYAML --
 Python's "standard" YAML library -- ruamel.yaml is [objectively better than
-PyYAML](https://yaml.readthedocs.io/en/latest/pyyaml.html).
+PyYAML](https://yaml.readthedocs.io/en/latest/pyyaml.html), which lacks critical
+round-trip editing capabilities as well as up-to-date YAML/Compatible data
+parsing capabilities (at the time of this writing).
 
 Should PyYAML ever merge with -- or at least, catch up with -- ruamel.yaml, this
 project can be (lightly) adapted to depend on it, instead.  These conversations
@@ -253,7 +266,10 @@ This repository contains:
 ### Command-Line Tools
 
 This project provides some command-line tool implementations which utilize YAML
-Path:
+Path.  For some use-case examples of these tools,
+[see below](#basic-usage--command-line-tools).
+
+The supplied command-line tools include:
 
 * [eyaml-rotate-keys](bin/eyaml-rotate-keys)
 
@@ -413,7 +429,7 @@ https://github.com/wwkimball/yamlpath.
 
 ### Libraries
 
-While there are several supporting library files like enumerations and
+While there are several supporting library files like enumerations, types, and
 exceptions, the most interesting library files include:
 
 * [yamlpath.py](yamlpath/yamlpath.py) -- The core YAML Path parser logic.
