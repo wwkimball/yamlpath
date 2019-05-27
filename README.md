@@ -144,9 +144,9 @@ YAML Path understands these segment types:
   either or both can be negative, causing the elements to be selected from the
   end of the Array; when `start#` and `stop#` are identical, it is the same as
   `array[start#]`
-* Hash slicing: `hash[min:max]` or `/hash[min:max]` where `min` and `max` are
-  alphanumeric terms between which the Hash's keys are compared
-* Escape symbol recognition:  `hash.dotted\.child\.key` or
+* Hash slicing: `hash[min:max]` where `min` and `max` are alphanumeric terms
+  between which the Hash's keys are compared
+* Escape symbol recognition:  `hash.dotted\.child\.key`,
   `/hash/whacked\/child\/key`, and `keys_with_\\slashes`
 * Hash attribute searches (which can return zero or more matches):
   * Exact match:  `hash[name=admin]`
@@ -157,38 +157,38 @@ YAML Path understands these segment types:
   * Greater Than match: `hash[access_level>0]`
   * Less Than or Equal match: `hash[access_level<=100]`
   * Greater Than or Equal match: `hash[access_level>=0]`
-  * Regular Expression matches using any delimiter you choose (other than `/`,
-    if you need something else): `hash[access_level=~/^\D+$/]` or
-    `/hash[access_level=~/^\D+$/]` and `hash[containing=~"/path/values"]` or
-    `/hash[containing=~"/path/values"]`; for forward-slash notation, using `/`
-    as the Regular Expression delimiter is safe because the surrounding `[]`
-    delimiters protect them and while odd, you can also use either `[` or `]`
-    as the Regular Expression delimiter for the same reason; white-space cannot
-    be used as the Regular Expression delimiter
-  * Invert any match with `!`, like: `hash[name!=admin]`
-  * Demarcate and/or escape expression values, like:
-    `hash[full\ name="Some User\'s Name"]`
+  * Regular Expression matches: `hash[access_level=~/^\D+$/]` (the `/` Regular
+    Expression delimiter can be substituted for any character you need, except
+    white-space; note that `/` does not interfere with forward-slash notation
+    *and it does not need to be escaped* because the entire search expression is
+    contained within a `[]` pair)
+  * Invert any match with `!`, like: `hash[name!=admin]` or even
+    `hash[!name=admin]` (the former syntax is used when YAML Paths are
+    stringified but both forms are equivalent)
+  * Demarcate and/or escape expression operands, like:
+    `hash[full\ name="Some User\'s Name"]` (note that embedded, single `'` and
+    `"` must be escaped lest they be deemed unmatched demarcation pairings)
   * Multi-level matching: `hash[name%admin].pass[encrypted!^ENC\[]` or
     `/hash[name%admin]/pass[encrypted!^ENC\[]`
 * Array element searches with all of the search methods above via `.` (yields
-  any matching elements): `array[.>9000]` or `/array[.>9000]`
+  any matching elements): `array[.>9000]`
 * Hash key-name searches with all of the search methods above via `.` (yields
   their values, not the keys themselves): `hash[.^app_]`
-* Array-of-Hashes Match-All:  Omit a selector for the elements of an
-  Array-of-Hashes and all Hash elements will be yielded (or searched when there
-  is more to the path).  For example, `warriors[1].power_level` or
-  `/warriors[1]/power_level` will return the power_level attribute of only the
-  second Hash in an Array-of-Hashes while `warriors.power_level` or
-  `/warriors/power_level` will return the power_level attribute of every Hash
-  in the same Array-of-Hashes.  Of course these results can be filtered in
-  multiple ways, like `warriors[power_level>9000]`,
+* Array-of-Hashes Pass-Through Selection:  Omit a selector for the elements of
+  an Array-of-Hashes and all matching Hash attributes at that level will be
+  yielded (or searched when there is more to the path).  For example,
+  `warriors[1].power_level` or `/warriors[1]/power_level` will return the
+  power_level attribute of only the second Hash in an Array-of-Hashes while
+  `warriors.power_level` or `/warriors/power_level` will return the power_level
+  attribute of every Hash in the same Array-of-Hashes.  Of course these results
+  can be filtered in multiple ways, like `warriors[power_level>9000]`,
   `/warriors[power_level>9000]`, `warriors.power_level[.>9000]`, and
   `/warriors/power_level[.>9000]` all yield only warriors with power_levels
   over 9,000.
 * Collectors:  Placing any portion of the YAML Path within parenthesis defines a
-  virtual list collector, like `(path)`; concatenation and exclusion
-  operators are supported -- `+` and `-`, respectively along with nesting, like
-  `(...)-((...)+(...))`
+  virtual list collector, like `(YAML Path)`; concatenation and exclusion
+  operators are supported -- `+` and `-`, respectively -- along with nesting,
+  like `(...)-((...)+(...))`
 * Complex combinations:
   `some::deep.hierarchy[with!=""].'any.valid'[.=~/(yaml|json)/][data%structure].or.complexity[4].2`
   or `/some::deep/hierarchy[with!=""]/any.valid[.=~/(yaml|json)/][data%structure]/or/complexity[4]/2`
