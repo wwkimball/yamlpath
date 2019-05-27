@@ -360,9 +360,12 @@ class Processor:
                         and stripped_attrs == ele.anchor.value):
                     yield ele
         elif isinstance(data, dict):
-            for _, val in data.items():
-                if (hasattr(val, "anchor")
-                        and stripped_attrs == val.anchor.value):
+            for key, val in data.items():
+                if (hasattr(key, "anchor")
+                        and stripped_attrs == key.anchor.value):
+                    yield val
+                elif (hasattr(val, "anchor")
+                      and stripped_attrs == val.anchor.value):
                     yield val
 
     # pylint: disable=locally-disabled,too-many-statements
@@ -782,8 +785,11 @@ class Processor:
                         + " dictionary"
                     )
                     if segment_type is PathSegmentTypes.ANCHOR:
-                        raise NotImplementedError
-
+                        raise YAMLPathException(
+                            "Cannot add ANCHOR keys",
+                            str(yaml_path),
+                            str(unstripped_attrs)
+                        )
                     if segment_type is PathSegmentTypes.KEY:
                         data[stripped_attrs] = build_next_node(
                             yaml_path, depth + 1, value
@@ -838,6 +844,9 @@ class Processor:
 
         Raises: N/A
         """
+        # This update_refs function was contributed by Anthon van der Neut, the
+        # author of ruamel.yaml, to resolve how to update all references to an
+        # Anchor throughout the parsed data structure.
         def update_refs(data: Any, reference_node: Any,
                         replacement_node: Any) -> None:
             if isinstance(data, CommentedMap):
