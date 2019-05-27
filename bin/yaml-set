@@ -210,6 +210,8 @@ def main():
     try:
         with open(args.yaml_file, 'r') as f:
             yaml_data = yaml.load(f)
+    except FileNotFoundError:
+        log.critical("YAML_FILE not found:  {}".format(args.yaml_file), 2)
     except ParserError as ex:
         log.critical(
             "YAML parsing error {}:  {}"

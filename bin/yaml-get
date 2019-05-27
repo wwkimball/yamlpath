@@ -136,9 +136,12 @@ def main():
     yaml.width = sys.maxsize
 
     # Attempt to open the YAML file; check for parsing errors
+
     try:
         with open(args.yaml_file, 'r') as f:
             yaml_data = yaml.load(f)
+    except FileNotFoundError:
+        log.critical("YAML_FILE not found:  {}".format(args.yaml_file), 2)
     except ParserError as ex:
         log.critical(
             "YAML parsing error {}:  {}"

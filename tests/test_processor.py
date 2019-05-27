@@ -327,18 +327,6 @@ class Test_Processor():
             nodes = list(processor.get_nodes("array.attr"))
         assert -1 < str(ex.value).find("Cannot add")
 
-    def test_no_anchors_to_hashes_error(self, logger_f):
-        yamldata = """---
-        hash:
-          key: value
-        """
-        yaml = YAML()
-        data = yaml.load(yamldata)
-        processor = Processor(logger_f, data)
-
-        with pytest.raises(NotImplementedError) as ex:
-            nodes = list(processor.get_nodes("hash[&anchor]"))
-
     def test_no_index_to_hashes_error(self, logger_f):
         # Using [#] syntax is a disambiguated INDEX ELEMENT NUMBER.  In
         # DICTIONARY context, this would create an ambiguous request to access
@@ -388,12 +376,44 @@ class Test_Processor():
             nodes = list(processor.get_nodes("scalar.key"))
         assert -1 < str(ex.value).find("Cannot add")
 
-    @pytest.mark.skip(reason="Not Implemented; deferred to a later release")
-    def test_key_anchors(self, logger_f):
+    @pytest.mark.parametrize("yamlpath,value,tally,mustexist,vformat,pathsep", [
+        ("/anchorKeys[&keyOne]", "Set self-destruct", 1, True, YAMLValueFormats.DEFAULT, PathSeperators.AUTO),
+        ("/hash[&keyTwo]", "Confirm", 1, True, YAMLValueFormats.DEFAULT, PathSeperators.AUTO),
+        ("/anchorKeys[&recursiveAnchorKey]", "Recurse more", 1, True, YAMLValueFormats.DEFAULT, PathSeperators.AUTO),
+        ("/hash[&recursiveAnchorKey]", "Recurse even more", 1, True, YAMLValueFormats.DEFAULT, PathSeperators.AUTO),
+    ])
+    def test_key_anchor_changes(self, logger_f, yamlpath, value, tally, mustexist, vformat, pathsep):
         yamldata = """---
         anchorKeys:
-          &keyOne value: 1
-          &keyTwo value: 2
+          &keyOne aliasOne: 11A1
+          &keyTwo aliasTwo: 22B2
+          &recursiveAnchorKey subjectKey: *recursiveAnchorKey
+
+        hash:
+          *keyOne :
+            subval: 1.1
+          *keyTwo :
+            subval: 2.2
+          *recursiveAnchorKey :
+            subval: 3.3
+        """
+        yaml = YAML()
+        data = yaml.load(yamldata)
+        processor = Processor(logger_f, data)
+
+        yamlpath = YAMLPath(yamlpath)
+        processor.set_value(yamlpath, value, mustexist=mustexist, value_format=vformat, pathsep=pathsep)
+        matchtally = 0
+        for node in processor.get_nodes(yamlpath):
+            assert node == value
+            matchtally += 1
+        assert matchtally == tally
+
+    def test_key_anchor_children(self, logger_f):
+        yamldata = """---
+        anchorKeys:
+          &keyOne aliasOne: 1 1 Alpha 1
+          &keyTwo aliasTwo: 2 2 Beta 2
 
         hash:
           *keyOne :
@@ -405,10 +425,33 @@ class Test_Processor():
         data = yaml.load(yamldata)
         processor = Processor(logger_f, data)
 
-        yamlpath = YAMLPath("anchorKeys[&keyTwo]")
-        processor.set_value(yamlpath, "value: 3")
+        yamlpath = YAMLPath("hash[&keyTwo].subval")
+        newvalue = "Mute audibles"
+        processor.set_value(yamlpath, newvalue, mustexist=True)
         matchtally = 0
         for node in processor.get_nodes(yamlpath):
-            assert node == value
+            assert node == newvalue
             matchtally += 1
         assert matchtally == 1
+
+    def test_cannot_add_novel_alias_keys(self, logger_f):
+        yamldata = """---
+        anchorKeys:
+          &keyOne aliasOne: 1 1 Alpha 1
+          &keyTwo aliasTwo: 2 2 Beta 2
+
+        hash:
+          *keyOne :
+            subval: 1.1
+          *keyTwo :
+            subval: 2.2
+        """
+        yaml = YAML()
+        data = yaml.load(yamldata)
+        processor = Processor(logger_f, data)
+
+        yamlpath = YAMLPath("hash[&keyThree].subval")
+        newvalue = "Abort"
+        with pytest.raises(YAMLPathException) as ex:
+            nodes = list(processor.get_nodes(yamlpath))
+        assert -1 < str(ex.value).find("Cannot add")
