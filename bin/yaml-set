@@ -22,16 +22,18 @@ from ruamel.yaml.parser import ParserError
 
 from yamlpath import YAMLPath
 from yamlpath.exceptions import YAMLPathException
-from yamlpath.eyaml.exceptions import EYAMLCommandException
-from yamlpath.eyaml import EYAMLProcessor
 from yamlpath.enums import YAMLValueFormats, PathSeperators
+from yamlpath.eyaml.exceptions import EYAMLCommandException
+from yamlpath.eyaml.enums import EYAMLOutputFormats
+from yamlpath.eyaml import EYAMLProcessor
 
+# pylint: disable=locally-disabled,unused-import
 import yamlpath.patches
 from yamlpath.func import clone_node
 from yamlpath.wrappers import ConsolePrinter
 
 # Implied Constants
-MY_VERSION = "1.0.4"
+MY_VERSION = "1.0.5"
 
 def processcli():
     """Process command-line arguments."""
@@ -237,6 +239,12 @@ def main():
     if not change_nodes:
         log.warning("Nothing to do!")
         exit(0)
+    elif len(change_nodes) == 1:
+        # When there is exactly one result, its old format can be known.  This
+        # is necessary to retain whether the replacement value should be
+        # represented later as a multi-line string when the new value is to be
+        # encrypted.
+        old_format = YAMLValueFormats.from_node(change_nodes[0])
 
     log.debug("Collected nodes:")
     log.debug(change_nodes)
@@ -292,7 +300,6 @@ def main():
         # format, despite being properly typed.  To restore the original
         # written form, reverse the conversion, here.
         old_value = change_nodes[0]
-        old_format = YAMLValueFormats.from_node(old_value)
         if (
                 (old_format is YAMLValueFormats.FOLDED
                  or old_format is YAMLValueFormats.LITERAL
@@ -311,7 +318,6 @@ def main():
     # Set the requested value
     log.verbose("Setting the new value for {}.".format(change_path))
     if args.eyamlcrypt:
-        output_type = "string"
         try:
             format_type = YAMLValueFormats.from_str(args.format)
         except NameError:
@@ -324,8 +330,10 @@ def main():
         if format_type is YAMLValueFormats.DEFAULT:
             format_type = old_format
 
+        output_type = EYAMLOutputFormats.STRING
         if format_type in [YAMLValueFormats.FOLDED, YAMLValueFormats.LITERAL]:
-            output_type = "block"
+            output_type = EYAMLOutputFormats.BLOCK
+
         try:
             processor.set_eyaml_value(
                 change_path, new_value
