@@ -6,6 +6,7 @@ from subprocess import run, CalledProcessError
 from ruamel.yaml import YAML
 
 import yamlpath.patches
+from yamlpath.enums import YAMLValueFormats
 from yamlpath.eyaml.enums import EYAMLOutputFormats
 from yamlpath.eyaml import EYAMLProcessor
 from yamlpath.wrappers import ConsolePrinter
@@ -248,6 +249,24 @@ class Test_eyaml_EYAMLProcessor():
             break
 
         assert EYAMLProcessor.is_eyaml_value(encvalue)
+
+    @requireseyaml
+    @pytest.mark.parametrize("yaml_path,newval,eoformat,yvformat", [
+        ("/aliased::secrets/novel_values/ident", "New, novel, encrypted identity in BLOCK format", EYAMLOutputFormats.BLOCK, YAMLValueFormats.FOLDED),
+        ("/aliased::secrets/string_values/ident", "New, novel, encrypted identity in STRING format", EYAMLOutputFormats.STRING, YAMLValueFormats.BARE),
+    ])
+    def test_preserve_old_blockiness(self, logger_f, eyamldata_f, eyamlkeys, yaml_path, newval, eoformat, yvformat):
+        processor = EYAMLProcessor(logger_f, eyamldata_f, privatekey=eyamlkeys[0], publickey=eyamlkeys[1])
+        processor.set_eyaml_value(yaml_path, newval, output=eoformat)
+
+        encvalue = None
+        encformat = YAMLValueFormats.DEFAULT
+        for encnode in processor.get_nodes(yaml_path):
+            encvalue = encnode
+            encformat = YAMLValueFormats.from_node(encvalue)
+            break
+
+        assert EYAMLProcessor.is_eyaml_value(encvalue) and yvformat == encformat
 
     def test_none_eyaml_value(self):
         assert False == EYAMLProcessor.is_eyaml_value(None)
