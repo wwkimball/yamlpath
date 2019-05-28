@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-# pylint: disable=locally-disabled,invalid-name
 """
 Changes one or more values in a YAML file at a specified YAML Path.  Matched
 values can be checked before they are replaced to mitigate accidental change.

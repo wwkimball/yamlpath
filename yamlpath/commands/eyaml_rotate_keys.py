@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-# pylint: disable=locally-disabled,invalid-name
 """
 Rotates the encryption keys used for all EYAML values within a set of YAML
 files, decrypting with old keys and re-encrypting using replacement keys.
@@ -19,6 +17,7 @@ from ruamel.yaml.scalarstring import FoldedScalarString
 from yamlpath.eyaml.exceptions import EYAMLCommandException
 from yamlpath.eyaml import EYAMLProcessor
 
+# pylint: disable=locally-disabled,unused-import
 import yamlpath.patches
 from yamlpath.wrappers import ConsolePrinter
 

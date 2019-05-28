@@ -22,11 +22,13 @@ setuptools.setup(
     license="ISC",
     keywords="yaml eyaml yaml-path",
     packages=setuptools.find_packages(),
-    scripts=[
-        "bin/eyaml-rotate-keys",
-        "bin/yaml-get",
-        "bin/yaml-set",
-    ],
+    entry_points={
+        "console-scripts": [
+            "eyaml-rotate-keys = yamlpath.commands.eyaml_rotate_keys:main",
+            "yaml-get = yamlpath.commands.yaml_get:main",
+            "yaml-set = yamlpath.commands.yaml_set:main",
+        ]
+    },
     python_requires=">3.6.0",
     install_requires=[
         "ruamel.yaml>=0.15.96",
@@ -34,6 +36,7 @@ setuptools.setup(
     tests_require=[
         "pytest",
         "pytest-cov",
+        "pytest-console-scripts",
     ],
     include_package_data=True,
     zip_safe=False

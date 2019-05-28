@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-# pylint: disable=locally-disabled,invalid-name
 """
 Retrieves one or more values from a YAML file at a specified YAML Path.
 Output is printed to STDOUT, one line per match.  When a result is a complex
