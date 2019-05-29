@@ -12,6 +12,8 @@ from os.path import isfile, exists
 
 from ruamel.yaml import YAML
 from ruamel.yaml.parser import ParserError
+from ruamel.yaml.composer import ComposerError
+from ruamel.yaml.scanner import ScannerError
 from ruamel.yaml.scalarstring import FoldedScalarString
 
 from yamlpath.eyaml.exceptions import EYAMLCommandException
@@ -22,7 +24,7 @@ import yamlpath.patches
 from yamlpath.wrappers import ConsolePrinter
 
 # Implied Constants
-MY_VERSION = "1.0.1"
+MY_VERSION = "1.0.2"
 
 def processcli():
     """Process command-line arguments."""
@@ -133,6 +135,14 @@ def main():
             continue
         except ParserError as ex:
             log.error("YAML parsing error {}:  {}"
+                      .format(str(ex.problem_mark).lstrip(), ex.problem))
+            continue
+        except ComposerError as ex:
+            log.error("YAML composition error {}:  {}"
+                      .format(str(ex.problem_mark).lstrip(), ex.problem))
+            continue
+        except ScannerError as ex:
+            log.error("YAML syntax error {}:  {}"
                       .format(str(ex.problem_mark).lstrip(), ex.problem))
             continue
 

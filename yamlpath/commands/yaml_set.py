@@ -17,6 +17,8 @@ from shutil import copy2
 
 from ruamel.yaml import YAML
 from ruamel.yaml.parser import ParserError
+from ruamel.yaml.composer import ComposerError
+from ruamel.yaml.scanner import ScannerError
 
 from yamlpath import YAMLPath
 from yamlpath.exceptions import YAMLPathException
@@ -31,7 +33,7 @@ from yamlpath.func import clone_node
 from yamlpath.wrappers import ConsolePrinter
 
 # Implied Constants
-MY_VERSION = "1.0.5"
+MY_VERSION = "1.0.6"
 
 def processcli():
     """Process command-line arguments."""
@@ -215,6 +217,18 @@ def main():
     except ParserError as ex:
         log.critical(
             "YAML parsing error {}:  {}"
+            .format(str(ex.problem_mark).lstrip(), ex.problem)
+            , 1
+        )
+    except ComposerError as ex:
+        log.critical(
+            "YAML composition error {}:  {}"
+            .format(str(ex.problem_mark).lstrip(), ex.problem)
+            , 1
+        )
+    except ScannerError as ex:
+        log.critical(
+            "YAML syntax error {}:  {}"
             .format(str(ex.problem_mark).lstrip(), ex.problem)
             , 1
         )

@@ -14,6 +14,8 @@ from os.path import isfile
 
 from ruamel.yaml import YAML
 from ruamel.yaml.parser import ParserError
+from ruamel.yaml.composer import ComposerError
+from ruamel.yaml.scanner import ScannerError
 
 from yamlpath import YAMLPath
 from yamlpath.exceptions import YAMLPathException
@@ -24,7 +26,7 @@ from yamlpath.eyaml import EYAMLProcessor
 from yamlpath.wrappers import ConsolePrinter
 
 # Implied Constants
-MY_VERSION = "1.0.3"
+MY_VERSION = "1.0.4"
 
 def processcli():
     """Process command-line arguments."""
@@ -95,6 +97,7 @@ def validateargs(args, log):
     if args.privatekey and not (
             isfile(args.privatekey) and access(args.privatekey, R_OK)
     ):
+        has_errors = True
         log.error(
             "EYAML private key is not a readable file:  " + args.privatekey
         )
@@ -103,6 +106,7 @@ def validateargs(args, log):
     if args.publickey and not (
             isfile(args.publickey) and access(args.publickey, R_OK)
     ):
+        has_errors = True
         log.error(
             "EYAML public key is not a readable file:  " + args.publickey
         )
@@ -114,6 +118,7 @@ def validateargs(args, log):
             (args.publickey and not args.privatekey)
             or (args.privatekey and not args.publickey)
     ):
+        has_errors = True
         log.error("Both private and public EYAML keys must be set.")
 
     if has_errors:
@@ -143,6 +148,18 @@ def main():
     except ParserError as ex:
         log.critical(
             "YAML parsing error {}:  {}"
+            .format(str(ex.problem_mark).lstrip(), ex.problem)
+            , 1
+        )
+    except ComposerError as ex:
+        log.critical(
+            "YAML composition error {}:  {}"
+            .format(str(ex.problem_mark).lstrip(), ex.problem)
+            , 1
+        )
+    except ScannerError as ex:
+        log.critical(
+            "YAML syntax error {}:  {}"
             .format(str(ex.problem_mark).lstrip(), ex.problem)
             , 1
         )
