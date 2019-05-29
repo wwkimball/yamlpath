@@ -1,5 +1,3 @@
-import tempfile
-
 import pytest
 
 @pytest.fixture
@@ -80,13 +78,13 @@ class Test_yaml_get():
         assert not result.success, result.stderr
         assert "YAML parsing error" in result.stderr
 
-    def test_yaml_syntax_error(self, script_runner, input_files):
-        result = script_runner.run("yaml-get", "--query=/", input_files[2])
+    def test_yaml_syntax_error(self, script_runner, badsyntax_yaml_file):
+        result = script_runner.run("yaml-get", "--query=/", badsyntax_yaml_file)
         assert not result.success, result.stderr
         assert "YAML syntax error" in result.stderr
 
-    def test_yaml_composition_error(self, script_runner, input_files):
-        result = script_runner.run("yaml-get", "--query=/", input_files[3])
+    def test_yaml_composition_error(self, script_runner, badcmp_yaml_file):
+        result = script_runner.run("yaml-get", "--query=/", badcmp_yaml_file)
         assert not result.success, result.stderr
         assert "YAML composition error" in result.stderr
 
