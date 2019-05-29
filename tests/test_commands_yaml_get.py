@@ -1,3 +1,5 @@
+import tempfile
+
 import pytest
 
 @pytest.fixture
@@ -73,8 +75,8 @@ class Test_yaml_get():
         assert not result.success, result.stderr
         assert "EYAML public key is not a readable file" in result.stderr
 
-    def test_yaml_parsing_error(self, script_runner, input_files):
-        result = script_runner.run("yaml-get", "--query=/", input_files[1])
+    def test_yaml_parsing_error(self, script_runner, imparsible_yaml_file):
+        result = script_runner.run("yaml-get", "--query=/", imparsible_yaml_file)
         assert not result.success, result.stderr
         assert "YAML parsing error" in result.stderr
 
