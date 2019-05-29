@@ -4,9 +4,11 @@ import pytest
 def input_files(tmp_path_factory):
     """Creates a sample YAML_FILE for CLI tests."""
     good_yaml_file_name = "good.test.yaml"
+    imparsible_yaml_file_name = "imparsible.test.yaml"
     badsyntax_yaml_file_name = "badsyntax.test.yaml"
     badcmp_yaml_file_name = "bad-composition.test.yaml"
     good_yaml_file = tmp_path_factory.mktemp("test_files") / good_yaml_file_name
+    imparsible_yaml_file = tmp_path_factory.mktemp("test_files") / imparsible_yaml_file_name
     badsyntax_yaml_file = tmp_path_factory.mktemp("test_files") / badsyntax_yaml_file_name
     badcmp_yaml_file = tmp_path_factory.mktemp("test_files") / badcmp_yaml_file_name
 
@@ -14,6 +16,8 @@ def input_files(tmp_path_factory):
     aliases:
       - &plainScalar Plain scalar string
     """
+
+    imparsible_yaml_content = '''{"json": "is YAML", "but_bad_json": "isn't anything!"'''
 
     badsyntax_yaml_content = """---
     # This YAML content contains a critical syntax error
@@ -27,12 +31,14 @@ def input_files(tmp_path_factory):
 
     with open(good_yaml_file, 'w') as fhnd:
         fhnd.write(good_yaml_content)
+    with open(imparsible_yaml_file, 'w') as fhnd:
+        fhnd.write(imparsible_yaml_content)
     with open(badsyntax_yaml_file, 'w') as fhnd:
         fhnd.write(badsyntax_yaml_content)
     with open(badcmp_yaml_file, 'w') as fhnd:
         fhnd.write(badcmp_yaml_content)
 
-    return [good_yaml_file, badsyntax_yaml_file, badcmp_yaml_file]
+    return [good_yaml_file, imparsible_yaml_file, badsyntax_yaml_file, badcmp_yaml_file]
 
 class Test_yaml_get():
     """Tests for the yaml-get command-line interface."""
@@ -67,13 +73,18 @@ class Test_yaml_get():
         assert not result.success, result.stderr
         assert "EYAML public key is not a readable file" in result.stderr
 
+    def test_yaml_parsing_error(self, script_runner, input_files):
+        result = script_runner.run("yaml-get", "--query=/", input_files[1])
+        assert not result.success, result.stderr
+        assert "YAML parsing error" in result.stderr
+
     def test_yaml_syntax_error(self, script_runner, input_files):
-        result = script_runner.run("yaml-get", "--query=aliases[&plainScalar]", input_files[1])
+        result = script_runner.run("yaml-get", "--query=/", input_files[2])
         assert not result.success, result.stderr
         assert "YAML syntax error" in result.stderr
 
     def test_yaml_composition_error(self, script_runner, input_files):
-        result = script_runner.run("yaml-get", "--query=/", input_files[2])
+        result = script_runner.run("yaml-get", "--query=/", input_files[3])
         assert not result.success, result.stderr
         assert "YAML composition error" in result.stderr
 
