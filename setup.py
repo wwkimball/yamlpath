@@ -23,7 +23,7 @@ setuptools.setup(
     keywords="yaml eyaml yaml-path",
     packages=setuptools.find_packages(),
     entry_points={
-        "console-scripts": [
+        "console_scripts": [
             "eyaml-rotate-keys = yamlpath.commands.eyaml_rotate_keys:main",
             "yaml-get = yamlpath.commands.yaml_get:main",
             "yaml-set = yamlpath.commands.yaml_set:main",
