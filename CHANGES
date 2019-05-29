@@ -1,3 +1,9 @@
+2.0.1:
+Bug Fixes:
+* yaml-set v1.0.4 lost track of EYAML block formatting between read and write,
+  causing replacement values to use unexpected formatting.  This is fixed in
+  yaml-set v.1.0.5.
+
 2.0.0:
 Enhancements:
 * Added Collectors to YAML Path expressions.  These take the form of "(YAML
