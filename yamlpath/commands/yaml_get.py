@@ -6,13 +6,11 @@ result.  EYAML can be employed to decrypt the values.
 
 Copyright 2018, 2019 William W. Kimball, Jr. MBA MSIS
 """
-import sys
 import argparse
 import json
 from os import access, R_OK
 from os.path import isfile
 
-from ruamel.yaml import YAML
 from ruamel.yaml.parser import ParserError
 from ruamel.yaml.composer import ComposerError
 from ruamel.yaml.scanner import ScannerError
@@ -24,6 +22,7 @@ from yamlpath.enums import PathSeperators
 from yamlpath.eyaml import EYAMLProcessor
 
 from yamlpath.wrappers import ConsolePrinter
+from yamlpath.func import get_yaml_editor
 
 # Implied Constants
 MY_VERSION = "1.0.4"
@@ -132,17 +131,13 @@ def main():
     yaml_path = YAMLPath(args.query, pathsep=args.pathsep)
 
     # Prep the YAML parser
-    yaml = YAML()
-    yaml.indent(mapping=2, sequence=4, offset=2)
-    yaml.explicit_start = True
-    yaml.preserve_quotes = True
-    yaml.width = sys.maxsize
+    yaml = get_yaml_editor()
 
     # Attempt to open the YAML file; check for parsing errors
 
     try:
-        with open(args.yaml_file, 'r') as f:
-            yaml_data = yaml.load(f)
+        with open(args.yaml_file, 'r') as fhnd:
+            yaml_data = yaml.load(fhnd)
     except FileNotFoundError:
         log.critical("YAML_FILE not found:  {}".format(args.yaml_file), 2)
     except ParserError as ex:

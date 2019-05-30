@@ -4,13 +4,11 @@ files, decrypting with old keys and re-encrypting using replacement keys.
 
 Copyright 2018, 2019 William W. Kimball, Jr. MBA MSIS
 """
-import sys
 import argparse
 from shutil import copy2
 from os import remove, access, R_OK
 from os.path import isfile, exists
 
-from ruamel.yaml import YAML
 from ruamel.yaml.parser import ParserError
 from ruamel.yaml.composer import ComposerError
 from ruamel.yaml.scanner import ScannerError
@@ -22,6 +20,7 @@ from yamlpath.eyaml import EYAMLProcessor
 # pylint: disable=locally-disabled,unused-import
 import yamlpath.patches
 from yamlpath.wrappers import ConsolePrinter
+from yamlpath.func import get_yaml_editor
 
 # Implied Constants
 MY_VERSION = "1.0.2"
@@ -94,6 +93,7 @@ def validateargs(args, log):
     if has_errors:
         exit(1)
 
+# pylint: disable=locally-disabled,too-many-locals,too-many-branches,too-many-statements
 def main():
     """Main code."""
     # Process any command-line arguments
@@ -103,11 +103,7 @@ def main():
     processor = EYAMLProcessor(log, None, binary=args.eyaml)
 
     # Prep the YAML parser
-    yaml = YAML()
-    yaml.indent(mapping=2, sequence=4, offset=2)
-    yaml.explicit_start = True
-    yaml.preserve_quotes = True
-    yaml.width = sys.maxsize
+    yaml = get_yaml_editor()
 
     # Process the input file(s)
     in_file_count = len(args.yaml_files)

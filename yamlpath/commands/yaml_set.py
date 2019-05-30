@@ -15,7 +15,6 @@ from os import remove, access, R_OK
 from os.path import isfile, exists
 from shutil import copy2
 
-from ruamel.yaml import YAML
 from ruamel.yaml.parser import ParserError
 from ruamel.yaml.composer import ComposerError
 from ruamel.yaml.scanner import ScannerError
@@ -29,7 +28,7 @@ from yamlpath.eyaml import EYAMLProcessor
 
 # pylint: disable=locally-disabled,unused-import
 import yamlpath.patches
-from yamlpath.func import clone_node
+from yamlpath.func import get_yaml_editor, clone_node
 from yamlpath.wrappers import ConsolePrinter
 
 # Implied Constants
@@ -176,6 +175,7 @@ def validateargs(args, log):
     if has_errors:
         exit(1)
 
+# pylint: disable=locally-disabled,too-many-locals,too-many-branches,too-many-statements
 def main():
     """Main code."""
     args = processcli()
@@ -190,8 +190,8 @@ def main():
     elif args.stdin:
         new_value = ''.join(sys.stdin.readlines())
     elif args.file:
-        with open(args.file, 'r') as f:
-            new_value = f.read().rstrip()
+        with open(args.file, 'r') as fhnd:
+            new_value = fhnd.read().rstrip()
     elif args.random is not None:
         new_value = ''.join(
             secrets.choice(
@@ -200,16 +200,12 @@ def main():
         )
 
     # Prep the YAML parser
-    yaml = YAML()
-    yaml.indent(mapping=2, sequence=4, offset=2)
-    yaml.explicit_start = True
-    yaml.preserve_quotes = True
-    yaml.width = sys.maxsize
+    yaml = get_yaml_editor()
 
     # Attempt to open the YAML file; check for parsing errors
     try:
-        with open(args.yaml_file, 'r') as f:
-            yaml_data = yaml.load(f)
+        with open(args.yaml_file, 'r') as fhnd:
+            yaml_data = yaml.load(fhnd)
     except FileNotFoundError:
         log.critical("YAML_FILE not found:  {}".format(args.yaml_file), 2)
     except ParserError as ex:
