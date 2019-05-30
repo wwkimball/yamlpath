@@ -26,13 +26,13 @@ from yamlpath.enums import (
     PathSegmentTypes,
 )
 
-def get_yaml_editor() -> object:
+def get_yaml_editor() -> Any:
     """
     Builds and returns a generic YAML editor based on ruamel.yaml.
 
     Parameters:  N/A
 
-    Returns (object) The ready-for-use YAML editor.
+    Returns (Any) The ready-for-use YAML editor.
 
     Raises:  N/A
     """
