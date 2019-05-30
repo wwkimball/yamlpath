@@ -1,6 +1,6 @@
 import pytest
 
-from tests.conftest import create_temp_yaml_file
+from tests.conftest import create_temp_yaml_file, requireseyaml, old_eyaml_keys
 
 
 class Test_yaml_set():
@@ -163,3 +163,20 @@ class Test_yaml_set():
             yaml_file
         )
         assert result.success, result.stderr
+
+    @requireseyaml
+    def test_missing_key(self, script_runner, tmp_path_factory, old_eyaml_keys):
+        content = """---
+        encrypted: ENC[PKCS7,MIIx...blahblahblah...==]
+        """
+        yaml_file = create_temp_yaml_file(tmp_path_factory, content)
+        result = script_runner.run(
+            self.command,
+            "--change=encrypted",
+            "--random=1",
+            "--check=n/a"
+            "--privatekey={}".format(old_eyaml_keys[0]),
+            yaml_file
+        )
+        assert not result.success, result.stderr
+        assert "Neither or both private and public EYAML keys must be set" in result.stderr
