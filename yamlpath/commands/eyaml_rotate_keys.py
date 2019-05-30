@@ -207,4 +207,4 @@ def main():
                 yaml.dump(yaml_data, yaml_dump)
 
 if __name__ == "__main__":
-    main()
+    main()  # pragma: no cover

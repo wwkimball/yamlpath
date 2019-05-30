@@ -341,17 +341,10 @@ def main():
                 , output=output_type
                 , mustexist=False
             )
-        except YAMLPathException as ex:
-            log.critical(ex, 1)
         except EYAMLCommandException as ex:
             log.critical(ex, 2)
     else:
-        try:
-            processor.set_value(
-                change_path, new_value, value_format=args.format
-            )
-        except YAMLPathException as ex:
-            log.critical(ex, 1)
+        processor.set_value(change_path, new_value, value_format=args.format)
 
     # Save a backup of the original file, if requested
     if args.backup:
@@ -368,4 +361,4 @@ def main():
         yaml.dump(yaml_data, yaml_dump)
 
 if __name__ == "__main__":
-    main()
+    main()  # pragma: no cover

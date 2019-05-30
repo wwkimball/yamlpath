@@ -280,6 +280,20 @@ class Test_yaml_set():
             filedat = fhnd.read()
         assert re.findall(r"^backup:\s+>$", filedat, re.M), filedat
 
+    def test_broken_change(self, script_runner, tmp_path_factory):
+        content = """---
+        key: value
+        """
+        yaml_file = create_temp_yaml_file(tmp_path_factory, content)
+        result = script_runner.run(
+            self.command,
+            "--change=[0]",
+            "--random=1",
+            yaml_file
+        )
+        assert not result.success, result.stderr
+        assert "Cannot add" in result.stderr
+
     def test_broken_saveto(self, script_runner, tmp_path_factory):
         content = """---
         key: value
@@ -372,3 +386,50 @@ class Test_yaml_set():
         )
         assert not result.success, result.stderr
         assert "The eyaml binary is not executable" in result.stderr
+
+    def test_backup_file(self, script_runner, tmp_path_factory):
+        import os
+
+        content = """---
+        key: value
+        """
+        yaml_file = create_temp_yaml_file(tmp_path_factory, content)
+        backup_file = yaml_file + ".bak"
+        result = script_runner.run(
+            self.command,
+            "--change=key",
+            "--random=1",
+            "--backup",
+            yaml_file
+        )
+        assert result.success, result.stderr
+        assert os.path.isfile(backup_file)
+
+        with open(backup_file, 'r') as fhnd:
+            filedat = fhnd.read()
+        assert filedat == content
+
+    def test_replace_backup_file(self, script_runner, tmp_path_factory):
+        import os
+
+        content = """---
+        key: value
+        """
+        yaml_file = create_temp_yaml_file(tmp_path_factory, content)
+        backup_file = yaml_file + ".bak"
+        with open(backup_file, 'w') as fhnd:
+            fhnd.write(content + "\nkey2: value2")
+
+        result = script_runner.run(
+            self.command,
+            "--change=key",
+            "--random=1",
+            "--backup",
+            yaml_file
+        )
+        assert result.success, result.stderr
+        assert os.path.isfile(backup_file)
+
+        with open(backup_file, 'r') as fhnd:
+            filedat = fhnd.read()
+        assert filedat == content
