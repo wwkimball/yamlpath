@@ -167,7 +167,7 @@ def main():
     # Seek the queried value(s)
     discovered_nodes = []
     processor = EYAMLProcessor(
-        log, yaml_data, eyaml=args.eyaml,
+        log, yaml_data, binary=args.eyaml,
         publickey=args.publickey, privatekey=args.privatekey)
     try:
         for node in processor.get_eyaml_values(yaml_path, mustexist=True):
@@ -178,9 +178,6 @@ def main():
     except EYAMLCommandException as ex:
         log.critical(ex, 2)
 
-    if not discovered_nodes:
-        log.critical("No matches for {}!".format(yaml_path), 3)
-
     for node in discovered_nodes:
         if isinstance(node, (dict, list)):
             print(json.dumps(node))
@@ -188,4 +185,4 @@ def main():
             print("{}".format(str(node).replace("\n", r"\n")))
 
 if __name__ == "__main__":
-    main()
+    main()  # pragma: no cover

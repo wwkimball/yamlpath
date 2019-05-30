@@ -1,44 +1,7 @@
 import pytest
 
-@pytest.fixture
-def input_files(tmp_path_factory):
-    """Creates a sample YAML_FILE for CLI tests."""
-    good_yaml_file_name = "good.test.yaml"
-    imparsible_yaml_file_name = "imparsible.test.yaml"
-    badsyntax_yaml_file_name = "badsyntax.test.yaml"
-    badcmp_yaml_file_name = "bad-composition.test.yaml"
-    good_yaml_file = tmp_path_factory.mktemp("test_files") / good_yaml_file_name
-    imparsible_yaml_file = tmp_path_factory.mktemp("test_files") / imparsible_yaml_file_name
-    badsyntax_yaml_file = tmp_path_factory.mktemp("test_files") / badsyntax_yaml_file_name
-    badcmp_yaml_file = tmp_path_factory.mktemp("test_files") / badcmp_yaml_file_name
+from tests.conftest import create_temp_yaml_file
 
-    good_yaml_content = """---
-    aliases:
-      - &plainScalar Plain scalar string
-    """
-
-    imparsible_yaml_content = '''{"json": "is YAML", "but_bad_json": "isn't anything!"'''
-
-    badsyntax_yaml_content = """---
-    # This YAML content contains a critical syntax error
-    & bad_anchor: is bad
-    """
-
-    badcmp_yaml_content = """---
-    # This YAML file is improperly composed
-    this is a parsing error: *no such capability
-    """
-
-    with open(good_yaml_file, 'w') as fhnd:
-        fhnd.write(good_yaml_content)
-    with open(imparsible_yaml_file, 'w') as fhnd:
-        fhnd.write(imparsible_yaml_content)
-    with open(badsyntax_yaml_file, 'w') as fhnd:
-        fhnd.write(badsyntax_yaml_content)
-    with open(badcmp_yaml_file, 'w') as fhnd:
-        fhnd.write(badcmp_yaml_content)
-
-    return [good_yaml_file, imparsible_yaml_file, badsyntax_yaml_file, badcmp_yaml_file]
 
 class Test_yaml_get():
     """Tests for the yaml-get command-line interface."""
@@ -58,18 +21,30 @@ class Test_yaml_get():
         assert not result.success, result.stderr
         assert "YAML_FILE not found:" in result.stderr
 
-    def test_no_query(self, script_runner, input_files):
-        result = script_runner.run("yaml-get", input_files[0])
+    def test_no_query(self, script_runner, tmp_path_factory):
+        content = """---
+        no: ''
+        """
+        yaml_file = create_temp_yaml_file(tmp_path_factory, content)
+        result = script_runner.run("yaml-get", yaml_file)
         assert not result.success, result.stderr
         assert "the following arguments are required: -p/--query" in result.stderr
 
-    def test_bad_privatekey(self, script_runner, input_files):
-        result = script_runner.run("yaml-get", "--query=aliases", "--privatekey=no-such-file", input_files[0])
+    def test_bad_privatekey(self, script_runner, tmp_path_factory):
+        content = """---
+        no: ''
+        """
+        yaml_file = create_temp_yaml_file(tmp_path_factory, content)
+        result = script_runner.run("yaml-get", "--query=aliases", "--privatekey=no-such-file", yaml_file)
         assert not result.success, result.stderr
         assert "EYAML private key is not a readable file" in result.stderr
 
-    def test_bad_publickey(self, script_runner, input_files):
-        result = script_runner.run("yaml-get", "--query=aliases", "--publickey=no-such-file", input_files[0])
+    def test_bad_publickey(self, script_runner, tmp_path_factory):
+        content = """---
+        no: ''
+        """
+        yaml_file = create_temp_yaml_file(tmp_path_factory, content)
+        result = script_runner.run("yaml-get", "--query=aliases", "--publickey=no-such-file", yaml_file)
         assert not result.success, result.stderr
         assert "EYAML public key is not a readable file" in result.stderr
 
@@ -88,7 +63,48 @@ class Test_yaml_get():
         assert not result.success, result.stderr
         assert "YAML composition error" in result.stderr
 
-    def test_query_anchor(self, script_runner, input_files):
-        result = script_runner.run("yaml-get", "--query=aliases[&plainScalar]", input_files[0])
+    def test_bad_yaml_path(self, script_runner, tmp_path_factory):
+        content = """---
+        aliases:
+          - &plainScalar Plain scalar string
+        """
+        yaml_file = create_temp_yaml_file(tmp_path_factory, content)
+        result = script_runner.run("yaml-get", "--query=aliases[1]", yaml_file)
+        assert not result.success, result.stderr
+        assert "Required YAML Path does not match any nodes" in result.stderr
+
+    def test_bad_eyaml_value(self, script_runner, tmp_path_factory):
+        content = """---
+        aliases:
+          - &encryptedScalar >
+            ENC[PKCS7,MIIx...broken-on-purpose...==]
+        """
+        yaml_file = create_temp_yaml_file(tmp_path_factory, content)
+        result = script_runner.run(
+            "yaml-get",
+            "--query=aliases[&encryptedScalar]",
+            "--eyaml=/does/not/exist-on-most/systems",
+            yaml_file
+        )
+        assert not result.success, result.stderr
+        assert "No accessible eyaml command" in result.stderr
+
+    def test_query_anchor(self, script_runner, tmp_path_factory):
+        content = """---
+        aliases:
+          - &plainScalar Plain scalar string
+        """
+        yaml_file = create_temp_yaml_file(tmp_path_factory, content)
+        result = script_runner.run("yaml-get", "--query=aliases[&plainScalar]", yaml_file)
         assert result.success, result.stderr
         assert "Plain scalar string" in result.stdout
+
+    def test_query_list(self, script_runner, tmp_path_factory):
+        content = """---
+        aliases:
+          - &plainScalar Plain scalar string
+        """
+        yaml_file = create_temp_yaml_file(tmp_path_factory, content)
+        result = script_runner.run("yaml-get", "--query=aliases", yaml_file)
+        assert result.success, result.stderr
+        assert '["Plain scalar string"]' in result.stdout

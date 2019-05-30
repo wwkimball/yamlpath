@@ -237,7 +237,7 @@ def main():
     change_nodes = []
     old_format = YAMLValueFormats.DEFAULT
     processor = EYAMLProcessor(
-        log, yaml_data, eyaml=args.eyaml,
+        log, yaml_data, binary=args.eyaml,
         publickey=args.publickey, privatekey=args.privatekey)
     try:
         for node in processor.get_nodes(

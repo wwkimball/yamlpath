@@ -100,7 +100,7 @@ def main():
     args = processcli()
     log = ConsolePrinter(args)
     validateargs(args, log)
-    processor = EYAMLProcessor(log, None, eyaml=args.eyaml)
+    processor = EYAMLProcessor(log, None, binary=args.eyaml)
 
     # Prep the YAML parser
     yaml = YAML()
