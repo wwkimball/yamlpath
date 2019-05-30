@@ -325,15 +325,9 @@ def main():
     # Set the requested value
     log.verbose("Setting the new value for {}.".format(change_path))
     if args.eyamlcrypt:
-        try:
-            format_type = YAMLValueFormats.from_str(args.format)
-        except NameError:
-            log.critical(
-                "Unknown YAML value format ,{}.".format(args.format), 1
-            )
-
         # If the user hasn't specified a format, use the same format as the
         # value being replaced, if known.
+        format_type = YAMLValueFormats.from_str(args.format)
         if format_type is YAMLValueFormats.DEFAULT:
             format_type = old_format
 

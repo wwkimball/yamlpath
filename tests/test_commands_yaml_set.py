@@ -149,8 +149,6 @@ class Test_yaml_set():
         assert "Required YAML Path does not match any nodes" in result.stderr
 
     def test_checked_replace(self, script_runner, tmp_path_factory):
-        import re
-
         content = """---
         key: value
         """
@@ -174,9 +172,203 @@ class Test_yaml_set():
             self.command,
             "--change=encrypted",
             "--random=1",
-            "--check=n/a"
+            "--check=n/a",
             "--privatekey={}".format(old_eyaml_keys[0]),
             yaml_file
         )
         assert not result.success, result.stderr
         assert "Neither or both private and public EYAML keys must be set" in result.stderr
+
+        result = script_runner.run(
+            self.command,
+            "--change=encrypted",
+            "--random=1",
+            "--check=n/a",
+            "--publickey={}".format(old_eyaml_keys[1]),
+            yaml_file
+        )
+        assert not result.success, result.stderr
+        assert "Neither or both private and public EYAML keys must be set" in result.stderr
+
+    @requireseyaml
+    def test_bad_decryption(self, script_runner, tmp_path_factory, old_eyaml_keys):
+        content = """---
+        encrypted: ENC[PKCS7,MIIx...broken-on-purpose...==]
+        """
+        yaml_file = create_temp_yaml_file(tmp_path_factory, content)
+        result = script_runner.run(
+            self.command,
+            "--change=encrypted",
+            "--random=1",
+            "--check=n/a",
+            "--privatekey={}".format(old_eyaml_keys[0]),
+            "--publickey={}".format(old_eyaml_keys[1]),
+            yaml_file
+        )
+        assert not result.success, result.stderr
+        assert "Unable to decrypt value!" in result.stderr
+
+    def test_bad_value_check(self, script_runner, tmp_path_factory):
+        content = """---
+        key: value
+        """
+        yaml_file = create_temp_yaml_file(tmp_path_factory, content)
+        result = script_runner.run(
+            self.command,
+            "--change=key",
+            "--random=1",
+            "--check=abc",
+            yaml_file
+        )
+        assert not result.success, result.stderr
+        assert "does not match the check value" in result.stderr
+
+    def test_cannot_save_multiple_matches(self, script_runner, tmp_path_factory):
+        content = """---
+        key1: value1
+        key2: value2
+        """
+        yaml_file = create_temp_yaml_file(tmp_path_factory, content)
+        result = script_runner.run(
+            self.command,
+            "--change=/[.^key]",
+            "--random=1",
+            "--saveto=/backup",
+            yaml_file
+        )
+        assert not result.success, result.stderr
+        assert "It is impossible to meaningly save more than one" in result.stderr
+
+    def test_save_old_plain_value(self, script_runner, tmp_path_factory):
+        import re
+
+        content = """---
+        key: value
+        """
+        yaml_file = create_temp_yaml_file(tmp_path_factory, content)
+        result = script_runner.run(
+            self.command,
+            "--change=key",
+            "--value=new",
+            "--saveto=backup",
+            yaml_file
+        )
+        assert result.success, result.stderr
+
+        with open(yaml_file, 'r') as fhnd:
+            filedat = fhnd.read()
+        assert re.findall(r"^backup:\s+value$", filedat, re.M), filedat
+
+    def test_save_old_crypt_value(self, script_runner, tmp_path_factory):
+        import re
+
+        content = """---
+        encrypted: >
+          ENC[PKCS7,MIIB...]
+        """
+        yaml_file = create_temp_yaml_file(tmp_path_factory, content)
+        result = script_runner.run(
+            self.command,
+            "--change=encrypted",
+            "--value=now_plaintext",
+            "--saveto=backup",
+            yaml_file
+        )
+        assert result.success, result.stderr
+
+        with open(yaml_file, 'r') as fhnd:
+            filedat = fhnd.read()
+        assert re.findall(r"^backup:\s+>$", filedat, re.M), filedat
+
+    def test_broken_saveto(self, script_runner, tmp_path_factory):
+        content = """---
+        key: value
+        """
+        yaml_file = create_temp_yaml_file(tmp_path_factory, content)
+        result = script_runner.run(
+            self.command,
+            "--change=key",
+            "--random=1",
+            "--saveto=[2]",
+            yaml_file
+        )
+        assert not result.success, result.stderr
+        assert "Cannot add" in result.stderr
+
+    @requireseyaml
+    def test_bad_decryption(self, script_runner, tmp_path_factory, old_eyaml_keys):
+        content = """---
+        encrypted: ENC[PKCS7,MIIx...broken-on-purpose...==]
+        """
+        yaml_file = create_temp_yaml_file(tmp_path_factory, content)
+        result = script_runner.run(
+            self.command,
+            "--change=encrypted",
+            "--random=1",
+            "--check=n/a",
+            "--privatekey={}".format(old_eyaml_keys[0]),
+            "--publickey={}".format(old_eyaml_keys[1]),
+            yaml_file
+        )
+        assert not result.success, result.stderr
+        assert "Unable to decrypt value!" in result.stderr
+
+    @requireseyaml
+    def test_good_encryption(self, script_runner, tmp_path_factory, old_eyaml_keys):
+        import re
+
+        content = """---
+        key: >
+          old
+          multiline
+          value
+        """
+        yaml_file = create_temp_yaml_file(tmp_path_factory, content)
+        result = script_runner.run(
+            self.command,
+            "--change=key",
+            "--value=now_encrypted",
+            "--eyamlcrypt",
+            "--privatekey={}".format(old_eyaml_keys[0]),
+            "--publickey={}".format(old_eyaml_keys[1]),
+            yaml_file
+        )
+        assert result.success, result.stderr
+
+        with open(yaml_file, 'r') as fhnd:
+            filedat = fhnd.read()
+        assert re.findall(r"\nkey:\s+>\n\s{2}ENC\[.+\n", filedat), filedat
+
+    @requireseyaml
+    def test_bad_crypt_path(self, script_runner, tmp_path_factory, old_eyaml_keys):
+        content = """---
+        key: value
+        """
+        yaml_file = create_temp_yaml_file(tmp_path_factory, content)
+        result = script_runner.run(
+            self.command,
+            "--change=[0]",
+            "--random=1",
+            "--eyamlcrypt",
+            "--privatekey={}".format(old_eyaml_keys[0]),
+            "--publickey={}".format(old_eyaml_keys[1]),
+            yaml_file
+        )
+        assert not result.success, result.stderr
+        assert "Cannot add" in result.stderr
+
+    def test_bad_eyaml_command(self, script_runner, tmp_path_factory):
+        content = """---
+        key: value
+        """
+        yaml_file = create_temp_yaml_file(tmp_path_factory, content)
+        result = script_runner.run(
+            self.command,
+            "--change=key",
+            "--random=1",
+            "--eyamlcrypt",
+            "--eyaml=/does/not/exist/on-most/systems",
+            yaml_file
+        )
+        assert not result.success, result.stderr
+        assert "The eyaml binary is not executable" in result.stderr
