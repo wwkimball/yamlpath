@@ -198,8 +198,6 @@ def main():
                 string.ascii_uppercase + string.ascii_lowercase + string.digits
             ) for _ in range(args.random)
         )
-    else:
-        log.critical("Unsupported input method.", 1)
 
     # Prep the YAML parser
     yaml = YAML()
@@ -248,10 +246,7 @@ def main():
     except YAMLPathException as ex:
         log.critical(ex, 1)
 
-    if not change_nodes:
-        log.warning("Nothing to do!")
-        exit(0)
-    elif len(change_nodes) == 1:
+    if len(change_nodes) == 1:
         # When there is exactly one result, its old format can be known.  This
         # is necessary to retain whether the replacement value should be
         # represented later as a multi-line string when the new value is to be
