@@ -172,10 +172,7 @@ def main():
                 try:
                     txtval = processor.decrypt_eyaml(node)
                 except EYAMLCommandException as ex:
-                    log.critical(ex, 2)
-
-                if txtval is None:
-                    # A warning about this failure has already been printed
+                    log.error(ex)
                     exit_state = 3
                     continue
 
@@ -192,7 +189,9 @@ def main():
                 try:
                     processor.set_eyaml_value(yaml_path, txtval, output=output)
                 except EYAMLCommandException as ex:
-                    log.critical(ex, 2)
+                    log.error(ex)
+                    exit_state = 3
+                    continue
 
                 file_changed = True
 
