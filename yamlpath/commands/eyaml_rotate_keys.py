@@ -111,6 +111,7 @@ def main():
 
     # Process the input file(s)
     in_file_count = len(args.yaml_files)
+    exit_state = 0
     for yaml_file in args.yaml_files:
         file_changed = False
         backup_file = yaml_file + ".bak"
@@ -119,6 +120,7 @@ def main():
         # Each YAML_FILE must actually be a file
         if not isfile(yaml_file):
             log.error("Not a file:  {}".format(yaml_file))
+            exit_state = 2
             continue
 
         # Don't bother with the file change update when there's only one input
@@ -130,20 +132,20 @@ def main():
         try:
             with open(yaml_file, 'r') as fhnd:
                 yaml_data = yaml.load(fhnd)
-        except FileNotFoundError:
-            log.error("YAML_FILE not found:  {}".format(args.yaml_file))
-            continue
         except ParserError as ex:
             log.error("YAML parsing error {}:  {}"
                       .format(str(ex.problem_mark).lstrip(), ex.problem))
+            exit_state = 3
             continue
         except ComposerError as ex:
             log.error("YAML composition error {}:  {}"
                       .format(str(ex.problem_mark).lstrip(), ex.problem))
+            exit_state = 3
             continue
         except ScannerError as ex:
             log.error("YAML syntax error {}:  {}"
                       .format(str(ex.problem_mark).lstrip(), ex.problem))
+            exit_state = 3
             continue
 
         # Process all EYAML values
@@ -152,7 +154,7 @@ def main():
             # Use ::get_nodes() instead of ::get_eyaml_values() here in order
             # to ignore values that have already been decrypted via their
             # Anchors.
-            for node in processor.get_nodes(yaml_data, yaml_path):
+            for node in processor.get_nodes(yaml_path):
                 # Ignore values which are Aliases for those already decrypted
                 anchor_name = (
                     node.anchor.value if hasattr(node, "anchor") else None
@@ -174,6 +176,7 @@ def main():
 
                 if txtval is None:
                     # A warning about this failure has already been printed
+                    exit_state = 3
                     continue
 
                 # Prefer block (folded) values unless the original YAML value
@@ -205,6 +208,8 @@ def main():
             log.verbose("Writing changed data to {}.".format(yaml_file))
             with open(yaml_file, 'w') as yaml_dump:
                 yaml.dump(yaml_data, yaml_dump)
+
+    exit(exit_state)
 
 if __name__ == "__main__":
     main()  # pragma: no cover
