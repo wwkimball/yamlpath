@@ -26,6 +26,7 @@ setuptools.setup(
         "console_scripts": [
             "eyaml-rotate-keys = yamlpath.commands.eyaml_rotate_keys:main",
             "yaml-get = yamlpath.commands.yaml_get:main",
+            "yaml-paths = yamlpath.commands.yaml_paths:main",
             "yaml-set = yamlpath.commands.yaml_set:main",
         ]
     },

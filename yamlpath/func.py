@@ -3,6 +3,7 @@ Collection of general helper functions.
 
 Copyright 2018, 2019 William W. Kimball, Jr. MBA MSIS
 """
+import re
 from sys import maxsize
 from distutils.util import strtobool
 from typing import Any
@@ -23,6 +24,7 @@ from ruamel.yaml.scalarint import ScalarInt
 from yamlpath import YAMLPath
 from yamlpath.enums import (
     YAMLValueFormats,
+    PathSearchMethods,
     PathSegmentTypes,
 )
 
@@ -275,3 +277,89 @@ def make_new_node(source_node: Any, value: Any,
             new_node = new_type(new_value)
 
     return new_node
+
+def search_matches(method: PathSearchMethods, needle: str,
+                   haystack: Any) -> bool:
+    """
+    Performs a search.
+    """
+    matches: bool = False
+
+    if method is PathSearchMethods.EQUALS:
+        if isinstance(haystack, int):
+            try:
+                matches = haystack == int(needle)
+            except ValueError:
+                matches = False
+        elif isinstance(haystack, float):
+            try:
+                matches = haystack == float(needle)
+            except ValueError:
+                matches = False
+        else:
+            matches = haystack == needle
+    elif method is PathSearchMethods.STARTS_WITH:
+        matches = str(haystack).startswith(needle)
+    elif method is PathSearchMethods.ENDS_WITH:
+        matches = str(haystack).endswith(needle)
+    elif method is PathSearchMethods.CONTAINS:
+        matches = needle in str(haystack)
+    elif method is PathSearchMethods.GREATER_THAN:
+        if isinstance(haystack, int):
+            try:
+                matches = haystack > int(needle)
+            except ValueError:
+                matches = False
+        elif isinstance(haystack, float):
+            try:
+                matches = haystack > float(needle)
+            except ValueError:
+                matches = False
+        else:
+            matches = haystack > needle
+    elif method is PathSearchMethods.LESS_THAN:
+        if isinstance(haystack, int):
+            try:
+                matches = haystack < int(needle)
+            except ValueError:
+                matches = False
+        elif isinstance(haystack, float):
+            try:
+                matches = haystack < float(needle)
+            except ValueError:
+                matches = False
+        else:
+            matches = haystack < needle
+    elif method is PathSearchMethods.GREATER_THAN_OR_EQUAL:
+        if isinstance(haystack, int):
+            try:
+                matches = haystack >= int(needle)
+            except ValueError:
+                matches = False
+        elif isinstance(haystack, float):
+            try:
+                matches = haystack >= float(needle)
+            except ValueError:
+                matches = False
+        else:
+            matches = haystack >= needle
+    elif method is PathSearchMethods.LESS_THAN_OR_EQUAL:
+        if isinstance(haystack, int):
+            try:
+                matches = haystack <= int(needle)
+            except ValueError:
+                matches = False
+        elif isinstance(haystack, float):
+            try:
+                matches = haystack <= float(needle)
+            except ValueError:
+                matches = False
+        else:
+            matches = haystack <= needle
+    elif method == PathSearchMethods.REGEX:
+        matcher = re.compile(needle)
+        matches = matcher.search(str(haystack)) is not None
+    else:
+        raise NotImplementedError
+
+    return matches
