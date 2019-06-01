@@ -196,6 +196,7 @@ def search_for_paths(data: Any, terms: SearchTerms,
         for idx, ele in enumerate(data):
             # Screen out aliases if the anchor has already been seen, unless
             # the caller has asked for all the duplicate results.
+            anchor_matched = False
             if hasattr(ele, "anchor") and ele.anchor.value is not None:
                 # Dealing with an anchor/alias, so ref this node by name unless
                 # it is to be excluded from the search results.
@@ -212,6 +213,13 @@ def search_for_paths(data: Any, terms: SearchTerms,
                     build_path,
                     ensure_escaped(anchor_name, strsep),
                 )
+
+                # Search the anchor name itself, if requested
+                if search_anchors:
+                    matches = search_matches(method, term, anchor_name)
+                    if (matches and not invert) or (invert and not matches):
+                        yield YAMLPath(tmp_path)
+                        anchor_matched = True
             else:
                 # Not an anchor/alias, so ref this node by its index
                 tmp_path = build_path + str(idx) + "]"
@@ -221,12 +229,15 @@ def search_for_paths(data: Any, terms: SearchTerms,
                 for subpath in search_for_paths(
                         ele, terms, pathsep, tmp_path, seen_anchors,
                         search_values=search_values, search_keys=search_keys,
+                        search_anchors=search_anchors,
                         include_aliases=include_aliases
                 ):
                     yield subpath
-            elif search_values:
+            elif search_values and not anchor_matched:
                 # Otherwise, check the element for a match unless the caller
-                # isn't interested in value searching.
+                # isn't interested in value searching.  Also ignore the value
+                # if it is anchored and the anchor has already matched to avoid
+                # duplication in the results.
                 matches = search_matches(method, term, ele)
                 if (matches and not invert) or (invert and not matches):
                     yield YAMLPath(tmp_path)
@@ -242,28 +253,46 @@ def search_for_paths(data: Any, terms: SearchTerms,
             pool = data.items()
 
         for key, val in pool:
-            # The key may be an anchor/alias.  The value may also be an
-            # anchor/alias.  Only duplicate values shall be screened out.
-            # Duplicate aliased keys are always included in the search results
-            # lest there be no means of identifying their children nodes.
-            # Duplicate aliased values are included in the search results only
-            # when the caller has asked for them to be.
             tmp_path = build_path + ensure_escaped(
                 ensure_escaped(key, "\\"), strsep)
             key_matched = False
 
             # Search the key when the caller wishes it.
             if search_keys:
-                matches = search_matches(method, term, key)
-                if (matches and not invert) or (invert and not matches):
-                    key_matched = True
-                    yield YAMLPath(tmp_path)
+                # The key may be anchored.  Search its anchor name if the
+                # caller wishes it.
+                anchor_matched = False
+                ignore_this_key = False
+                if hasattr(key, "anchor") and key.anchor.value is not None:
+                    anchor_name = key.anchor.value
+                    if anchor_name in seen_anchors:
+                        if not include_aliases:
+                            # Ignore this duplicate anchor name
+                            ignore_this_key = True
+                    else:
+                        # Record only original anchor names
+                        seen_anchors.append(anchor_name)
+
+                    # Search the anchor name itself, if requested
+                    if search_anchors and not ignore_this_key:
+                        matches = search_matches(method, term, anchor_name)
+                        if ((matches and not invert)
+                                or (invert and not matches)):
+                            yield YAMLPath(tmp_path)
+                            anchor_matched = True
+
+                if not anchor_matched:
+                    matches = search_matches(method, term, key)
+                    if (matches and not invert) or (invert and not matches):
+                        key_matched = True
+                        yield YAMLPath(tmp_path)
 
             if isinstance(val, (CommentedSeq, CommentedMap)):
                 # When the value is a list/dict, recurse into it.
                 for subpath in search_for_paths(
                         val, terms, pathsep, tmp_path, seen_anchors,
                         search_values=search_values, search_keys=search_keys,
+                        search_anchors=search_anchors,
                         include_aliases=include_aliases
                 ):
                     yield subpath
@@ -272,6 +301,7 @@ def search_for_paths(data: Any, terms: SearchTerms,
                 # not if the key has already matched (lest a duplicate result
                 # be generated).  Exclude duplicate alias values unless the
                 # caller wishes to receive them.
+                anchor_matched = False
                 if hasattr(val, "anchor") and val.anchor.value is not None:
                     anchor_name = val.anchor.value
                     if anchor_name in seen_anchors:
@@ -282,9 +312,18 @@ def search_for_paths(data: Any, terms: SearchTerms,
                         # Record only original anchor names
                         seen_anchors.append(anchor_name)
 
-                matches = search_matches(method, term, val)
-                if (matches and not invert) or (invert and not matches):
-                    yield YAMLPath(tmp_path)
+                    # Search the anchor name itself, if requested
+                    if search_anchors:
+                        matches = search_matches(method, term, anchor_name)
+                        if ((matches and not invert)
+                                or (invert and not matches)):
+                            yield YAMLPath(tmp_path)
+                            anchor_matched = True
+
+                if not anchor_matched:
+                    matches = search_matches(method, term, val)
+                    if (matches and not invert) or (invert and not matches):
+                        yield YAMLPath(tmp_path)
 
 def main():
     """Main code."""
