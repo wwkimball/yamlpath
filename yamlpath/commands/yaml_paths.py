@@ -392,7 +392,8 @@ def main():
 
             # The leading character must be a known search operator
             check_operator = expression[0]
-            if not PathSearchMethods.is_operator(check_operator):
+            if not (PathSearchMethods.is_operator(check_operator)
+                    or check_operator == '!'):
                 exit_state = 1
                 log.error(
                     ("Invalid search expression, '{}'.  The first symbol of"
