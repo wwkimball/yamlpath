@@ -280,6 +280,7 @@ def main():
 
     # Process the input file(s)
     in_file_count = len(args.yaml_files)
+    in_expressions = len(args.search)
     exit_state = 0
     for yaml_file in args.yaml_files:
         # Try to open the file
@@ -308,7 +309,17 @@ def main():
             expath = YAMLPath("[*{}]".format(expression))
             for result in search_for_paths(yaml_data, expath.escaped[0][1],
                                            args.pathsep):
-                print("{}:{}: {}".format(yaml_file, expression, result))
+                if in_file_count > 1:
+                    if in_expressions > 1:
+                        print("{}[{}]: {}".format(
+                            yaml_file, expression, result))
+                    else:
+                        print("{}: {}".format(yaml_file, result))
+                else:
+                    if in_expressions > 1:
+                        print("[{}]: {}".format(expression, result))
+                    else:
+                        print("{}".format(result))
 
     exit(exit_state)
 
