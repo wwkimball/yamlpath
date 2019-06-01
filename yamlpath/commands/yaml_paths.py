@@ -211,12 +211,14 @@ def search_for_paths(data: Any, terms: SearchTerms,
                     yield YAMLPath(tmp_path)
 
     elif isinstance(data, CommentedMap):
+        if build_path:
+            build_path += strsep
+        elif pathsep is PathSeperators.FSLASH:
+            build_path = strsep
+
         pool = data.non_merged_items()
         if include_aliases:
             pool = data.items()
-
-        if build_path:
-            build_path += strsep
 
         for key, val in pool:
             # The key may be an anchor/alias.  The value may also be an
