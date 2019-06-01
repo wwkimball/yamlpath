@@ -8,7 +8,7 @@ Copyright 2019 William W. Kimball, Jr. MBA MSIS
 import argparse
 from os import access, R_OK
 from os.path import isfile
-from typing import Any, Generator, List
+from typing import Any, Generator, List, Optional
 
 from ruamel.yaml.parser import ParserError
 from ruamel.yaml.composer import ComposerError
@@ -29,9 +29,9 @@ def processcli():
     """Process command-line arguments."""
     parser = argparse.ArgumentParser(
         description="Returns zero or more YAML Paths indicating where in given\
-            YAML/Compatible data a search expression matches.  Values and/or\
-            keys can be searched.  EYAML can be employed to search encrypted\
-            values.",
+            YAML/Compatible data one or more search expressions match.  Values\
+            and/or keys can be searched.  EYAML can be employed to search\
+            encrypted values.",
         epilog="For more information about YAML Paths, please visit\
             https://github.com/wwkimball/yamlpath."
     )
@@ -88,11 +88,15 @@ def processcli():
     anchor_group = anchor_group_ex.add_mutually_exclusive_group()
     anchor_group.add_argument(
         "-c", "--onlyanchors",
-        action="store_true",
+        action="store_const",
+        dest="include_aliases",
+        const=False,
         help="(default) include only the original anchor in matching results")
     anchor_group.add_argument(
         "-a", "--aliases",
-        action="store_true",
+        action="store_const",
+        dest="include_aliases",
+        const=True,
         help="include anchor and duplicate aliases in results")
 
     eyaml_group = parser.add_argument_group(
@@ -150,7 +154,7 @@ def validateargs(args, log):
 def search_for_paths(data: Any, terms: SearchTerms,
                      pathsep: PathSeperators = PathSeperators.DOT,
                      build_path: str = "",
-                     seen_anchors: List[str] = [],
+                     seen_anchors: Optional[List[str]] = None,
                      **kwargs: bool) -> Generator[YAMLPath, None, None]:
     """
     Recursively searches a data structure for nodes matching a search
@@ -165,6 +169,9 @@ def search_for_paths(data: Any, terms: SearchTerms,
     invert = terms.inverted
     method = terms.method
     term = terms.term
+
+    if seen_anchors is None:
+        seen_anchors = []
 
     if isinstance(data, CommentedSeq):
         # Build the path
@@ -271,6 +278,13 @@ def main():
     args = processcli()
     log = ConsolePrinter(args)
     validateargs(args, log)
+    search_values = True
+    search_keys = False
+    if args.onlykeynames:
+        search_values = False
+        search_keys = True
+    elif args.keynames:
+        search_keys = True
 
     # Prepare the YAML processor
     yaml = get_yaml_editor()
@@ -307,8 +321,12 @@ def main():
         processor.data = yaml_data
         for expression in args.search:
             expath = YAMLPath("[*{}]".format(expression))
-            for result in search_for_paths(yaml_data, expath.escaped[0][1],
-                                           args.pathsep):
+            for result in search_for_paths(
+                    yaml_data, expath.escaped[0][1],
+                    args.pathsep,
+                    search_values=search_values,
+                    search_keys=search_keys,
+                    include_aliases=args.include_aliases):
                 if in_file_count > 1:
                     if in_expressions > 1:
                         print("{}[{}]: {}".format(
