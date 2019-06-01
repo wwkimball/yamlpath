@@ -8,7 +8,7 @@ Copyright 2019 William W. Kimball, Jr. MBA MSIS
 import argparse
 from os import access, R_OK
 from os.path import isfile
-from typing import Any, Generator
+from typing import Any, Generator, List
 
 from ruamel.yaml.parser import ParserError
 from ruamel.yaml.composer import ComposerError
@@ -150,6 +150,7 @@ def validateargs(args, log):
 def search_for_paths(data: Any, terms: SearchTerms,
                      pathsep: PathSeperators = PathSeperators.DOT,
                      build_path: str = "",
+                     seen_anchors: List[str] = [],
                      **kwargs: bool) -> Generator[YAMLPath, None, None]:
     """
     Recursively searches a data structure for nodes matching a search
@@ -164,7 +165,6 @@ def search_for_paths(data: Any, terms: SearchTerms,
     invert = terms.inverted
     method = terms.method
     term = terms.term
-    seen_anchors = []
 
     if isinstance(data, CommentedSeq):
         # Build the path
@@ -198,7 +198,7 @@ def search_for_paths(data: Any, terms: SearchTerms,
             if isinstance(ele, (CommentedSeq, CommentedMap)):
                 # When an element is a list-of-lists/dicts, recurse into it.
                 for subpath in search_for_paths(
-                        ele, terms, pathsep, tmp_path,
+                        ele, terms, pathsep, tmp_path, seen_anchors,
                         search_values=search_values, search_keys=search_keys,
                         include_aliases=include_aliases
                 ):
@@ -241,7 +241,7 @@ def search_for_paths(data: Any, terms: SearchTerms,
             if isinstance(val, (CommentedSeq, CommentedMap)):
                 # When the value is a list/dict, recurse into it.
                 for subpath in search_for_paths(
-                        val, terms, pathsep, tmp_path,
+                        val, terms, pathsep, tmp_path, seen_anchors,
                         search_values=search_values, search_keys=search_keys,
                         include_aliases=include_aliases
                 ):
