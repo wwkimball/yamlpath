@@ -62,7 +62,8 @@ def processcli():
     parser.add_argument(
         "-t", "--pathsep",
         default="dot",
-        choices=[l.lower() for l in PathSeperators.get_names()],
+        choices=PathSeperators,
+        metavar=PathSeperators.get_choices(),
         type=PathSeperators.from_str,
         help="indicate which YAML Path seperator to use when rendering\
               results; default=dot")

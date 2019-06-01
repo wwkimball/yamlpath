@@ -51,11 +51,12 @@ def processcli():
 
     parser.add_argument(
         "-t", "--pathsep",
-        default="auto",
-        choices=[l.lower() for l in PathSeperators.get_names()],
+        default="dot",
+        choices=PathSeperators,
+        metavar=PathSeperators.get_choices(),
         type=PathSeperators.from_str,
-        help="force the separator in YAML_PATH when inference fails"
-    )
+        help="indicate which YAML Path seperator to use when rendering\
+              results; default=dot")
 
     eyaml_group = parser.add_argument_group(
         "EYAML options", "Left unset, the EYAML keys will default to your\
