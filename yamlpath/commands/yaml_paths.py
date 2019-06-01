@@ -164,7 +164,7 @@ def validateargs(args, log):
     if has_errors:
         exit(1)
 
-def search_for_paths(data: Any, terms: SearchTerms,
+def search_for_paths(processor: EYAMLProcessor, data: Any, terms: SearchTerms,
                      pathsep: PathSeperators = PathSeperators.DOT,
                      build_path: str = "",
                      seen_anchors: Optional[List[str]] = None,
@@ -179,6 +179,7 @@ def search_for_paths(data: Any, terms: SearchTerms,
     search_keys: bool = kwargs.pop("search_keys", False)
     search_anchors: bool = kwargs.pop("search_anchors", False)
     include_aliases: bool = kwargs.pop("include_aliases", False)
+    decrypt_eyaml: bool = kwargs.pop("decrypt_eyaml", False)
     strsep = str(pathsep)
     invert = terms.inverted
     method = terms.method
@@ -227,10 +228,11 @@ def search_for_paths(data: Any, terms: SearchTerms,
             if isinstance(ele, (CommentedSeq, CommentedMap)):
                 # When an element is a list-of-lists/dicts, recurse into it.
                 for subpath in search_for_paths(
-                        ele, terms, pathsep, tmp_path, seen_anchors,
+                        processor, ele, terms, pathsep, tmp_path, seen_anchors,
                         search_values=search_values, search_keys=search_keys,
                         search_anchors=search_anchors,
-                        include_aliases=include_aliases
+                        include_aliases=include_aliases,
+                        decrypt_eyaml=decrypt_eyaml
                 ):
                     yield subpath
             elif search_values and not anchor_matched:
@@ -238,7 +240,11 @@ def search_for_paths(data: Any, terms: SearchTerms,
                 # isn't interested in value searching.  Also ignore the value
                 # if it is anchored and the anchor has already matched to avoid
                 # duplication in the results.
-                matches = search_matches(method, term, ele)
+                check_value = ele
+                if decrypt_eyaml and processor.is_eyaml_value(ele):
+                    check_value = processor.decrypt_eyaml(ele)
+
+                matches = search_matches(method, term, check_value)
                 if (matches and not invert) or (invert and not matches):
                     yield YAMLPath(tmp_path)
 
@@ -290,10 +296,11 @@ def search_for_paths(data: Any, terms: SearchTerms,
             if isinstance(val, (CommentedSeq, CommentedMap)):
                 # When the value is a list/dict, recurse into it.
                 for subpath in search_for_paths(
-                        val, terms, pathsep, tmp_path, seen_anchors,
+                        processor, val, terms, pathsep, tmp_path, seen_anchors,
                         search_values=search_values, search_keys=search_keys,
                         search_anchors=search_anchors,
-                        include_aliases=include_aliases
+                        include_aliases=include_aliases,
+                        decrypt_eyaml=decrypt_eyaml
                 ):
                     yield subpath
             elif search_values and not key_matched:
@@ -321,7 +328,11 @@ def search_for_paths(data: Any, terms: SearchTerms,
                             anchor_matched = True
 
                 if not anchor_matched:
-                    matches = search_matches(method, term, val)
+                    check_value = val
+                    if decrypt_eyaml and processor.is_eyaml_value(val):
+                        check_value = processor.decrypt_eyaml(val)
+
+                    matches = search_matches(method, term, check_value)
                     if (matches and not invert) or (invert and not matches):
                         yield YAMLPath(tmp_path)
 
@@ -375,12 +386,15 @@ def main():
         for expression in args.search:
             expath = YAMLPath("[*{}]".format(expression))
             for result in search_for_paths(
-                    yaml_data, expath.escaped[0][1],
+                    processor,
+                    yaml_data,
+                    expath.escaped[0][1],
                     args.pathsep,
                     search_values=search_values,
                     search_keys=search_keys,
                     search_anchors=args.anchors,
-                    include_aliases=args.include_aliases):
+                    include_aliases=args.include_aliases,
+                    decrypt_eyaml=args.decrypt):
                 if in_file_count > 1:
                     if in_expressions > 1:
                         print("{}[{}]: {}".format(
