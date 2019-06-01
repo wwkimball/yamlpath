@@ -16,7 +16,8 @@ from ruamel.yaml.scanner import ScannerError
 from ruamel.yaml.comments import CommentedSeq, CommentedMap
 
 from yamlpath.func import get_yaml_editor, search_matches, ensure_escaped
-from yamlpath.enums import PathSeperators
+from yamlpath.exceptions import YAMLPathException
+from yamlpath.enums import PathSeperators, PathSearchMethods
 from yamlpath.path import SearchTerms
 from yamlpath import YAMLPath
 from yamlpath.wrappers import ConsolePrinter
@@ -57,7 +58,7 @@ def processcli():
     noise_group.add_argument(
         "-q", "--quiet",
         action="store_true",
-        help="suppress all output except errors")
+        help="suppress all non-result output except errors")
 
     parser.add_argument(
         "-t", "--pathsep",
@@ -114,7 +115,8 @@ def processcli():
     eyaml_group.add_argument(
         "-e", "--decrypt",
         action="store_true",
-        help="decrypt EYAML values in order to search their original values"
+        help="decrypt EYAML values in order to search them (otherwise, search\
+            the encrypted blob)"
     )
     eyaml_group.add_argument(
         "-x", "--eyaml",
@@ -384,11 +386,36 @@ def main():
         # Process all searches
         processor.data = yaml_data
         for expression in args.search:
-            expath = YAMLPath("[*{}]".format(expression))
+            if not expression:
+                # Ignore empty expressions
+                continue
+
+            # The leading character must be a known search operator
+            check_operator = expression[0]
+            if not PathSearchMethods.is_operator(check_operator):
+                exit_state = 1
+                log.error(
+                    ("Invalid search expression, '{}'.  The first symbol of"
+                     + " every search expression must be one of:  {}")
+                    .format(expression,
+                            ", ".join(PathSearchMethods.get_operators())))
+                continue
+
+            try:
+                expath = YAMLPath("[*{}]".format(expression))
+                exterm = expath.escaped[0][1]
+            except YAMLPathException as ex:
+                exit_state = 1
+                log.error(
+                    ("Invalid search expression, '{}', due to:  {}")
+                    .format(expression, ex)
+                )
+                continue
+
             for result in search_for_paths(
                     processor,
                     yaml_data,
-                    expath.escaped[0][1],
+                    exterm,
                     args.pathsep,
                     search_values=search_values,
                     search_keys=search_keys,
