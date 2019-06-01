@@ -29,9 +29,9 @@ def processcli():
     """Process command-line arguments."""
     parser = argparse.ArgumentParser(
         description="Returns zero or more YAML Paths indicating where in given\
-            YAML/Compatible data one or more search expressions match.  Values\
-            and/or keys can be searched.  EYAML can be employed to search\
-            encrypted values.",
+            YAML/Compatible data one or more search expressions match.\
+            Values, keys, and/or anchors can be searched.  EYAML can be\
+            employed to search encrypted values.",
         epilog="For more information about YAML Paths, please visit\
             https://github.com/wwkimball/yamlpath."
     )
@@ -68,6 +68,11 @@ def processcli():
         help="indicate which YAML Path seperator to use when rendering\
               results; default=dot")
 
+    parser.add_argument(
+        "-n", "--anchors",
+        action="store_true",
+        help="search anchor names")
+
     keyname_group_ex = parser.add_argument_group("Key name searching options")
     keyname_group = keyname_group_ex.add_mutually_exclusive_group()
     keyname_group.add_argument(
@@ -83,17 +88,20 @@ def processcli():
         action="store_true",
         help="only search key names (ignore all values and array elements)")
 
-    anchor_group_ex = parser.add_argument_group(
-        "Anchor handling options")
-    anchor_group = anchor_group_ex.add_mutually_exclusive_group()
-    anchor_group.add_argument(
-        "-c", "--onlyanchors",
+    dedup_group_ex = parser.add_argument_group(
+        "Duplicate alias options",
+        "An 'anchor' is an original, reusable key or value.  An 'alias' is a\
+         copy of an 'anchor'.  These options specify how to handle this\
+        duplication.")
+    dedup_group = dedup_group_ex.add_mutually_exclusive_group()
+    dedup_group.add_argument(
+        "-c", "--originals",
         action="store_const",
         dest="include_aliases",
         const=False,
         help="(default) include only the original anchor in matching results")
-    anchor_group.add_argument(
-        "-a", "--aliases",
+    dedup_group.add_argument(
+        "-a", "--duplicates",
         action="store_const",
         dest="include_aliases",
         const=True,
@@ -103,6 +111,11 @@ def processcli():
         "EYAML options", "Left unset, the EYAML keys will default to your\
          system or user defaults.  Both keys must be set either here or in\
          your system or user EYAML configuration file when using EYAML.")
+    eyaml_group.add_argument(
+        "-e", "--decrypt",
+        action="store_true",
+        help="decrypt EYAML values in order to search their original values"
+    )
     eyaml_group.add_argument(
         "-x", "--eyaml",
         default="eyaml",
@@ -164,6 +177,7 @@ def search_for_paths(data: Any, terms: SearchTerms,
     """
     search_values: bool = kwargs.pop("search_values", True)
     search_keys: bool = kwargs.pop("search_keys", False)
+    search_anchors: bool = kwargs.pop("search_anchors", False)
     include_aliases: bool = kwargs.pop("include_aliases", False)
     strsep = str(pathsep)
     invert = terms.inverted
@@ -326,6 +340,7 @@ def main():
                     args.pathsep,
                     search_values=search_values,
                     search_keys=search_keys,
+                    search_anchors=args.anchors,
                     include_aliases=args.include_aliases):
                 if in_file_count > 1:
                     if in_expressions > 1:
