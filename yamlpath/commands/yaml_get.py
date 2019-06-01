@@ -25,7 +25,7 @@ from yamlpath.wrappers import ConsolePrinter
 from yamlpath.func import get_yaml_editor
 
 # Implied Constants
-MY_VERSION = "1.0.4"
+MY_VERSION = "1.0.5"
 
 def processcli():
     """Process command-line arguments."""
@@ -53,7 +53,7 @@ def processcli():
         "-t", "--pathsep",
         default="auto",
         choices=[l.lower() for l in PathSeperators.get_names()],
-        type=str.lower,
+        type=PathSeperators.from_str,
         help="force the separator in YAML_PATH when inference fails"
     )
 

@@ -10,9 +10,12 @@ from os import access, R_OK
 from os.path import isfile
 from typing import Any, Generator
 
+from ruamel.yaml.parser import ParserError
+from ruamel.yaml.composer import ComposerError
+from ruamel.yaml.scanner import ScannerError
 from ruamel.yaml.comments import CommentedSeq, CommentedMap
 
-from yamlpath.func import get_yaml_editor, search_matches
+from yamlpath.func import get_yaml_editor, search_matches, ensure_escaped
 from yamlpath.enums import PathSeperators
 from yamlpath.path import SearchTerms
 from yamlpath import YAMLPath
@@ -60,7 +63,7 @@ def processcli():
         "-t", "--pathsep",
         default="dot",
         choices=[l.lower() for l in PathSeperators.get_names()],
-        type=str.lower,
+        type=PathSeperators.from_str,
         help="indicate which YAML Path seperator to use when rendering\
               results; default=dot")
 
@@ -143,7 +146,9 @@ def validateargs(args, log):
     if has_errors:
         exit(1)
 
-def search_for_paths(data: Any, terms: SearchTerms = "", build_path: str = "",
+def search_for_paths(data: Any, terms: SearchTerms,
+                     pathsep: PathSeperators = PathSeperators.DOT,
+                     build_path: str = "",
                      **kwargs: bool) -> Generator[YAMLPath, None, None]:
     """
     Recursively searches a data structure for nodes matching a search
@@ -154,13 +159,18 @@ def search_for_paths(data: Any, terms: SearchTerms = "", build_path: str = "",
     search_values: bool = kwargs.pop("search_values", True)
     search_keys: bool = kwargs.pop("search_keys", False)
     include_aliases: bool = kwargs.pop("include_aliases", False)
+    strsep = str(pathsep)
     invert = terms.inverted
     method = terms.method
     term = terms.term
     seen_anchors = []
 
     if isinstance(data, CommentedSeq):
+        # Build the path
+        if not build_path and pathsep is PathSeperators.FSLASH:
+            build_path = strsep
         build_path += "["
+
         for idx, ele in enumerate(data):
             # Screen out aliases if the anchor has already been seen, unless
             # the caller has asked for all the duplicate results.
@@ -175,7 +185,11 @@ def search_for_paths(data: Any, terms: SearchTerms = "", build_path: str = "",
                 else:
                     # Record only original anchor names
                     seen_anchors.append(anchor_name)
-                tmp_path = build_path + "&" + anchor_name + "]"
+
+                tmp_path = "{}&{}]".format(
+                    build_path,
+                    ensure_escaped(anchor_name, strsep),
+                )
             else:
                 # Not an anchor/alias, so ref this node by its index
                 tmp_path = build_path + str(idx) + "]"
@@ -183,7 +197,7 @@ def search_for_paths(data: Any, terms: SearchTerms = "", build_path: str = "",
             if isinstance(ele, (CommentedSeq, CommentedMap)):
                 # When an element is a list-of-lists/dicts, recurse into it.
                 for subpath in search_for_paths(
-                        ele, terms, tmp_path,
+                        ele, terms, pathsep, tmp_path,
                         search_values=search_values, search_keys=search_keys,
                         include_aliases=include_aliases
                 ):
@@ -201,7 +215,7 @@ def search_for_paths(data: Any, terms: SearchTerms = "", build_path: str = "",
             pool = data.items()
 
         if build_path:
-            build_path += "."
+            build_path += strsep
 
         for key, val in pool:
             # The key may be an anchor/alias.  The value may also be an
@@ -210,7 +224,8 @@ def search_for_paths(data: Any, terms: SearchTerms = "", build_path: str = "",
             # lest there be no means of identifying their children nodes.
             # Duplicate aliased values are included in the search results only
             # when the caller has asked for them to be.
-            tmp_path = build_path + str(key)
+            tmp_path = build_path + ensure_escaped(
+                ensure_escaped(key, "\\"), strsep)
             key_matched = False
 
             # Search the key when the caller wishes it.
@@ -220,10 +235,10 @@ def search_for_paths(data: Any, terms: SearchTerms = "", build_path: str = "",
                     key_matched = True
                     yield YAMLPath(tmp_path)
 
-            if isinstance(ele, (CommentedSeq, CommentedMap)):
+            if isinstance(val, (CommentedSeq, CommentedMap)):
                 # When the value is a list/dict, recurse into it.
                 for subpath in search_for_paths(
-                        val, terms, tmp_path,
+                        val, terms, pathsep, tmp_path,
                         search_values=search_values, search_keys=search_keys,
                         include_aliases=include_aliases
                 ):
@@ -264,8 +279,35 @@ def main():
     in_file_count = len(args.yaml_files)
     exit_state = 0
     for yaml_file in args.yaml_files:
+        # Try to open the file
+        try:
+            with open(yaml_file, 'r') as fhnd:
+                yaml_data = yaml.load(fhnd)
+        except ParserError as ex:
+            log.error("YAML parsing error {}:  {}"
+                      .format(str(ex.problem_mark).lstrip(), ex.problem))
+            exit_state = 3
+            continue
+        except ComposerError as ex:
+            log.error("YAML composition error {}:  {}"
+                      .format(str(ex.problem_mark).lstrip(), ex.problem))
+            exit_state = 3
+            continue
+        except ScannerError as ex:
+            log.error("YAML syntax error {}:  {}"
+                      .format(str(ex.problem_mark).lstrip(), ex.problem))
+            exit_state = 3
+            continue
+
+        # Process all searches
+        processor.data = yaml_data
         for expression in args.search:
-            print("{}:{}".format(yaml_file, expression))
+            expath = YAMLPath("[*{}]".format(expression))
+            for result in search_for_paths(yaml_data, expath.escaped[0][1],
+                                           args.pathsep):
+                print("{}:{}: {}".format(yaml_file, expression, result))
+
+    exit(exit_state)
 
 if __name__ == "__main__":
     main()

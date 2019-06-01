@@ -53,6 +53,8 @@ class YAMLPath:
             self.original = yaml_path
 
     def __str__(self) -> str:
+        from yamlpath.func import ensure_escaped
+
         if self._stringified:
             return self._stringified
 
@@ -70,9 +72,11 @@ class YAMLPath:
                 if add_sep:
                     ppath += pathsep
 
+                # Replace unescaped pathseps with escaped pathseps
+                safe_attrs = ensure_escaped(segment_attrs, pathsep)
+
                 ppath += (
-                    str(segment_attrs)
-                    .replace(pathsep, "\\{}".format(pathsep))
+                    safe_attrs
                     .replace("&", r"\&")
                     .replace("[", r"\[")
                     .replace("]", r"\]")
@@ -536,6 +540,7 @@ class YAMLPath:
                         raise YAMLPathException(
                             "Not an integer index:  {}".format(segment_id)
                             , yaml_path
+                            , segment_id
                         )
                     path_segments.append((segment_type, idx))
                 elif (

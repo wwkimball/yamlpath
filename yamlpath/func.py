@@ -45,7 +45,7 @@ def get_yaml_editor() -> Any:
     yaml.width = maxsize
     return yaml
 
-def build_next_node(yaml_path: YAMLPath, depth: int,
+def build_next_node(yaml_path: "YAMLPath", depth: int,
                     value: Any = None) -> Any:
     """
     Identifies and returns the most appropriate default value for the next
@@ -363,3 +363,15 @@ def search_matches(method: PathSearchMethods, needle: str,
         raise NotImplementedError
 
     return matches
+
+def ensure_escaped(value: str, symbol: str):
+    """
+    Ensures all instances of a symbol are escaped (via \\) within a value.
+    """
+    replace_term = "\\{}".format(symbol)
+    return replace_term.join(
+        list(map(
+            lambda ele: ele.replace(symbol, replace_term)
+            , str(value).split(replace_term)
+        ))
+    )
