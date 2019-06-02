@@ -21,11 +21,11 @@ from ruamel.yaml.scalarbool import ScalarBoolean
 from ruamel.yaml.scalarfloat import ScalarFloat
 from ruamel.yaml.scalarint import ScalarInt
 
-from yamlpath import YAMLPath
 from yamlpath.enums import (
     YAMLValueFormats,
     PathSearchMethods,
     PathSegmentTypes,
+    PathSeperators,
 )
 
 def get_yaml_editor() -> Any:
@@ -364,14 +364,29 @@ def search_matches(method: PathSearchMethods, needle: str,
 
     return matches
 
-def ensure_escaped(value: str, symbol: str):
+def ensure_escaped(value: str, *symbols: str):
     """
     Ensures all instances of a symbol are escaped (via \\) within a value.
+    Multiple symbols can be processed at once.
     """
-    replace_term = "\\{}".format(symbol)
-    return replace_term.join(
-        list(map(
-            lambda ele: ele.replace(symbol, replace_term)
-            , str(value).split(replace_term)
-        ))
+    escaped = value
+    for symbol in symbols:
+        replace_term = "\\{}".format(symbol)
+        escaped = replace_term.join(
+            list(map(
+                lambda ele, sym=symbol, rt=replace_term: ele.replace(sym, rt)
+                , str(escaped).split(replace_term)
+            ))
+        )
+    return escaped
+
+def escape_path_section(section: str, pathsep: PathSeperators):
+    """
+    Renders inert via escaping all symbols within a string which have special
+    meaning to YAML Path.  The resulting string can be consumed as a YAML Path
+    section without triggering unwanted additional processing.
+    """
+    return ensure_escaped(
+        section,
+        '\\', str(pathsep), '(', ')', '[', ']', '^', '$', '%', ' ', "'", '"'
     )

@@ -159,6 +159,8 @@ def main():
             .format(str(ex.problem_mark).lstrip(), ex.problem)
             , 1
         )
+    except KeyboardInterrupt:
+        log.critical("Aborted.", 120)
 
     # Seek the queried value(s)
     discovered_nodes = []
@@ -173,12 +175,17 @@ def main():
         log.critical(ex, 1)
     except EYAMLCommandException as ex:
         log.critical(ex, 2)
+    except KeyboardInterrupt:
+        log.critical("Aborted.", 120)
 
     for node in discovered_nodes:
-        if isinstance(node, (dict, list)):
-            print(json.dumps(node))
-        else:
-            print("{}".format(str(node).replace("\n", r"\n")))
+        try:
+            if isinstance(node, (dict, list)):
+                print(json.dumps(node))
+            else:
+                print("{}".format(str(node).replace("\n", r"\n")))
+        except KeyboardInterrupt:
+            break
 
 if __name__ == "__main__":
     main()  # pragma: no cover

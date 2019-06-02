@@ -72,14 +72,12 @@ class YAMLPath:
                 if add_sep:
                     ppath += pathsep
 
-                # Replace unescaped pathseps with escaped pathseps
-                safe_attrs = ensure_escaped(segment_attrs, pathsep)
-
-                ppath += (
-                    safe_attrs
-                    .replace("&", r"\&")
-                    .replace("[", r"\[")
-                    .replace("]", r"\]")
+                # Replace a subset of special characters to alert users to
+                # potentially unintentional demarcation.
+                ppath += ensure_escaped(
+                    segment_attrs,
+                    pathsep,
+                    '(', ')', '[', ']', '^', '$', '%', ' ', "'", '"'
                 )
             elif segment_type == PathSegmentTypes.INDEX:
                 ppath += "[{}]".format(segment_attrs)

@@ -15,7 +15,12 @@ from ruamel.yaml.composer import ComposerError
 from ruamel.yaml.scanner import ScannerError
 from ruamel.yaml.comments import CommentedSeq, CommentedMap
 
-from yamlpath.func import get_yaml_editor, search_matches, ensure_escaped
+from yamlpath.func import (
+    ensure_escaped,
+    escape_path_section,
+    get_yaml_editor,
+    search_matches,
+)
 from yamlpath.exceptions import YAMLPathException
 from yamlpath.enums import PathSeperators, PathSearchMethods
 from yamlpath.path import SearchTerms
@@ -214,7 +219,7 @@ def search_for_paths(processor: EYAMLProcessor, data: Any, terms: SearchTerms,
 
                 tmp_path = "{}&{}]".format(
                     build_path,
-                    ensure_escaped(anchor_name, strsep),
+                    escape_path_section(anchor_name, pathsep)
                 )
 
                 # Search the anchor name itself, if requested
@@ -261,8 +266,7 @@ def search_for_paths(processor: EYAMLProcessor, data: Any, terms: SearchTerms,
             pool = data.items()
 
         for key, val in pool:
-            tmp_path = build_path + ensure_escaped(
-                ensure_escaped(key, "\\"), strsep)
+            tmp_path = build_path + escape_path_section(key, pathsep)
             key_matched = False
 
             # Search the key when the caller wishes it.
