@@ -48,6 +48,12 @@ def processcli():
         metavar="EXPRESSION", action="append",
         help="the search expression; can be set more than once")
 
+    parser.add_argument(
+        "-c", "--except",
+        metavar="EXPRESSION", action="append", dest="except_expression",
+        help="except results matching this search expression; can be set more\
+            than once")
+
     noise_group = parser.add_mutually_exclusive_group()
     noise_group.add_argument(
         "-d", "--debug",
@@ -77,7 +83,7 @@ def processcli():
               results; default=dot")
 
     parser.add_argument(
-        "-n", "--anchors",
+        "-a", "--anchors",
         action="store_true",
         help="search anchor names")
 
@@ -92,7 +98,7 @@ def processcli():
         action="store_true",
         help="search key names in addition to values and array elements")
     keyname_group.add_argument(
-        "-o", "--onlykeynames",
+        "-n", "--onlykeynames",
         action="store_true",
         help="only search key names (ignore all values and array elements)")
 
@@ -103,13 +109,13 @@ def processcli():
         duplication.")
     dedup_group = dedup_group_ex.add_mutually_exclusive_group()
     dedup_group.add_argument(
-        "-c", "--originals",
+        "-o", "--originals",
         action="store_const",
         dest="include_aliases",
         const=False,
         help="(default) include only the original anchor in matching results")
     dedup_group.add_argument(
-        "-a", "--duplicates",
+        "-l", "--duplicates",
         action="store_const",
         dest="include_aliases",
         const=True,
@@ -344,6 +350,38 @@ def search_for_paths(processor: EYAMLProcessor, data: Any, terms: SearchTerms,
                     if (matches and not invert) or (invert and not matches):
                         yield YAMLPath(tmp_path)
 
+def get_search_term(logger: ConsolePrinter,
+                    expression: str) -> Optional[SearchTerms]:
+    """
+    Attempts to cast a search expression into a SearchTerms instance.  Returns
+    None on failure.
+    """
+    if not expression:
+        # Ignore empty expressions
+        return None
+
+    # The leading character must be a known search operator
+    check_operator = expression[0]
+    if not (PathSearchMethods.is_operator(check_operator)
+            or check_operator == '!'):
+        logger.error(
+            ("Invalid search expression, '{}'.  The first symbol of"
+             + " every search expression must be one of:  {}")
+            .format(expression,
+                    ", ".join(PathSearchMethods.get_operators())))
+        return None
+
+    try:
+        exterm = YAMLPath("[*{}]".format(expression)).escaped[0][1]
+    except YAMLPathException as ex:
+        logger.error(
+            ("Invalid search expression, '{}', due to:  {}")
+            .format(expression, ex)
+        )
+        return None
+
+    return exterm
+
 def main():
     """Main code."""
     # Process any command-line arguments
@@ -378,32 +416,12 @@ def main():
 
         # Process all searches
         processor.data = yaml_data
+        add_results = []
+        rem_results = []
         for expression in args.search:
-            if not expression:
-                # Ignore empty expressions
-                continue
-
-            # The leading character must be a known search operator
-            check_operator = expression[0]
-            if not (PathSearchMethods.is_operator(check_operator)
-                    or check_operator == '!'):
+            exterm = get_search_term(log, expression)
+            if exterm is None:
                 exit_state = 1
-                log.error(
-                    ("Invalid search expression, '{}'.  The first symbol of"
-                     + " every search expression must be one of:  {}")
-                    .format(expression,
-                            ", ".join(PathSearchMethods.get_operators())))
-                continue
-
-            try:
-                expath = YAMLPath("[*{}]".format(expression))
-                exterm = expath.escaped[0][1]
-            except YAMLPathException as ex:
-                exit_state = 1
-                log.error(
-                    ("Invalid search expression, '{}', due to:  {}")
-                    .format(expression, ex)
-                )
                 continue
 
             for result in search_for_paths(
@@ -416,19 +434,51 @@ def main():
                     search_anchors=args.anchors,
                     include_aliases=args.include_aliases,
                     decrypt_eyaml=args.decrypt):
-                if args.pathonly:
-                    print("{}".format(result))
-                elif in_file_count > 1:
-                    if in_expressions > 1:
-                        print("{}[{}]: {}".format(
-                            yaml_file, expression, result))
-                    else:
-                        print("{}: {}".format(yaml_file, result))
+                add_results.append(result)
+
+        if not add_results:
+            # Nothing further to do when there are no results
+            continue
+
+        if args.except_expression:
+            for expression in args.except_expression:
+                exterm = get_search_term(log, expression)
+                if exterm is None:
+                    exit_state = 1
+                    continue
+
+                for result in search_for_paths(
+                        processor,
+                        yaml_data,
+                        exterm,
+                        args.pathsep,
+                        search_values=search_values,
+                        search_keys=search_keys,
+                        search_anchors=args.anchors,
+                        include_aliases=args.include_aliases,
+                        decrypt_eyaml=args.decrypt):
+                    rem_results.append(result)
+
+            fin_results = [
+                res for res in add_results if res not in rem_results
+            ]
+        else:
+            fin_results = add_results
+
+        for result in fin_results:
+            if args.pathonly:
+                print("{}".format(result))
+            elif in_file_count > 1:
+                if in_expressions > 1:
+                    print("{}[{}]: {}".format(
+                        yaml_file, expression, result))
                 else:
-                    if in_expressions > 1:
-                        print("[{}]: {}".format(expression, result))
-                    else:
-                        print("{}".format(result))
+                    print("{}: {}".format(yaml_file, result))
+            else:
+                if in_expressions > 1:
+                    print("[{}]: {}".format(expression, result))
+                else:
+                    print("{}".format(result))
 
     exit(exit_state)
 
