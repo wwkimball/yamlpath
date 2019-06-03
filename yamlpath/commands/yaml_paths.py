@@ -30,13 +30,16 @@ MY_VERSION = "0.0.1"
 
 def processcli():
     """Process command-line arguments."""
+    search_ops = ", ".join(PathSearchMethods.get_operators()) + ", or !"
     parser = argparse.ArgumentParser(
         description="Returns zero or more YAML Paths indicating where in given\
             YAML/Compatible data one or more search expressions match.\
             Values, keys, and/or anchors can be searched.  EYAML can be\
             employed to search encrypted values.",
-        epilog="For more information about YAML Paths, please visit\
-            https://github.com/wwkimball/yamlpath."
+        epilog="A search or exception EXPRESSION takes the form of a YAML Path\
+            search operator -- {} -- followed by the search term, omitting the\
+            left-hand operand.  For more information about YAML Paths, please\
+            visit https://github.com/wwkimball/yamlpath.".format(search_ops)
     )
     parser.add_argument("-V", "--version", action="version",
                         version="%(prog)s " + MY_VERSION)
