@@ -6,6 +6,7 @@ Copyright 2019 William W. Kimball, Jr. MBA MSIS
 from collections import deque
 from typing import Deque, List, Optional, Union
 
+from yamlpath.types import PathSegment
 from yamlpath.enums import (
     PathSegmentTypes,
     PathSearchMethods,
@@ -13,7 +14,6 @@ from yamlpath.enums import (
     CollectorOperators,
 )
 from yamlpath.path import SearchTerms, CollectorTerms
-from yamlpath.types import PathSegment
 
 
 class YAMLPath:
