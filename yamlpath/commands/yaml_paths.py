@@ -382,6 +382,28 @@ def get_search_term(logger: ConsolePrinter,
 
     return exterm
 
+def print_results(args: Any, yaml_file: str, expression: str,
+                  yaml_paths: List[YAMLPath]) -> None:
+    """
+    Dumps the search results to STDOUT with optional and dynamic formatting.
+    """
+    in_file_count = len(args.yaml_files)
+    in_expressions = len(args.search)
+    for result in yaml_paths:
+        if args.pathonly:
+            print("{}".format(result))
+        elif in_file_count > 1:
+            if in_expressions > 1:
+                print("{}[{}]: {}".format(
+                    yaml_file, expression, result))
+            else:
+                print("{}: {}".format(yaml_file, result))
+        else:
+            if in_expressions > 1:
+                print("[{}]: {}".format(expression, result))
+            else:
+                print("{}".format(result))
+
 def main():
     """Main code."""
     # Process any command-line arguments
@@ -403,8 +425,6 @@ def main():
         publickey=args.publickey, privatekey=args.privatekey)
 
     # Process the input file(s)
-    in_file_count = len(args.yaml_files)
-    in_expressions = len(args.search)
     exit_state = 0
     for yaml_file in args.yaml_files:
         # Try to open the file
@@ -416,8 +436,7 @@ def main():
 
         # Process all searches
         processor.data = yaml_data
-        add_results = []
-        rem_results = []
+        yaml_paths = []
         for expression in args.search:
             exterm = get_search_term(log, expression)
             if exterm is None:
@@ -434,9 +453,9 @@ def main():
                     search_anchors=args.anchors,
                     include_aliases=args.include_aliases,
                     decrypt_eyaml=args.decrypt):
-                add_results.append(result)
+                yaml_paths.append(result)
 
-        if not add_results:
+        if not yaml_paths:
             # Nothing further to do when there are no results
             continue
 
@@ -457,28 +476,9 @@ def main():
                         search_anchors=args.anchors,
                         include_aliases=args.include_aliases,
                         decrypt_eyaml=args.decrypt):
-                    rem_results.append(result)
+                    yaml_paths.remove(result)
 
-            fin_results = [
-                res for res in add_results if res not in rem_results
-            ]
-        else:
-            fin_results = add_results
-
-        for result in fin_results:
-            if args.pathonly:
-                print("{}".format(result))
-            elif in_file_count > 1:
-                if in_expressions > 1:
-                    print("{}[{}]: {}".format(
-                        yaml_file, expression, result))
-                else:
-                    print("{}: {}".format(yaml_file, result))
-            else:
-                if in_expressions > 1:
-                    print("[{}]: {}".format(expression, result))
-                else:
-                    print("{}".format(result))
+        print_results(args, yaml_file, expression, yaml_paths)
 
     exit(exit_state)
 
