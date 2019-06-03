@@ -75,7 +75,7 @@ class YAMLPath:
                 # Replace a subset of special characters to alert users to
                 # potentially unintentional demarcation.
                 ppath += ensure_escaped(
-                    segment_attrs,
+                    str(segment_attrs),
                     pathsep,
                     '(', ')', '[', ']', '^', '$', '%', ' ', "'", '"'
                 )

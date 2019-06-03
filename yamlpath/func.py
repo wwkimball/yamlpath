@@ -6,7 +6,7 @@ Copyright 2018, 2019 William W. Kimball, Jr. MBA MSIS
 import re
 from sys import maxsize
 from distutils.util import strtobool
-from typing import Any
+from typing import Any, List
 
 from ruamel.yaml import YAML
 from ruamel.yaml.parser import ParserError
@@ -32,7 +32,7 @@ from yamlpath.enums import (
     PathSeperators,
 )
 from yamlpath.wrappers import ConsolePrinter
-
+from yamlpath import YAMLPath
 
 def get_yaml_editor() -> Any:
     """
@@ -116,7 +116,7 @@ def get_yaml_data(parser: Any, logger: ConsolePrinter, source: str) -> Any:
 
     return yaml_data
 
-def build_next_node(yaml_path: "YAMLPath", depth: int,
+def build_next_node(yaml_path: YAMLPath, depth: int,
                     value: Any = None) -> Any:
     """
     Identifies and returns the most appropriate default value for the next
@@ -440,15 +440,14 @@ def ensure_escaped(value: str, *symbols: str) -> str:
     Ensures all instances of a symbol are escaped (via \\) within a value.
     Multiple symbols can be processed at once.
     """
-    escaped = value
+    escaped: str = value
     for symbol in symbols:
-        replace_term = "\\{}".format(symbol)
-        escaped = replace_term.join(
-            list(map(
-                lambda ele, sym=symbol, rt=replace_term: ele.replace(sym, rt)
-                , str(escaped).split(replace_term)
-            ))
-        )
+        replace_term: str = "\\{}".format(symbol)
+        oparts: List[str] = str(escaped).split(replace_term)
+        eparts: List[str] = []
+        for opart in oparts:
+            eparts.append(opart.replace(symbol, replace_term))
+        escaped = replace_term.join(eparts)
     return escaped
 
 def escape_path_section(section: str, pathsep: PathSeperators) -> str:

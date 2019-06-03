@@ -182,6 +182,7 @@ def validateargs(args, log):
     if has_errors:
         exit(1)
 
+# pylint: disable=locally-disabled,too-many-arguments,too-many-locals,too-many-branches,too-many-statements
 def search_for_paths(processor: EYAMLProcessor, data: Any, terms: SearchTerms,
                      pathsep: PathSeperators = PathSeperators.DOT,
                      build_path: str = "",
@@ -266,6 +267,7 @@ def search_for_paths(processor: EYAMLProcessor, data: Any, terms: SearchTerms,
                 if (matches and not invert) or (invert and not matches):
                     yield YAMLPath(tmp_path)
 
+    # pylint: disable=locally-disabled,too-many-nested-blocks
     elif isinstance(data, CommentedMap):
         if build_path:
             build_path += strsep
@@ -375,7 +377,9 @@ def get_search_term(logger: ConsolePrinter,
         return None
 
     try:
-        exterm = YAMLPath("[*{}]".format(expression)).escaped[0][1]
+        exterm = SearchTerms.from_path_segment_attrs(
+            YAMLPath("[*{}]".format(expression)).escaped[0][1]
+        )
     except YAMLPathException as ex:
         logger.error(
             ("Invalid search expression, '{}', due to:  {}")

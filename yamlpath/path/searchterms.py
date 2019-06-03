@@ -3,7 +3,10 @@ YAML path Search segment terms.
 
 Copyright 2019 William W. Kimball, Jr. MBA MSIS
 """
+from typing import Type, Union
+
 from yamlpath.enums import PathSearchMethods
+from yamlpath.path import CollectorTerms
 
 
 class SearchTerms:
@@ -15,6 +18,21 @@ class SearchTerms:
         self._method: PathSearchMethods = method
         self._attribute: str = attribute
         self._term: str = term
+
+    @classmethod
+    def from_path_segment_attrs(
+            cls: Type,
+            rhs: Union[str, CollectorTerms, SearchTerms]) -> SearchTerms:
+        """
+        Generates a new SearchTerms instance by copying SearchTerms attributes
+        from a YAML Path segment's attributes.
+        """
+        if isinstance(rhs, SearchTerms):
+            newinst: SearchTerms = cls(
+                rhs.inverted, rhs.method, rhs.attribute, rhs.term
+            )
+            return newinst
+        raise AttributeError
 
     def __str__(self) -> str:
         if self.method == PathSearchMethods.REGEX:
