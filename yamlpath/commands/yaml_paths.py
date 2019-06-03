@@ -10,14 +10,11 @@ from os import access, R_OK
 from os.path import isfile
 from typing import Any, Generator, List, Optional
 
-from ruamel.yaml.parser import ParserError
-from ruamel.yaml.composer import ComposerError
-from ruamel.yaml.scanner import ScannerError
 from ruamel.yaml.comments import CommentedSeq, CommentedMap
 
 from yamlpath.func import (
-    ensure_escaped,
     escape_path_section,
+    get_yaml_data,
     get_yaml_editor,
     search_matches,
 )
@@ -64,6 +61,11 @@ def processcli():
         "-q", "--quiet",
         action="store_true",
         help="suppress all non-result output except errors")
+
+    parser.add_argument(
+        "-p", "--pathonly",
+        action="store_true",
+        help="print results without any file or expression decorators")
 
     parser.add_argument(
         "-t", "--pathsep",
@@ -368,22 +370,9 @@ def main():
     exit_state = 0
     for yaml_file in args.yaml_files:
         # Try to open the file
-        try:
-            with open(yaml_file, 'r') as fhnd:
-                yaml_data = yaml.load(fhnd)
-        except ParserError as ex:
-            log.error("YAML parsing error {}:  {}"
-                      .format(str(ex.problem_mark).lstrip(), ex.problem))
-            exit_state = 3
-            continue
-        except ComposerError as ex:
-            log.error("YAML composition error {}:  {}"
-                      .format(str(ex.problem_mark).lstrip(), ex.problem))
-            exit_state = 3
-            continue
-        except ScannerError as ex:
-            log.error("YAML syntax error {}:  {}"
-                      .format(str(ex.problem_mark).lstrip(), ex.problem))
+        yaml_data = get_yaml_data(yaml, log, yaml_file)
+        if yaml_data is None:
+            # An error message has already been logged
             exit_state = 3
             continue
 
@@ -427,7 +416,9 @@ def main():
                     search_anchors=args.anchors,
                     include_aliases=args.include_aliases,
                     decrypt_eyaml=args.decrypt):
-                if in_file_count > 1:
+                if args.pathonly:
+                    print("{}".format(result))
+                elif in_file_count > 1:
                     if in_expressions > 1:
                         print("{}[{}]: {}".format(
                             yaml_file, expression, result))

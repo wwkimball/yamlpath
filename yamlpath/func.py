@@ -9,6 +9,10 @@ from distutils.util import strtobool
 from typing import Any
 
 from ruamel.yaml import YAML
+from ruamel.yaml.parser import ParserError
+from ruamel.yaml.composer import ComposerError, ReusedAnchorWarning
+from ruamel.yaml.constructor import DuplicateKeyError
+from ruamel.yaml.scanner import ScannerError
 from ruamel.yaml.comments import CommentedSeq, CommentedMap
 from ruamel.yaml.scalarstring import (
     PlainScalarString,
@@ -27,6 +31,8 @@ from yamlpath.enums import (
     PathSegmentTypes,
     PathSeperators,
 )
+from yamlpath.wrappers import ConsolePrinter
+
 
 def get_yaml_editor() -> Any:
     """
@@ -44,6 +50,71 @@ def get_yaml_editor() -> Any:
     yaml.preserve_quotes = True
     yaml.width = maxsize
     return yaml
+
+def get_yaml_data(parser: Any, logger: ConsolePrinter, source: str) -> Any:
+    """
+    Attempts to parse YAML/Compatible data and return the ruamel.yaml object
+    result.
+
+    All known issues are caught and distinctively logged.  Returns None when
+    the data could not be loaded.
+    """
+    import warnings
+    warnings.filterwarnings("error")
+    yaml_data = None
+
+    # Try to open the file
+    try:
+        with open(source, 'r') as fhnd:
+            yaml_data = parser.load(fhnd)
+    except KeyboardInterrupt:
+        logger.error("Aborting data load due to keyboard interrupt!")
+        yaml_data = None
+    except FileNotFoundError:
+        logger.error("File not found:  {}".format(source))
+        yaml_data = None
+    except ParserError as ex:
+        logger.error("YAML parsing error {}:  {}"
+                     .format(str(ex.problem_mark).lstrip(), ex.problem))
+        yaml_data = None
+    except ComposerError as ex:
+        logger.error("YAML composition error {}:  {}"
+                     .format(str(ex.problem_mark).lstrip(), ex.problem))
+        yaml_data = None
+    except ScannerError as ex:
+        logger.error("YAML syntax error {}:  {}"
+                     .format(str(ex.problem_mark).lstrip(), ex.problem))
+        yaml_data = None
+    except DuplicateKeyError as dke:
+        omits = [
+            "while constructing", "To suppress this", "readthedocs",
+            "future releases", "the new API",
+        ]
+        message = str(dke).split("\n")
+        newmsg = ""
+        for line in message:
+            line = line.strip()
+            if not line:
+                continue
+            write_line = True
+            for omit in omits:
+                if omit in line:
+                    write_line = False
+                    break
+            if write_line:
+                newmsg += "\n   " + line
+        logger.error("Duplicate Hash key detected:  {}"
+                     .format(newmsg))
+        yaml_data = None
+    except ReusedAnchorWarning as raw:
+        logger.error("Duplicate YAML Anchor detected:  {}"
+                     .format(
+                         str(raw)
+                         .replace("occurrence   ", "occurrence ")
+                         .replace("\n", "\n   ")))
+        yaml_data = None
+
+    return yaml_data
 
 def build_next_node(yaml_path: "YAMLPath", depth: int,
                     value: Any = None) -> Any:
@@ -364,7 +435,7 @@ def search_matches(method: PathSearchMethods, needle: str,
 
     return matches
 
-def ensure_escaped(value: str, *symbols: str):
+def ensure_escaped(value: str, *symbols: str) -> str:
     """
     Ensures all instances of a symbol are escaped (via \\) within a value.
     Multiple symbols can be processed at once.
@@ -380,7 +451,7 @@ def ensure_escaped(value: str, *symbols: str):
         )
     return escaped
 
-def escape_path_section(section: str, pathsep: PathSeperators):
+def escape_path_section(section: str, pathsep: PathSeperators) -> str:
     """
     Renders inert via escaping all symbols within a string which have special
     meaning to YAML Path.  The resulting string can be consumed as a YAML Path

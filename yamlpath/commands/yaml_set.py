@@ -15,10 +15,7 @@ from os import remove, access, R_OK
 from os.path import isfile, exists
 from shutil import copy2
 
-from ruamel.yaml.parser import ParserError
-from ruamel.yaml.composer import ComposerError
-from ruamel.yaml.scanner import ScannerError
-
+from yamlpath.func import clone_node, get_yaml_data, get_yaml_editor
 from yamlpath import YAMLPath
 from yamlpath.exceptions import YAMLPathException
 from yamlpath.enums import YAMLValueFormats, PathSeperators
@@ -28,7 +25,6 @@ from yamlpath.eyaml import EYAMLProcessor
 
 # pylint: disable=locally-disabled,unused-import
 import yamlpath.patches
-from yamlpath.func import get_yaml_editor, clone_node
 from yamlpath.wrappers import ConsolePrinter
 
 # Implied Constants
@@ -205,29 +201,10 @@ def main():
     yaml = get_yaml_editor()
 
     # Attempt to open the YAML file; check for parsing errors
-    try:
-        with open(args.yaml_file, 'r') as fhnd:
-            yaml_data = yaml.load(fhnd)
-    except FileNotFoundError:
-        log.critical("YAML_FILE not found:  {}".format(args.yaml_file), 2)
-    except ParserError as ex:
-        log.critical(
-            "YAML parsing error {}:  {}"
-            .format(str(ex.problem_mark).lstrip(), ex.problem)
-            , 1
-        )
-    except ComposerError as ex:
-        log.critical(
-            "YAML composition error {}:  {}"
-            .format(str(ex.problem_mark).lstrip(), ex.problem)
-            , 1
-        )
-    except ScannerError as ex:
-        log.critical(
-            "YAML syntax error {}:  {}"
-            .format(str(ex.problem_mark).lstrip(), ex.problem)
-            , 1
-        )
+    yaml_data = get_yaml_data(yaml, log, args.yaml_file)
+    if yaml_data is None:
+        # An error message has already been logged
+        exit(1)
 
     # Load the present value at the specified YAML Path
     change_nodes = []
