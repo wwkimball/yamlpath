@@ -149,17 +149,12 @@ def main():
         log.critical(ex, 1)
     except EYAMLCommandException as ex:
         log.critical(ex, 2)
-    except KeyboardInterrupt:
-        log.critical("Aborted.", 120)
 
     for node in discovered_nodes:
-        try:
-            if isinstance(node, (dict, list)):
-                print(json.dumps(node))
-            else:
-                print("{}".format(str(node).replace("\n", r"\n")))
-        except KeyboardInterrupt:
-            break
+        if isinstance(node, (dict, list)):
+            print(json.dumps(node))
+        else:
+            print("{}".format(str(node).replace("\n", r"\n")))
 
 if __name__ == "__main__":
     main()  # pragma: no cover
