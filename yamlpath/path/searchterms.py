@@ -6,8 +6,7 @@ Copyright 2019 William W. Kimball, Jr. MBA MSIS
 from typing import Type
 
 # pylint: disable=locally-disabled,unused-import
-from yamlpath.types import PathAttributes
-from yamlpath.path import CollectorTerms
+import yamlpath.types.pathattributes as pathattributes
 from yamlpath.enums import PathSearchMethods
 
 
@@ -24,7 +23,7 @@ class SearchTerms:
     @classmethod
     def from_path_segment_attrs(
             cls: Type,
-            rhs: PathAttributes) -> "SearchTerms":
+            rhs: "pathattributes.PathAttributes") -> "SearchTerms":
         """
         Generates a new SearchTerms instance by copying SearchTerms attributes
         from a YAML Path segment's attributes.
