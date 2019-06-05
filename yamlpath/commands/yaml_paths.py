@@ -74,7 +74,7 @@ def processcli():
     parser.add_argument(
         "-p", "--pathonly",
         action="store_true",
-        help="print results without any file or expression decorators")
+        help="print results without any search expression decorators")
 
     parser.add_argument(
         "-t", "--pathsep",
@@ -469,28 +469,28 @@ def get_search_term(logger: ConsolePrinter,
 
     return exterm
 
-def print_results(args: Any, yaml_file: str, expression: str,
+def print_results(args: Any, yaml_file: str,
                   yaml_paths: List[YAMLPath]) -> None:
     """
     Dumps the search results to STDOUT with optional and dynamic formatting.
     """
     in_file_count = len(args.yaml_files)
     in_expressions = len(args.search)
-    for result in yaml_paths:
+    suppress_expression = in_expressions < 2 or args.pathonly
+    for entry in yaml_paths:
+        expression, result = entry
         resline = ""
-        if args.pathonly:
-            resline += "{}".format(result)
-        elif in_file_count > 1:
-            if in_expressions > 1:
+        if in_file_count > 1:
+            if suppress_expression:
+                resline += "{}: {}".format(yaml_file, result)
+            else:
                 resline += "{}[{}]: {}".format(
                     yaml_file, expression, result)
-            else:
-                resline += "{}: {}".format(yaml_file, result)
         else:
-            if in_expressions > 1:
-                resline += "[{}]: {}".format(expression, result)
-            else:
+            if suppress_expression:
                 resline += "{}".format(result)
+            else:
+                resline += "[{}]: {}".format(expression, result)
         print(resline)
 
 def main():
@@ -539,8 +539,13 @@ def main():
                     include_aliases=args.include_aliases,
                     decrypt_eyaml=args.decrypt):
                 # Record only unique results
-                if not any(str(p) == str(result) for p in yaml_paths):
-                    yaml_paths.append(result)
+                add_entry = True
+                for entry in yaml_paths:
+                    if str(result) == str(entry[1]):
+                        add_entry = False
+                        break
+                if add_entry:
+                    yaml_paths.append((expression, result))
 
         if not yaml_paths:
             # Nothing further to do when there are no results
@@ -559,9 +564,12 @@ def main():
                         search_anchors=args.anchors,
                         include_aliases=args.include_aliases,
                         decrypt_eyaml=args.decrypt):
-                    yaml_paths.remove(result)
+                    for entry in yaml_paths:
+                        _, check = entry
+                        if check == result:
+                            yaml_paths.remove(entry)
 
-        print_results(args, yaml_file, expression, yaml_paths)
+        print_results(args, yaml_file, yaml_paths)
 
     exit(exit_state)
 

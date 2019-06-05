@@ -293,3 +293,118 @@ class Test_yaml_paths():
         )
         assert not result.success, result.stderr
         assert "Invalid search expression" in result.stderr
+
+    def test_bad_yamlpath(self, script_runner, tmp_path_factory):
+        content = """---
+        no: ''
+        """
+        yaml_file = create_temp_yaml_file(tmp_path_factory, content)
+        result = script_runner.run(
+            self.command, "--search", "=](.", yaml_file
+        )
+        assert not result.success, result.stderr
+        assert "Invalid search expression" in result.stderr
+
+    def test_multi_search_expressions(self, script_runner, tmp_path_factory):
+        content = """---
+        - node: 1
+          value: A
+        - node: 2
+          value: B
+          nest:
+            - alpha
+            - bravo
+        """
+        yaml_file = create_temp_yaml_file(tmp_path_factory, content)
+        result = script_runner.run(
+            self.command,
+            "--pathsep=/", "--keynames",
+            "--search", "^value",
+            "--search", "=bravo",
+            yaml_file
+        )
+        assert result.success, result.stderr
+        assert "\n".join([
+            "[^value]: /[0]/value",
+            "[^value]: /[1]/value",
+            "[=bravo]: /[1]/nest[1]"
+        ]) + "\n" == result.stdout
+
+    def test_multi_file_single_expression_search(self, script_runner, tmp_path_factory):
+        content1 = """---
+        - node: 1
+          value: A
+        """
+        content2 = """---
+        - node: 2
+          value: B
+        """
+        yaml_file1 = create_temp_yaml_file(tmp_path_factory, content1)
+        yaml_file2 = create_temp_yaml_file(tmp_path_factory, content2)
+        result = script_runner.run(
+            self.command,
+            "--pathsep=/", "--keynames",
+            "--search", "^value",
+            yaml_file1, yaml_file2
+        )
+        assert result.success, result.stderr
+        assert "\n".join([
+            "{}: /[0]/value".format(yaml_file1),
+            "{}: /[0]/value".format(yaml_file2),
+        ]) + "\n" == result.stdout
+
+    def test_multi_file_multi_expression_search(self, script_runner, tmp_path_factory):
+        content1 = """---
+        - node: 1
+          value: A
+        """
+        content2 = """---
+        - node: 2
+          value: B
+          nest:
+            - alpha
+            - bravo
+        """
+        yaml_file1 = create_temp_yaml_file(tmp_path_factory, content1)
+        yaml_file2 = create_temp_yaml_file(tmp_path_factory, content2)
+        result = script_runner.run(
+            self.command,
+            "--pathsep=/", "--keynames",
+            "--search", "^value",
+            "--search", "=bravo",
+            yaml_file1, yaml_file2
+        )
+        assert result.success, result.stderr
+        assert "\n".join([
+            "{}[^value]: /[0]/value".format(yaml_file1),
+            "{}[^value]: /[0]/value".format(yaml_file2),
+            "{}[=bravo]: /[0]/nest[1]".format(yaml_file2)
+        ]) + "\n" == result.stdout
+
+    def test_multi_file_multi_expression_pathonly_search(self, script_runner, tmp_path_factory):
+        content1 = """---
+        - node: 1
+          value: A
+        """
+        content2 = """---
+        - node: 2
+          value: B
+          nest:
+            - alpha
+            - bravo
+        """
+        yaml_file1 = create_temp_yaml_file(tmp_path_factory, content1)
+        yaml_file2 = create_temp_yaml_file(tmp_path_factory, content2)
+        result = script_runner.run(
+            self.command,
+            "--pathsep=/", "--keynames", "--pathonly",
+            "--search", "^value",
+            "--search", "=bravo",
+            yaml_file1, yaml_file2
+        )
+        assert result.success, result.stderr
+        assert "\n".join([
+            "{}: /[0]/value".format(yaml_file1),
+            "{}: /[0]/value".format(yaml_file2),
+            "{}: /[0]/nest[1]".format(yaml_file2)
+        ]) + "\n" == result.stdout
