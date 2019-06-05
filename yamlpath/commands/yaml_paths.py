@@ -236,6 +236,9 @@ def search_for_paths(logger: ConsolePrinter, processor: EYAMLProcessor,
                     escape_path_section(ele.anchor.value, pathsep)
                 )
 
+            if anchor_matched is AnchorMatches.ALIAS_EXCLUDED:
+                continue
+
             if anchor_matched in [AnchorMatches.MATCH,
                                   AnchorMatches.ALIAS_INCLUDED]:
                 # No other matches within this node matter because they are
@@ -270,10 +273,9 @@ def search_for_paths(logger: ConsolePrinter, processor: EYAMLProcessor,
                     logger.debug("<<<< <<<< <<<< <<<< <<<< <<<< <<<<")
                     yield subpath
             elif search_values:
-                # FIXME:  Aliases aren't being excluded.  Ever.
-                if hasattr(ele, "anchor"):
-                    logger.debug("Seeking '{}' in:".format(ele.anchor.value))
-                    logger.debug(seen_anchors)
+                if (anchor_matched is AnchorMatches.UNSEARCHABLE_ALIAS
+                        and not include_aliases):
+                    continue
 
                 check_value = ele
                 if decrypt_eyaml and processor.is_eyaml_value(ele):
@@ -346,6 +348,9 @@ def search_for_paths(logger: ConsolePrinter, processor: EYAMLProcessor,
                 .format(anchor_matched)
             )
 
+            if anchor_matched is AnchorMatches.ALIAS_EXCLUDED:
+                continue
+
             if anchor_matched in [AnchorMatches.MATCH,
                                   AnchorMatches.ALIAS_INCLUDED]:
                 # No other matches within this node matter because they are
@@ -380,10 +385,9 @@ def search_for_paths(logger: ConsolePrinter, processor: EYAMLProcessor,
                     logger.debug("<<<< <<<< <<<< <<<< <<<< <<<< <<<<")
                     yield subpath
             elif search_values:
-                # FIXME:  Aliases aren't being excluded.  Ever.
-                if hasattr(val, "anchor"):
-                    logger.debug("Seeking '{}' in:".format(val.anchor.value))
-                    logger.debug(seen_anchors)
+                if (anchor_matched is AnchorMatches.UNSEARCHABLE_ALIAS
+                        and not include_aliases):
+                    continue
 
                 check_value = val
                 if decrypt_eyaml and processor.is_eyaml_value(val):

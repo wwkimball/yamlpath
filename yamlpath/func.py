@@ -472,16 +472,15 @@ def search_anchor(node: Any, terms: SearchTerms, seen_anchors: List[str],
         return retval
 
     include_aliases: bool = kwargs.pop("include_aliases", False)
-    if is_alias:
-        retval = AnchorMatches.ALIAS_EXCLUDED
-        if include_aliases:
-            retval = AnchorMatches.ALIAS_INCLUDED
-        return retval
+    if is_alias and not include_aliases:
+        return AnchorMatches.ALIAS_EXCLUDED
 
     retval = AnchorMatches.NO_MATCH
     matches = search_matches(terms.method, terms.term, anchor_name)
     if (matches and not terms.inverted) or (terms.inverted and not matches):
         retval = AnchorMatches.MATCH
+        if is_alias:
+            retval = AnchorMatches.ALIAS_INCLUDED
     return retval
 
 def ensure_escaped(value: str, *symbols: str) -> str:
