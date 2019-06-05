@@ -187,8 +187,6 @@ class Test_yaml_paths():
         assert result.success, result.stderr
         assert "/aliases[&anchor]\n/hash/child1\n/hash/subhash/subchild1\n" == result.stdout
 
-    # FIXME: This should work...
-    @pytest.mark.xfail
     def test_simple_hash_anchor(self, script_runner, tmp_path_factory):
         content = """---
         parent: &anchored
@@ -196,10 +194,15 @@ class Test_yaml_paths():
         """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
         result = script_runner.run(
-            self.command, "--pathsep=/", "--anchors", "--search", "=anchored", yaml_file
+            self.command,
+            "--pathsep=/", "--anchors", "--keynames",
+            "--search", "=anchored",
+            yaml_file
         )
         assert result.success, result.stderr
-        assert "/parent\n" == result.stdout
+        assert "\n".join([
+            "/parent",
+        ]) + "\n" == result.stdout
 
     # FIXME: This should also work...
     @pytest.mark.xfail
@@ -465,3 +468,53 @@ class Test_yaml_paths():
         assert "\n".join([
             "/key",
         ]) + "\n" in result.stdout
+
+    def test_search_encrypted_values(self, script_runner, tmp_path_factory, old_eyaml_keys):
+        content = """---
+        aliases:
+          - &doesNotMatch >
+            ENC[PKCS7,MIIBiQYJKoZIhvcNAQcDoIIBejCCAXYCAQAxggEhMIIBHQIBADAFMAACAQEw
+            DQYJKoZIhvcNAQEBBQAEggEAMjjCGsU40xyRcwMIEUOHxAcwftmvKCiMsZxk
+            cLgp7tc52f+dNdymNDrfh6Q9LasFZZe6e7gzSjukVj9URZQkDDl7csAcLgIU
+            MhladFC30XgNHdejogyXLm3ZEISXRGWuYWCldMz8SgXKdjh53lrjup4vq+30
+            oj0l63Ayvx713lwMqO1wfpqX2gOJUcsobSNVXZ5a/j7pbqlgazaJjw859ZzJ
+            l/PeunPHtfM987TX+sLb3gNoCmEer6DTgP9OH/mcvOog032QqADaBXSa5NCD
+            b+wf5eYYEn3/FlgVZlTse865JAlDB+xcE0UoJtBt2qqOQcqVxWMKTahVdcMA
+            fbUDqTBMBgkqhkiG9w0BBwEwHQYJYIZIAWUDBAEqBBA+cYFas5DLzK18/KwN
+            lR5igCCdj/rltHjF5wh/zf0wC9OxImzBIWRsJFiTU7cdN6cndg==]
+          - &doesMatch >
+            ENC[PKCS7,MIIBiQYJKoZIhvcNAQcDoIIBejCCAXYCAQAxggEhMIIBHQIBADAFMAACAQEw
+            DQYJKoZIhvcNAQEBBQAEggEAoxeZnZUr27Uf0joVgiIzeTSGGWYIv/YMCVyH
+            dqe0jvIrSjjg2ShQjPBe+syXKTeKZryU+eyuL5BmSBKXxhT9DNh89n2KpUwL
+            euY+zDmIhzC2kaYpk3So2BKcf1U083xzVQi0tHQ6hnaddx/fSMocaO8eX9jO
+            itSfVIuEylGNdH/HtZ8BtMz7t7AsnAiSTpkqx3BfBXbE7UDy5zEofnz9JwTr
+            M1Hr7/E4ggi+oWXi+KKFmboVgRdTvN16F0/3v8IzytfkXMcKmaY2EbvVPc6X
+            aUlBv7lav7iHXdtETMpVP5i04BGVNMaejd6Ij8O0j6pnAIZWPzFtmp/GIM3k
+            uZ8FKTBMBgkqhkiG9w0BBwEwHQYJYIZIAWUDBAEqBBDErMS1u80DI+6I3tXH
+            0383gCBxoEtDQ9n93/oYDStliDn7/hOGOgwCExaIHRXxeMHLrg==]
+        also_matches: >
+          ENC[PKCS7,MIIBeQYJKoZIhvcNAQcDoIIBajCCAWYCAQAxggEhMIIBHQIBADAFMAACAQEw
+          DQYJKoZIhvcNAQEBBQAEggEAgaYgoKqf77s8S8yfb6bvhrbubtym67/DkltB
+          em0rN4Z2MVKgVp02wJKuaEX8L4DEftROgAz3TDqJihwcGXqMryr15OfRF7wM
+          VLdqkD0+iRwqOWCoVIwFrJjquO/FyyaCeCNVH0XUjvJQyyUzokaHo9Jw6oqC
+          9wx5GytBmGtoiniUJgHaetiDQ6OBYXufqNYGZMKJN1u1qJqnYnw+kJMnfoND
+          SENEi0bRc9hufCNTCT1cuJolxQYCfhpbWPSQFfIWjrIguF3Yud7CRfCc8AFy
+          NSk+MYcrYNJxpF4OPCdFS3KdGAKQrbUVMTzp8IJ6Sd9WLOKIM/+84nFoZaQ3
+          KyhLjDA8BgkqhkiG9w0BBwEwHQYJYIZIAWUDBAEqBBDaeiqnwlecngAcBJlO
+          8OvCgBDvP5ZkrDJjHj6N5T8wSl/0]
+        """
+        yaml_file = create_temp_yaml_file(tmp_path_factory, content)
+        result = script_runner.run(
+            self.command,
+            "--pathsep=/",
+            "--search", "%what",
+            "--decrypt",
+            "--privatekey={}".format(old_eyaml_keys[0]),
+            "--publickey={}".format(old_eyaml_keys[1]),
+            yaml_file
+        )
+        assert result.success, result.stderr
+        assert "\n".join([
+            "/aliases[&doesMatch]",
+            "/also_matches",
+        ]) + "\n" == result.stdout

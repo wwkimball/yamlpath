@@ -182,6 +182,55 @@ def validateargs(args, log):
     if has_errors:
         exit(1)
 
+# To the question of, "Does this child-or-parent node have an anchor and does
+# that anchor match the user's search?", there are multiple answers:
+# 1. No, because the user doesn't wish to search Anchors.
+# 2. No, because this node has no Anchor.
+# 3. No, because this node's Anchor doesn't match the search.
+# 4. No, because this node's Anchor is a duplicate that has already matched.
+# 5. Yes, and the Anchor is an original.
+# 6. Yes, but the Anchor is not original
+def has_matching_anchor(logger: ConsolePrinter, node: Any, terms: SearchTerms,
+                        seen_anchors: List[str] = None,
+                        **kwargs: bool) -> bool:
+    """
+    Indicates whether a node has an Anchor that matches given search terms.
+    """
+    anchor_matches = False
+    search_anchors: bool = kwargs.pop("search_anchors", False)
+    include_aliases: bool = kwargs.pop("include_aliases", False)
+    if search_anchors and hasattr(node, "anchor"):
+        is_alias = False
+        anchor_name = node.anchor.value
+        if anchor_name in seen_anchors:
+            logger.debug(
+                ("yaml_paths::has_matching_anchor<{}>:"
+                 + "Encountered duplicate ANCHOR name, {}"
+                ).format(type(node), anchor_name)
+            )
+            is_alias = True
+        else:
+            # Record only original anchor names
+            logger.debug(
+                ("yaml_paths::has_matching_anchor<{}>:"
+                 + "Recording original ANCHOR name, {}"
+                ).format(type(node), anchor_name)
+            )
+            seen_anchors.append(anchor_name)
+
+        if include_aliases or not is_alias:
+            matches = search_matches(terms.method, terms.term, anchor_name)
+            if ((matches and not terms.inverted)
+                    or (terms.inverted and not matches)):
+                logger.debug(
+                    ("yaml_paths::has_matching_anchor<{}>:"
+                     + "Found an ANCHOR name match, '{}'."
+                    ).format(type(node), anchor_name)
+                )
+                anchor_matches = True
+
+    return anchor_matches
+
 # pylint: disable=locally-disabled,too-many-arguments,too-many-locals,too-many-branches,too-many-statements
 def search_for_paths(logger: ConsolePrinter, processor: EYAMLProcessor,
                      data: Any, terms: SearchTerms,
@@ -266,7 +315,7 @@ def search_for_paths(logger: ConsolePrinter, processor: EYAMLProcessor,
                     + "recursing into complex data:"
                 )
                 logger.debug(ele)
-                logger.debug(">>>> >>>> >>>> >>>> >>>> >>>> >>>> >>>>")
+                logger.debug(">>>> >>>> >>>> >>>> >>>> >>>> >>>>")
                 # When an element is a list-of-lists/dicts, recurse into it.
                 for subpath in search_for_paths(
                         logger, processor, ele, terms, pathsep, tmp_path,
@@ -280,7 +329,7 @@ def search_for_paths(logger: ConsolePrinter, processor: EYAMLProcessor,
                          + "yielding RECURSED match, {}"
                         ).format(subpath)
                     )
-                    logger.debug("<<<< <<<< <<<< <<<< <<<< <<<< <<<< <<<<")
+                    logger.debug("<<<< <<<< <<<< <<<< <<<< <<<< <<<<")
                     yield subpath
             elif search_values and not anchor_matched:
                 # Otherwise, check the element for a match unless the caller
@@ -360,29 +409,35 @@ def search_for_paths(logger: ConsolePrinter, processor: EYAMLProcessor,
                         )
                         yield YAMLPath(tmp_path)
 
-            if isinstance(val, (CommentedSeq, CommentedMap)):
-                logger.debug(
-                    "yaml_paths::search_for_paths<dict>:"
-                    + "recursing into complex data:"
-                )
-                logger.debug(val)
-                logger.debug(">>>> >>>> >>>> >>>> >>>> >>>> >>>> >>>>")
-                # When the value is a list/dict, recurse into it.
-                for subpath in search_for_paths(
-                        logger, processor, val, terms, pathsep, tmp_path,
-                        seen_anchors, search_values=search_values,
-                        search_keys=search_keys, search_anchors=search_anchors,
-                        include_aliases=include_aliases,
-                        decrypt_eyaml=decrypt_eyaml
-                ):
+            # The value may itself be anchored; search it if requested
+            if search_anchors and hasattr(val, "anchor"):
+                anchor_name = val.anchor.value
+                ignore_this_anchor = False
+                if anchor_name in seen_anchors:
+                    if not include_aliases:
+                        # Ignore this duplicate anchor name
+                        ignore_this_anchor = True
+                else:
+                    # Record only original anchor names
                     logger.debug(
                         ("yaml_paths::search_for_paths<dict>:"
-                         + "yielding RECURSED match, {}"
-                        ).format(subpath)
+                         + "recording original VALUE-ANCHOR name, {}"
+                        ).format(anchor_name)
                     )
-                    logger.debug("<<<< <<<< <<<< <<<< <<<< <<<< <<<< <<<<")
-                    yield subpath
-            elif search_values and not key_matched:
+                    seen_anchors.append(anchor_name)
+
+                if not ignore_this_anchor:
+                    matches = search_matches(method, term, anchor_name)
+                    if ((matches and not invert)
+                            or (invert and not matches)):
+                        logger.debug(
+                            ("yaml_paths::search_for_paths<dict>:"
+                             + "yielding VALUE-ANCHOR name match, {}:  {}"
+                            ).format(anchor_name, tmp_path)
+                        )
+                        yield YAMLPath(tmp_path)
+
+            if search_values and not key_matched:
                 # Otherwise, search the value when the caller wishes it, but
                 # not if the key has already matched (lest a duplicate result
                 # be generated).  Exclude duplicate alias values unless the
@@ -422,18 +477,44 @@ def search_for_paths(logger: ConsolePrinter, processor: EYAMLProcessor,
                             anchor_matched = True
 
                 if not anchor_matched:
-                    check_value = val
-                    if decrypt_eyaml and processor.is_eyaml_value(val):
-                        check_value = processor.decrypt_eyaml(val)
-
-                    matches = search_matches(method, term, check_value)
-                    if (matches and not invert) or (invert and not matches):
+                    if isinstance(val, (CommentedSeq, CommentedMap)):
                         logger.debug(
-                            ("yaml_paths::search_for_paths<dict>:"
-                             + "yielding VALUE match, {}:  {}"
-                            ).format(check_value, tmp_path)
+                            "yaml_paths::search_for_paths<dict>:"
+                            + "recursing into complex data:"
                         )
-                        yield YAMLPath(tmp_path)
+                        logger.debug(val)
+                        logger.debug(">>>> >>>> >>>> >>>> >>>> >>>> >>>>")
+                        # When the value is a list/dict, recurse into it.
+                        for subpath in search_for_paths(
+                                logger, processor, val, terms, pathsep,
+                                tmp_path,
+                                seen_anchors, search_values=search_values,
+                                search_keys=search_keys,
+                                search_anchors=search_anchors,
+                                include_aliases=include_aliases,
+                                decrypt_eyaml=decrypt_eyaml
+                        ):
+                            logger.debug(
+                                ("yaml_paths::search_for_paths<dict>:"
+                                 + "yielding RECURSED match, {}"
+                                ).format(subpath)
+                            )
+                            logger.debug("<<<< <<<< <<<< <<<< <<<< <<<< <<<<")
+                            yield subpath
+                    else:
+                        check_value = val
+                        if decrypt_eyaml and processor.is_eyaml_value(val):
+                            check_value = processor.decrypt_eyaml(val)
+
+                        matches = search_matches(method, term, check_value)
+                        if ((matches and not invert)
+                                or (invert and not matches)):
+                            logger.debug(
+                                ("yaml_paths::search_for_paths<dict>:"
+                                 + "yielding VALUE match, {}:  {}"
+                                ).format(check_value, tmp_path)
+                            )
+                            yield YAMLPath(tmp_path)
 
 def get_search_term(logger: ConsolePrinter,
                     expression: str) -> Optional[SearchTerms]:
