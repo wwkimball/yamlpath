@@ -441,12 +441,8 @@ def get_search_term(logger: ConsolePrinter,
     Attempts to cast a search expression into a SearchTerms instance.  Returns
     None on failure.
     """
-    if not expression:
-        # Ignore empty expressions
-        return None
-
     # The leading character must be a known search operator
-    check_operator = expression[0]
+    check_operator = expression[0] if expression else ""
     if not (PathSearchMethods.is_operator(check_operator)
             or check_operator == '!'):
         logger.error(
@@ -454,6 +450,13 @@ def get_search_term(logger: ConsolePrinter,
              + " every search expression must be one of:  {}")
             .format(expression,
                     ", ".join(PathSearchMethods.get_operators())))
+        return None
+
+    if not len(expression) > 1:
+        # Empty expressions do nothing
+        logger.error(
+            "An EXPRESSION with only a search operator has no effect, '{}'."
+            .format(expression))
         return None
 
     try:
@@ -528,6 +531,9 @@ def main():
         yaml_paths = []
         for expression in args.search:
             exterm = get_search_term(log, expression)
+            log.debug(("yaml_paths::main:"
+                       + "converting search expression '{}' into '{}'"
+                       ).format(expression, exterm))
             if exterm is None:
                 exit_state = 1
                 continue
@@ -554,6 +560,9 @@ def main():
         if args.except_expression:
             for expression in args.except_expression:
                 exterm = get_search_term(log, expression)
+                log.debug(("yaml_paths::main:"
+                           + "converted except expression '{}' into '{}'"
+                           ).format(expression, exterm))
                 if exterm is None:
                     exit_state = 1
                     continue
@@ -565,13 +574,13 @@ def main():
                         include_aliases=args.include_aliases,
                         decrypt_eyaml=args.decrypt):
                     for entry in yaml_paths:
-                        _, check = entry
-                        if check == result:
+                        if str(result) == str(entry[1]):
                             yaml_paths.remove(entry)
+                            break  # Entries are already unique
 
         print_results(args, yaml_file, yaml_paths)
 
     exit(exit_state)
 
 if __name__ == "__main__":
-    main()
+    main()  # pragma: no cover

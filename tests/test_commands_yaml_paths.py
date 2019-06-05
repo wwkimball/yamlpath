@@ -278,10 +278,10 @@ class Test_yaml_paths():
         """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
         result = script_runner.run(
-            self.command, "--search=", yaml_file
+            self.command, "--search==", yaml_file
         )
         assert not result.success, result.stderr
-        assert "" in result.stdout
+        assert "An EXPRESSION with only a search operator has no effect" in result.stderr
 
     def test_bad_expression(self, script_runner, tmp_path_factory):
         content = """---
@@ -408,3 +408,60 @@ class Test_yaml_paths():
             "{}: /[0]/value".format(yaml_file2),
             "{}: /[0]/nest[1]".format(yaml_file2)
         ]) + "\n" == result.stdout
+
+    def test_result_exclusions(self, script_runner, tmp_path_factory):
+        content = """---
+        accounts:
+          - username: admin
+            password: 12345
+          - username: nonadmin
+            password: password
+        applications:
+          app1:
+            accounts:
+              admin:
+                user: admin
+                passphrase: a passphrase is a password with spaces
+              user1:
+                user: passimion
+                passphrase: ignores user because --onlykeynames
+            links:
+              gateway: 192.168.0.0/16
+              passthrough: yes
+          app2:
+            display_name:  What a pass!
+        """
+        yaml_file = create_temp_yaml_file(tmp_path_factory, content)
+        result = script_runner.run(
+            self.command,
+            "--pathsep=/", "--onlykeynames",
+            "--search", "%pass",
+            "--except", "%passthrough",
+            "--except", "%display",
+            yaml_file
+        )
+        assert result.success, result.stderr
+        assert "\n".join([
+            "/accounts[0]/password",
+            "/accounts[1]/password",
+            "/applications/app1/accounts/admin/passphrase",
+            "/applications/app1/accounts/user1/passphrase",
+        ]) + "\n" == result.stdout
+
+    def test_empty_exclusion(self, script_runner, tmp_path_factory):
+        content = """---
+        key: value
+        """
+        yaml_file = create_temp_yaml_file(tmp_path_factory, content)
+        result = script_runner.run(
+            self.command,
+            "--pathsep=/",
+            "--search==value",
+            "--except==",
+            yaml_file
+        )
+        assert not result.success, result.stderr
+        assert "An EXPRESSION with only a search operator has no effect" in result.stderr
+        assert "\n".join([
+            "/key",
+        ]) + "\n" in result.stdout
