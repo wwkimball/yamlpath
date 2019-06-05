@@ -19,4 +19,4 @@ class Test_path_SearchTerms():
 		assert str(st) == str(SearchTerms.from_path_segment_attrs(st))
 
 		with pytest.raises(AttributeError):
-			_=SearchTerms.from_path_segment_attrs("nothing-to-see-here")
+			_ = SearchTerms.from_path_segment_attrs("nothing-to-see-here")

@@ -183,7 +183,8 @@ def validateargs(args, log):
         exit(1)
 
 # pylint: disable=locally-disabled,too-many-arguments,too-many-locals,too-many-branches,too-many-statements
-def search_for_paths(processor: EYAMLProcessor, data: Any, terms: SearchTerms,
+def search_for_paths(logger: ConsolePrinter, processor: EYAMLProcessor,
+                     data: Any, terms: SearchTerms,
                      pathsep: PathSeperators = PathSeperators.DOT,
                      build_path: str = "",
                      seen_anchors: Optional[List[str]] = None,
@@ -224,9 +225,19 @@ def search_for_paths(processor: EYAMLProcessor, data: Any, terms: SearchTerms,
                 if anchor_name in seen_anchors:
                     if not include_aliases:
                         # Ignore duplicate aliases
+                        logger.debug(
+                            ("yaml_paths::search_for_paths<list>:"
+                             + "skipping repeat VALUE-ANCHOR name, {}"
+                            ).format(anchor_name)
+                        )
                         continue
                 else:
                     # Record only original anchor names
+                    logger.debug(
+                        ("yaml_paths::search_for_paths<list>:"
+                         + "recording original ANCHOR name, {}"
+                        ).format(anchor_name)
+                    )
                     seen_anchors.append(anchor_name)
 
                 tmp_path = "{}&{}]".format(
@@ -238,6 +249,11 @@ def search_for_paths(processor: EYAMLProcessor, data: Any, terms: SearchTerms,
                 if search_anchors:
                     matches = search_matches(method, term, anchor_name)
                     if (matches and not invert) or (invert and not matches):
+                        logger.debug(
+                            ("yaml_paths::search_for_paths<list>:"
+                             + "yielding ANCHOR name match, {}:  {}"
+                            ).format(anchor_name, tmp_path)
+                        )
                         yield YAMLPath(tmp_path)
                         anchor_matched = True
             else:
@@ -245,14 +261,26 @@ def search_for_paths(processor: EYAMLProcessor, data: Any, terms: SearchTerms,
                 tmp_path = build_path + str(idx) + "]"
 
             if isinstance(ele, (CommentedSeq, CommentedMap)):
+                logger.debug(
+                    "yaml_paths::search_for_paths<list>:"
+                    + "recursing into complex data:"
+                )
+                logger.debug(ele)
+                logger.debug(">>>> >>>> >>>> >>>> >>>> >>>> >>>> >>>>")
                 # When an element is a list-of-lists/dicts, recurse into it.
                 for subpath in search_for_paths(
-                        processor, ele, terms, pathsep, tmp_path, seen_anchors,
-                        search_values=search_values, search_keys=search_keys,
-                        search_anchors=search_anchors,
+                        logger, processor, ele, terms, pathsep, tmp_path,
+                        seen_anchors, search_values=search_values,
+                        search_keys=search_keys, search_anchors=search_anchors,
                         include_aliases=include_aliases,
                         decrypt_eyaml=decrypt_eyaml
                 ):
+                    logger.debug(
+                        ("yaml_paths::search_for_paths<list>:"
+                         + "yielding RECURSED match, {}"
+                        ).format(subpath)
+                    )
+                    logger.debug("<<<< <<<< <<<< <<<< <<<< <<<< <<<< <<<<")
                     yield subpath
             elif search_values and not anchor_matched:
                 # Otherwise, check the element for a match unless the caller
@@ -265,6 +293,11 @@ def search_for_paths(processor: EYAMLProcessor, data: Any, terms: SearchTerms,
 
                 matches = search_matches(method, term, check_value)
                 if (matches and not invert) or (invert and not matches):
+                    logger.debug(
+                        ("yaml_paths::search_for_paths<list>:"
+                         + "yielding VALUE match, {}:  {}"
+                        ).format(check_value, tmp_path)
+                    )
                     yield YAMLPath(tmp_path)
 
     # pylint: disable=locally-disabled,too-many-nested-blocks
@@ -296,6 +329,11 @@ def search_for_paths(processor: EYAMLProcessor, data: Any, terms: SearchTerms,
                             ignore_this_key = True
                     else:
                         # Record only original anchor names
+                        logger.debug(
+                            ("yaml_paths::search_for_paths<dict>:"
+                             + "recording original KEY-ANCHOR name, {}"
+                            ).format(anchor_name)
+                        )
                         seen_anchors.append(anchor_name)
 
                     # Search the anchor name itself, if requested
@@ -303,6 +341,11 @@ def search_for_paths(processor: EYAMLProcessor, data: Any, terms: SearchTerms,
                         matches = search_matches(method, term, anchor_name)
                         if ((matches and not invert)
                                 or (invert and not matches)):
+                            logger.debug(
+                                ("yaml_paths::search_for_paths<dict>:"
+                                 + "yielding KEY-ANCHOR name match, {}:  {}"
+                                ).format(anchor_name, tmp_path)
+                            )
                             yield YAMLPath(tmp_path)
                             anchor_matched = True
 
@@ -310,17 +353,34 @@ def search_for_paths(processor: EYAMLProcessor, data: Any, terms: SearchTerms,
                     matches = search_matches(method, term, key)
                     if (matches and not invert) or (invert and not matches):
                         key_matched = True
+                        logger.debug(
+                            ("yaml_paths::search_for_paths<dict>:"
+                             + "yielding KEY name match, {}:  {}"
+                            ).format(key, tmp_path)
+                        )
                         yield YAMLPath(tmp_path)
 
             if isinstance(val, (CommentedSeq, CommentedMap)):
+                logger.debug(
+                    "yaml_paths::search_for_paths<dict>:"
+                    + "recursing into complex data:"
+                )
+                logger.debug(val)
+                logger.debug(">>>> >>>> >>>> >>>> >>>> >>>> >>>> >>>>")
                 # When the value is a list/dict, recurse into it.
                 for subpath in search_for_paths(
-                        processor, val, terms, pathsep, tmp_path, seen_anchors,
-                        search_values=search_values, search_keys=search_keys,
-                        search_anchors=search_anchors,
+                        logger, processor, val, terms, pathsep, tmp_path,
+                        seen_anchors, search_values=search_values,
+                        search_keys=search_keys, search_anchors=search_anchors,
                         include_aliases=include_aliases,
                         decrypt_eyaml=decrypt_eyaml
                 ):
+                    logger.debug(
+                        ("yaml_paths::search_for_paths<dict>:"
+                         + "yielding RECURSED match, {}"
+                        ).format(subpath)
+                    )
+                    logger.debug("<<<< <<<< <<<< <<<< <<<< <<<< <<<< <<<<")
                     yield subpath
             elif search_values and not key_matched:
                 # Otherwise, search the value when the caller wishes it, but
@@ -333,9 +393,19 @@ def search_for_paths(processor: EYAMLProcessor, data: Any, terms: SearchTerms,
                     if anchor_name in seen_anchors:
                         if not include_aliases:
                             # Ignore duplicate aliases
+                            logger.debug(
+                                ("yaml_paths::search_for_paths<dict>:"
+                                 + "skipping repeat VALUE-ANCHOR name, {}"
+                                ).format(anchor_name)
+                            )
                             continue
                     else:
                         # Record only original anchor names
+                        logger.debug(
+                            ("yaml_paths::search_for_paths<dict>:"
+                             + "recording original VALUE-ANCHOR name, {}"
+                            ).format(anchor_name)
+                        )
                         seen_anchors.append(anchor_name)
 
                     # Search the anchor name itself, if requested
@@ -343,6 +413,11 @@ def search_for_paths(processor: EYAMLProcessor, data: Any, terms: SearchTerms,
                         matches = search_matches(method, term, anchor_name)
                         if ((matches and not invert)
                                 or (invert and not matches)):
+                            logger.debug(
+                                ("yaml_paths::search_for_paths<dict>:"
+                                 + "yielding VALUE-ANCHOR name match, {}:  {}"
+                                ).format(anchor_name, tmp_path)
+                            )
                             yield YAMLPath(tmp_path)
                             anchor_matched = True
 
@@ -353,6 +428,11 @@ def search_for_paths(processor: EYAMLProcessor, data: Any, terms: SearchTerms,
 
                     matches = search_matches(method, term, check_value)
                     if (matches and not invert) or (invert and not matches):
+                        logger.debug(
+                            ("yaml_paths::search_for_paths<dict>:"
+                             + "yielding VALUE match, {}:  {}"
+                            ).format(check_value, tmp_path)
+                        )
                         yield YAMLPath(tmp_path)
 
 def get_search_term(logger: ConsolePrinter,
@@ -397,19 +477,21 @@ def print_results(args: Any, yaml_file: str, expression: str,
     in_file_count = len(args.yaml_files)
     in_expressions = len(args.search)
     for result in yaml_paths:
+        resline = ""
         if args.pathonly:
-            print("{}".format(result))
+            resline += "{}".format(result)
         elif in_file_count > 1:
             if in_expressions > 1:
-                print("{}[{}]: {}".format(
-                    yaml_file, expression, result))
+                resline += "{}[{}]: {}".format(
+                    yaml_file, expression, result)
             else:
-                print("{}: {}".format(yaml_file, result))
+                resline += "{}: {}".format(yaml_file, result)
         else:
             if in_expressions > 1:
-                print("[{}]: {}".format(expression, result))
+                resline += "[{}]: {}".format(expression, result)
             else:
-                print("{}".format(result))
+                resline += "{}".format(result)
+        print(resline)
 
 def main():
     """Main code."""
@@ -451,16 +533,14 @@ def main():
                 continue
 
             for result in search_for_paths(
-                    processor,
-                    yaml_data,
-                    exterm,
-                    args.pathsep,
-                    search_values=search_values,
-                    search_keys=search_keys,
+                    log, processor, yaml_data, exterm, args.pathsep,
+                    search_values=search_values, search_keys=search_keys,
                     search_anchors=args.anchors,
                     include_aliases=args.include_aliases,
                     decrypt_eyaml=args.decrypt):
-                yaml_paths.append(result)
+                # Record only unique results
+                if not any(str(p) == str(result) for p in yaml_paths):
+                    yaml_paths.append(result)
 
         if not yaml_paths:
             # Nothing further to do when there are no results
@@ -474,12 +554,8 @@ def main():
                     continue
 
                 for result in search_for_paths(
-                        processor,
-                        yaml_data,
-                        exterm,
-                        args.pathsep,
-                        search_values=search_values,
-                        search_keys=search_keys,
+                        log, processor, yaml_data, exterm, args.pathsep,
+                        search_values=search_values, search_keys=search_keys,
                         search_anchors=args.anchors,
                         include_aliases=args.include_aliases,
                         decrypt_eyaml=args.decrypt):
