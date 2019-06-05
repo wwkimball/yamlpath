@@ -26,12 +26,14 @@ from ruamel.yaml.scalarfloat import ScalarFloat
 from ruamel.yaml.scalarint import ScalarInt
 
 from yamlpath.enums import (
-    YAMLValueFormats,
+    AnchorMatches,
     PathSearchMethods,
     PathSegmentTypes,
     PathSeperators,
+    YAMLValueFormats,
 )
 from yamlpath.wrappers import ConsolePrinter
+from yamlpath.path import SearchTerms
 from yamlpath import YAMLPath
 
 def get_yaml_editor() -> Any:
@@ -349,6 +351,19 @@ def make_new_node(source_node: Any, value: Any,
 
     return new_node
 
+def get_node_anchor(node: Any) -> str:
+    """
+    Returns a node's Anchor/Alias name or None wheh there isn't one.
+    """
+    if (
+            not hasattr(node, "anchor")
+            or node.anchor is None
+            or node.anchor.value is None
+            or not node.anchor.value
+    ):
+        return None
+    return node.anchor.value
+
 def search_matches(method: PathSearchMethods, needle: str,
                    haystack: Any) -> bool:
     """
@@ -434,6 +449,40 @@ def search_matches(method: PathSearchMethods, needle: str,
         raise NotImplementedError
 
     return matches
+
+def search_anchor(node: Any, terms: SearchTerms, seen_anchors: List[str],
+                  **kwargs: bool) -> AnchorMatches:
+    """
+    Indicates whether a node has an Anchor that matches given search terms.
+    """
+    anchor_name = get_node_anchor(node)
+    if anchor_name is None:
+        return AnchorMatches.NO_ANCHOR
+
+    is_alias = True
+    if anchor_name not in seen_anchors:
+        is_alias = False
+        seen_anchors.append(anchor_name)
+
+    search_anchors: bool = kwargs.pop("search_anchors", False)
+    if not search_anchors:
+        retval = AnchorMatches.UNSEARCHABLE_ANCHOR
+        if is_alias:
+            retval = AnchorMatches.UNSEARCHABLE_ALIAS
+        return retval
+
+    include_aliases: bool = kwargs.pop("include_aliases", False)
+    if is_alias:
+        retval = AnchorMatches.ALIAS_EXCLUDED
+        if include_aliases:
+            retval = AnchorMatches.ALIAS_INCLUDED
+        return retval
+
+    retval = AnchorMatches.NO_MATCH
+    matches = search_matches(terms.method, terms.term, anchor_name)
+    if (matches and not terms.inverted) or (terms.inverted and not matches):
+        retval = AnchorMatches.MATCH
+    return retval
 
 def ensure_escaped(value: str, *symbols: str) -> str:
     """

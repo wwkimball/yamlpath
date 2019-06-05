@@ -17,9 +17,10 @@ from yamlpath.func import (
     get_yaml_data,
     get_yaml_editor,
     search_matches,
+    search_anchor,
 )
 from yamlpath.exceptions import YAMLPathException
-from yamlpath.enums import PathSeperators, PathSearchMethods
+from yamlpath.enums import AnchorMatches, PathSeperators, PathSearchMethods
 from yamlpath.path import SearchTerms
 from yamlpath import YAMLPath
 from yamlpath.wrappers import ConsolePrinter
@@ -182,55 +183,6 @@ def validateargs(args, log):
     if has_errors:
         exit(1)
 
-# To the question of, "Does this child-or-parent node have an anchor and does
-# that anchor match the user's search?", there are multiple answers:
-# 1. No, because the user doesn't wish to search Anchors.
-# 2. No, because this node has no Anchor.
-# 3. No, because this node's Anchor doesn't match the search.
-# 4. No, because this node's Anchor is a duplicate that has already matched.
-# 5. Yes, and the Anchor is an original.
-# 6. Yes, but the Anchor is not original
-def has_matching_anchor(logger: ConsolePrinter, node: Any, terms: SearchTerms,
-                        seen_anchors: List[str] = None,
-                        **kwargs: bool) -> bool:
-    """
-    Indicates whether a node has an Anchor that matches given search terms.
-    """
-    anchor_matches = False
-    search_anchors: bool = kwargs.pop("search_anchors", False)
-    include_aliases: bool = kwargs.pop("include_aliases", False)
-    if search_anchors and hasattr(node, "anchor"):
-        is_alias = False
-        anchor_name = node.anchor.value
-        if anchor_name in seen_anchors:
-            logger.debug(
-                ("yaml_paths::has_matching_anchor<{}>:"
-                 + "Encountered duplicate ANCHOR name, {}"
-                ).format(type(node), anchor_name)
-            )
-            is_alias = True
-        else:
-            # Record only original anchor names
-            logger.debug(
-                ("yaml_paths::has_matching_anchor<{}>:"
-                 + "Recording original ANCHOR name, {}"
-                ).format(type(node), anchor_name)
-            )
-            seen_anchors.append(anchor_name)
-
-        if include_aliases or not is_alias:
-            matches = search_matches(terms.method, terms.term, anchor_name)
-            if ((matches and not terms.inverted)
-                    or (terms.inverted and not matches)):
-                logger.debug(
-                    ("yaml_paths::has_matching_anchor<{}>:"
-                     + "Found an ANCHOR name match, '{}'."
-                    ).format(type(node), anchor_name)
-                )
-                anchor_matches = True
-
-    return anchor_matches
-
 # pylint: disable=locally-disabled,too-many-arguments,too-many-locals,too-many-branches,too-many-statements
 def search_for_paths(logger: ConsolePrinter, processor: EYAMLProcessor,
                      data: Any, terms: SearchTerms,
@@ -264,50 +216,37 @@ def search_for_paths(logger: ConsolePrinter, processor: EYAMLProcessor,
         build_path += "["
 
         for idx, ele in enumerate(data):
-            # Screen out aliases if the anchor has already been seen, unless
-            # the caller has asked for all the duplicate results.
-            anchor_matched = False
-            if hasattr(ele, "anchor") and ele.anchor.value is not None:
-                # Dealing with an anchor/alias, so ref this node by name unless
-                # it is to be excluded from the search results.
-                anchor_name = ele.anchor.value
-                if anchor_name in seen_anchors:
-                    if not include_aliases:
-                        # Ignore duplicate aliases
-                        logger.debug(
-                            ("yaml_paths::search_for_paths<list>:"
-                             + "skipping repeat VALUE-ANCHOR name, {}"
-                            ).format(anchor_name)
-                        )
-                        continue
-                else:
-                    # Record only original anchor names
-                    logger.debug(
-                        ("yaml_paths::search_for_paths<list>:"
-                         + "recording original ANCHOR name, {}"
-                        ).format(anchor_name)
-                    )
-                    seen_anchors.append(anchor_name)
+            # Any element may or may not have an Anchor/Alias
+            anchor_matched = search_anchor(ele, terms, seen_anchors,
+                                           search_anchors=search_anchors,
+                                           include_aliases=include_aliases)
+            logger.debug(
+                ("yaml_paths::search_for_paths<list>:"
+                 + "anchor_matched => {}.")
+                .format(anchor_matched)
+            )
 
-                tmp_path = "{}&{}]".format(
-                    build_path,
-                    escape_path_section(anchor_name, pathsep)
-                )
-
-                # Search the anchor name itself, if requested
-                if search_anchors:
-                    matches = search_matches(method, term, anchor_name)
-                    if (matches and not invert) or (invert and not matches):
-                        logger.debug(
-                            ("yaml_paths::search_for_paths<list>:"
-                             + "yielding ANCHOR name match, {}:  {}"
-                            ).format(anchor_name, tmp_path)
-                        )
-                        yield YAMLPath(tmp_path)
-                        anchor_matched = True
-            else:
+            # Build the temporary YAML Path using either Anchor or Index
+            if anchor_matched is AnchorMatches.NO_ANCHOR:
                 # Not an anchor/alias, so ref this node by its index
                 tmp_path = build_path + str(idx) + "]"
+            else:
+                tmp_path = "{}&{}]".format(
+                    build_path,
+                    escape_path_section(ele.anchor.value, pathsep)
+                )
+
+            if anchor_matched in [AnchorMatches.MATCH,
+                                  AnchorMatches.ALIAS_INCLUDED]:
+                # No other matches within this node matter because they are
+                # already in the result.
+                logger.debug(
+                    ("yaml_paths::search_for_paths<list>:"
+                     + "yielding an Anchor/Alias match and continuing, {}.")
+                    .format(tmp_path)
+                )
+                yield tmp_path
+                continue
 
             if isinstance(ele, (CommentedSeq, CommentedMap)):
                 logger.debug(
@@ -316,7 +255,6 @@ def search_for_paths(logger: ConsolePrinter, processor: EYAMLProcessor,
                 )
                 logger.debug(ele)
                 logger.debug(">>>> >>>> >>>> >>>> >>>> >>>> >>>>")
-                # When an element is a list-of-lists/dicts, recurse into it.
                 for subpath in search_for_paths(
                         logger, processor, ele, terms, pathsep, tmp_path,
                         seen_anchors, search_values=search_values,
@@ -331,11 +269,12 @@ def search_for_paths(logger: ConsolePrinter, processor: EYAMLProcessor,
                     )
                     logger.debug("<<<< <<<< <<<< <<<< <<<< <<<< <<<<")
                     yield subpath
-            elif search_values and not anchor_matched:
-                # Otherwise, check the element for a match unless the caller
-                # isn't interested in value searching.  Also ignore the value
-                # if it is anchored and the anchor has already matched to avoid
-                # duplication in the results.
+            elif search_values:
+                # FIXME:  Aliases aren't being excluded.  Ever.
+                if hasattr(ele, "anchor"):
+                    logger.debug("Seeking '{}' in:".format(ele.anchor.value))
+                    logger.debug(seen_anchors)
+
                 check_value = ele
                 if decrypt_eyaml and processor.is_eyaml_value(ele):
                     check_value = processor.decrypt_eyaml(ele)
@@ -349,7 +288,6 @@ def search_for_paths(logger: ConsolePrinter, processor: EYAMLProcessor,
                     )
                     yield YAMLPath(tmp_path)
 
-    # pylint: disable=locally-disabled,too-many-nested-blocks
     elif isinstance(data, CommentedMap):
         if build_path:
             build_path += strsep
@@ -362,159 +300,103 @@ def search_for_paths(logger: ConsolePrinter, processor: EYAMLProcessor,
 
         for key, val in pool:
             tmp_path = build_path + escape_path_section(key, pathsep)
-            key_matched = False
 
             # Search the key when the caller wishes it.
             if search_keys:
-                # The key may be anchored.  Search its anchor name if the
-                # caller wishes it.
-                anchor_matched = False
-                ignore_this_key = False
-                if hasattr(key, "anchor") and key.anchor.value is not None:
-                    anchor_name = key.anchor.value
-                    if anchor_name in seen_anchors:
-                        if not include_aliases:
-                            # Ignore this duplicate anchor name
-                            ignore_this_key = True
-                    else:
-                        # Record only original anchor names
-                        logger.debug(
-                            ("yaml_paths::search_for_paths<dict>:"
-                             + "recording original KEY-ANCHOR name, {}"
-                            ).format(anchor_name)
-                        )
-                        seen_anchors.append(anchor_name)
+                # The key itself may be an Anchor or Alias.  Search it when the
+                # caller wishes.
+                anchor_matched = search_anchor(key, terms, seen_anchors,
+                                               search_anchors=search_anchors,
+                                               include_aliases=include_aliases)
+                logger.debug(
+                    ("yaml_paths::search_for_paths<dict>:"
+                     + "KEY anchor_matched => {}.")
+                    .format(anchor_matched)
+                )
 
-                    # Search the anchor name itself, if requested
-                    if search_anchors and not ignore_this_key:
-                        matches = search_matches(method, term, anchor_name)
-                        if ((matches and not invert)
-                                or (invert and not matches)):
-                            logger.debug(
-                                ("yaml_paths::search_for_paths<dict>:"
-                                 + "yielding KEY-ANCHOR name match, {}:  {}"
-                                ).format(anchor_name, tmp_path)
-                            )
-                            yield YAMLPath(tmp_path)
-                            anchor_matched = True
-
-                if not anchor_matched:
-                    matches = search_matches(method, term, key)
-                    if (matches and not invert) or (invert and not matches):
-                        key_matched = True
-                        logger.debug(
-                            ("yaml_paths::search_for_paths<dict>:"
-                             + "yielding KEY name match, {}:  {}"
-                            ).format(key, tmp_path)
-                        )
-                        yield YAMLPath(tmp_path)
-
-            # The value may itself be anchored; search it if requested
-            if search_anchors and hasattr(val, "anchor"):
-                anchor_name = val.anchor.value
-                ignore_this_anchor = False
-                if anchor_name in seen_anchors:
-                    if not include_aliases:
-                        # Ignore this duplicate anchor name
-                        ignore_this_anchor = True
-                else:
-                    # Record only original anchor names
+                if anchor_matched in [AnchorMatches.MATCH,
+                                      AnchorMatches.ALIAS_INCLUDED]:
+                    # No other matches within this node matter because they are
+                    # already in the result.
                     logger.debug(
                         ("yaml_paths::search_for_paths<dict>:"
-                         + "recording original VALUE-ANCHOR name, {}"
-                        ).format(anchor_name)
+                         + "yielding a KEY-ANCHOR match and continuing, {}.")
+                        .format(tmp_path)
                     )
-                    seen_anchors.append(anchor_name)
+                    yield tmp_path
+                    continue
 
-                if not ignore_this_anchor:
-                    matches = search_matches(method, term, anchor_name)
-                    if ((matches and not invert)
-                            or (invert and not matches)):
-                        logger.debug(
-                            ("yaml_paths::search_for_paths<dict>:"
-                             + "yielding VALUE-ANCHOR name match, {}:  {}"
-                            ).format(anchor_name, tmp_path)
-                        )
-                        yield YAMLPath(tmp_path)
+                # Search the name of the key, itself
+                matches = search_matches(method, term, key)
+                if (matches and not invert) or (invert and not matches):
+                    logger.debug(
+                        ("yaml_paths::search_for_paths<dict>:"
+                         + "yielding KEY name match, {}:  {}"
+                        ).format(key, tmp_path)
+                    )
+                    yield YAMLPath(tmp_path)
 
-            if search_values and not key_matched:
-                # Otherwise, search the value when the caller wishes it, but
-                # not if the key has already matched (lest a duplicate result
-                # be generated).  Exclude duplicate alias values unless the
-                # caller wishes to receive them.
-                anchor_matched = False
-                if hasattr(val, "anchor") and val.anchor.value is not None:
-                    anchor_name = val.anchor.value
-                    if anchor_name in seen_anchors:
-                        if not include_aliases:
-                            # Ignore duplicate aliases
-                            logger.debug(
-                                ("yaml_paths::search_for_paths<dict>:"
-                                 + "skipping repeat VALUE-ANCHOR name, {}"
-                                ).format(anchor_name)
-                            )
-                            continue
-                    else:
-                        # Record only original anchor names
-                        logger.debug(
-                            ("yaml_paths::search_for_paths<dict>:"
-                             + "recording original VALUE-ANCHOR name, {}"
-                            ).format(anchor_name)
-                        )
-                        seen_anchors.append(anchor_name)
+            # The value may itself be anchored; search it if requested
+            anchor_matched = search_anchor(val, terms, seen_anchors,
+                                           search_anchors=search_anchors,
+                                           include_aliases=include_aliases)
+            logger.debug(
+                ("yaml_paths::search_for_paths<dict>:"
+                 + "VALUE anchor_matched => {}.")
+                .format(anchor_matched)
+            )
 
-                    # Search the anchor name itself, if requested
-                    if search_anchors:
-                        matches = search_matches(method, term, anchor_name)
-                        if ((matches and not invert)
-                                or (invert and not matches)):
-                            logger.debug(
-                                ("yaml_paths::search_for_paths<dict>:"
-                                 + "yielding VALUE-ANCHOR name match, {}:  {}"
-                                ).format(anchor_name, tmp_path)
-                            )
-                            yield YAMLPath(tmp_path)
-                            anchor_matched = True
+            if anchor_matched in [AnchorMatches.MATCH,
+                                  AnchorMatches.ALIAS_INCLUDED]:
+                # No other matches within this node matter because they are
+                # already in the result.
+                logger.debug(
+                    ("yaml_paths::search_for_paths<dict>:"
+                     + "yielding a VALUE-ANCHOR match and continuing, {}.")
+                    .format(tmp_path)
+                )
+                yield tmp_path
+                continue
 
-                if not anchor_matched:
-                    if isinstance(val, (CommentedSeq, CommentedMap)):
-                        logger.debug(
-                            "yaml_paths::search_for_paths<dict>:"
-                            + "recursing into complex data:"
-                        )
-                        logger.debug(val)
-                        logger.debug(">>>> >>>> >>>> >>>> >>>> >>>> >>>>")
-                        # When the value is a list/dict, recurse into it.
-                        for subpath in search_for_paths(
-                                logger, processor, val, terms, pathsep,
-                                tmp_path,
-                                seen_anchors, search_values=search_values,
-                                search_keys=search_keys,
-                                search_anchors=search_anchors,
-                                include_aliases=include_aliases,
-                                decrypt_eyaml=decrypt_eyaml
-                        ):
-                            logger.debug(
-                                ("yaml_paths::search_for_paths<dict>:"
-                                 + "yielding RECURSED match, {}"
-                                ).format(subpath)
-                            )
-                            logger.debug("<<<< <<<< <<<< <<<< <<<< <<<< <<<<")
-                            yield subpath
-                    else:
-                        check_value = val
-                        if decrypt_eyaml and processor.is_eyaml_value(val):
-                            check_value = processor.decrypt_eyaml(val)
+            if isinstance(val, (CommentedSeq, CommentedMap)):
+                logger.debug(
+                    "yaml_paths::search_for_paths<dict>:"
+                    + "recursing into complex data:"
+                )
+                logger.debug(val)
+                logger.debug(">>>> >>>> >>>> >>>> >>>> >>>> >>>>")
+                for subpath in search_for_paths(
+                        logger, processor, val, terms, pathsep, tmp_path,
+                        seen_anchors, search_values=search_values,
+                        search_keys=search_keys, search_anchors=search_anchors,
+                        include_aliases=include_aliases,
+                        decrypt_eyaml=decrypt_eyaml
+                ):
+                    logger.debug(
+                        ("yaml_paths::search_for_paths<dict>:"
+                         + "yielding RECURSED match, {}"
+                        ).format(subpath)
+                    )
+                    logger.debug("<<<< <<<< <<<< <<<< <<<< <<<< <<<<")
+                    yield subpath
+            elif search_values:
+                # FIXME:  Aliases aren't being excluded.  Ever.
+                if hasattr(val, "anchor"):
+                    logger.debug("Seeking '{}' in:".format(val.anchor.value))
+                    logger.debug(seen_anchors)
 
-                        matches = search_matches(method, term, check_value)
-                        if ((matches and not invert)
-                                or (invert and not matches)):
-                            logger.debug(
-                                ("yaml_paths::search_for_paths<dict>:"
-                                 + "yielding VALUE match, {}:  {}"
-                                ).format(check_value, tmp_path)
-                            )
-                            yield YAMLPath(tmp_path)
+                check_value = val
+                if decrypt_eyaml and processor.is_eyaml_value(val):
+                    check_value = processor.decrypt_eyaml(val)
+
+                matches = search_matches(method, term, check_value)
+                if (matches and not invert) or (invert and not matches):
+                    logger.debug(
+                        ("yaml_paths::search_for_paths<dict>:"
+                         + "yielding VALUE match, {}:  {}"
+                        ).format(check_value, tmp_path)
+                    )
+                    yield YAMLPath(tmp_path)
 
 def get_search_term(logger: ConsolePrinter,
                     expression: str) -> Optional[SearchTerms]:
