@@ -33,6 +33,7 @@ from yamlpath.enums import (
     YAMLValueFormats,
 )
 from yamlpath.wrappers import ConsolePrinter
+from yamlpath.types import PathAttributes
 from yamlpath.path import SearchTerms
 from yamlpath import YAMLPath
 
@@ -508,3 +509,16 @@ def escape_path_section(section: str, pathsep: PathSeperators) -> str:
         section,
         '\\', str(pathsep), '(', ')', '[', ']', '^', '$', '%', ' ', "'", '"'
     )
+
+def create_searchterms_from_pathattributes(
+        rhs: PathAttributes) -> SearchTerms:
+    """
+    Generates a new SearchTerms instance by copying SearchTerms
+    attributes from a YAML Path segment's attributes.
+    """
+    if isinstance(rhs, SearchTerms):
+        newinst: SearchTerms = SearchTerms(
+            rhs.inverted, rhs.method, rhs.attribute, rhs.term
+        )
+        return newinst
+    raise AttributeError
