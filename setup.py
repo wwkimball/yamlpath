@@ -13,6 +13,7 @@ setuptools.setup(
         "Development Status :: 4 - Beta",
         "License :: OSI Approved :: ISC License (ISCL)",
         "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3.7",
         "Operating System :: OS Independent",
         "Topic :: Software Development :: Libraries :: Python Modules",
     ],
