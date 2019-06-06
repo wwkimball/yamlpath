@@ -312,8 +312,8 @@ def search_for_paths(logger: ConsolePrinter, processor: EYAMLProcessor,
                                                include_aliases=include_aliases)
                 logger.debug(
                     ("yaml_paths::search_for_paths<dict>:"
-                     + "KEY anchor_matched => {}.")
-                    .format(anchor_matched)
+                     + "KEY anchor_matched, {}:  {}.")
+                    .format(key, anchor_matched)
                 )
 
                 if anchor_matched in [AnchorMatches.MATCH,
@@ -322,8 +322,8 @@ def search_for_paths(logger: ConsolePrinter, processor: EYAMLProcessor,
                     # already in the result.
                     logger.debug(
                         ("yaml_paths::search_for_paths<dict>:"
-                         + "yielding a KEY-ANCHOR match and continuing, {}.")
-                        .format(tmp_path)
+                         + "yielding a KEY-ANCHOR match and continuing, {}:  .")
+                        .format(key, tmp_path)
                     )
                     yield tmp_path
                     continue

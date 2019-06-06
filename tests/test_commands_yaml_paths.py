@@ -83,7 +83,9 @@ class Test_yaml_paths():
             self.command, "--pathsep=/", "--search", "^element", yaml_file
         )
         assert result.success, result.stderr
-        assert "/[0]\n" == result.stdout
+        assert "\n".join([
+            "/[0]",
+        ]) + "\n" == result.stdout
 
     def test_nonrepeating_value_anchored_array(self, script_runner, tmp_path_factory):
         content = """---
@@ -98,7 +100,9 @@ class Test_yaml_paths():
             self.command, "--pathsep=/", "--search", "^element", yaml_file
         )
         assert result.success, result.stderr
-        assert "/aliases[&anchor1]\n" == result.stdout
+        assert "\n".join([
+            "/aliases[&anchor1]",
+        ]) + "\n" == result.stdout
 
     def test_nonrepeating_anchor_name_in_array(self, script_runner, tmp_path_factory):
         content = """---
@@ -113,7 +117,9 @@ class Test_yaml_paths():
             self.command, "--pathsep=/", "--anchors", "--search", "^anchor", yaml_file
         )
         assert result.success, result.stderr
-        assert "/aliases[&anchor1]\n" == result.stdout
+        assert "\n".join([
+            "/aliases[&anchor1]"
+        ]) + "\n" == result.stdout
 
     def test_nonrepeating_subarray(self, script_runner, tmp_path_factory):
         content = """---
@@ -126,7 +132,9 @@ class Test_yaml_paths():
             self.command, "--pathsep=/", "--search", "=subvalue", yaml_file
         )
         assert result.success, result.stderr
-        assert "/array[0][0]\n" == result.stdout
+        assert "\n".join([
+            "/array[0][0]",
+        ]) + "\n" == result.stdout
 
     def test_simple_hash_result(self, script_runner, tmp_path_factory):
         content = """---
@@ -138,7 +146,25 @@ class Test_yaml_paths():
             self.command, "--pathsep=/", "--search", "=value", yaml_file
         )
         assert result.success, result.stderr
-        assert "/parent/child\n" == result.stdout
+        assert "\n".join([
+            "/parent/child",
+        ]) + "\n" == result.stdout
+
+    def test_ignore_aliases(self, script_runner, tmp_path_factory):
+        content = """---
+        aliases:
+          - &anchoredValue Anchored value
+        parent:
+          child: *anchoredValue
+        """
+        yaml_file = create_temp_yaml_file(tmp_path_factory, content)
+        result = script_runner.run(
+            self.command, "--pathsep=/", "--search", "$alue", yaml_file
+        )
+        assert result.success, result.stderr
+        assert "\n".join([
+            "/aliases[&anchoredValue]",
+        ]) + "\n" == result.stdout
 
     def test_hash_merge_anchor(self, script_runner, tmp_path_factory):
         content = """---
@@ -154,7 +180,9 @@ class Test_yaml_paths():
             "--search", "^anchored", yaml_file
         )
         assert result.success, result.stderr
-        assert "/anchored_hash\n" == result.stdout
+        assert "\n".join([
+            "/anchored_hash",
+        ]) + "\n" == result.stdout
 
     def test_anchored_hash_value(self, script_runner, tmp_path_factory):
         content = """---
@@ -168,7 +196,9 @@ class Test_yaml_paths():
             "--search", "^anchored", yaml_file
         )
         assert result.success, result.stderr
-        assert "/hash/key\n" == result.stdout
+        assert "\n".join([
+            "/hash/key",
+        ]) + "\n" == result.stdout
 
     def test_duplicate_hash_value_anchor(self, script_runner, tmp_path_factory):
         content = """---
@@ -185,7 +215,11 @@ class Test_yaml_paths():
             "--search", "^element", yaml_file
         )
         assert result.success, result.stderr
-        assert "/aliases[&anchor]\n/hash/child1\n/hash/subhash/subchild1\n" == result.stdout
+        assert "\n".join([
+            "/aliases[&anchor]",
+            "/hash/child1",
+            "/hash/subhash/subchild1",
+        ]) + "\n" == result.stdout
 
     def test_simple_hash_anchor(self, script_runner, tmp_path_factory):
         content = """---
@@ -204,8 +238,6 @@ class Test_yaml_paths():
             "/parent",
         ]) + "\n" == result.stdout
 
-    # FIXME: This should also work...
-    @pytest.mark.xfail
     def test_hash_anchored_key(self, script_runner, tmp_path_factory):
         content = """---
         anchorKeys:
@@ -227,7 +259,10 @@ class Test_yaml_paths():
             "--search", "=aliasOne", yaml_file
         )
         assert result.success, result.stderr
-        assert "/anchorKeys/aliasOne\n" == result.stdout
+        assert "\n".join([
+            "/anchorKeys/aliasOne",
+            "/hash/aliasOne",
+        ]) + "\n" == result.stdout
 
     def test_hash_nonduplicate_anchor_name_search(self, script_runner, tmp_path_factory):
         content = """---
@@ -250,7 +285,9 @@ class Test_yaml_paths():
             "--search", "=recursiveAnchorKey", yaml_file
         )
         assert result.success, result.stderr
-        assert "/anchorKeys/subjectKey\n" == result.stdout
+        assert "\n".join([
+            "/anchorKeys/subjectKey",
+        ]) + "\n" == result.stdout
 
     def test_hash_duplicate_anchor_name_search(self, script_runner, tmp_path_factory):
         content = """---
@@ -273,7 +310,10 @@ class Test_yaml_paths():
             "--duplicates", "--search", "=recursiveAnchorKey", yaml_file
         )
         assert result.success, result.stderr
-        assert "/anchorKeys/subjectKey\n/hash/subjectKey\n" == result.stdout
+        assert "\n".join([
+            "/anchorKeys/subjectKey",
+            "/hash/subjectKey",
+        ]) + "\n" == result.stdout
 
     def test_empty_search_expression(self, script_runner, tmp_path_factory):
         content = """---
