@@ -20,7 +20,7 @@ import yamlpath.patches
 from yamlpath.wrappers import ConsolePrinter
 
 # Implied Constants
-MY_VERSION = "1.0.2"
+MY_VERSION = "1.0.3"
 
 def processcli():
     """Process command-line arguments."""
