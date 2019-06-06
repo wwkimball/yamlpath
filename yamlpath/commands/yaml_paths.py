@@ -13,6 +13,7 @@ from typing import Any, Generator, List, Optional, Tuple
 from ruamel.yaml.comments import CommentedSeq, CommentedMap
 
 from yamlpath.func import (
+    create_searchterms_from_pathattributes,
     escape_path_section,
     get_yaml_data,
     get_yaml_editor,
@@ -427,7 +428,7 @@ def get_search_term(logger: ConsolePrinter,
         return None
 
     try:
-        exterm = SearchTerms.from_path_segment_attrs(
+        exterm = create_searchterms_from_pathattributes(
             YAMLPath("[*{}]".format(expression)).escaped[0][1]
         )
     except YAMLPathException as ex:

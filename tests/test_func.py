@@ -8,12 +8,15 @@ from ruamel.yaml.scalarbool import ScalarBoolean
 from ruamel.yaml.scalarfloat import ScalarFloat
 from ruamel.yaml.scalarint import ScalarInt
 
-from yamlpath.enums import YAMLValueFormats
+from yamlpath.enums import PathSearchMethods, YAMLValueFormats
+from yamlpath.types import PathAttributes
+from yamlpath.path import SearchTerms
 from yamlpath import YAMLPath
 from yamlpath.func import (
     append_list_element,
     build_next_node,
     clone_node,
+    create_searchterms_from_pathattributes,
     escape_path_section,
     get_yaml_data,
     get_yaml_editor,
@@ -138,3 +141,10 @@ class Test_func():
     def test_escape_path_section(self):
         from yamlpath.enums.pathseperators import PathSeperators
         assert r"a\\b\.c\(\)\[\]\^\$\%\ \'\"" == escape_path_section("a\\b.c()[]^$% '\"", PathSeperators.DOT)
+
+    def test_create_searchterms_from_pathattributes(self):
+        st = SearchTerms(False, PathSearchMethods.EQUALS, ".", "key")
+        assert str(st) == str(create_searchterms_from_pathattributes(st))
+
+        with pytest.raises(AttributeError):
+            _ = create_searchterms_from_pathattributes("nothing-to-see-here")
