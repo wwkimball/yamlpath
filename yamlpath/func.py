@@ -6,7 +6,7 @@ Copyright 2018, 2019 William W. Kimball, Jr. MBA MSIS
 import re
 from sys import maxsize
 from distutils.util import strtobool
-from typing import Any, List
+from typing import Any, List, Optional
 
 from ruamel.yaml import YAML
 from ruamel.yaml.parser import ParserError
@@ -351,7 +351,7 @@ def make_new_node(source_node: Any, value: Any,
 
     return new_node
 
-def get_node_anchor(node: Any) -> str:
+def get_node_anchor(node: Any) -> Optional[str]:
     """
     Returns a node's Anchor/Alias name or None wheh there isn't one.
     """
@@ -362,7 +362,7 @@ def get_node_anchor(node: Any) -> str:
             or not node.anchor.value
     ):
         return None
-    return node.anchor.value
+    return str(node.anchor.value)
 
 def search_matches(method: PathSearchMethods, needle: str,
                    haystack: Any) -> bool:

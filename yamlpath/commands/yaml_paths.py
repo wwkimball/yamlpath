@@ -8,7 +8,7 @@ Copyright 2019 William W. Kimball, Jr. MBA MSIS
 import argparse
 from os import access, R_OK
 from os.path import isfile
-from typing import Any, Generator, List, Optional
+from typing import Any, Generator, List, Optional, Tuple
 
 from ruamel.yaml.comments import CommentedSeq, CommentedMap
 
@@ -248,7 +248,7 @@ def search_for_paths(logger: ConsolePrinter, processor: EYAMLProcessor,
                      + "yielding an Anchor/Alias match and continuing, {}.")
                     .format(tmp_path)
                 )
-                yield tmp_path
+                yield YAMLPath(tmp_path)
                 continue
 
             if isinstance(ele, (CommentedSeq, CommentedMap)):
@@ -322,8 +322,8 @@ def search_for_paths(logger: ConsolePrinter, processor: EYAMLProcessor,
                     # already in the result.
                     logger.debug(
                         ("yaml_paths::search_for_paths<dict>:"
-                         + "yielding a KEY-ANCHOR match and continuing, {}:  .")
-                        .format(key, tmp_path)
+                         + "yielding a KEY-ANCHOR match and continuing, {}:  ."
+                        ).format(key, tmp_path)
                     )
                     yield tmp_path
                     continue
@@ -440,7 +440,7 @@ def get_search_term(logger: ConsolePrinter,
     return exterm
 
 def print_results(args: Any, yaml_file: str,
-                  yaml_paths: List[YAMLPath]) -> None:
+                  yaml_paths: List[Tuple[str, YAMLPath]]) -> None:
     """
     Dumps the search results to STDOUT with optional and dynamic formatting.
     """
@@ -485,6 +485,8 @@ def main():
 
     # Process the input file(s)
     exit_state = 0
+
+    # pylint: disable=too-many-nested-blocks
     for yaml_file in args.yaml_files:
         # Try to open the file
         yaml_data = get_yaml_data(yaml, log, yaml_file)
