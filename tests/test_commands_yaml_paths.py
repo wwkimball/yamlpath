@@ -575,3 +575,38 @@ class Test_yaml_paths():
         assert "\n".join([
             "/key",
         ]) + "\n" == result.stdout
+
+    def test_expand_parents(self, script_runner, tmp_path_factory):
+        content = """---
+        hash: &topHash
+          child: node
+          nested:
+            - e1
+            - e2
+
+        records:
+          - id: 1
+            <<: *topHash
+          - id: 2
+            <<: *topHash
+            child: override node
+        """
+        yaml_file = create_temp_yaml_file(tmp_path_factory, content)
+        result = script_runner.run(
+            self.command,
+            "--pathsep=/", "--pathonly",
+            "--expand", "--keynames", "--duplicates",
+            "--search", "=records",
+            yaml_file
+        )
+        assert result.success, result.stderr
+        assert "\n".join([
+            "/records[0]/id",
+            "/records[0]/child",
+            "/records[0]/nested[0]",
+            "/records[0]/nested[1]",
+            "/records[1]/id",
+            "/records[1]/child",
+            "/records[1]/nested[0]",
+            "/records[1]/nested[1]",
+        ]) + "\n" == result.stdout
