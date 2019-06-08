@@ -576,7 +576,7 @@ class Test_yaml_paths():
             "/key",
         ]) + "\n" == result.stdout
 
-    def test_expand_parents(self, script_runner, tmp_path_factory):
+    def test_expand_map_parents(self, script_runner, tmp_path_factory):
         content = """---
         hash: &topHash
           child: node
@@ -610,3 +610,105 @@ class Test_yaml_paths():
             "/records[1]/nested[0]",
             "/records[1]/nested[1]",
         ]) + "\n" == result.stdout
+
+    def test_expand_sequence_parents(self, script_runner, tmp_path_factory):
+        content = """---
+        - &list
+          -
+            -
+              - value
+        """
+        yaml_file = create_temp_yaml_file(tmp_path_factory, content)
+        result = script_runner.run(
+            self.command,
+            "--pathsep=/",
+            "--expand", "--anchors",
+            "--search", "=list",
+            yaml_file
+        )
+        assert result.success, result.stderr
+        assert "\n".join([
+            "/&list[0][0][0]",
+        ]) + "\n" == result.stdout
+
+    def test_yield_seq_children_direct(self, tmp_path_factory, quiet_logger):
+        from yamlpath.enums import PathSeperators, PathSearchMethods
+        from yamlpath.path import SearchTerms
+        from yamlpath.func import get_yaml_data, get_yaml_editor
+        from yamlpath.commands.yaml_paths import yield_children
+        from itertools import zip_longest
+
+        content = """---
+        - &value Test value
+        - value
+        - *value
+        """
+        processor = get_yaml_editor()
+        yaml_file = create_temp_yaml_file(tmp_path_factory, content)
+        yaml_data = get_yaml_data(processor, quiet_logger, yaml_file)
+        seen_anchors = []
+        assertions = ["/&value", "/[1]"]
+        results = []
+        for assertion, path in zip_longest(assertions, yield_children(
+            quiet_logger, yaml_data,
+            SearchTerms(False, PathSearchMethods.EQUALS, "*", "value"),
+            PathSeperators.FSLASH, "", seen_anchors, search_anchors=True,
+            include_aliases=False
+        )):
+            assert assertion == str(path)
+
+    @pytest.mark.parametrize("include_aliases,assertions", [
+        (False, ["/aliases[&aValue]", "/hash/key1", "/hash/key3"]),
+        (True, ["/aliases[&aValue]", "/hash/key1", "/hash/key2", "/hash/key3"]),
+    ])
+    def test_yield_map_children_direct(self, tmp_path_factory, quiet_logger, include_aliases, assertions):
+        from yamlpath.enums import PathSeperators, PathSearchMethods
+        from yamlpath.path import SearchTerms
+        from yamlpath.func import get_yaml_data, get_yaml_editor
+        from yamlpath.commands.yaml_paths import yield_children
+        from itertools import zip_longest
+
+        content = """---
+        aliases:
+          - &aValue val2
+
+        hash:
+          key1: val1
+          key2: *aValue
+          key3: val3
+        """
+        processor = get_yaml_editor()
+        yaml_file = create_temp_yaml_file(tmp_path_factory, content)
+        yaml_data = get_yaml_data(processor, quiet_logger, yaml_file)
+        seen_anchors = []
+        results = []
+        for assertion, path in zip_longest(assertions, yield_children(
+            quiet_logger, yaml_data,
+            SearchTerms(False, PathSearchMethods.EQUALS, "*", "anchor"),
+            PathSeperators.FSLASH, "", seen_anchors, search_anchors=True,
+            include_aliases=include_aliases
+        )):
+            assert assertion == str(path)
+
+    def test_yield_raw_children_direct(self, tmp_path_factory, quiet_logger):
+        from yamlpath.enums import PathSeperators, PathSearchMethods
+        from yamlpath.path import SearchTerms
+        from yamlpath.func import get_yaml_data, get_yaml_editor
+        from yamlpath.commands.yaml_paths import yield_children
+        from itertools import zip_longest
+
+        content = """some raw text value
+        """
+        processor = get_yaml_editor()
+        yaml_file = create_temp_yaml_file(tmp_path_factory, content)
+        yaml_data = get_yaml_data(processor, quiet_logger, yaml_file)
+        seen_anchors = []
+        assertions = ["/"]
+        results = []
+        for assertion, path in zip_longest(assertions, yield_children(
+            quiet_logger, yaml_data,
+            SearchTerms(False, PathSearchMethods.STARTS_WITH, "*", "some"),
+            PathSeperators.FSLASH, "", seen_anchors, search_anchors=False,
+            include_aliases=False
+        )):
+            assert assertion == str(path)
