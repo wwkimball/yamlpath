@@ -21,7 +21,12 @@ from yamlpath.func import (
     search_anchor,
 )
 from yamlpath.exceptions import YAMLPathException
-from yamlpath.enums import AnchorMatches, PathSeperators, PathSearchMethods
+from yamlpath.enums import (
+    AnchorMatches,
+    IncludeAliases,
+    PathSeperators,
+    PathSearchMethods
+)
 from yamlpath.path import SearchTerms
 from yamlpath import YAMLPath
 from yamlpath.wrappers import ConsolePrinter
@@ -81,7 +86,8 @@ def processcli():
     parser.add_argument(
         "-m", "--expand",
         action="store_true",
-        help="expand matching parent nodes to list all child leaf nodes")
+        help="expand matching parent nodes to list all permissible child leaf\
+              nodes (see \"Reference handling options\" for restrictions)")
 
     parser.add_argument(
         "-t", "--pathsep",
@@ -91,11 +97,6 @@ def processcli():
         type=PathSeperators.from_str,
         help="indicate which YAML Path seperator to use when rendering\
               results; default=dot")
-
-    parser.add_argument(
-        "-a", "--anchors",
-        action="store_true",
-        help="search anchor names")
 
     keyname_group_ex = parser.add_argument_group("Key name searching options")
     keyname_group = keyname_group_ex.add_mutually_exclusive_group()
@@ -108,28 +109,50 @@ def processcli():
         action="store_true",
         help="search key names in addition to values and array elements")
     keyname_group.add_argument(
-        "-n", "--onlykeynames",
+        "-K", "--onlykeynames",
         action="store_true",
         help="only search key names (ignore all values and array elements)")
 
+    parser.add_argument(
+        "-a", "--refnames",
+        action="store_true",
+        help="also search the names of &anchor and *alias references")
+
     dedup_group_ex = parser.add_argument_group(
-        "Duplicate alias options",
-        "An 'anchor' is an original, reusable key or value.  An 'alias' is a\
-         copy of an 'anchor'.  These options specify how to handle this\
-        duplication.")
+        "Reference handling options",
+        "Indicate how to treat anchor and alias references.  An anchor is an\
+         original, reusable key or value.  All aliases become replaced by the\
+         anchors they reference when YAML data is read.  These options specify\
+         how to handle this duplication of keys and values.  Note that the\
+         default behavior includes all aliased keys but not aliased values.")
     dedup_group = dedup_group_ex.add_mutually_exclusive_group()
     dedup_group.add_argument(
-        "-o", "--originals",
+        "-A", "--anchorsonly",
         action="store_const",
         dest="include_aliases",
-        const=False,
-        help="(default) include only the original anchor in matching results")
+        const=IncludeAliases.ANCHORS_ONLY,
+        help="include only original matching key and value anchors in results,\
+              discarding all aliased keys and values (including child nodes)")
     dedup_group.add_argument(
-        "-l", "--duplicates",
+        "-Y", "--withkeyaliases",
         action="store_const",
         dest="include_aliases",
-        const=True,
-        help="include anchor and duplicate aliases in results")
+        const=IncludeAliases.INCLUDE_KEY_ALIASES,
+        help="(default) include matching key aliases, permitting search\
+              traversal into their child nodes")
+    dedup_group.add_argument(
+        "-y", "--withvaluealiases",
+        action="store_const",
+        dest="include_aliases",
+        const=IncludeAliases.INCLUDE_VALUE_ALIASES,
+        help="include matching value aliases (does not permit search traversal\
+              into aliased keys)")
+    dedup_group.add_argument(
+        "-l", "--withaliases",
+        action="store_const",
+        dest="include_aliases",
+        const=IncludeAliases.INCLUDE_ALL_ALIASES,
+        help="include all matching key and value aliases")
 
     eyaml_group = parser.add_argument_group(
         "EYAML options", "Left unset, the EYAML keys will default to your\
@@ -150,6 +173,8 @@ def processcli():
 
     parser.add_argument("yaml_files", metavar="YAML_FILE", nargs="+",
                         help="one or more YAML files to search")
+
+    parser.set_defaults(include_aliases = IncludeAliases.INCLUDE_KEY_ALIASES)
 
     return parser.parse_args()
 
@@ -189,7 +214,7 @@ def validateargs(args, log):
     if has_errors:
         exit(1)
 
-# pylint: disable=locally-disabled,too-many-branches
+# pylint: disable=locally-disabled,too-many-arguments,too-many-locals,too-many-branches
 def yield_children(logger: ConsolePrinter, data: Any,
                    terms: SearchTerms, pathsep: PathSeperators,
                    build_path: str, seen_anchors: List[str],
@@ -198,12 +223,17 @@ def yield_children(logger: ConsolePrinter, data: Any,
     Except for unwanted aliases, unconditionally dump the YAML Path of every
     child node beneath a given parent node, if there are any.
     """
-    include_aliases: bool = kwargs.pop("include_aliases", False)
+    include_key_aliases: bool = kwargs.pop("include_key_aliases", True)
+    include_value_aliases: bool = kwargs.pop("include_value_aliases", False)
     search_anchors: bool = kwargs.pop("search_anchors", False)
     logger.debug(
-        "yaml_paths::yield_children<list>:  "
-        + "dumping all children in:")
+        ("yaml_paths::yield_children:  "
+         + "dumping all children in data of type, {}:")
+        .format(type(data)))
     logger.debug(data)
+
+    exclude_alias_matchers = [AnchorMatches.UNSEARCHABLE_ALIAS,
+                              AnchorMatches.ALIAS_EXCLUDED]
 
     if isinstance(data, CommentedSeq):
         if not build_path and pathsep is PathSeperators.FSLASH:
@@ -211,9 +241,9 @@ def yield_children(logger: ConsolePrinter, data: Any,
         build_path += "["
 
         for idx, ele in enumerate(data):
-            anchor_matched = search_anchor(ele, terms, seen_anchors,
-                                           search_anchors=search_anchors,
-                                           include_aliases=include_aliases)
+            anchor_matched = search_anchor(
+                ele, terms, seen_anchors, search_anchors=search_anchors,
+                include_aliases=include_value_aliases)
             logger.debug(
                 ("yaml_paths::yield_children<list>:  "
                  + "element[{}] has anchor search => {}.")
@@ -229,16 +259,16 @@ def yield_children(logger: ConsolePrinter, data: Any,
                     escape_path_section(ele.anchor.value, pathsep)
                 )
 
-            if not include_aliases and anchor_matched in [
-                    AnchorMatches.UNSEARCHABLE_ALIAS,
-                    AnchorMatches.ALIAS_EXCLUDED]:
+            if (not include_value_aliases
+                    and anchor_matched in exclude_alias_matchers):
                 continue
 
             if isinstance(ele, (CommentedMap, CommentedSeq)):
-                for path in yield_children(logger, ele, terms, pathsep,
-                                           tmp_path, seen_anchors,
-                                           search_anchors=search_anchors,
-                                           include_aliases=include_aliases):
+                for path in yield_children(
+                        logger, ele, terms, pathsep, tmp_path, seen_anchors,
+                        search_anchors=search_anchors,
+                        include_key_aliases=include_key_aliases,
+                        include_value_aliases=include_value_aliases):
                     yield path
             else:
                 yield YAMLPath(tmp_path)
@@ -250,30 +280,37 @@ def yield_children(logger: ConsolePrinter, data: Any,
             build_path = str(pathsep)
 
         pool = data.non_merged_items()
-        if include_aliases:
+        if include_key_aliases or include_value_aliases:
             pool = data.items()
 
         for key, val in pool:
             tmp_path = build_path + escape_path_section(key, pathsep)
 
-            anchor_matched = search_anchor(val, terms, seen_anchors,
-                                           search_anchors=search_anchors,
-                                           include_aliases=include_aliases)
+            key_anchor_matched = search_anchor(
+                key, terms, seen_anchors, search_anchors=search_anchors,
+                include_aliases=include_key_aliases)
+            val_anchor_matched = search_anchor(
+                val, terms, seen_anchors, search_anchors=search_anchors,
+                include_aliases=include_value_aliases)
             logger.debug(
                 ("yaml_paths::yield_children<dict>:  "
-                 + "key[{}] has value anchor search => {}.")
-                .format(key, anchor_matched))
+                 + "key[{}]:value have value anchor search => {}:{}.")
+                .format(key, key_anchor_matched, val_anchor_matched))
 
-            if not include_aliases and anchor_matched in [
-                    AnchorMatches.UNSEARCHABLE_ALIAS,
-                    AnchorMatches.ALIAS_EXCLUDED]:
+            if (
+                    (not include_key_aliases
+                     and key_anchor_matched in exclude_alias_matchers)
+                    or (not include_value_aliases
+                        and val_anchor_matched in exclude_alias_matchers)
+            ):
                 continue
 
             if isinstance(val, (CommentedSeq, CommentedMap)):
-                for path in yield_children(logger, val, terms, pathsep,
-                                           tmp_path, seen_anchors,
-                                           search_anchors=search_anchors,
-                                           include_aliases=include_aliases):
+                for path in yield_children(
+                        logger, val, terms, pathsep, tmp_path, seen_anchors,
+                        search_anchors=search_anchors,
+                        include_key_aliases=include_key_aliases,
+                        include_value_aliases=include_value_aliases):
                     yield path
             else:
                 yield YAMLPath(tmp_path)
@@ -299,7 +336,8 @@ def search_for_paths(logger: ConsolePrinter, processor: EYAMLProcessor,
     search_values: bool = kwargs.pop("search_values", True)
     search_keys: bool = kwargs.pop("search_keys", False)
     search_anchors: bool = kwargs.pop("search_anchors", False)
-    include_aliases: bool = kwargs.pop("include_aliases", False)
+    include_key_aliases: bool = kwargs.pop("include_key_aliases", True)
+    include_value_aliases: bool = kwargs.pop("include_value_aliases", False)
     decrypt_eyaml: bool = kwargs.pop("decrypt_eyaml", False)
     expand_children: bool = kwargs.pop("expand_children", False)
     strsep = str(pathsep)
@@ -318,9 +356,9 @@ def search_for_paths(logger: ConsolePrinter, processor: EYAMLProcessor,
 
         for idx, ele in enumerate(data):
             # Any element may or may not have an Anchor/Alias
-            anchor_matched = search_anchor(ele, terms, seen_anchors,
-                                           search_anchors=search_anchors,
-                                           include_aliases=include_aliases)
+            anchor_matched = search_anchor(
+                ele, terms, seen_anchors, search_anchors=search_anchors,
+                include_aliases=include_value_aliases)
             logger.debug(
                 ("yaml_paths::search_for_paths<list>:"
                  + "anchor search => {}.")
@@ -351,11 +389,12 @@ def search_for_paths(logger: ConsolePrinter, processor: EYAMLProcessor,
                     for path in yield_children(
                             logger, ele, terms, pathsep, tmp_path,
                             seen_anchors, search_anchors=search_anchors,
-                            include_aliases=include_aliases):
+                            include_key_aliases=include_key_aliases,
+                            include_value_aliases=include_value_aliases):
                         yield path
                 else:
                     yield YAMLPath(tmp_path)
-                    continue
+                continue
 
             if isinstance(ele, (CommentedSeq, CommentedMap)):
                 logger.debug(
@@ -368,7 +407,8 @@ def search_for_paths(logger: ConsolePrinter, processor: EYAMLProcessor,
                         logger, processor, ele, terms, pathsep, tmp_path,
                         seen_anchors, search_values=search_values,
                         search_keys=search_keys, search_anchors=search_anchors,
-                        include_aliases=include_aliases,
+                        include_key_aliases=include_key_aliases,
+                        include_value_aliases=include_value_aliases,
                         decrypt_eyaml=decrypt_eyaml,
                         expand_children=expand_children
                 ):
@@ -381,7 +421,7 @@ def search_for_paths(logger: ConsolePrinter, processor: EYAMLProcessor,
                     yield subpath
             elif search_values:
                 if (anchor_matched is AnchorMatches.UNSEARCHABLE_ALIAS
-                        and not include_aliases):
+                        and not include_value_aliases):
                     continue
 
                 check_value = ele
@@ -405,7 +445,7 @@ def search_for_paths(logger: ConsolePrinter, processor: EYAMLProcessor,
             build_path = strsep
 
         pool = data.non_merged_items()
-        if include_aliases:
+        if include_key_aliases or include_value_aliases:
             pool = data.items()
 
         for key, val in pool:
@@ -415,9 +455,9 @@ def search_for_paths(logger: ConsolePrinter, processor: EYAMLProcessor,
             if search_keys:
                 # The key itself may be an Anchor or Alias.  Search it when the
                 # caller wishes.
-                anchor_matched = search_anchor(key, terms, seen_anchors,
-                                               search_anchors=search_anchors,
-                                               include_aliases=include_aliases)
+                anchor_matched = search_anchor(
+                    key, terms, seen_anchors, search_anchors=search_anchors,
+                    include_aliases=include_key_aliases)
                 logger.debug(
                     ("yaml_paths::search_for_paths<dict>:"
                      + "KEY anchor search, {}:  {}.")
@@ -435,36 +475,40 @@ def search_for_paths(logger: ConsolePrinter, processor: EYAMLProcessor,
                         for path in yield_children(
                                 logger, val, terms, pathsep, tmp_path,
                                 seen_anchors, search_anchors=search_anchors,
-                                include_aliases=include_aliases):
+                                include_key_aliases=include_key_aliases,
+                                include_value_aliases=include_value_aliases):
                             yield path
                     else:
                         yield YAMLPath(tmp_path)
-                        continue
+                    continue
 
                 # Search the name of the key, itself
                 matches = search_matches(method, term, key)
                 if (matches and not invert) or (invert and not matches):
-                    # No other matches within this node matter because they are
-                    # already in the result.
                     logger.debug(
                         ("yaml_paths::search_for_paths<dict>:"
                          + "yielding KEY name match, {}:  {}."
                         ).format(key, tmp_path)
                     )
                     if expand_children:
+                        # Include every non-excluded child node under this
+                        # matched parent node.
                         for path in yield_children(
                                 logger, val, terms, pathsep, tmp_path,
                                 seen_anchors, search_anchors=search_anchors,
-                                include_aliases=include_aliases):
+                                include_key_aliases=include_key_aliases,
+                                include_value_aliases=include_value_aliases):
                             yield path
                     else:
+                        # No other matches within this node matter because they
+                        # are already in the result.
                         yield YAMLPath(tmp_path)
-                        continue
+                    continue
 
             # The value may itself be anchored; search it if requested
-            anchor_matched = search_anchor(val, terms, seen_anchors,
-                                           search_anchors=search_anchors,
-                                           include_aliases=include_aliases)
+            anchor_matched = search_anchor(
+                val, terms, seen_anchors, search_anchors=search_anchors,
+                include_aliases=include_value_aliases)
             logger.debug(
                 ("yaml_paths::search_for_paths<dict>:"
                  + "VALUE anchor search => {}.")
@@ -485,7 +529,8 @@ def search_for_paths(logger: ConsolePrinter, processor: EYAMLProcessor,
                     for path in yield_children(
                             logger, val, terms, pathsep, tmp_path,
                             seen_anchors, search_anchors=search_anchors,
-                            include_aliases=include_aliases):
+                            include_key_aliases=include_key_aliases,
+                            include_value_aliases=include_value_aliases):
                         yield path
                 else:
                     yield tmp_path
@@ -502,7 +547,8 @@ def search_for_paths(logger: ConsolePrinter, processor: EYAMLProcessor,
                         logger, processor, val, terms, pathsep, tmp_path,
                         seen_anchors, search_values=search_values,
                         search_keys=search_keys, search_anchors=search_anchors,
-                        include_aliases=include_aliases,
+                        include_key_aliases=include_key_aliases,
+                        include_value_aliases=include_value_aliases,
                         decrypt_eyaml=decrypt_eyaml,
                         expand_children=expand_children
                 ):
@@ -515,7 +561,7 @@ def search_for_paths(logger: ConsolePrinter, processor: EYAMLProcessor,
                     yield subpath
             elif search_values:
                 if (anchor_matched is AnchorMatches.UNSEARCHABLE_ALIAS
-                        and not include_aliases):
+                        and not include_value_aliases):
                     continue
 
                 check_value = val
@@ -600,11 +646,22 @@ def main():
     validateargs(args, log)
     search_values = True
     search_keys = False
+    include_key_aliases = False
+    include_value_aliases = False
+
     if args.onlykeynames:
         search_values = False
         search_keys = True
     elif args.keynames:
         search_keys = True
+
+    if args.include_aliases is IncludeAliases.INCLUDE_ALL_ALIASES:
+        include_key_aliases = True
+        include_value_aliases = True
+    elif args.include_aliases is IncludeAliases.INCLUDE_KEY_ALIASES:
+        include_key_aliases = True
+    elif args.include_aliases is IncludeAliases.INCLUDE_VALUE_ALIASES:
+        include_value_aliases = True
 
     # Prepare the YAML processor
     yaml = get_yaml_editor()
@@ -639,8 +696,9 @@ def main():
             for result in search_for_paths(
                     log, processor, yaml_data, exterm, args.pathsep,
                     search_values=search_values, search_keys=search_keys,
-                    search_anchors=args.anchors,
-                    include_aliases=args.include_aliases,
+                    search_anchors=args.refnames,
+                    include_key_aliases=include_key_aliases,
+                    include_value_aliases=include_value_aliases,
                     decrypt_eyaml=args.decrypt, expand_children=args.expand):
                 # Record only unique results
                 add_entry = True
@@ -668,8 +726,9 @@ def main():
                 for result in search_for_paths(
                         log, processor, yaml_data, exterm, args.pathsep,
                         search_values=search_values, search_keys=search_keys,
-                        search_anchors=args.anchors,
-                        include_aliases=args.include_aliases,
+                        search_anchors=args.refnames,
+                        include_key_aliases=include_key_aliases,
+                        include_value_aliases=include_value_aliases,
                         decrypt_eyaml=args.decrypt,
                         expand_children=args.expand):
                     for entry in yaml_paths:

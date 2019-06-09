@@ -114,7 +114,10 @@ class Test_yaml_paths():
         """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
         result = script_runner.run(
-            self.command, "--pathsep=/", "--anchors", "--search", "^anchor", yaml_file
+            self.command,
+            "--pathsep=/", "--refnames",
+            "--search", "^anchor",
+            yaml_file
         )
         assert result.success, result.stderr
         assert "\n".join([
@@ -176,7 +179,7 @@ class Test_yaml_paths():
         """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
         result = script_runner.run(
-            self.command, "--pathsep=/", "--keynames", "--anchors",
+            self.command, "--pathsep=/", "--keynames", "--refnames",
             "--search", "^anchored", yaml_file
         )
         assert result.success, result.stderr
@@ -192,7 +195,7 @@ class Test_yaml_paths():
         """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
         result = script_runner.run(
-            self.command, "--pathsep=/", "--anchors",
+            self.command, "--pathsep=/", "--refnames",
             "--search", "^anchored", yaml_file
         )
         assert result.success, result.stderr
@@ -211,7 +214,7 @@ class Test_yaml_paths():
         """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
         result = script_runner.run(
-            self.command, "--pathsep=/", "--duplicates",
+            self.command, "--pathsep=/", "--withaliases",
             "--search", "^element", yaml_file
         )
         assert result.success, result.stderr
@@ -229,7 +232,7 @@ class Test_yaml_paths():
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
         result = script_runner.run(
             self.command,
-            "--pathsep=/", "--anchors", "--keynames",
+            "--pathsep=/", "--refnames", "--keynames",
             "--search", "=anchored",
             yaml_file
         )
@@ -281,7 +284,7 @@ class Test_yaml_paths():
         """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
         result = script_runner.run(
-            self.command, "--pathsep=/", "--anchors", "--keynames",
+            self.command, "--pathsep=/", "--refnames", "--keynames",
             "--search", "=recursiveAnchorKey", yaml_file
         )
         assert result.success, result.stderr
@@ -306,8 +309,8 @@ class Test_yaml_paths():
         """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
         result = script_runner.run(
-            self.command, "--pathsep=/", "--anchors", "--keynames",
-            "--duplicates", "--search", "=recursiveAnchorKey", yaml_file
+            self.command, "--pathsep=/", "--refnames", "--keynames",
+            "--withaliases", "--search", "=recursiveAnchorKey", yaml_file
         )
         assert result.success, result.stderr
         assert "\n".join([
@@ -595,7 +598,7 @@ class Test_yaml_paths():
         result = script_runner.run(
             self.command,
             "--pathsep=/", "--pathonly",
-            "--expand", "--keynames", "--duplicates",
+            "--expand", "--keynames", "--withaliases",
             "--search", "=records",
             yaml_file
         )
@@ -611,6 +614,48 @@ class Test_yaml_paths():
             "/records[1]/nested[1]",
         ]) + "\n" == result.stdout
 
+    @pytest.mark.parametrize("include_aliases,assertions", [
+        (False, []),
+        (True, []),
+    ])
+    def test_expand_aliased_keys(self, script_runner, tmp_path_factory, include_aliases, assertions):
+        content = """---
+        aliases:
+          - &customer1 someCustomerName: Some Customer Name
+          - &customer2 anotherCustomerName: Another Customer Name
+
+        settings: &allSettings
+          defaults:
+            setting: default
+          *customer1 :
+            setting: one
+          *customer2 :
+            setting: another
+
+        accounts: &allAccounts
+          defaults:
+            globaladmin: user0
+          *customer1 :
+            admin: user1
+          *customer2 :
+            admin: user2
+
+        config:
+          <<: *allSettings
+          <<: *allAccounts
+        """
+        yaml_file = create_temp_yaml_file(tmp_path_factory, content)
+        result = script_runner.run(
+            self.command,
+            "--pathsep=/", "--pathonly",
+            "--expand", "--keynames",
+            "--withaliases" if include_aliases else "",
+            "--search", "=settings",
+            yaml_file
+        )
+        assert result.success, result.stderr
+        assert "\n".join(assertions) + "\n" == result.stdout
+
     def test_expand_sequence_parents(self, script_runner, tmp_path_factory):
         content = """---
         - &list
@@ -622,7 +667,7 @@ class Test_yaml_paths():
         result = script_runner.run(
             self.command,
             "--pathsep=/",
-            "--expand", "--anchors",
+            "--expand", "--refnames",
             "--search", "=list",
             yaml_file
         )
