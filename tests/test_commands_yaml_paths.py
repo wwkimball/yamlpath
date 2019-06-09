@@ -214,7 +214,7 @@ class Test_yaml_paths():
         """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
         result = script_runner.run(
-            self.command, "--pathsep=/", "--withaliases",
+            self.command, "--pathsep=/", "--allowaliases",
             "--search", "^element", yaml_file
         )
         assert result.success, result.stderr
@@ -284,7 +284,9 @@ class Test_yaml_paths():
         """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
         result = script_runner.run(
-            self.command, "--pathsep=/", "--refnames", "--keynames",
+            self.command, "--pathsep=/",
+            "--refnames", "--keynames",
+            "--anchorsonly",
             "--search", "=recursiveAnchorKey", yaml_file
         )
         assert result.success, result.stderr
@@ -310,7 +312,7 @@ class Test_yaml_paths():
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
         result = script_runner.run(
             self.command, "--pathsep=/", "--refnames", "--keynames",
-            "--withaliases", "--search", "=recursiveAnchorKey", yaml_file
+            "--allowaliases", "--search", "=recursiveAnchorKey", yaml_file
         )
         assert result.success, result.stderr
         assert "\n".join([
@@ -581,80 +583,203 @@ class Test_yaml_paths():
 
     def test_expand_map_parents(self, script_runner, tmp_path_factory):
         content = """---
-        hash: &topHash
-          child: node
-          nested:
-            - e1
-            - e2
-
-        records:
-          - id: 1
-            <<: *topHash
-          - id: 2
-            <<: *topHash
-            child: override node
+        parent1:
+          child1.1: value1.1
+          child1.2: value1.2
+        parent2:
+          child2.1:
+            child2.1.1:
+              child2.1.1.1: value2.1.1.1
         """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
         result = script_runner.run(
             self.command,
-            "--pathsep=/", "--pathonly",
-            "--expand", "--keynames", "--withaliases",
-            "--search", "=records",
+            "--pathsep=/",
+            "--expand", "--keynames",
+            "--search", "^parent",
             yaml_file
         )
         assert result.success, result.stderr
         assert "\n".join([
-            "/records[0]/id",
-            "/records[0]/child",
-            "/records[0]/nested[0]",
-            "/records[0]/nested[1]",
-            "/records[1]/id",
-            "/records[1]/child",
-            "/records[1]/nested[0]",
-            "/records[1]/nested[1]",
+            "/parent1/child1.1",
+            "/parent1/child1.2",
+            "/parent2/child2.1/child2.1.1/child2.1.1.1",
         ]) + "\n" == result.stdout
 
-    @pytest.mark.parametrize("include_aliases,assertions", [
-        (False, []),
-        (True, []),
+    @pytest.mark.parametrize("aliasmode,assertions", [
+        ("--anchorsonly", [
+            "/config/settings/overrides/static",
+            "/config/accounts/overrides/root/name",
+            "/config/accounts/overrides/root/pass",
+            "/config/global/overrides/environment/PATH",
+        ]),
+        ("--allowvaluealiases", [
+            "/config/settings/overrides/static",
+            "/config/settings/overrides/default_pass",
+            "/config/accounts/overrides/root/name",
+            "/config/accounts/overrides/root/pass",
+            "/config/accounts/defaults/globaladmin/name",
+            "/config/accounts/defaults/globaladmin/pass",
+            "/config/global/overrides/environment/PATH",
+        ]),
+        ("--allowkeyaliases", [
+            "/config/settings/overrides/setting",
+            "/config/settings/overrides/static",
+            "/config/settings/defaults/setting",
+            "/config/settings/someCustomerName/setting",
+            "/config/settings/anotherCustomerName/setting",
+            "/config/accounts/overrides/root/name",
+            "/config/accounts/overrides/root/pass",
+            "/config/accounts/defaults/globaladmin/name",
+            "/config/accounts/defaults/globaladmin/pass",
+            "/config/accounts/someCustomerName/admin/name",
+            "/config/accounts/anotherCustomerName/admin/name",
+            "/config/global/setting",
+            "/config/global/overrides/environment/PATH",
+        ]),
+        ("--allowaliases", [
+            "/config/settings/overrides/setting",
+            "/config/settings/overrides/static",
+            "/config/settings/overrides/default_pass",
+            "/config/settings/defaults/setting",
+            "/config/settings/someCustomerName/setting",
+            "/config/settings/anotherCustomerName/setting",
+            "/config/accounts/overrides/root/name",
+            "/config/accounts/overrides/root/pass",
+            "/config/accounts/defaults/globaladmin/name",
+            "/config/accounts/defaults/globaladmin/pass",
+            "/config/accounts/someCustomerName/admin/name",
+            "/config/accounts/someCustomerName/admin/pass",
+            "/config/accounts/anotherCustomerName/admin/name",
+            "/config/accounts/anotherCustomerName/admin/pass",
+            "/config/global/setting",
+            "/config/global/overrides/environment/PATH",
+        ]),
     ])
-    def test_expand_aliased_keys(self, script_runner, tmp_path_factory, include_aliases, assertions):
+    def test_expanded_keymatch_aliases(self, script_runner, tmp_path_factory, aliasmode, assertions):
         content = """---
         aliases:
+          # Keys:
           - &customer1 someCustomerName: Some Customer Name
           - &customer2 anotherCustomerName: Another Customer Name
+          - &settingName setting
+
+          # Values:
+          - &defaultPassphrase CHANGE ME!
 
         settings: &allSettings
           defaults:
-            setting: default
+            *settingName : default
           *customer1 :
-            setting: one
+            *settingName : one
           *customer2 :
-            setting: another
+            *settingName : another
 
         accounts: &allAccounts
           defaults:
-            globaladmin: user0
+            globaladmin:
+              name: user0
+              pass: >
+                ENC[PKCS7,MIIBiQYJKoZIhvcNAQcDoIIBejCCAXYCAQAxggEhMIIBHQIBADAFMAACAQEw
+                DQYJKoZIhvcNAQEBBQAEggEAfyvl69TDxQgS4Gon3gw57W8McgYGFsbh+N2e
+                EHdoOG5nR1NpKdL1px+csX6qbKgeolCBsQUADPn6x3aiyjIK754MSASthWmu
+                glJzJlGvDeRRoXj8leuGPYAsEH59zmFe6rjVZOq57XP45zpq9/ggcvivzrFP
+                9zBcIq/3ITnoMLhjpMkENcn1qbYeLXTJXbLhd5WXK47epngtY2Od89TkkquU
+                is464XYQ4kv0JRm1K01DdLcKeIpuOXhDAQJ7f/Tmbn1dUYtNzJKBSsNW1fW1
+                2Taf6IcCcrGkqcYmw61z/wbTcCVJj/ihBjgaPzhz16WEOHz/qZ666eVfo8tg
+                bI54MTBMBgkqhkiG9w0BBwEwHQYJYIZIAWUDBAEqBBCeVE0neevYnLy9UMgl
+                f0YugCDjDxDCkIrSpQWCcUA5RHZyOngXMrbOJqlw92d21WDZXg==]
           *customer1 :
-            admin: user1
+            admin:
+              name: user1
+              pass: *defaultPassphrase
           *customer2 :
-            admin: user2
+            admin:
+              name: user2
+              pass: *defaultPassphrase
 
         config:
-          <<: *allSettings
-          <<: *allAccounts
+          settings:
+            <<: *allSettings
+            overrides:
+              *settingName : absolute
+              static: value
+              default_pass: *defaultPassphrase
+          accounts:
+            <<: *allAccounts
+            overrides:
+              root:
+                name: root
+                pass: >
+                  ENC[PKCS7,MIIBmQYJKoZIhvcNAQcDoIIBijCCAYYCAQAxggEhMIIBHQIBADAFMAACAQEw
+                  DQYJKoZIhvcNAQEBBQAEggEAhxT9HVAYbxtCDFj9kOKqnHXvZUUL0m43c86B
+                  KTkIWwhaRtdy5lTHYqTuDxs1TV+3N+0FILhu9+EkAu+af8lbPP6dDrxk5rqw
+                  6GsuoO3/4hU5JiqBHoJ/0V4cSL3wkBBtcoLgh+5nu/mFfPkbU1QCgKFTIHgc
+                  fy4izEN8jQi+mf3kThCHyN6sezbzlSfbj4qjnNbnXTFBpRrbuZUGRkaO0tRd
+                  pwuZIdtOA0l5jz+iFGXCJYy+WY6ipGSOV7ecbfMUrZdq0wM69oZuAda6RXoP
+                  S8JdOCrspCkkkRMO8gijUH38ONlY8aK9EdIN0OJlAqw2MZoVPrd1yx2OloP2
+                  NY3tZjBcBgkqhkiG9w0BBwEwHQYJYIZIAWUDBAEqBBBcACTjY0bIdZxtSdZj
+                  v74ngDDa4+WAkqQjW9UuRmz60HvLdkr6QLUkGR0FIzXYfPNLMGvyJjcjqdba
+                  kfk8ED1ScmA=]
+          global:
+            *settingName : everywhere
+            overrides:
+              environment:
+                PATH: /usr/local/sbin:/usr/sbin:/sbin:/usr/local/bin:/usr/bin:/bin
         """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
         result = script_runner.run(
             self.command,
-            "--pathsep=/", "--pathonly",
+            "--pathsep=/",
             "--expand", "--keynames",
-            "--withaliases" if include_aliases else "",
-            "--search", "=settings",
+            aliasmode,
+            "--search", "=config",
             yaml_file
         )
         assert result.success, result.stderr
         assert "\n".join(assertions) + "\n" == result.stdout
+
+    def test_expanded_key_refmatches(self, script_runner, tmp_path_factory):
+        content = """---
+        anchors:
+            &keyAnchor key: &valueAnchor value
+        *keyAnchor :
+          ignoreChild: *valueAnchor
+          includeChild: static
+        """
+        yaml_file = create_temp_yaml_file(tmp_path_factory, content)
+        result = script_runner.run(
+            self.command,
+            "--pathsep=/",
+            "--expand", "--keynames",
+            "--refnames", "--allowkeyaliases",
+            "--search", "=keyAnchor",
+            yaml_file
+        )
+        assert result.success, result.stderr
+        assert "\n".join([
+            "/anchors/key",
+            "/key/includeChild",
+        ]) + "\n" == result.stdout
+
+    def test_expanded_value_refmatches(self, script_runner, tmp_path_factory):
+        content = """---
+        copy: &thisHash
+          key: value
+        """
+        yaml_file = create_temp_yaml_file(tmp_path_factory, content)
+        result = script_runner.run(
+            self.command,
+            "--pathsep=/",
+            "--expand",
+            "--refnames",
+            "--search", "=thisHash",
+            yaml_file
+        )
+        assert result.success, result.stderr
+        assert "\n".join([
+            "/copy/key",
+        ]) + "\n" == result.stdout
 
     def test_expand_sequence_parents(self, script_runner, tmp_path_factory):
         content = """---
@@ -731,7 +856,7 @@ class Test_yaml_paths():
             quiet_logger, yaml_data,
             SearchTerms(False, PathSearchMethods.EQUALS, "*", "anchor"),
             PathSeperators.FSLASH, "", seen_anchors, search_anchors=True,
-            include_aliases=include_aliases
+            include_value_aliases=include_aliases
         )):
             assert assertion == str(path)
 
@@ -754,6 +879,6 @@ class Test_yaml_paths():
             quiet_logger, yaml_data,
             SearchTerms(False, PathSearchMethods.STARTS_WITH, "*", "some"),
             PathSeperators.FSLASH, "", seen_anchors, search_anchors=False,
-            include_aliases=False
+            include_key_aliases=False, include_value_aliases=False
         )):
             assert assertion == str(path)
