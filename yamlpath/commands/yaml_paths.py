@@ -79,15 +79,27 @@ def processcli():
         help="suppress all non-result output except errors")
 
     parser.add_argument(
-        "-p", "--pathonly",
-        action="store_true",
-        help="print results without any search expression decorators")
-
-    parser.add_argument(
         "-m", "--expand",
         action="store_true",
         help="expand matching parent nodes to list all permissible child leaf\
-              nodes (see \"Reference handling options\" for restrictions)")
+              nodes (see \"reference handling options\" for restrictions)")
+
+    valdump_group = parser.add_argument_group("result printing options")
+    valdump_group.add_argument(
+        "-L", "--values",
+        action="store_true",
+        help="print the values or elements along with each YAML Path (complex\
+            results are emitted as JSON)")
+    valdump_group.add_argument(
+        "-p", "--noexpression",
+        action="store_true",
+        help="omit search expression decorators from the output")
+    valdump_group.add_argument(
+        "-U", "--nopath",
+        action="store_true",
+        help="omit YAML Paths from the output (useful with --values or to\
+            indicate whether a file has any matches without printing them\
+            all, perhaps especially with --noexpression)")
 
     parser.add_argument(
         "-t", "--pathsep",
@@ -98,7 +110,7 @@ def processcli():
         help="indicate which YAML Path seperator to use when rendering\
               results; default=dot")
 
-    keyname_group_ex = parser.add_argument_group("Key name searching options")
+    keyname_group_ex = parser.add_argument_group("key name searching options")
     keyname_group = keyname_group_ex.add_mutually_exclusive_group()
     keyname_group.add_argument(
         "-i", "--ignorekeynames",
@@ -119,7 +131,7 @@ def processcli():
         help="also search the names of &anchor and *alias references")
 
     dedup_group_ex = parser.add_argument_group(
-        "Reference handling options",
+        "reference handling options",
         "Indicate how to treat anchor and alias references.  An anchor is an\
          original, reusable key or value.  All aliases become replaced by the\
          anchors they reference when YAML data is read.  These options specify\
