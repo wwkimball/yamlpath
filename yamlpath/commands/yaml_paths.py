@@ -6,6 +6,7 @@ employed to search encrypted values.
 Copyright 2019 William W. Kimball, Jr. MBA MSIS
 """
 import argparse
+import json
 from os import access, R_OK
 from os.path import isfile
 from typing import Any, Generator, List, Optional, Tuple
@@ -79,15 +80,33 @@ def processcli():
         help="suppress all non-result output except errors")
 
     parser.add_argument(
-        "-p", "--pathonly",
-        action="store_true",
-        help="print results without any search expression decorators")
-
-    parser.add_argument(
         "-m", "--expand",
         action="store_true",
         help="expand matching parent nodes to list all permissible child leaf\
-              nodes (see \"Reference handling options\" for restrictions)")
+              nodes (see \"reference handling options\" for restrictions)")
+
+    valdump_group = parser.add_argument_group("result printing options")
+    valdump_group.add_argument(
+        "-L", "--values",
+        action="store_true",
+        help="print the values or elements along with each YAML Path (complex\
+            results are emitted as JSON; use --expand to emit only simple\
+            values)")
+    valdump_group.add_argument(
+        "-F", "--nofile",
+        action="store_true",
+        help="omit source file path and name decorators from the output\
+            (applies only when searching multiple files)")
+    valdump_group.add_argument(
+        "-X", "--noexpression",
+        action="store_true",
+        help="omit search expression decorators from the output")
+    valdump_group.add_argument(
+        "-P", "--noyamlpath",
+        action="store_true",
+        help="omit YAML Paths from the output (useful with --values or to\
+            indicate whether a file has any matches without printing them\
+            all, perhaps especially with --noexpression)")
 
     parser.add_argument(
         "-t", "--pathsep",
@@ -98,7 +117,7 @@ def processcli():
         help="indicate which YAML Path seperator to use when rendering\
               results; default=dot")
 
-    keyname_group_ex = parser.add_argument_group("Key name searching options")
+    keyname_group_ex = parser.add_argument_group("key name searching options")
     keyname_group = keyname_group_ex.add_mutually_exclusive_group()
     keyname_group.add_argument(
         "-i", "--ignorekeynames",
@@ -119,7 +138,7 @@ def processcli():
         help="also search the names of &anchor and *alias references")
 
     dedup_group_ex = parser.add_argument_group(
-        "Reference handling options",
+        "reference handling options",
         "Indicate how to treat anchor and alias references.  An anchor is an\
          original, reusable key or value.  All aliases become replaced by the\
          anchors they reference when YAML data is read.  These options specify\
@@ -617,28 +636,48 @@ def get_search_term(logger: ConsolePrinter,
 
     return exterm
 
-def print_results(args: Any, yaml_file: str,
+def print_results(args: Any, processor: EYAMLProcessor, yaml_file: str,
                   yaml_paths: List[Tuple[str, YAMLPath]]) -> None:
     """
     Dumps the search results to STDOUT with optional and dynamic formatting.
     """
     in_file_count = len(args.yaml_files)
     in_expressions = len(args.search)
-    suppress_expression = in_expressions < 2 or args.pathonly
+    print_file_path = in_file_count > 1 and not args.nofile
+    print_expression = in_expressions > 1 and not args.noexpression
+    print_yaml_path = not args.noyamlpath
+    print_value = args.values
+    buffers = [
+        ": " if print_file_path or print_expression and (
+            print_yaml_path or print_value
+            ) else "",
+        ": " if print_yaml_path and print_value else "",
+    ]
     for entry in yaml_paths:
         expression, result = entry
         resline = ""
-        if in_file_count > 1:
-            if suppress_expression:
-                resline += "{}: {}".format(yaml_file, result)
-            else:
-                resline += "{}[{}]: {}".format(
-                    yaml_file, expression, result)
-        else:
-            if suppress_expression:
-                resline += "{}".format(result)
-            else:
-                resline += "[{}]: {}".format(expression, result)
+
+        if print_file_path:
+            resline += "{}".format(yaml_file)
+
+        if print_expression:
+            resline += "[{}]".format(expression)
+
+        resline += buffers[0]
+        if print_yaml_path:
+            resline += "{}".format(result)
+
+        resline += buffers[1]
+        if print_value:
+            # These results can have only one match, but make sure lest the
+            # output become messy.
+            for node in processor.get_nodes(result, mustexist=True):
+                if isinstance(node, (dict, list)):
+                    resline += "{}".format(json.dumps(node))
+                else:
+                    resline += "{}".format(str(node).replace("\n", r"\n"))
+                break
+
         print(resline)
 
 def main():
@@ -739,7 +778,7 @@ def main():
                             yaml_paths.remove(entry)
                             break  # Entries are already unique
 
-        print_results(args, yaml_file, yaml_paths)
+        print_results(args, processor, yaml_file, yaml_paths)
 
     exit(exit_state)
 
