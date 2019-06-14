@@ -648,10 +648,7 @@ def print_results(args: Any, processor: EYAMLProcessor, yaml_file: str,
     print_yaml_path = not args.noyamlpath
     print_value = args.values
     buffers = [
-        ": " if print_file_path and (
-            print_expression or print_yaml_path or print_value
-            ) else "",
-        ": " if print_expression and (
+        ": " if print_file_path or print_expression and (
             print_yaml_path or print_value
             ) else "",
         ": " if print_yaml_path and print_value else "",
@@ -662,16 +659,15 @@ def print_results(args: Any, processor: EYAMLProcessor, yaml_file: str,
 
         if print_file_path:
             resline += "{}".format(yaml_file)
-        resline += buffers[0]
 
         if print_expression:
             resline += "[{}]".format(expression)
-        resline += buffers[1]
 
+        resline += buffers[0]
         if print_yaml_path:
             resline += "{}".format(result)
-        resline += buffers[2]
 
+        resline += buffers[1]
         if print_value:
             # These results can have only one match, but make sure lest the
             # output become messy.
