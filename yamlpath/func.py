@@ -47,11 +47,13 @@ def get_yaml_editor() -> Any:
 
     Raises:  N/A
     """
+    # The ruamel.yaml class appears to be missing some typing data, so these
+    # valid assignments cannot be type-checked.
     yaml = YAML()
     yaml.indent(mapping=2, sequence=4, offset=2)
-    yaml.explicit_start = True
-    yaml.preserve_quotes = True
-    yaml.width = maxsize
+    yaml.explicit_start = True      # type: ignore
+    yaml.preserve_quotes = True     # type: ignore
+    yaml.width = maxsize            # type: ignore
     return yaml
 
 # pylint: disable=locally-disabled,too-many-branches

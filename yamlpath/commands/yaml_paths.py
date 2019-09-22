@@ -555,7 +555,7 @@ def search_for_paths(logger: ConsolePrinter, processor: EYAMLProcessor,
                             include_value_aliases=include_value_aliases):
                         yield path
                 else:
-                    yield tmp_path
+                    yield YAMLPath(tmp_path)
                 continue
 
             if isinstance(val, (CommentedSeq, CommentedMap)):

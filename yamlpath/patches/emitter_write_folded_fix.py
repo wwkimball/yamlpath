@@ -86,4 +86,6 @@ def write_folded_fix(self, text):
         end += 1
 
 
-Emitter.write_folded = write_folded_fix
+# MYPY hates MonkeyPatching per https://github.com/python/mypy/issues/2427
+# but there's no choice here, so... ignore the type.
+Emitter.write_folded = write_folded_fix     # type: ignore
