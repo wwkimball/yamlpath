@@ -362,10 +362,10 @@ https://github.com/wwkimball/yamlpath.
 * [yaml-paths](yamlpath/commands/yaml_paths.py)
 
 ```text
-usage: yaml-paths [-h] [-V] -s EXPRESSION [-c EXPRESSION] [-d | -v | -q] [-p]
-                  [-m] [-t ['.', '/', 'auto', 'dot', 'fslash']] [-i | -k | -K]
-                  [-a] [-A | -Y | -y | -l] [-e] [-x EYAML] [-r PRIVATEKEY]
-                  [-u PUBLICKEY]
+usage: yaml-paths [-h] [-V] -s EXPRESSION [-c EXPRESSION] [-d | -v | -q] [-m]
+                  [-L] [-F] [-X] [-P] [-t ['.', '/', 'auto', 'dot', 'fslash']]
+                  [-i | -k | -K] [-a] [-A | -Y | -y | -l] [-e] [-x EYAML]
+                  [-r PRIVATEKEY] [-u PUBLICKEY]
                   YAML_FILE [YAML_FILE ...]
 
 Returns zero or more YAML Paths indicating where in given YAML/Compatible data
@@ -384,9 +384,8 @@ optional arguments:
   -d, --debug           output debugging details
   -v, --verbose         increase output verbosity
   -q, --quiet           suppress all non-result output except errors
-  -p, --pathonly        print results without any search expression decorators
   -m, --expand          expand matching parent nodes to list all permissible
-                        child leaf nodes (see "Reference handling options" for
+                        child leaf nodes (see "reference handling options" for
                         restrictions)
   -t ['.', '/', 'auto', 'dot', 'fslash'], --pathsep ['.', '/', 'auto', 'dot', 'fslash']
                         indicate which YAML Path seperator to use when
@@ -397,14 +396,26 @@ required settings:
   -s EXPRESSION, --search EXPRESSION
                         the search expression; can be set more than once
 
-Key name searching options:
+result printing options:
+  -L, --values          print the values or elements along with each YAML Path
+                        (complex results are emitted as JSON; use --expand to
+                        emit only simple values)
+  -F, --nofile          omit source file path and name decorators from the
+                        output (applies only when searching multiple files)
+  -X, --noexpression    omit search expression decorators from the output
+  -P, --noyamlpath      omit YAML Paths from the output (useful with --values
+                        or to indicate whether a file has any matches without
+                        printing them all, perhaps especially with
+                        --noexpression)
+
+key name searching options:
   -i, --ignorekeynames  (default) do not search key names
   -k, --keynames        search key names in addition to values and array
                         elements
   -K, --onlykeynames    only search key names (ignore all values and array
                         elements)
 
-Reference handling options:
+reference handling options:
   Indicate how to treat anchor and alias references. An anchor is an
   original, reusable key or value. All aliases become replaced by the
   anchors they reference when YAML data is read. These options specify how
