@@ -1,7 +1,11 @@
-2.2.1:
+2.3.0:
 Bug Fixes:
 * The get_yaml_data helper function now contains ruamel.yaml errors/warnings
   without disrupting calling context handlers.
+
+Enhancements:
+* yaml-paths version 0.2.0 now has more detailed output control, trading
+  --pathonly for --values, --nofile, --noexpression, and --noyamlpath.
 
 2.2.0:
 Bug Fixes:

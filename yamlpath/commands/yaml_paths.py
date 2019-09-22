@@ -34,7 +34,7 @@ from yamlpath.wrappers import ConsolePrinter
 from yamlpath.eyaml import EYAMLProcessor
 
 # Implied Constants
-MY_VERSION = "0.1.0"
+MY_VERSION = "0.2.0"
 
 def processcli():
     """Process command-line arguments."""
