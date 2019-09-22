@@ -445,7 +445,7 @@ class Test_yaml_paths():
         yaml_file2 = create_temp_yaml_file(tmp_path_factory, content2)
         result = script_runner.run(
             self.command,
-            "--pathsep=/", "--keynames", "--pathonly",
+            "--pathsep=/", "--keynames", "--noexpression",
             "--search", "^value",
             "--search", "=bravo",
             yaml_file1, yaml_file2
@@ -571,7 +571,7 @@ class Test_yaml_paths():
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
         result = script_runner.run(
             self.command,
-            "--pathsep=/", "--keynames", "--pathonly",
+            "--pathsep=/", "--keynames", "--noexpression",
             "--search", "=key",
             "--search", "=value",
             yaml_file
@@ -882,3 +882,25 @@ class Test_yaml_paths():
             include_key_aliases=False, include_value_aliases=False
         )):
             assert assertion == str(path)
+
+    def test_value_dump(self, script_runner, tmp_path_factory):
+        content = """---
+        sample_scalar: value
+        sample_hash:
+          sub:
+            - list
+            - elements
+        """
+        yaml_file = create_temp_yaml_file(tmp_path_factory, content)
+        result = script_runner.run(
+            self.command,
+            "--pathsep=/",
+            "--keynames", "--values",
+            "--search", "^sample",
+            yaml_file
+        )
+        assert result.success, result.stderr
+        assert "\n".join([
+            "/sample_scalar: value",
+            '/sample_hash: {"sub": ["list", "elements"]}',
+        ]) + "\n" == result.stdout

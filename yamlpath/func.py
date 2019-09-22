@@ -47,14 +47,16 @@ def get_yaml_editor() -> Any:
 
     Raises:  N/A
     """
+    # The ruamel.yaml class appears to be missing some typing data, so these
+    # valid assignments cannot be type-checked.
     yaml = YAML()
     yaml.indent(mapping=2, sequence=4, offset=2)
-    yaml.explicit_start = True
-    yaml.preserve_quotes = True
-    yaml.width = maxsize
+    yaml.explicit_start = True      # type: ignore
+    yaml.preserve_quotes = True     # type: ignore
+    yaml.width = maxsize            # type: ignore
     return yaml
 
-# pylint: disable=locally-disabled,too-many-branches
+# pylint: disable=locally-disabled,too-many-branches,too-many-statements
 def get_yaml_data(parser: Any, logger: ConsolePrinter, source: str) -> Any:
     """
     Attempts to parse YAML/Compatible data and return the ruamel.yaml object
@@ -64,13 +66,17 @@ def get_yaml_data(parser: Any, logger: ConsolePrinter, source: str) -> Any:
     the data could not be loaded.
     """
     import warnings
-    warnings.filterwarnings("error")
     yaml_data = None
 
-    # Try to open the file
+    # This code traps errors and warnings from ruamel.yaml, substituting
+    # lengthy stack-dumps with specific, meaningful feedback.  Further, some
+    # warnings are treated as errors by ruamel.yaml, so these are also
+    # coallesced into cleaner feedback.
     try:
         with open(source, 'r') as fhnd:
-            yaml_data = parser.load(fhnd)
+            with warnings.catch_warnings():
+                warnings.filterwarnings("error")
+                yaml_data = parser.load(fhnd)
     except KeyboardInterrupt:
         logger.error("Aborting data load due to keyboard interrupt!")
         yaml_data = None
