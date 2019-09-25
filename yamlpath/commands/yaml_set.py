@@ -11,6 +11,7 @@ import sys
 import argparse
 import secrets
 import string
+import io
 from os import remove, access, R_OK
 from os.path import isfile, exists
 from shutil import copy2
@@ -70,6 +71,9 @@ def processcli():
         type=int,
         metavar="LENGTH",
         help="randomly generate a replacement value of a set length")
+    parser.add_argument(
+        "-y", "--yaml", action="store_true",
+        help="the input is a yaml string and should be parsed and merged")
 
     parser.add_argument(
         "-F", "--format",
@@ -196,6 +200,11 @@ def main():
                 string.ascii_uppercase + string.ascii_lowercase + string.digits
             ) for _ in range(args.random)
         )
+    if args.yaml:
+        buf = io.StringIO()
+        buf.write(new_value)
+        buf.seek(0)
+        new_value = get_yaml_editor().load(buf)
 
     # Prep the YAML parser
     yaml = get_yaml_editor()
