@@ -73,7 +73,9 @@ def get_yaml_data(parser: Any, logger: ConsolePrinter, source: str) -> Any:
     # warnings are treated as errors by ruamel.yaml, so these are also
     # coallesced into cleaner feedback.
     try:
-        with open(source, 'r') as fhnd:
+        content = source if hasattr(source, 'read') else open(source, 'r')
+
+        with content as fhnd:
             with warnings.catch_warnings():
                 warnings.filterwarnings("error")
                 yaml_data = parser.load(fhnd)

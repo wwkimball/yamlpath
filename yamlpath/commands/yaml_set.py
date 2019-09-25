@@ -200,14 +200,15 @@ def main():
                 string.ascii_uppercase + string.ascii_lowercase + string.digits
             ) for _ in range(args.random)
         )
+
+    # Prep the YAML parser
+    yaml = get_yaml_editor()
     if args.yaml:
         buf = io.StringIO()
         buf.write(new_value)
         buf.seek(0)
-        new_value = get_yaml_editor().load(buf)
+        new_value = get_yaml_data(yaml, log, buf)
 
-    # Prep the YAML parser
-    yaml = get_yaml_editor()
 
     # Attempt to open the YAML file; check for parsing errors
     yaml_data = get_yaml_data(yaml, log, args.yaml_file)

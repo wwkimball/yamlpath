@@ -433,3 +433,25 @@ class Test_yaml_set():
         with open(backup_file, 'r') as fhnd:
             filedat = fhnd.read()
         assert filedat == content
+
+    def test_invalid_yaml_value(self, script_runner, tmp_path_factory):
+        content = """---
+        key: value
+        """
+        yaml_file = create_temp_yaml_file(tmp_path_factory, content)
+
+        result = script_runner.run(self.command, "--yaml", "--change=/key", "--value={foo: bar", yaml_file)
+        assert not result.success, result.stderr
+        assert "YAML parsing error" in result.stderr
+
+    def test_invalid_yaml_file(self, script_runner, tmp_path_factory, imparsible_yaml_file):
+        content = """---
+        key: value
+        """
+        yaml_file = create_temp_yaml_file(tmp_path_factory, content)
+
+        result = script_runner.run(self.command, "--yaml", "--change=/key", "--file={}".format(imparsible_yaml_file), yaml_file)
+        assert not result.success, result.stderr
+        assert "YAML parsing error" in result.stderr
+
+
