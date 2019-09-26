@@ -149,6 +149,18 @@ def validateargs(args, log):
             "Exactly one of the following must be set:  --value, --file,"
             + " --stdin, or --random")
 
+    # * We do not support random YAML values
+    if args.yaml and args.random is not None:
+        has_errors = True
+        log.error(
+            "The following options are not compatible: --yaml, --random")
+
+    # * The format of the input YAML will be preserved, so this option shouldn't be used with --yaml
+    if args.yaml and args.format != "default":
+        has_errors = True
+        log.error(
+            "The following options are not compatible: --yaml, --format")
+
     # * When set, --saveto cannot be identical to --change
     if args.saveto and args.saveto == args.change:
         has_errors = True
@@ -208,7 +220,6 @@ def main():
         buf.write(new_value)
         buf.seek(0)
         new_value = get_yaml_data(yaml, log, buf)
-
 
     # Attempt to open the YAML file; check for parsing errors
     yaml_data = get_yaml_data(yaml, log, args.yaml_file)

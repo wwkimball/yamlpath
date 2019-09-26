@@ -1,4 +1,5 @@
 import pytest
+import textwrap
 
 from tests.conftest import create_temp_yaml_file, requireseyaml, old_eyaml_keys
 
@@ -21,6 +22,16 @@ class Test_yaml_set():
         result = script_runner.run(self.command, "--change='/test'", "no-such-file")
         assert not result.success, result.stderr
         assert "Exactly one of the following must be set:" in result.stderr
+
+    def test_yaml_and_random(self, script_runner):
+        result = script_runner.run(self.command, "--change='/test'", "--yaml", "--random=12", "no-such-file")
+        assert not result.success, result.stderr
+        assert "The following options are not compatible:" in result.stderr
+
+    def test_yaml_and_format(self, script_runner):
+        result = script_runner.run(self.command, "--change='/test'", "--value=foo", "--yaml", "--format=int", "no-such-file")
+        assert not result.success, result.stderr
+        assert "The following options are not compatible:" in result.stderr
 
     def test_bad_yaml_file(self, script_runner):
         result = script_runner.run(self.command, "--change='/test'", "--random=1", "no-such-file")
@@ -443,6 +454,28 @@ class Test_yaml_set():
         result = script_runner.run(self.command, "--yaml", "--change=/key", "--value={foo: bar", yaml_file)
         assert not result.success, result.stderr
         assert "YAML parsing error" in result.stderr
+
+    def test_valid_yaml_value(self, script_runner, tmp_path_factory):
+        content = """---
+        key: value
+        """
+        new_content = textwrap.dedent("""\
+        ---
+        key:
+          foo:
+            bar:
+              - baz
+              - blat
+              - 10
+        """)
+
+        yaml_file = create_temp_yaml_file(tmp_path_factory, content)
+
+        result = script_runner.run(self.command, "--yaml", "--change=/key", "--value=\nfoo: \n  bar: \n  - baz\n  - blat\n  - 10", yaml_file)
+        assert result.success
+        with open(yaml_file, 'r') as fhnd:
+            filedat = fhnd.read()
+        assert filedat == new_content
 
     def test_invalid_yaml_file(self, script_runner, tmp_path_factory, imparsible_yaml_file):
         content = """---
