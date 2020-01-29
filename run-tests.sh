@@ -27,6 +27,8 @@ EOF
 	pip install --force-reinstall ruamel.yaml==0.15.96
 	echo "...upgrading testing tools"
 	pip install --upgrade mypy pytest pytest-cov pytest-console-scripts pylint coveralls
+    echo "...installing self"
+    pip install -e .
 
 	echo -e "\nMYPY..."
 	if ! mypy yamlpath; then
