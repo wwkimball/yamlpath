@@ -7,11 +7,11 @@ if ! [ -d tests -a -d yamlpath ]; then
 	exit 2
 fi
 
-for envDir in env*; do
+for envDir in env* venv*; do
 	deactivate &>/dev/null
 	if ! source "${envDir}/bin/activate"; then
-		echo -e "\nERROR:  Unable to activate ${envDir}!" >&2
-		exit 20
+		echo -e "\nWARNING:  Unable to activate ${envDir}!" >&2
+		continue
 	fi
 
 	cat <<-EOF
@@ -22,13 +22,14 @@ for envDir in env*; do
 EOF
 
 	echo "...upgrading pip"
-	pip install --upgrade pip
+	python -m pip install --upgrade pip >/dev/null
 	echo "...reinstalling ruamel.yaml (because pip upgrades break it)"
-	pip install --force-reinstall ruamel.yaml==0.15.96
+	pip install --force-reinstall ruamel.yaml==0.15.96 >/dev/null
 	echo "...upgrading testing tools"
-	pip install --upgrade mypy pytest pytest-cov pytest-console-scripts pylint coveralls
+	pip install --upgrade mypy pytest pytest-cov pytest-console-scripts \
+		pylint coveralls >/dev/null
     echo "...installing self"
-    pip install -e .
+    pip install -e . >/dev/null
 
 	echo -e "\nMYPY..."
 	if ! mypy yamlpath; then

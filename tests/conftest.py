@@ -1,5 +1,6 @@
 """Define reusable pytest fixtures."""
 import tempfile
+from subprocess import run
 from types import SimpleNamespace
 
 import pytest
@@ -93,7 +94,6 @@ FktE6rH8a+8SwO+TGw==
 @pytest.fixture(scope="session")
 def new_eyaml_keys(tmp_path_factory):
     """Creates temporary keys for encryption/decryption tests."""
-    from subprocess import run
 
     new_key_path_name = "new-keys"
     new_key_dir = tmp_path_factory.mktemp(new_key_path_name)
@@ -107,7 +107,8 @@ def new_eyaml_keys(tmp_path_factory):
             new_private_key_file,
             new_public_key_file
         )
-        .split()
+        .split(),
+        check=True
     )
 
     return (new_private_key_file, new_public_key_file)

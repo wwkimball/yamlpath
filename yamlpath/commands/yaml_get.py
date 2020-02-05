@@ -6,12 +6,13 @@ result.  EYAML can be employed to decrypt the values.
 
 Copyright 2018, 2019 William W. Kimball, Jr. MBA MSIS
 """
+import sys
 import argparse
 import json
 from os import access, R_OK
 from os.path import isfile
 
-from yamlpath.func import get_yaml_data, get_yaml_editor
+from yamlpath.func import get_yaml_data, get_yaml_editor, unwrap_node_coords
 from yamlpath import YAMLPath
 from yamlpath.exceptions import YAMLPathException
 from yamlpath.eyaml.exceptions import EYAMLCommandException
@@ -118,7 +119,7 @@ def validateargs(args, log):
         log.error("Both private and public EYAML keys must be set.")
 
     if has_errors:
-        exit(1)
+        sys.exit(1)
 
 def main():
     """Main code."""
@@ -134,7 +135,7 @@ def main():
     yaml_data = get_yaml_data(yaml, log, args.yaml_file)
     if yaml_data is None:
         # An error message has already been logged
-        exit(1)
+        sys.exit(1)
 
     # Seek the queried value(s)
     discovered_nodes = []
@@ -144,7 +145,7 @@ def main():
     try:
         for node in processor.get_eyaml_values(yaml_path, mustexist=True):
             log.debug("Got {} from {}.".format(repr(node), yaml_path))
-            discovered_nodes.append(node)
+            discovered_nodes.append(unwrap_node_coords(node))
     except YAMLPathException as ex:
         log.critical(ex, 1)
     except EYAMLCommandException as ex:

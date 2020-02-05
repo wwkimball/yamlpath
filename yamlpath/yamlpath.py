@@ -7,6 +7,7 @@ from collections import deque
 from typing import Deque, List, Optional, Union
 
 from yamlpath.types import PathSegment
+from yamlpath.exceptions import YAMLPathException
 from yamlpath.enums import (
     PathSegmentTypes,
     PathSearchMethods,
@@ -53,6 +54,10 @@ class YAMLPath:
             self.original = yaml_path
 
     def __str__(self) -> str:
+        # The following import must not occur at the toplevel because doing so
+        # causes a cyclic dependency error.  The import must occur only when
+        # this method is invoked.
+        # pylint: disable=import-outside-toplevel
         from yamlpath.func import ensure_escaped
 
         if self._stringified:
@@ -230,8 +235,6 @@ class YAMLPath:
         Raises:
             - `YAMLPathException` when the YAML Path is invalid
         """
-        from yamlpath.exceptions import YAMLPathException
-
         yaml_path: str = self.original
         path_segments: deque = deque()
         segment_id: str = ""
@@ -273,14 +276,15 @@ class YAMLPath:
                     capturing_regex = False
                     demarc_stack.pop()
                     continue
-                else:
-                    # Pass-through; capture everything that isn't the present
-                    # RegEx delimiter.  This deliberately means users cannot
-                    # escape the RegEx delimiter itself should it occur within
-                    # the RegEx; thus, users must select a delimiter that won't
-                    # appear within the RegEx (which is exactly why the user
-                    # gets to choose the delimiter).
-                    pass  # pragma: no cover
+
+                # Pass-through; capture everything that isn't the present
+                # RegEx delimiter.  This deliberately means users cannot
+                # escape the RegEx delimiter itself should it occur within
+                # the RegEx; thus, users must select a delimiter that won't
+                # appear within the RegEx (which is exactly why the user
+                # gets to choose the delimiter).
+                # pylint: disable=unnecessary-pass
+                pass  # pragma: no cover
 
             # The escape test MUST come AFTER the RegEx capture test so users
             # won't be forced into "The Backslash Plague".
@@ -410,6 +414,7 @@ class YAMLPath:
                     and char in ["=", "^", "$", "%", "!", ">", "<", "~"]
             ):
                 # Hash attribute search
+                # pylint: disable=no-else-continue
                 if char == "!":
                     if search_inverted:
                         raise YAMLPathException(

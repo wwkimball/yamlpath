@@ -3,6 +3,8 @@ Collection of general helper functions.
 
 Copyright 2018, 2019 William W. Kimball, Jr. MBA MSIS
 """
+import warnings
+import ast
 import re
 from sys import maxsize
 from distutils.util import strtobool
@@ -32,7 +34,7 @@ from yamlpath.enums import (
     PathSeperators,
     YAMLValueFormats,
 )
-from yamlpath.wrappers import ConsolePrinter
+from yamlpath.wrappers import ConsolePrinter, NodeCoords
 from yamlpath.types import PathAttributes
 from yamlpath.path import SearchTerms
 from yamlpath import YAMLPath
@@ -65,7 +67,6 @@ def get_yaml_data(parser: Any, logger: ConsolePrinter, source: str) -> Any:
     All known issues are caught and distinctively logged.  Returns None when
     the data could not be loaded.
     """
-    import warnings
     yaml_data = None
 
     # This code traps errors and warnings from ruamel.yaml, substituting
@@ -211,7 +212,15 @@ def wrap_type(value: Any) -> Any:
     Raises:  N/A
     """
     wrapped_value = value
-    typ = type(value)
+
+    try:
+        ast_value = ast.literal_eval(value)
+    except ValueError:
+        ast_value = value
+    except SyntaxError:
+        ast_value = value
+
+    typ = type(ast_value)
     if typ is list:
         wrapped_value = CommentedSeq(value)
     elif typ is dict:
@@ -533,3 +542,18 @@ def create_searchterms_from_pathattributes(
         )
         return newinst
     raise AttributeError
+
+def unwrap_node_coords(data: Any) -> Any:
+    """
+    Recursively strips all DOM tracking data off of a NodeCoords wrapper.
+    """
+    if isinstance(data, NodeCoords):
+        return unwrap_node_coords(data.node)
+
+    if isinstance(data, list):
+        stripped_nodes = []
+        for ele in data:
+            stripped_nodes.append(unwrap_node_coords(ele))
+        return stripped_nodes
+
+    return data

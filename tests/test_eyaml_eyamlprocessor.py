@@ -5,6 +5,7 @@ from subprocess import run, CalledProcessError
 from ruamel.yaml import YAML
 
 import yamlpath.patches
+from yamlpath.func import unwrap_node_coords
 from yamlpath.enums import YAMLValueFormats
 from yamlpath.eyaml.enums import EYAMLOutputFormats
 from yamlpath.eyaml import EYAMLProcessor
@@ -141,7 +142,7 @@ class Test_eyaml_EYAMLProcessor():
     def test_happy_get_eyaml_values(self, quiet_logger, eyamldata_f, old_eyaml_keys, yaml_path, compare):
         processor = EYAMLProcessor(quiet_logger, eyamldata_f, privatekey=old_eyaml_keys[0], publickey=old_eyaml_keys[1])
         for node in processor.get_eyaml_values(yaml_path, True):
-            assert node == compare
+            assert unwrap_node_coords(node) == compare
 
     @requireseyaml
     @pytest.mark.parametrize("yaml_path,compare,mustexist,output_format", [
@@ -157,7 +158,7 @@ class Test_eyaml_EYAMLProcessor():
         # Ensure the new value is encrypted
         encvalue = None
         for encnode in processor.get_nodes(yaml_path):
-            encvalue = encnode
+            encvalue = unwrap_node_coords(encnode)
             break
 
         assert EYAMLProcessor.is_eyaml_value(encvalue)
@@ -174,7 +175,7 @@ class Test_eyaml_EYAMLProcessor():
         encvalue = None
         encformat = YAMLValueFormats.DEFAULT
         for encnode in processor.get_nodes(yaml_path):
-            encvalue = encnode
+            encvalue = unwrap_node_coords(encnode)
             encformat = YAMLValueFormats.from_node(encvalue)
             break
 

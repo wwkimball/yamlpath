@@ -5,10 +5,12 @@ language:
 
 python:
   - 3.6
+  - 3.7
+  - 3.8
 
 install:
   - pip install --upgrade ruamel.yaml mypy pytest pytest-cov pytest-console-scripts pylint coveralls
-  - gem install hiera-eyaml
+  - gem install hiera-eyaml -v 2.1.0
 
 script:
   - pip install -e .

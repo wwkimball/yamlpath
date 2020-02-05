@@ -5,6 +5,7 @@ employed to search encrypted values.
 
 Copyright 2019 William W. Kimball, Jr. MBA MSIS
 """
+import sys
 import argparse
 import json
 from os import access, R_OK
@@ -231,7 +232,7 @@ def validateargs(args, log):
         log.error("Both private and public EYAML keys must be set.")
 
     if has_errors:
-        exit(1)
+        sys.exit(1)
 
 # pylint: disable=locally-disabled,too-many-arguments,too-many-locals,too-many-branches
 def yield_children(logger: ConsolePrinter, data: Any,
@@ -671,7 +672,8 @@ def print_results(args: Any, processor: EYAMLProcessor, yaml_file: str,
         if print_value:
             # These results can have only one match, but make sure lest the
             # output become messy.
-            for node in processor.get_nodes(result, mustexist=True):
+            for node_coordinate in processor.get_nodes(result, mustexist=True):
+                node = node_coordinate.node
                 if isinstance(node, (dict, list)):
                     resline += "{}".format(json.dumps(node))
                 else:
@@ -780,7 +782,7 @@ def main():
 
         print_results(args, processor, yaml_file, yaml_paths)
 
-    exit(exit_state)
+    sys.exit(exit_state)
 
 if __name__ == "__main__":
     main()  # pragma: no cover

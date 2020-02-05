@@ -2,6 +2,7 @@ import pytest
 
 from ruamel.yaml import YAML
 
+from yamlpath.func import unwrap_node_coords
 from yamlpath.exceptions import YAMLPathException
 from yamlpath.enums import (
     PathSeperators,
@@ -98,7 +99,7 @@ class Test_Processor():
         for node in processor.get_nodes(
                 yamlpath, mustexist=mustexist, default_value=default
         ):
-            assert node == results[matchidx]
+            assert unwrap_node_coords(node) == results[matchidx]
             matchidx += 1
         assert len(results) == matchidx
 
@@ -111,7 +112,7 @@ class Test_Processor():
         processor = Processor(quiet_logger, yaml.load(yamldata))
         yamlpath = YAMLPath("aliases[&firstAlias]")
         for node in processor.get_nodes(yamlpath, pathsep=PathSeperators.FSLASH):
-            assert node == "Anchored Scalar Value"
+            assert unwrap_node_coords(node) == "Anchored Scalar Value"
 
     @pytest.mark.parametrize("yamlpath,mustexist", [
         ("abc", True),
@@ -178,7 +179,7 @@ class Test_Processor():
         processor.set_value(yamlpath, value, mustexist=mustexist, value_format=vformat, pathsep=pathsep)
         matchtally = 0
         for node in processor.get_nodes(yamlpath, mustexist=mustexist):
-            assert node == value
+            assert unwrap_node_coords(node) == value
             matchtally += 1
         assert matchtally == tally
 
@@ -290,7 +291,9 @@ class Test_Processor():
         with pytest.raises(NotImplementedError):
             nodes = list(processor._get_nodes_by_search(
                 data,
-                SearchTerms(True, PathSearchMethods.DNF, ".", "top_scalar")
+                SearchTerms(True, PathSearchMethods.DNF, ".", "top_scalar"),
+                None,
+                None
             ))
 
     def test_adjoined_collectors_error(self, quiet_logger):
@@ -397,7 +400,7 @@ class Test_Processor():
         processor.set_value(yamlpath, value, mustexist=mustexist, value_format=vformat, pathsep=pathsep)
         matchtally = 0
         for node in processor.get_nodes(yamlpath):
-            assert node == value
+            assert unwrap_node_coords(node) == value
             matchtally += 1
         assert matchtally == tally
 
@@ -422,7 +425,7 @@ class Test_Processor():
         processor.set_value(yamlpath, newvalue, mustexist=True)
         matchtally = 0
         for node in processor.get_nodes(yamlpath):
-            assert node == newvalue
+            assert unwrap_node_coords(node) == newvalue
             matchtally += 1
         assert matchtally == 1
 
@@ -447,3 +450,70 @@ class Test_Processor():
         with pytest.raises(YAMLPathException) as ex:
             nodes = list(processor.get_nodes(yamlpath))
         assert -1 < str(ex.value).find("Cannot add")
+
+    @pytest.mark.parametrize("yamlpath,value,verifications", [
+        ("number", 5280, [
+            ("aliases[&alias_number]", 1),
+            ("number", 5280),
+            ("alias_number", 1),
+            ("hash.number", 1),
+            ("hash.alias_number", 1),
+            ("complex.hash.number", 1),
+            ("complex.hash.alias_number", 1),
+        ]),
+        ("aliases[&alias_number]", 5280, [
+            ("aliases[&alias_number]", 5280),
+            ("number", 1),
+            ("alias_number", 5280),
+            ("hash.number", 1),
+            ("hash.alias_number", 5280),
+            ("complex.hash.number", 1),
+            ("complex.hash.alias_number", 5280),
+        ]),
+        ("bool", False, [
+            ("aliases[&alias_bool]", True),
+            ("bool", False),
+            ("alias_bool", True),
+            ("hash.bool", True),
+            ("hash.alias_bool", True),
+            ("complex.hash.bool", True),
+            ("complex.hash.alias_bool", True),
+        ]),
+        ("aliases[&alias_bool]", False, [
+            ("aliases[&alias_bool]", False),
+            ("bool", True),
+            ("alias_bool", False),
+            ("hash.bool", True),
+            ("hash.alias_bool", False),
+            ("complex.hash.bool", True),
+            ("complex.hash.alias_bool", False),
+        ]),
+    ])
+    def test_set_nonunique_values(self, quiet_logger, yamlpath, value, verifications):
+        yamldata = """---
+        aliases:
+          - &alias_number 1
+          - &alias_bool true
+        number: 1
+        bool: true
+        alias_number: *alias_number
+        alias_bool: *alias_bool
+        hash:
+          number: 1
+          bool: true
+          alias_number: *alias_number
+          alias_bool: *alias_bool
+        complex:
+          hash:
+            number: 1
+            bool: true
+            alias_number: *alias_number
+            alias_bool: *alias_bool
+        """
+        yaml = YAML()
+        data = yaml.load(yamldata)
+        processor = Processor(quiet_logger, data)
+        processor.set_value(yamlpath, value)
+        for verification in verifications:
+            for verify_node_coord in processor.get_nodes(verification[0]):
+                assert unwrap_node_coords(verify_node_coord) == verification[1]

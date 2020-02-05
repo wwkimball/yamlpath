@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="yamlpath",
-    version="2.3.0",
+    version="2.3.1",
     description="Read and change YAML/Compatible data using powerful, intuitive, command-line friendly syntax",
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -14,6 +14,7 @@ setuptools.setup(
         "License :: OSI Approved :: ISC License (ISCL)",
         "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.8",
         "Operating System :: OS Independent",
         "Topic :: Software Development :: Libraries :: Python Modules",
     ],

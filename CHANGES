@@ -1,3 +1,36 @@
+2.3.1:
+Bug Fixes:
+* Under certain conditions, some YAML changes were affecting unexpected nodes
+  which had identical original values.
+* YAMLValueFormats.DEFAULT was identifying all CLI-supplied values as String
+  rather than their most-likely data-type.
+
+API COMPATIBILITY WARNING:
+Previous versions of the library returned only selected data nodes.  Now,
+instead of data nodes, NodeCoords objects are returned.  This is necessary in
+order to resolve Issue #44, which was caused by Python over-aggressively
+optimizing memory, making non-String data nodes references to any other node
+with the same value.  This made changing exactly one of those data nodes
+impossible because all nodes with the same original value would change with it.
+Now, the NodeCoords class carries DOM tracking data along with each data
+node making precise node changes possible.  However, your queries will now
+return this more complex additional data.  In order to evaluate just the data,
+please refer to this before-and-after example:
+
+BEFORE:
+for node in processor.get_values(yaml_path):
+    do_something_with(node)
+
+AFTER:
+for node_coordinate in processor.get_values(yaml_path):
+    do_something_with(node_coordinate.node)
+
+If you need to recursively remove DOM tracking data from the results, a new
+utility function is available:  func.unwrap_node_coords(data).  Note however
+that you need that tracking data in order to change data within the DOM.
+
+This does not affect the output of the sample command-line utilities.
+
 2.3.0:
 Bug Fixes:
 * The get_yaml_data helper function now contains ruamel.yaml errors/warnings
