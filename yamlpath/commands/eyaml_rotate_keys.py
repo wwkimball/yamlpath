@@ -4,6 +4,7 @@ files, decrypting with old keys and re-encrypting using replacement keys.
 
 Copyright 2018, 2019 William W. Kimball, Jr. MBA MSIS
 """
+import sys
 import argparse
 from shutil import copy2
 from os import remove, access, R_OK
@@ -88,7 +89,7 @@ def validateargs(args, log):
             )
 
     if has_errors:
-        exit(1)
+        sys.exit(1)
 
 # pylint: disable=locally-disabled,too-many-locals,too-many-branches,too-many-statements
 def main():
@@ -134,7 +135,8 @@ def main():
             # Use ::get_nodes() instead of ::get_eyaml_values() here in order
             # to ignore values that have already been decrypted via their
             # Anchors.
-            for node in processor.get_nodes(yaml_path):
+            for node_coordinate in processor.get_nodes(yaml_path):
+                node = node_coordinate.node
                 # Ignore values which are Aliases for those already decrypted
                 anchor_name = (
                     node.anchor.value if hasattr(node, "anchor") else None
@@ -142,8 +144,8 @@ def main():
                 if anchor_name is not None:
                     if anchor_name in seen_anchors:
                         continue
-                    else:
-                        seen_anchors.append(anchor_name)
+
+                    seen_anchors.append(anchor_name)
 
                 log.verbose("Decrypting value(s) at {}.".format(yaml_path))
                 processor.publickey = args.oldpublickey
@@ -188,7 +190,7 @@ def main():
             with open(yaml_file, 'w') as yaml_dump:
                 yaml.dump(yaml_data, yaml_dump)
 
-    exit(exit_state)
+    sys.exit(exit_state)
 
 if __name__ == "__main__":
     main()  # pragma: no cover

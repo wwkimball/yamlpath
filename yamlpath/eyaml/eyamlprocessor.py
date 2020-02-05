@@ -149,7 +149,8 @@ class EYAMLProcessor(Processor):
             retval: str = run(
                 cmd,
                 stdout=PIPE,
-                input=bval
+                input=bval,
+                check=True
             ).stdout.decode('ascii').rstrip()
         except CalledProcessError as ex:
             raise EYAMLCommandException(
@@ -299,7 +300,7 @@ class EYAMLProcessor(Processor):
         )
         for node in self.get_nodes(yaml_path, mustexist=mustexist,
                                    default_value=default_value):
-            plain_text: str = self.decrypt_eyaml(node)
+            plain_text: str = self.decrypt_eyaml(node.node)
             yield plain_text
 
     def _can_run_eyaml(self) -> bool:

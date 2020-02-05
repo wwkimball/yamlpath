@@ -103,7 +103,7 @@ class ConsolePrinter:
         # Optionally terminate program execution with a specified exit code
         if exit_code is not None:
             self.debug("Terminating with exit code, {}.".format(exit_code))
-            exit(exit_code)
+            sys.exit(exit_code)
 
     def critical(self, message, exit_code=1):
         """
@@ -127,7 +127,7 @@ class ConsolePrinter:
 
         # Terminate program execution with a specified exit code
         self.debug("Terminating with exit code, {}.".format(exit_code))
-        exit(exit_code)
+        sys.exit(exit_code)
 
     def debug(self, message):
         """

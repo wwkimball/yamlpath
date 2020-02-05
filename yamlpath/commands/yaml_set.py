@@ -171,7 +171,7 @@ def validateargs(args, log):
             "EYAML public key is not a readable file:  " + args.publickey)
 
     if has_errors:
-        exit(1)
+        sys.exit(1)
 
 # pylint: disable=locally-disabled,too-many-locals,too-many-branches,too-many-statements
 def main():
@@ -204,37 +204,38 @@ def main():
     yaml_data = get_yaml_data(yaml, log, args.yaml_file)
     if yaml_data is None:
         # An error message has already been logged
-        exit(1)
+        sys.exit(1)
 
     # Load the present value at the specified YAML Path
-    change_nodes = []
+    change_node_coordinates = []
     old_format = YAMLValueFormats.DEFAULT
     processor = EYAMLProcessor(
         log, yaml_data, binary=args.eyaml,
         publickey=args.publickey, privatekey=args.privatekey)
     try:
-        for node in processor.get_nodes(
+        for node_coordinate in processor.get_nodes(
                 change_path, mustexist=(args.mustexist or args.saveto),
                 default_value=("" if new_value else " ")):
-            log.debug('Got "{}" from {}.'.format(node, change_path))
-            change_nodes.append(node)
+            log.debug('Got "{}" from {}.'.format(node_coordinate, change_path))
+            change_node_coordinates.append(node_coordinate)
     except YAMLPathException as ex:
         log.critical(ex, 1)
 
-    if len(change_nodes) == 1:
+    if len(change_node_coordinates) == 1:
         # When there is exactly one result, its old format can be known.  This
         # is necessary to retain whether the replacement value should be
         # represented later as a multi-line string when the new value is to be
         # encrypted.
-        old_format = YAMLValueFormats.from_node(change_nodes[0])
+        old_format = YAMLValueFormats.from_node(
+            change_node_coordinates[0].node)
 
     log.debug("Collected nodes:")
-    log.debug(change_nodes)
+    log.debug(change_node_coordinates)
 
     # Check the value(s), if desired
     if args.check:
-        for node in change_nodes:
-            if processor.is_eyaml_value(node):
+        for node_coordinate in change_node_coordinates:
+            if processor.is_eyaml_value(node_coordinate.node):
                 # Sanity check:  If either --publickey or --privatekey were set
                 # then they must both be set in order to decrypt this value.
                 # This is enforced only when the value must be decrypted due to
@@ -247,14 +248,14 @@ def main():
                         "Neither or both private and public EYAML keys must be"
                         + " set when --check is required to decrypt the old"
                         + " value.")
-                    exit(1)
+                    sys.exit(1)
 
                 try:
-                    check_value = processor.decrypt_eyaml(node)
+                    check_value = processor.decrypt_eyaml(node_coordinate.node)
                 except EYAMLCommandException as ex:
                     log.critical(ex, 1)
             else:
-                check_value = node
+                check_value = node_coordinate.node
 
             if not args.check == check_value:
                 log.critical(
@@ -268,7 +269,7 @@ def main():
         # Only one can be saved; otherwise it is impossible to meaningfully
         # convey to the end-user from exactly which other YAML node each saved
         # value came.
-        if len(change_nodes) > 1:
+        if len(change_node_coordinates) > 1:
             log.critical(
                 "It is impossible to meaningly save more than one matched"
                 + " value.  Please omit --saveto or set --change to affect"
@@ -281,7 +282,7 @@ def main():
         # when read.  As such, writing them back out breaks their original
         # format, despite being properly typed.  To restore the original
         # written form, reverse the conversion, here.
-        old_value = change_nodes[0]
+        old_value = change_node_coordinates[0].node
         if (
                 (old_format is YAMLValueFormats.FOLDED
                  or old_format is YAMLValueFormats.LITERAL
