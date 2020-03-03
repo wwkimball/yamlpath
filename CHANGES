@@ -1,10 +1,6 @@
 2.3.2:
 Bug Fixes:
-* When there is exactly one result, a Collector returns the sole, bare node
-  rather than a list of exactly 1 element.  This is by design to eliminate
-  burdensome 0-indexing, like `(collector)[0]`.  However, Collector set math
-  was expecting a list in every case and crashed when there was a single
-  non-list result.
+* Subtraction collector math crashed when the RHS result was non-iterable.
 
 2.3.1:
 Bug Fixes:
