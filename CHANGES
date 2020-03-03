@@ -1,3 +1,7 @@
+2.3.2:
+Bug Fixes:
+* Subtraction collector math crashed when the RHS result was non-iterable.
+
 2.3.1:
 Bug Fixes:
 * Under certain conditions, some YAML changes were affecting unexpected nodes
