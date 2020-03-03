@@ -536,9 +536,12 @@ class Processor:
                     # Removal requires looking only at the data element
                     rem_data = []
                     for rem_node_coord in rem_node_coords:
-                        just_data = rem_node_coord.node  # Always a list
-                        for just_element in just_data:
-                            rem_data.append(just_element)
+                        just_data = rem_node_coord.node
+                        if isinstance(just_data, list):
+                            for just_element in just_data:
+                                rem_data.append(just_element)
+                        else:
+                            rem_data.append(just_data)
 
                     node_coords = [e for e in node_coords
                                    if e.node not in rem_data]
