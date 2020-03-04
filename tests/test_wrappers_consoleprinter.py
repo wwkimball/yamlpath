@@ -64,8 +64,8 @@ class Test_wrappers_ConsolePrinter():
         logger.debug(["test", anchoredval])
         console = capsys.readouterr()
         assert "\n".join([
-            "DEBUG:  [0]=test",
-            "DEBUG:  [1]=TestVal; &Anchor",
+            "DEBUG:  [0]=test <class 'str'>",
+            "DEBUG:  [1]=TestVal; &Anchor <class 'ruamel.yaml.scalarstring.PlainScalarString'>",
         ]) + "\n" == console.out
 
         logger.debug({"ichi": 1, anchoredkey: anchoredval})

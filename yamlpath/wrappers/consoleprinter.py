@@ -149,7 +149,7 @@ class ConsolePrinter:
                     if hasattr(ele, "anchor") and ele.anchor.value is not None:
                         attr = "; &" + ele.anchor.value
                     eattr = (str(ele) + attr).replace("\n", "\nDEBUG:  ")
-                    print("DEBUG:  [" + str(i) + "]=" + str(eattr))
+                    print("DEBUG:  [{}]={} {}".format(i, eattr, type(ele)))
             elif isinstance(message, dict):
                 for key, val in message.items():
                     key_anchor = (
