@@ -551,3 +551,39 @@ class Test_Processor():
             assert unwrap_node_coords(node) == results[matchidx]
             matchidx += 1
         assert len(results) == matchidx
+
+    @pytest.mark.parametrize("yamlpath,results", [
+        ("(/list1) + (/list2)", [[1, 2, 3, 4, 5, 6]]),
+        ("(/list1) - (/exclude)", [[1, 2]]),
+        ("(/list2) - (/exclude)", [[5, 6]]),
+        ("(/list1) + (/list2) - (/exclude)", [[1, 2, 5, 6]]),
+        ("((/list1) + (/list2)) - (/exclude)", [[1, 2, 5, 6]]),
+        ("(/list1) + ((/list2) - (/exclude))", [[1, 2, 3, 5, 6]]),
+        ("((/list1) - (/exclude)) + ((/list2) - (/exclude))", [[1, 2, 5, 6]]),
+        ("(((/list1) - (/exclude)) + ((/list2) - (/exclude)))[2]", [5]),
+    ])
+    def test_scalar_collectors(self, quiet_logger, yamlpath, results):
+        yamldata = """---
+        list1:
+          - 1
+          - 2
+          - 3
+        list2:
+          - 4
+          - 5
+          - 6
+        exclude:
+          - 3
+          - 4
+        """
+        yaml = YAML()
+        processor = Processor(quiet_logger, yaml.load(yamldata))
+        matchidx = 0
+        # Note that Collectors deal with virtual DOMs, so mustexist must always
+        # be set True.  Otherwise, ephemeral virtual nodes would be created and
+        # discarded.  Is this desirable?  Maybe, but not today.  For now, using
+        # Collectors without setting mustexist=True will be undefined behavior.
+        for node in processor.get_nodes(yamlpath, mustexist=True):
+            assert unwrap_node_coords(node) == results[matchidx]
+            matchidx += 1
+        assert len(results) == matchidx
