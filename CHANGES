@@ -1,6 +1,16 @@
+2.3.3:
+Bug Fixes:
+* Subtraction Collector math had no effect when the RHS was a list of scalar
+  values (because LHS was a list of NodeCoords, so comparison was always
+  false).  Also reduced O(3N) to O(2N) during Collector subtraction.
+
+Enhancements:
+* The console logger's debug method now includes the type of each element in a
+  list while it is being dumped.
+
 2.3.2:
 Bug Fixes:
-* Subtraction collector math crashed when the RHS result was non-iterable.
+* Subtraction Collector math crashed when the RHS result was non-iterable.
 
 2.3.1:
 Bug Fixes:

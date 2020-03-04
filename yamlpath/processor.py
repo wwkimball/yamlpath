@@ -10,6 +10,7 @@ from yamlpath.func import (
     build_next_node,
     make_new_node,
     search_matches,
+    unwrap_node_coords,
 )
 from yamlpath import YAMLPath
 from yamlpath.path import SearchTerms, CollectorTerms
@@ -523,28 +524,26 @@ class Processor:
                             data, peek_path, 0, parent, parentref):
                         if (isinstance(node_coord, NodeCoords)
                                 and isinstance(node_coord.node, list)):
-                            for coord in node_coord.node:
+                            for coord_idx, coord in enumerate(node_coord.node):
+                                if not isinstance(coord, NodeCoords):
+                                    coord = NodeCoords(
+                                        coord, node_coord.node, coord_idx)
                                 node_coords.append(coord)
                         else:
                             node_coords.append(node_coord)
                 elif peek_attrs.operation == CollectorOperators.SUBTRACTION:
-                    rem_node_coords = []
+                    rem_data = []
                     for node_coord in self._get_required_nodes(
                             data, peek_path, 0, parent, parentref):
-                        rem_node_coords.append(node_coord)
-
-                    # Removal requires looking only at the data element
-                    rem_data = []
-                    for rem_node_coord in rem_node_coords:
-                        just_data = rem_node_coord.node
-                        if isinstance(just_data, list):
-                            for just_element in just_data:
-                                rem_data.append(just_element)
+                        unwrapped_data = unwrap_node_coords(node_coord)
+                        if isinstance(unwrapped_data, list):
+                            for unwrapped_datum in unwrapped_data:
+                                rem_data.append(unwrapped_datum)
                         else:
-                            rem_data.append(just_data)
+                            rem_data.append(unwrapped_data)
 
                     node_coords = [e for e in node_coords
-                                   if e.node not in rem_data]
+                                   if unwrap_node_coords(e) not in rem_data]
                 else:
                     raise YAMLPathException(
                         "Adjoining Collectors without an operator has no"
