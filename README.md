@@ -3,9 +3,20 @@
 [![Build Status](https://travis-ci.org/wwkimball/yamlpath.svg?branch=master)](https://travis-ci.org/wwkimball/yamlpath)
 [![Python versions](https://img.shields.io/pypi/pyversions/yamlpath.svg)](https://pypi.org/project/yamlpath/)
 [![PyPI version](https://badge.fury.io/py/yamlpath.svg)](https://pypi.org/project/yamlpath/)
+[![Downloads](https://pepy.tech/badge/yamlpath)](https://pepy.tech/project/yamlpath)
 [![Coverage Status](https://coveralls.io/repos/github/wwkimball/yamlpath/badge.svg?branch=master)](https://coveralls.io/github/wwkimball/yamlpath?branch=master)
 
-Contents:
+Along with providing a
+[standard for defining YAML Paths](https://github.com/wwkimball/yamlpath/wiki/Segments-of-a-YAML-Path),
+this project aims to provide
+[generally-useful command-line tools](https://github.com/wwkimball/yamlpath/wiki/Command-Line-(CLI)-Tools)
+which implement YAML Paths.  These bring intuitive YAML, EYAML, JSON, and
+compatible data parsing and editing capabilties to the command-line.  It is
+also a
+[Python library](https://github.com/wwkimball/yamlpath/wiki/Python-Library)
+for other projects to readily employ YAML Paths.
+
+## Contents
 
 1. [Introduction](#introduction)
 2. [Illustration](#illustration)
@@ -45,6 +56,9 @@ search for any number of nodes that match some criteria.  Keys, values, and
 elements can all be searched at any number of levels within the data structure
 using the same query.  Collectors can also be used to gather and further select
 from otherwise disparate parts of the source data.
+
+The [project Wiki](https://github.com/wwkimball/yamlpath/wiki) provides a
+deeper dive into these concepts.
 
 ## Illustration
 
@@ -119,10 +133,10 @@ For a deeper exploration of YAML Path's capabilities, please visit the
 
 ## Supported YAML Path Segments
 
-A YAML Path *segment* is the text between seperators which identifies a parent
-or leaf node within the data structure.  For dot-notation, a path like
-`hash.key` identifies two segments:  `hash` (a parent node) and `key` (a leaf
-node).  The same path in forward-slash notation would be:  `/hash/key`.
+A YAML Path *segment* is the text between seperators which identifies zero or
+more parent or leaf nodes within the data structure.  For dot-notation, a path
+like `hash.key` identifies two segments:  `hash` (a parent node) and `key` (a
+leaf node).  The same path in forward-slash notation would be:  `/hash/key`.
 
 YAML Path understands these segment types:
 
@@ -201,6 +215,8 @@ YAML Path understands these segment types:
 
 This implementation of YAML Path encourages creativity.  Use whichever notation
 and segment types that make the most sense to you in each application.
+
+The [project Wiki provides more illustrative details of YAML Path Segments](https://github.com/wwkimball/yamlpath/wiki/Segments-of-a-YAML-Path).
 
 ## Installing
 
