@@ -14,37 +14,37 @@ ForEach ($EnvDir in $EnvDirs) {
     }
 
     $PythonVersion = $(python --version)
-    Write-Host @"
+    Write-Output @"
 
         =========================================================================
         Using Python $PythonVersion...
         =========================================================================
 "@
 
-    Write-Host "...upgrading pip"
+    Write-Output "...upgrading pip"
     python -m pip install --upgrade pip
-    Write-Host "...reinstalling ruamel.yaml (because pip upgrades break it)"
+    Write-Output "...reinstalling ruamel.yaml (because pip upgrades break it)"
     pip install --force-reinstall ruamel.yaml==0.15.96
-    Write-Host "...upgrading testing tools"
+    Write-Output "...upgrading testing tools"
     pip install --upgrade mypy pytest pytest-cov pytest-console-scripts pylint coveralls
-    Write-Host "...installing self"
+    Write-Output "...installing self"
     pip install -e .
 
-    Write-Host "`nMYPY..."
+    Write-Output "`nMYPY..."
     mypy yamlpath | Out-String
     if (!$?) {
         Write-Error "MYPY Error: $?"
         exit 10
     }
 
-    Write-Host "`nPYLINT..."
+    Write-Output "`nPYLINT..."
     pylint yamlpath | Out-String
     if (!$?) {
         Write-Error "PYLINT Error: $?"
         exit 11
     }
 
-    Write-Host "`n PYTEST..."
+    Write-Output "`n PYTEST..."
     pytest -vv --cov=yamlpath --cov-report=term-missing --cov-fail-under=100 --script-launch-mode=subprocess tests
     if (!$?) {
         Write-Error "PYTEST Error: $?"
@@ -52,5 +52,5 @@ ForEach ($EnvDir in $EnvDirs) {
     }
 }
 
-Write-Host "Deactivating virtual Python environment..."
+Write-Output "Deactivating virtual Python environment..."
 & deactivate
