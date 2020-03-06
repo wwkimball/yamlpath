@@ -10,3 +10,4 @@ engines:
 # Ignore all PyTests because Codacy can't comprehend them.
 exclude_paths:
   - 'tests/**'
+  - '**/*.md'
