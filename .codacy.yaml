@@ -1,2 +1,12 @@
+---
+engines:
+  pylint:
+    # PyLint code quality is already measured and reported via TravisCI across
+    # multiple Pythons.  It is wasteful to run yet another PyLint, especially
+    # one that fails to honor the project's .pylintrc file and cannot run
+    # against a matrix of Pythons.
+    enabled: false
+
+# Ignore all PyTests because Codacy can't comprehend them.
 exclude_paths:
   - 'tests/**'
