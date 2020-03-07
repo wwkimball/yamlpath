@@ -146,11 +146,14 @@ class EYAMLProcessor(Processor):
         )
 
         try:
+            # self.eyaml is untrusted, so shell must always be False and
+            # all parameters must be supplied via a List.
             retval: str = run(
                 cmd,
                 stdout=PIPE,
                 input=bval,
-                check=True
+                check=True,
+                shell=False
             ).stdout.decode('ascii').rstrip()
         except CalledProcessError as ex:
             raise EYAMLCommandException(
@@ -210,8 +213,10 @@ class EYAMLProcessor(Processor):
         bval: bytes = (value + "\n").encode("ascii")
 
         try:
+            # self.eyaml is untrusted, so shell must always be False and
+            # all parameters must be supplied via a List.
             retval: str = (
-                run(cmd, stdout=PIPE, input=bval, check=True)
+                run(cmd, stdout=PIPE, input=bval, check=True, shell=False)
                 .stdout
                 .decode('ascii')
                 .rstrip()
