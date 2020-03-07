@@ -27,9 +27,15 @@ EOF
 	pip install --force-reinstall ruamel.yaml==0.15.96 >/dev/null
 	echo "...upgrading testing tools"
 	pip install --upgrade mypy pytest pytest-cov pytest-console-scripts \
-		pylint coveralls >/dev/null
+		pylint coveralls pep257 >/dev/null
     echo "...installing self"
     pip install -e . >/dev/null
+
+	echo -e "\nPEP257..."
+	if ! pep257 yamlpath; then
+		echo "PEP257 Error: $?"
+		exit 9
+	fi
 
 	echo -e "\nMYPY..."
 	if ! mypy yamlpath; then

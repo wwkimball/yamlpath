@@ -26,9 +26,16 @@ ForEach ($EnvDir in $EnvDirs) {
     Write-Output "...reinstalling ruamel.yaml (because pip upgrades break it)"
     pip install --force-reinstall ruamel.yaml==0.15.96
     Write-Output "...upgrading testing tools"
-    pip install --upgrade mypy pytest pytest-cov pytest-console-scripts pylint coveralls
+    pip install --upgrade mypy pytest pytest-cov pytest-console-scripts pylint coveralls pep257
     Write-Output "...installing self"
     pip install -e .
+
+    Write-Output "`nPEP257..."
+    pep257 yamlpath | Out-String
+    if (!$?) {
+        Write-Error "PEP257 Error: $?"
+        exit 9
+    }
 
     Write-Output "`nMYPY..."
     mypy yamlpath | Out-String
