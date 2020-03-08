@@ -1,7 +1,7 @@
 """
 YAML Path processor based on ruamel.yaml.
 
-Copyright 2018, 2019 William W. Kimball, Jr. MBA MSIS
+Copyright 2018, 2019, 2020 William W. Kimball, Jr. MBA MSIS
 """
 from typing import Any, Generator, List, Union
 
@@ -25,40 +25,41 @@ from yamlpath.enums import (
 
 
 class Processor:
-    """
-    Query and update YAML data via robust YAML Paths.
+    """Query and update YAML data via robust YAML Paths."""
 
-    Parameters:
+    def __init__(self, logger: ConsolePrinter, data: Any) -> None:
+        """
+        Instantiate this class into an object.
+
+        Parameters:
         1. logger (ConsolePrinter) Instance of ConsoleWriter or subclass
         2. data (Any) Parsed YAML data
 
-    Returns:  N/A
+        Returns:  N/A
 
-    Raises:  N/A
-    """
-
-    def __init__(self, logger: ConsolePrinter, data: Any) -> None:
+        Raises:  N/A
+        """
         self.logger: ConsolePrinter = logger
         self.data: Any = data
 
     def get_nodes(self, yaml_path: Union[YAMLPath, str],
                   **kwargs: Any) -> Generator[Any, None, None]:
         """
-        Retrieves zero or more nodes at YAML Path in YAML data.
+        Get nodes at YAML Path in data.
 
         Parameters:
-            1. yaml_path (Union[YAMLPath, str]) The YAML Path to evaluate
+        1. yaml_path (Union[YAMLPath, str]) The YAML Path to evaluate
 
         Keyword Parameters:
-            * mustexist (bool) Indicate whether yaml_path must exist
-              in data prior to this query (lest an Exception be raised);
-              default=False
-            * default_value (Any) The value to set at yaml_path should
-              it not already exist in data and mustexist is False;
-              default=None
-            * pathsep (PathSeperators) Forced YAML Path segment seperator; set
-              only when automatic inference fails;
-              default = PathSeperators.AUTO
+        * mustexist (bool) Indicate whether yaml_path must exist
+          in data prior to this query (lest an Exception be raised);
+          default=False
+        * default_value (Any) The value to set at yaml_path should
+          it not already exist in data and mustexist is False;
+          default=None
+        * pathsep (PathSeperators) Forced YAML Path segment seperator; set
+          only when automatic inference fails;
+          default = PathSeperators.AUTO
 
         Returns:  (Generator) The requested YAML nodes as they are matched
 
@@ -107,22 +108,22 @@ class Processor:
     def set_value(self, yaml_path: Union[YAMLPath, str],
                   value: Any, **kwargs) -> None:
         """
-        Sets the value of zero or more nodes at YAML Path in YAML data.
+        Set the value of zero or more nodes at YAML Path in YAML data.
 
         Parameters:
-            1. yaml_path (Union[Path, str]) The YAML Path to evaluate
-            2. value (Any) The value to set
+        1. yaml_path (Union[Path, str]) The YAML Path to evaluate
+        2. value (Any) The value to set
 
         Keyword Parameters:
-            * mustexist (bool) Indicate whether yaml_path must exist
-              in data prior to this query (lest an Exception be raised);
-              default=False
-            * value_format (YAMLValueFormats) The demarcation or visual
-              representation to use when writing the data;
-              default=YAMLValueFormats.DEFAULT
-            * pathsep (PathSeperators) Forced YAML Path segment seperator; set
-              only when automatic inference fails;
-              default = PathSeperators.AUTO
+        * mustexist (bool) Indicate whether yaml_path must exist
+          in data prior to this query (lest an Exception be raised);
+          default=False
+        * value_format (YAMLValueFormats) The demarcation or visual
+          representation to use when writing the data;
+          default=YAMLValueFormats.DEFAULT
+        * pathsep (PathSeperators) Forced YAML Path segment seperator; set
+          only when automatic inference fails;
+          default = PathSeperators.AUTO
 
         Returns:  N/A
 
@@ -182,16 +183,18 @@ class Processor:
                                    parent: Any = None, parentref: Any = None
                                   ) -> Generator[Any, None, None]:
         """
+        Get nodes identified by their YAML Path segment.
+
         Returns zero or more NodeCoords *or* List[NodeCoords] identified by one
         segment of a YAML Path within the present data context.
 
         Parameters:
-            1. data (ruamel.yaml data) The parsed YAML data to process
-            2. yaml_path (yamlpath.Path) The YAML Path being processed
-            3. segment_index (int) Segment index of the YAML Path to process
-            4. parent (ruamel.yaml node) The parent node from which this query
-               originates
-            5. parentref (Any) The Index or Key of data within parent
+        1. data (ruamel.yaml data) The parsed YAML data to process
+        2. yaml_path (yamlpath.Path) The YAML Path being processed
+        3. segment_index (int) Segment index of the YAML Path to process
+        4. parent (ruamel.yaml node) The parent node from which this query
+           originates
+        5. parentref (Any) The Index or Key of data within parent
 
         Returns:  (Generator[Any, None, None]) Each node coordinate or list of
         node coordinates as they are matched.  You must check with isinstance()
@@ -244,13 +247,15 @@ class Processor:
             self, data: Any, yaml_path: YAMLPath, segment_index: int
     ) -> Generator[NodeCoords, None, None]:
         """
+        Get nodes from a Hash by their unique key name.
+
         Returns zero or more NodeCoords identified by a dict key found at a
         specific segment of a YAML Path within the present data context.
 
         Parameters:
-            1. data (ruamel.yaml data) The parsed YAML data to process
-            2. yaml_path (yamlpath.Path) The YAML Path being processed
-            3. segment_index (int) Segment index of the YAML Path to process
+        1. data (ruamel.yaml data) The parsed YAML data to process
+        2. yaml_path (yamlpath.Path) The YAML Path being processed
+        3. segment_index (int) Segment index of the YAML Path to process
 
         Returns:  (Generator[NodeCoords, None, None]) Each NodeCoords as they
         are matched
@@ -294,14 +299,16 @@ class Processor:
             self, data: Any, yaml_path: YAMLPath, segment_index: int
     ) -> Generator[NodeCoords, None, None]:
         """
+        Get nodes from a List by their index.
+
         Returns zero or more NodeCoords identified by a list element index
         found at a specific segment of a YAML Path within the present data
         context.
 
         Parameters:
-            1. data (Any) The parsed YAML data to process
-            2. yaml_path (Path) The YAML Path being processed
-            3. segment_index (int) Segment index of the YAML Path to process
+        1. data (Any) The parsed YAML data to process
+        2. yaml_path (Path) The YAML Path being processed
+        3. segment_index (int) Segment index of the YAML Path to process
 
         Returns:  (Generator[NodeCoords, None, None]) Each NodeCoords as they
         are matched
@@ -361,13 +368,15 @@ class Processor:
             self, data: Any, yaml_path: YAMLPath, segment_index: int
     ) -> Generator[NodeCoords, None, None]:
         """
+        Get nodes matching an Anchor name.
+
         Returns zero or more NodeCoords identified by an Anchor name found at a
         specific segment of a YAML Path within the present data context.
 
         Parameters:
-            1. data (Any) The parsed YAML data to process
-            2. yaml_path (Path) The YAML Path being processed
-            3. segment_index (int) Segment index of the YAML Path to process
+        1. data (Any) The parsed YAML data to process
+        2. yaml_path (Path) The YAML Path being processed
+        3. segment_index (int) Segment index of the YAML Path to process
 
         Returns:  (Generator[NodeCoords, None, None]) Each NodeCoords as they
         are matched
@@ -399,15 +408,17 @@ class Processor:
             self, data: Any, terms: SearchTerms, parent: Any, parentref: Any
     ) -> Generator[NodeCoords, None, None]:
         """
+        Get nodes matching a search expression.
+
         Searches the the current data context for all NodeCoords matching a
         search expression.
 
         Parameters:
-            1. data (Any) The parsed YAML data to process
-            2. terms (SearchTerms) The search terms
-            3. parent (ruamel.yaml node) The parent node from which this query
-               originates
-            4. parentref (Any) The Index or Key of data within parent
+        1. data (Any) The parsed YAML data to process
+        2. terms (SearchTerms) The search terms
+        3. parent (ruamel.yaml node) The parent node from which this query
+           originates
+        4. parentref (Any) The Index or Key of data within parent
 
         Returns:  (Generator[NodeCoords, None, None]) Each NodeCoords as they
         are matched
@@ -460,18 +471,20 @@ class Processor:
             terms: CollectorTerms, parent: Any, parentref: Any
     ) -> Generator[List[NodeCoords], None, None]:
         """
+        Generate List of nodes gathered via a Collector.
+
         Returns a list of zero or more NodeCoords within a given data context
         that match an inner YAML Path found at a specific segment of an outer
         YAML Path.
 
         Parameters:
-            1. data (ruamel.yaml data) The parsed YAML data to process
-            2. yaml_path (Path) The YAML Path being processed
-            3. segment_index (int) Segment index of the YAML Path to process
-            4. terms (CollectorTerms) The collector terms
-            5. parent (ruamel.yaml node) The parent node from which this query
-               originates
-            6. parentref (Any) The Index or Key of data within parent
+        1. data (ruamel.yaml data) The parsed YAML data to process
+        2. yaml_path (Path) The YAML Path being processed
+        3. segment_index (int) Segment index of the YAML Path to process
+        4. terms (CollectorTerms) The collector terms
+        5. parent (ruamel.yaml node) The parent node from which this query
+           originates
+        6. parentref (Any) The Index or Key of data within parent
 
         Returns:  (Generator[List[NodeCoords], None, None]) Each list of
         NodeCoords as they are matched (the result is always a list)
@@ -565,16 +578,15 @@ class Processor:
                             parentref: Any = None
                             ) -> Generator[NodeCoords, None, None]:
         """
-        Generates zero or more pre-existing NodeCoords from YAML data matching
-        a YAML Path.
+        Generate pre-existing NodeCoords from YAML data matching a YAML Path.
 
         Parameters:
-            1. data (Any) The parsed YAML data to process
-            2. yaml_path (Path) The pre-parsed YAML Path to follow
-            3. depth (int) Index within yaml_path to process; default=0
-            4. parent (ruamel.yaml node) The parent node from which this query
-               originates
-            5. parentref (Any) Key or Index of data within parent
+        1. data (Any) The parsed YAML data to process
+        2. yaml_path (Path) The pre-parsed YAML Path to follow
+        3. depth (int) Index within yaml_path to process; default=0
+        4. parent (ruamel.yaml node) The parent node from which this query
+           originates
+        5. parentref (Any) Key or Index of data within parent
 
         Returns:  (Generator[NodeCoords, None, None]) The requested NodeCoords
         as they are matched
@@ -642,28 +654,29 @@ class Processor:
             depth: int = 0, parent: Any = None, parentref: Any = None
     ) -> Generator[NodeCoords, None, None]:
         """
-        Returns zero or more pre-existing NodeCoords matching a YAML Path.
+        Return zero or more pre-existing NodeCoords matching a YAML Path.
+
         Will create nodes that are missing, as long as any missing segments are
         deterministic (SEARCH and COLLECTOR segments are non-deterministic).
 
         Parameters:
-            1. data (Any) The parsed YAML data to process
-            2. yaml_path (Path) The pre-parsed YAML Path to follow
-            3. value (Any) The value to assign to the element
-            4. depth (int) For recursion, this identifies which segment of
-               yaml_path to evaluate; default=0
-            5. parent (ruamel.yaml node) The parent node from which this query
-               originates
-            6. parentref (Any) Index or Key of data within parent
+        1. data (Any) The parsed YAML data to process
+        2. yaml_path (Path) The pre-parsed YAML Path to follow
+        3. value (Any) The value to assign to the element
+        4. depth (int) For recursion, this identifies which segment of
+           yaml_path to evaluate; default=0
+        5. parent (ruamel.yaml node) The parent node from which this query
+           originates
+        6. parentref (Any) Index or Key of data within parent
 
         Returns:  (Generator[NodeCoords, None, None]) The requested NodeCoords
         as they are matched
 
         Raises:
-            - `YAMLPathException` when the YAML Path is invalid.
-            - `NotImplementedError` when a segment of the YAML Path indicates
-               an element that does not exist in data and this code isn't
-               yet prepared to add it.
+        - `YAMLPathException` when the YAML Path is invalid.
+        - `NotImplementedError` when a segment of the YAML Path indicates
+          an element that does not exist in data and this code isn't
+          yet prepared to add it.
         """
         if data is None:
             self.logger.debug(
@@ -820,17 +833,19 @@ class Processor:
     def _update_node(self, parent: Any, parentref: Any, value: Any,
                      value_format: YAMLValueFormats) -> None:
         """
+        Set the value of a data node.
+
         Recursively updates the value of a YAML Node and any references to it
         within the entire YAML data structure (Anchors and Aliases, if any).
 
         Parameters:
-          1. parent (ruamel.yaml data) The parent of the node to change
-          2. parent_ref (Any) Index or Key of the value within parent_node to
-             change
-          3. value (any) The new value to assign to the source_node and
-             its references
-          4. value_format (YAMLValueFormats) the YAML representation of the
-             value
+        1. parent (ruamel.yaml data) The parent of the node to change
+        2. parent_ref (Any) Index or Key of the value within parent_node to
+           change
+        3. value (any) The new value to assign to the source_node and
+           its references
+        4. value_format (YAMLValueFormats) the YAML representation of the
+           value
 
         Returns: N/A
 

@@ -1,7 +1,7 @@
 """
 Implements the PathSeperators enumeration.
 
-Copyright 2019 William W. Kimball, Jr. MBA MSIS
+Copyright 2019, 2020 William W. Kimball, Jr. MBA MSIS
 """
 from enum import Enum, auto
 from typing import List
@@ -9,7 +9,9 @@ from typing import List
 
 class PathSeperators(Enum):
     """
-    Supported YAML Path segment seperators.  Seperators include:
+    Supported YAML Path segment seperators.
+
+    Seperators include:
 
     `AUTO`
         The seperator must be manually dictated or automatically inferred from
@@ -21,11 +23,13 @@ class PathSeperators(Enum):
     `FSLASH`
         YAML Path segments are seperated via forward-slashes (/).
     """
+
     AUTO = auto()
     DOT = auto()
     FSLASH = auto()
 
     def __str__(self) -> str:
+        """Get a String representation of this employed enum's value."""
         seperator = '.'
         if self is PathSeperators.FSLASH:
             seperator = '/'
@@ -34,7 +38,7 @@ class PathSeperators(Enum):
     @staticmethod
     def get_names() -> List[str]:
         """
-        Returns all upper-cased entry names for this enumeration.
+        Get all upper-cased entry names for this enumeration.
 
         Parameters:  N/A
 
@@ -47,8 +51,9 @@ class PathSeperators(Enum):
     @staticmethod
     def get_choices() -> List[str]:
         """
-        Returns all lower-cased entry names with symbolic representatins for
-        this enumeration.
+        Get all entry names with symbolic representations for this enumeration.
+
+        All returned entries are lower-cased.
 
         Parameters:  N/A
 
@@ -66,7 +71,7 @@ class PathSeperators(Enum):
     @staticmethod
     def from_str(name: str) -> "PathSeperators":
         """
-        Converts a string value to a value of this enumeration, if valid.
+        Convert a string value to a value of this enumeration, if valid.
 
         Parameters:
             1. name (str) The name to convert
@@ -92,9 +97,10 @@ class PathSeperators(Enum):
     @staticmethod
     def infer_seperator(yaml_path: str) -> "PathSeperators":
         """
-        Infers the seperator used within a sample YAML Path, returning the best
-        PathSeperators match.  Will return `PathSeperators.AUTO` when the
-        sample is empty.
+        Infer the seperator used within a sample YAML Path.
+
+        Will attempt to return the best PathSeperators match.  Always returns
+        `PathSeperators.AUTO` when the sample is empty.
 
         Parameters:
             1. yaml_path (str) The sample YAML Path to evaluate

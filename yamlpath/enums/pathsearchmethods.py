@@ -1,7 +1,7 @@
 """
 Implements the PathSearchMethods enumeration.
 
-Copyright 2019 William W. Kimball, Jr. MBA MSIS
+Copyright 2019, 2020 William W. Kimball, Jr. MBA MSIS
 """
 from enum import Enum, auto
 from typing import List
@@ -9,7 +9,9 @@ from typing import List
 
 class PathSearchMethods(Enum):
     """
-    Supported selfs for searching YAML Path segments.  These include:
+    Supported selfs for searching YAML Path segments.
+
+    These include:
 
     `CONTAINS`
         Matches when the haystack contains the needle.
@@ -38,6 +40,7 @@ class PathSearchMethods(Enum):
     `REGEX`
         Matches when the needle Regular Expression matches the haystack.
     """
+
     CONTAINS = auto()
     ENDS_WITH = auto()
     EQUALS = auto()
@@ -49,6 +52,7 @@ class PathSearchMethods(Enum):
     REGEX = auto()
 
     def __str__(self) -> str:
+        """Get a String representation of an employed value of this enum."""
         operator = ''
         if self is PathSearchMethods.EQUALS:
             operator = '='
@@ -73,14 +77,10 @@ class PathSearchMethods(Enum):
 
     @staticmethod
     def get_operators() -> List[str]:
-        """
-        Returns the full list of suppoerted symbolic search operators.
-        """
+        """Return the full list of suppoerted symbolic search operators."""
         return [str(o) for o in PathSearchMethods]
 
     @staticmethod
     def is_operator(symbol: str) -> bool:
-        """
-        Indicates whether a given symbol is a known search method operator.
-        """
+        """Indicate whether symbol is a known search method operator."""
         return symbol in PathSearchMethods.get_operators()

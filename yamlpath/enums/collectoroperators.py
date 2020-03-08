@@ -1,7 +1,7 @@
 """
 Implements the CollectorOperators enumeration.
 
-Copyright 2019 William W. Kimball, Jr. MBA MSIS
+Copyright 2019, 2020 William W. Kimball, Jr. MBA MSIS
 """
 from enum import Enum, auto
 from typing import List
@@ -9,9 +9,10 @@ from typing import List
 
 class CollectorOperators(Enum):
     """
-    Supported Collector operators.  These identify how one Collector's results
-    are to be combined with its predecessor Collector, if there is one.
-    Operations include:
+    Supported Collector operators.
+
+    These identify how one Collector's results are to be combined with its
+    predecessor Collector, if there is one.  Operations include:
 
     `NONE`
         The Collector's results are not combined with its predecessor.
@@ -27,11 +28,13 @@ class CollectorOperators(Enum):
         The Collector's results are removed from its immediate predecessor
         Collector's results.  Only exact matches are removed.
     """
+
     ADDITION = auto()
     NONE = auto()
     SUBTRACTION = auto()
 
     def __str__(self) -> str:
+        """Get a String representation of an employed value of this enum."""
         operator: str = ''
         if self is CollectorOperators.ADDITION:
             operator = '+'
@@ -42,7 +45,7 @@ class CollectorOperators(Enum):
     @staticmethod
     def get_names() -> List[str]:
         """
-        Returns all entry names for this enumeration.
+        Get all entry names for this enumeration.
 
         Parameters:  N/A
 
@@ -55,7 +58,7 @@ class CollectorOperators(Enum):
     @staticmethod
     def from_operator(operator: str) -> "CollectorOperators":
         """
-        Converts a string value to a value of this enumeration, if valid.
+        Convert a string value to a value of this enumeration, if valid.
 
         Parameters:
             1. operator (str) The name to convert

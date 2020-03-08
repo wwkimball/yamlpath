@@ -1,14 +1,16 @@
 """
 Implements the PathSegmentTypes enumeration.
 
-Copyright 2019 William W. Kimball, Jr. MBA MSIS
+Copyright 2019, 2020 William W. Kimball, Jr. MBA MSIS
 """
 from enum import Enum, auto
 
 
 class PathSegmentTypes(Enum):
     """
-    Supported YAML Path segment types.  These include:
+    Supported YAML Path segment types.
+
+    These include:
 
     `ANCHOR`
         A named YAML Anchor.
@@ -27,6 +29,7 @@ class PathSegmentTypes(Enum):
     `SEARCH`
         A search operation for which results are returned as they are matched.
     """
+
     ANCHOR = auto()
     COLLECTOR = auto()
     INDEX = auto()
