@@ -1,7 +1,7 @@
 """
 Implements the YAMLValueFormats enumeration.
 
-Copyright 2019 William W. Kimball, Jr. MBA MSIS
+Copyright 2019, 2020 William W. Kimball, Jr. MBA MSIS
 """
 from enum import Enum, auto
 from typing import Any, List
@@ -20,7 +20,9 @@ from ruamel.yaml.scalarint import ScalarInt
 
 class YAMLValueFormats(Enum):
     """
-    Supported representation formats for YAML values.  These include:
+    Supported representation formats for YAML values.
+
+    These include:
 
     `BARE`
         The value is written as-is, when possible, with neither demarcation nor
@@ -55,6 +57,7 @@ class YAMLValueFormats(Enum):
     `SQUOTE`
         The value is demarcated via apostrophes (').
     """
+
     BARE = auto()
     BOOLEAN = auto()
     DEFAULT = auto()
@@ -68,7 +71,7 @@ class YAMLValueFormats(Enum):
     @staticmethod
     def get_names() -> List[str]:
         """
-        Returns all entry names for this enumeration.
+        Return all entry names for this enumeration.
 
         Parameters:  N/A
 
@@ -80,7 +83,8 @@ class YAMLValueFormats(Enum):
 
     @staticmethod
     def from_str(name: str) -> "YAMLValueFormats":
-        """Converts a string value to a value of this enumeration, if valid.
+        """
+        Convert a string value to a value of this enumeration, if valid.
 
         Parameters:
             1. name (str) The name to convert
@@ -99,9 +103,11 @@ class YAMLValueFormats(Enum):
 
     @staticmethod
     def from_node(node: Any) -> "YAMLValueFormats":
-        """Identifies the best matching enumeration value from a sample data
-        node.  Will return YAMLValueFormats.DEFAULT if the node is None or its
-        best match cannot be determined.
+        """
+        Identify the best matching enumeration value from a sample data node.
+
+        Will return YAMLValueFormats.DEFAULT if the node is None or its best
+        match cannot be determined.
 
         Parameters:
             1. node (Any) The node to type

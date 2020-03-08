@@ -1,9 +1,11 @@
 """
+Enable users to discover the YAML Path of every expression-matching term.
+
 Returns zero or more YAML Paths indicating where in given YAML/Compatible data
 a search expression matches.  Values and/or keys can be searched.  EYAML can be
 employed to search encrypted values.
 
-Copyright 2019 William W. Kimball, Jr. MBA MSIS
+Copyright 2019, 2020 William W. Kimball, Jr. MBA MSIS
 """
 import sys
 import argparse
@@ -240,8 +242,9 @@ def yield_children(logger: ConsolePrinter, data: Any,
                    build_path: str, seen_anchors: List[str],
                    **kwargs: bool) -> Generator[YAMLPath, None, None]:
     """
-    Except for unwanted aliases, unconditionally dump the YAML Path of every
-    child node beneath a given parent node, if there are any.
+    Dump the YAML Path of every child node beneath a given parent.
+
+    Except for unwanted aliases, the dump is unconditional.
     """
     include_key_aliases: bool = kwargs.pop("include_key_aliases", True)
     include_value_aliases: bool = kwargs.pop("include_value_aliases", False)
@@ -348,10 +351,11 @@ def search_for_paths(logger: ConsolePrinter, processor: EYAMLProcessor,
                      seen_anchors: Optional[List[str]] = None,
                      **kwargs: bool) -> Generator[YAMLPath, None, None]:
     """
-    Recursively searches a data structure for nodes matching a search
-    expression.  The nodes can be keys, values, and/or elements.  When dealing
-    with anchors and their aliases, the caller indicates whether to include
-    only the original anchor or the anchor and all of its (duplicate) aliases.
+    Recursively search a data structure for nodes matching an expression.
+
+    The nodes can be keys, values, and/or elements.  When dealing with anchors
+    and their aliases, the caller indicates whether to include only the
+    original anchor or the anchor and all of its (duplicate) aliases.
     """
     search_values: bool = kwargs.pop("search_values", True)
     search_keys: bool = kwargs.pop("search_keys", False)
@@ -603,8 +607,9 @@ def search_for_paths(logger: ConsolePrinter, processor: EYAMLProcessor,
 def get_search_term(logger: ConsolePrinter,
                     expression: str) -> Optional[SearchTerms]:
     """
-    Attempts to cast a search expression into a SearchTerms instance.  Returns
-    None on failure.
+    Attempt to cast a search expression into a SearchTerms instance.
+
+    Will log an error and return None on failure.
     """
     # The leading character must be a known search operator
     check_operator = expression[0] if expression else ""
@@ -639,9 +644,7 @@ def get_search_term(logger: ConsolePrinter,
 
 def print_results(args: Any, processor: EYAMLProcessor, yaml_file: str,
                   yaml_paths: List[Tuple[str, YAMLPath]]) -> None:
-    """
-    Dumps the search results to STDOUT with optional and dynamic formatting.
-    """
+    """Dump search results to STDOUT with optional and dynamic formatting."""
     in_file_count = len(args.yaml_files)
     in_expressions = len(args.search)
     print_file_path = in_file_count > 1 and not args.nofile

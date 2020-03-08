@@ -1,4 +1,6 @@
 """
+Enable users to rotate EYAML encryption keys used for pre-encrypted files.
+
 Rotates the encryption keys used for all EYAML values within a set of YAML
 files, decrypting with old keys and re-encrypting using replacement keys.
 

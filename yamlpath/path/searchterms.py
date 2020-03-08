@@ -1,7 +1,7 @@
 """
 YAML path Search segment terms.
 
-Copyright 2019 William W. Kimball, Jr. MBA MSIS
+Copyright 2019, 2020 William W. Kimball, Jr. MBA MSIS
 """
 from yamlpath.enums import PathSearchMethods
 
@@ -11,6 +11,15 @@ class SearchTerms:
 
     def __init__(self, inverted: bool, method: PathSearchMethods,
                  attribute: str, term: str) -> None:
+        """
+        Instantiate a Search Term.
+
+        Parameters:
+        1. inverted (bool) true = invert the search results; false, otherwise
+        2. method (PathSearchMethods) the method of search
+        3. attribute (str) the attribute to search
+        4. term (str) the term to search for within attribute
+        """
         self._inverted: bool = inverted
         self._method: PathSearchMethods = method
         self._attribute: str = attribute
@@ -38,6 +47,7 @@ class SearchTerms:
     #     raise AttributeError
 
     def __str__(self) -> str:
+        """Get a String representation of this Search Term."""
         if self.method == PathSearchMethods.REGEX:
             safe_term = "/{}/".format(self.term.replace("/", r"\/"))
         else:
@@ -61,32 +71,36 @@ class SearchTerms:
     @property
     def inverted(self) -> bool:
         """
-        Accesses the inversion flag for this Search, indicating whether the
-        results are to be inverted.
+        Access the inversion flag for this Search.
+
+        This indicates whether the results are to be inverted.
         """
         return self._inverted
 
     @property
     def method(self) -> PathSearchMethods:
         """
-        Accesses the search method, indicating what kind of search is to be
-        performed.
+        Access the search method.
+
+        This indicates what kind of search is to be performed.
         """
         return self._method
 
     @property
     def attribute(self) -> str:
         """
-        Accessor for the attribute being searched.  This is the "haystack" and
-        may reference a particular dictionary key, all values of a dictionary,
-        or the elements of a list.
+        Accessor for the attribute being searched.
+
+        This is the "haystack" and may reference a particular dictionary key,
+        all values of a dictionary, or the elements of a list.
         """
         return self._attribute
 
     @property
     def term(self) -> str:
         """
-        Accessor for the search term.  This is the "needle" to search for
-        within the attribute ("haystack").
+        Accessor for the search term.
+
+        This is the "needle" to search for within the attribute ("haystack").
         """
         return self._term

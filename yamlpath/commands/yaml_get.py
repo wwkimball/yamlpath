@@ -1,10 +1,12 @@
 """
+Enable users to get data out of YAML/Compatible files using YAML Paths.
+
 Retrieves one or more values from a YAML file at a specified YAML Path.
 Output is printed to STDOUT, one line per match.  When a result is a complex
 data-type (Array or Hash), a JSON dump is produced to represent each complex
 result.  EYAML can be employed to decrypt the values.
 
-Copyright 2018, 2019 William W. Kimball, Jr. MBA MSIS
+Copyright 2018, 2019, 2020 William W. Kimball, Jr. MBA MSIS
 """
 import sys
 import argparse

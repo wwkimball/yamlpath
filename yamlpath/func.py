@@ -1,7 +1,7 @@
 """
 Collection of general helper functions.
 
-Copyright 2018, 2019 William W. Kimball, Jr. MBA MSIS
+Copyright 2018, 2019, 2020 William W. Kimball, Jr. MBA MSIS
 """
 import warnings
 import ast
@@ -41,7 +41,7 @@ from yamlpath import YAMLPath
 
 def get_yaml_editor() -> Any:
     """
-    Builds and returns a generic YAML editor based on ruamel.yaml.
+    Build and return a generic YAML editor based on ruamel.yaml.
 
     Parameters:  N/A
 
@@ -61,8 +61,7 @@ def get_yaml_editor() -> Any:
 # pylint: disable=locally-disabled,too-many-branches,too-many-statements
 def get_yaml_data(parser: Any, logger: ConsolePrinter, source: str) -> Any:
     """
-    Attempts to parse YAML/Compatible data and return the ruamel.yaml object
-    result.
+    Parse YAML/Compatible data and return the ruamel.yaml object result.
 
     All known issues are caught and distinctively logged.  Returns None when
     the data could not be loaded.
@@ -134,13 +133,12 @@ def get_yaml_data(parser: Any, logger: ConsolePrinter, source: str) -> Any:
 def build_next_node(yaml_path: YAMLPath, depth: int,
                     value: Any = None) -> Any:
     """
-    Identifies and returns the most appropriate default value for the next
-    entry in a YAML Path, should it not already exist.
+    Get the best default value for the next entry in a YAML Path.
 
     Parameters:
-        1. yaml_path (deque) The pre-parsed YAML Path to follow
-        2. depth (int) Index of the YAML Path segment to evaluate
-        3. value (Any) The expected value for the final YAML Path entry
+    1. yaml_path (deque) The pre-parsed YAML Path to follow
+    2. depth (int) Index of the YAML Path segment to evaluate
+    3. value (Any) The expected value for the final YAML Path entry
 
     Returns:  (Any) The most appropriate default value
 
@@ -162,13 +160,15 @@ def build_next_node(yaml_path: YAMLPath, depth: int,
 def append_list_element(data: Any, value: Any = None,
                         anchor: str = None) -> Any:
     """
-    Appends a new element to an ruamel.yaml presented list, preserving any
-    tailing comment for the former last element of the same list.
+    Append a new element to an ruamel.yaml List.
+
+    This method preserves any tailing comment for the former last element of
+    the same list.
 
     Parameters:
-        1. data (Any) The parsed YAML data to process
-        2. value (Any) The value of the element to append
-        3. anchor (str) An Anchor or Alias name for the new element
+    1. data (Any) The parsed YAML data to process
+    2. value (Any) The value of the element to append
+    3. anchor (str) An Anchor or Alias name for the new element
 
     Returns:  (Any) The newly appended element node
 
@@ -201,10 +201,10 @@ def append_list_element(data: Any, value: Any = None,
 
 def wrap_type(value: Any) -> Any:
     """
-    Wraps a value in one of the ruamel.yaml wrapper types.
+    Wrap a value in one of the ruamel.yaml wrapper types.
 
     Parameters:
-        1. value (Any) The value to wrap.
+    1. value (Any) The value to wrap.
 
     Returns: (Any) The wrapped value or the original value when a better
         wrapper could not be identified.
@@ -238,14 +238,16 @@ def wrap_type(value: Any) -> Any:
 
 def clone_node(node: Any) -> Any:
     """
-    Duplicates a YAML Data node.  This is necessary because otherwise,
-    Python would treat any copies of a value as references to each other
-    such that changes to one automatically affect all copies.  This is not
-    desired when an original value must be duplicated elsewhere in the data
-    and then the original changed without impacting the copy.
+    Duplicate a YAML Data node.
+
+    This is necessary because otherwise, Python would treat any copies of a
+    value as references to each other such that changes to one automatically
+    affect all copies.  This is not desired when an original value must be
+    duplicated elsewhere in the data and then the original changed without
+    impacting the copy.
 
     Parameters:
-        1. node (Any) The node to clone.
+    1. node (Any) The node to clone.
 
     Returns: (Any) Clone of the given node
 
@@ -266,21 +268,23 @@ def clone_node(node: Any) -> Any:
 def make_new_node(source_node: Any, value: Any,
                   value_format: YAMLValueFormats) -> Any:
     """
-    Creates a new data node based on a sample node, effectively duplicaing
-    the type and anchor of the node but giving it a different value.
+    Create a new data node based on a sample node.
+
+    This is achieved by effectively duplicaing the type and anchor of the node
+    but giving it a different value.
 
     Parameters:
-        1. source_node (Any) The node from which to copy type
-        2. value (Any) The value to assign to the new node
-        3. value_format (YAMLValueFormats) The YAML presentation format to
-            apply to value when it is dumped
+    1. source_node (Any) The node from which to copy type
+    2. value (Any) The value to assign to the new node
+    3. value_format (YAMLValueFormats) The YAML presentation format to
+       apply to value when it is dumped
 
     Returns: (Any) The new node
 
     Raises:
-        - `NameError` when value_format is invalid
-        - `ValueError' when the new value is not numeric and value_format
-            requires it to be so
+    - `NameError` when value_format is invalid
+    - `ValueError' when the new value is not numeric and value_format
+       requires it to be so
     """
     new_node = None
     new_type = type(source_node)
@@ -373,9 +377,7 @@ def make_new_node(source_node: Any, value: Any,
     return new_node
 
 def get_node_anchor(node: Any) -> Optional[str]:
-    """
-    Returns a node's Anchor/Alias name or None wheh there isn't one.
-    """
+    """Return a node's Anchor/Alias name or None wheh there isn't one."""
     if (
             not hasattr(node, "anchor")
             or node.anchor is None
@@ -387,9 +389,7 @@ def get_node_anchor(node: Any) -> Optional[str]:
 
 def search_matches(method: PathSearchMethods, needle: str,
                    haystack: Any) -> bool:
-    """
-    Performs a search.
-    """
+    """Perform a search."""
     matches: bool = False
 
     if method is PathSearchMethods.EQUALS:
@@ -473,9 +473,7 @@ def search_matches(method: PathSearchMethods, needle: str,
 
 def search_anchor(node: Any, terms: SearchTerms, seen_anchors: List[str],
                   **kwargs: bool) -> AnchorMatches:
-    """
-    Indicates whether a node has an Anchor that matches given search terms.
-    """
+    """Indicate whether a node has an Anchor matching given search terms."""
     anchor_name = get_node_anchor(node)
     if anchor_name is None:
         return AnchorMatches.NO_ANCHOR
@@ -505,8 +503,10 @@ def search_anchor(node: Any, terms: SearchTerms, seen_anchors: List[str],
     return retval
 
 def ensure_escaped(value: str, *symbols: str) -> str:
-    """
-    Ensures all instances of a symbol are escaped (via \\) within a value.
+    r"""
+    Escape all instances of a symbol within a value.
+
+    Ensures all instances of a symbol are escaped (via \) within a value.
     Multiple symbols can be processed at once.
     """
     escaped: str = value
@@ -521,6 +521,8 @@ def ensure_escaped(value: str, *symbols: str) -> str:
 
 def escape_path_section(section: str, pathsep: PathSeperators) -> str:
     """
+    Escape all special symbols present within a YAML Path segment.
+
     Renders inert via escaping all symbols within a string which have special
     meaning to YAML Path.  The resulting string can be consumed as a YAML Path
     section without triggering unwanted additional processing.
@@ -532,10 +534,7 @@ def escape_path_section(section: str, pathsep: PathSeperators) -> str:
 
 def create_searchterms_from_pathattributes(
         rhs: PathAttributes) -> SearchTerms:
-    """
-    Generates a new SearchTerms instance by copying SearchTerms
-    attributes from a YAML Path segment's attributes.
-    """
+    """Convert a PathAttributes instance to a SearchTerms instance."""
     if isinstance(rhs, SearchTerms):
         newinst: SearchTerms = SearchTerms(
             rhs.inverted, rhs.method, rhs.attribute, rhs.term
@@ -544,9 +543,7 @@ def create_searchterms_from_pathattributes(
     raise AttributeError
 
 def unwrap_node_coords(data: Any) -> Any:
-    """
-    Recursively strips all DOM tracking data off of a NodeCoords wrapper.
-    """
+    """Recursively strips all DOM tracking data off of a NodeCoords wrapper."""
     if isinstance(data, NodeCoords):
         return unwrap_node_coords(data.node)
 
