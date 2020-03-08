@@ -8,6 +8,11 @@ engines:
     enabled: false
 
 exclude_paths:
-  - 'tests/**' # Codacy fails to comprehend PyTests.
-  - '**/*.md' # MarkDown files are not project source code.
-  - '**/__init__.py' # Codacy fails to comprehend imports used elsewhere.
+  # Codacy fails to comprehend PyTests.
+  - 'tests/**'
+
+  # MarkDown files are not project source code.
+  - '**/*.md'
+
+  # Codacy fails to comprehend imports used elsewhere.
+  - '**/__init__.py'
