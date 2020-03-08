@@ -5,6 +5,7 @@
 [![PyPI version](https://badge.fury.io/py/yamlpath.svg)](https://pypi.org/project/yamlpath/)
 [![Downloads](https://pepy.tech/badge/yamlpath)](https://pepy.tech/project/yamlpath)
 [![Coverage Status](https://coveralls.io/repos/github/wwkimball/yamlpath/badge.svg?branch=master)](https://coveralls.io/github/wwkimball/yamlpath?branch=master)
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/6bcc1f2767854390923a8d25a2e4a191)](https://www.codacy.com/manual/wwkimball/yamlpath?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=wwkimball/yamlpath&amp;utm_campaign=Badge_Grade)
 
 Along with providing a
 [standard for defining YAML Paths](https://github.com/wwkimball/yamlpath/wiki/Segments-of-a-YAML-Path),
