@@ -1,11 +1,13 @@
 """
+Enable users to change YAML/Compatible files using YAML Paths.
+
 Changes one or more values in a YAML file at a specified YAML Path.  Matched
 values can be checked before they are replaced to mitigate accidental change.
 When matching singular results, the value can be archived to another key
 before it is replaced.  Further, EYAML can be employed to encrypt the new
 values and/or decrypt old values before checking them.
 
-Copyright 2018, 2019 William W. Kimball, Jr. MBA MSIS
+Copyright 2018, 2019, 2020 William W. Kimball, Jr. MBA MSIS
 """
 import sys
 import argparse

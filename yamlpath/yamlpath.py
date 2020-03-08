@@ -1,7 +1,7 @@
 """
-Implements YAML Path.
+Implement YAML Path.
 
-Copyright 2019 William W. Kimball, Jr. MBA MSIS
+Copyright 2019, 2020 William W. Kimball, Jr. MBA MSIS
 """
 from collections import deque
 from typing import Deque, List, Optional, Union
@@ -29,19 +29,22 @@ class YAMLPath:
 
     Parsing operations are lazy and property setting smartly tiggers re-parsing
     only when necessary.
-
-    Parameters:
-        1. yaml_path (Union["YAMLPath", str]) The YAML Path to parse or copy
-        2. pathsep (PathSeperators) Forced YAML Path segment seperator; set
-            only when automatic inference fails
-
-    Returns:  N/A
-
-    Raises:  N/A
     """
 
     def __init__(self, yaml_path: Union["YAMLPath", str] = "",
                  pathsep: PathSeperators = PathSeperators.AUTO) -> None:
+        """
+        Instantiate this class into an object.
+
+        Parameters:
+        1. yaml_path (Union["YAMLPath", str]) The YAML Path to parse or copy
+        2. pathsep (PathSeperators) Forced YAML Path segment seperator; set
+           only when automatic inference fails
+
+        Returns:  N/A
+
+        Raises:  N/A
+        """
         self._seperator: PathSeperators = pathsep
         self._original: str = ""
         self._unescaped: deque = deque()
@@ -54,6 +57,7 @@ class YAMLPath:
             self.original = yaml_path
 
     def __str__(self) -> str:
+        """Get a stringified version of this object."""
         # The following import must not occur at the toplevel because doing so
         # causes a cyclic dependency error.  The import must occur only when
         # this method is invoked.
@@ -102,7 +106,7 @@ class YAMLPath:
         return ppath
 
     def __repr__(self) -> str:
-        """Generates an eval()-safe representation of this object."""
+        """Generate an eval()-safe representation of this object."""
         return ("{}('{}', '{}')".format(self.__class__.__name__,
                                         self.original, self.seperator))
 
@@ -125,7 +129,7 @@ class YAMLPath:
         Original YAML Path mutator.
 
         Parameters:
-            1. value (str) A YAML Path in string form
+        1. value (str) A YAML Path in string form
 
         Returns:  N/A
 
@@ -144,7 +148,7 @@ class YAMLPath:
     @property
     def seperator(self) -> PathSeperators:
         """
-        Accessor for the seperator used to demarcate YAML Path segments.
+        Get the seperator used to demarcate YAML Path segments.
 
         Parameters:  N/A
 
@@ -160,12 +164,13 @@ class YAMLPath:
     @seperator.setter
     def seperator(self, value: PathSeperators) -> None:
         """
-        Mutator for the seperator used to demarcate YAML Path segments.  This
-        only affects __str__ and only when the new value differs from the
+        Set the seperator used to demarcate YAML Path segments.
+
+        This only affects __str__ and only when the new value differs from the
         seperator already inferred from the original YAML Path.
 
         Parameters:
-            1. value (PathSeperators) The segment demarcation symbol
+        1. value (PathSeperators) The segment demarcation symbol
 
         Returns:  N/A
 
@@ -182,7 +187,7 @@ class YAMLPath:
     @property
     def escaped(self) -> Deque[PathSegment]:
         r"""
-        Accessor for the escaped, parsed version of this YAML Path.
+        Get the escaped, parsed version of this YAML Path.
 
         Any leading \ symbols are stripped out.  This is the parsed YAML Path
         used for processing YAML data.
@@ -201,9 +206,10 @@ class YAMLPath:
     @property
     def unescaped(self) -> Deque[PathSegment]:
         r"""
-        Accessor for the unescaped, parsed version of this YAML Path.  Any
-        leading \ symbols are preserved.  This is the print and log friendly
-        version of the parsed YAML Path.
+        Get the unescaped, parsed version of this YAML Path.
+
+        Any leading \ symbols are preserved.  This is the print and log
+        friendly version of the parsed YAML Path.
 
         Parameters:  N/A
 
@@ -221,13 +227,15 @@ class YAMLPath:
                     strip_escapes: bool = True
                    ) -> Deque[PathSegment]:
         r"""
+        Parse the YAML Path into its component segments.
+
         Breaks apart a stringified YAML Path into component segments, each
         identified by its type.  See README.md for sample YAML Paths.
 
         Parameters:
-            1. strip_escapes (bool) True = Remove leading \ symbols, leaving
-               only the "escaped" symbol.  False = Leave all leading \ symbols
-               intact.
+        1. strip_escapes (bool) True = Remove leading \ symbols, leaving
+           only the "escaped" symbol.  False = Leave all leading \ symbols
+           intact.
 
         Returns:  (deque) an empty queue or a queue of tuples, each identifying
           (PathSegmentTypes, segment_attributes).

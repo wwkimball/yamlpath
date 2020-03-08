@@ -1,29 +1,35 @@
 """
 Express an issue with a YAML Path.
 
-Copyright 2019 William W. Kimball, Jr. MBA MSIS
+Copyright 2019, 2020 William W. Kimball, Jr. MBA MSIS
 """
 from typing import Optional
 
 
 class YAMLPathException(Exception):
     """
+    Indicate a user error with a YAML Path.
+
     Occurs when a YAML Path is improperly formed or fails to lead to a required
     YAML node.
-
-    Parameters:
-        - user_message (str) The message to convey to the user
-        - yaml_path (str) The stringified YAML Path which lead to the exception
-        - segment (Optional[str]) The segment of the YAML Path which triggered
-          the exception, if available
-
-    Returns:  N/A
-
-    Raises:  N/A
     """
 
     def __init__(self, user_message: str, yaml_path: str,
                  segment: Optional[str] = None) -> None:
+        """
+        Initialize this Exception with all pertinent data.
+
+        Parameters:
+        1. user_message (str) The message to convey to the user
+        2. yaml_path (str) The stringified YAML Path which lead to the
+           exception
+        3. segment (Optional[str]) The segment of the YAML Path which triggered
+           the exception, if available
+
+        Returns:  N/A
+
+        Raises:  N/A
+        """
         self.user_message: str = user_message
         self.yaml_path: str = yaml_path
         self.segment: Optional[str] = segment
@@ -41,6 +47,7 @@ class YAMLPathException(Exception):
     #     )
 
     def __str__(self) -> str:
+        """Return a String expression of this Exception."""
         message: str = ""
         if self.segment is None:
             message = "{}, '{}'.".format(

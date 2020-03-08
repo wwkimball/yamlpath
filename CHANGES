@@ -1,3 +1,9 @@
+2.3.4:
+Bug Fixes:
+* Minor security patch:  Python already makes non-shell subprocess calls safe
+  (mitigating shell command injection).  This patch makes that already-present
+  protection explicit rather than implicit.
+
 2.3.3:
 Bug Fixes:
 * Subtraction Collector math had no effect when the RHS was a list of scalar

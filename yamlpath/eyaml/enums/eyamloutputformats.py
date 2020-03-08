@@ -1,14 +1,16 @@
 """
 Implements the EYAMLOutputFormats enumeration.
 
-Copyright 2019 William W. Kimball, Jr. MBA MSIS
+Copyright 2019, 2020 William W. Kimball, Jr. MBA MSIS
 """
 from enum import Enum, auto
 from typing import List
 
 class EYAMLOutputFormats(Enum):
     """
-    Supported EYAML command output formats.  Options include:
+    Supported EYAML command output formats.
+
+    Options include:
 
     `BLOCK`
         A multi-line version of the otherwise very long encrypted value,
@@ -19,16 +21,18 @@ class EYAMLOutputFormats(Enum):
     `STRING`
         A single-line version of the encrypted value, usually very long.
     """
+
     BLOCK = auto()
     STRING = auto()
 
     def __str__(self) -> str:
+        """Get a String rendition of this object."""
         return str(self.name).lower()
 
     @staticmethod
     def get_names() -> List[str]:
         """
-        Returns all entry names for this enumeration.
+        Get all entry names for this enumeration.
 
         Parameters:  N/A
 
@@ -40,10 +44,10 @@ class EYAMLOutputFormats(Enum):
 
     @staticmethod
     def from_str(name: str) -> "EYAMLOutputFormats":
-        """Converts a string value to a value of this enumeration, if valid.
+        """Convert a string value to a value of this enumeration, if valid.
 
         Parameters:
-            1. name (str) The name to convert
+        1. name (str) The name to convert
 
         Returns:  (EYAMLOutputFormats) the converted enumeration value
 

@@ -1,15 +1,16 @@
 """
 Implements the AnchorMatches enumeration.
 
-Copyright 2019 William W. Kimball, Jr. MBA MSIS
+Copyright 2019, 2020 William W. Kimball, Jr. MBA MSIS
 """
 from enum import Enum, auto
 
 
 class AnchorMatches(Enum):
     """
-    When performing a search, YAML Anchors and Aliases can be evaluated.  When
-    they are, these are the possible match results:
+    When performing a search, YAML Anchors and Aliases can be evaluated.
+
+    When they are, these are the possible match results:
 
     `ALIAS_EXCLUDED`
         The Anchor is a duplicate that has already matched.
@@ -35,6 +36,7 @@ class AnchorMatches(Enum):
         The node has an Anchor that is so-far unique, but the search parameters
         prohibit searching Anchor names.
     """
+
     ALIAS_EXCLUDED = auto()
     ALIAS_INCLUDED = auto()
     MATCH = auto()
