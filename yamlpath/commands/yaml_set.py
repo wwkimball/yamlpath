@@ -353,6 +353,7 @@ def main():
                 if args.backup:
                     remove(backup_file)
 
+                log.debug("Assertion error: {}".format(ex))
                 log.critical((
                     "Indeterminate assertion error encountered while"
                     + " attempting to write updated data to {}.  The original"
