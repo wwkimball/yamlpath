@@ -689,7 +689,12 @@ class Processor:
         # pylint: disable=locally-disabled,too-many-nested-blocks
         if segments and len(segments) > depth:
             (segment_type, unstripped_attrs) = yaml_path.unescaped[depth]
-            stripped_attrs = segments[depth][1]
+            stripped_attrs: Union[
+                str,
+                int,
+                SearchTerms,
+                CollectorTerms
+            ] = segments[depth][1]
             except_segment = str(unstripped_attrs)
 
             self.logger.debug(

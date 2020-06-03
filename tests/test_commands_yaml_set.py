@@ -434,7 +434,6 @@ class Test_yaml_set():
             filedat = fhnd.read()
         assert filedat == content
 
-
     def test_nonref_changes(self, script_runner, tmp_path_factory):
         yamlin = """---
 somestring:
@@ -461,6 +460,38 @@ otherstring:
             self.command,
             "--change=otherstring.default.config.deploy.me",
             "--value=set_value",
+            yaml_file
+        )
+        assert result.success, result.stderr
+
+        with open(yaml_file, 'r') as fhnd:
+            filedat = fhnd.read()
+        assert filedat == yamlout
+
+    @pytest.mark.xfail(strict=True, reason="https://sourceforge.net/p/ruamel-yaml/tickets/351/")
+    def test_commented_aliased_parent_hash(self, script_runner, tmp_path_factory):
+        yamlin = """---
+aliases:
+  - &key_alias hash
+
+*key_alias :
+  # Comment
+  key: value
+"""
+        yamlout = """---
+aliases:
+  - &key_alias hash
+
+*key_alias :
+  # Comment
+  key: new value
+"""
+        yaml_file = create_temp_yaml_file(tmp_path_factory, yamlin)
+        result = script_runner.run(
+            self.command,
+            "--change=/hash/key",
+            "--value=new value",
+            "--backup",
             yaml_file
         )
         assert result.success, result.stderr
