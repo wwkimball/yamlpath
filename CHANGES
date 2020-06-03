@@ -1,3 +1,11 @@
+2.3.5:
+Bug Fixes:
+* Certain YAML constructs trigger AssertionErrors in ruamel.yaml during YAML
+  data writes.  This was causing yaml-set to generate empty files.  Until
+  https://sourceforge.net/p/ruamel-yaml/tickets/351/ is fixed, this patch
+  will revert the file contents to mitigate data loss under these conditions.
+  A specific test has been created to detect when the upstream issue is fixed.
+
 2.3.4:
 Bug Fixes:
 * Minor security patch:  Python already makes non-shell subprocess calls safe
