@@ -10,12 +10,13 @@ values and/or decrypt old values before checking them.
 Copyright 2018, 2019, 2020 William W. Kimball, Jr. MBA MSIS
 """
 import sys
+import tempfile
 import argparse
 import secrets
 import string
 from os import remove, access, R_OK
 from os.path import isfile, exists
-from shutil import copy2
+from shutil import copy2, copyfileobj
 
 from yamlpath.func import clone_node, get_yaml_data, get_yaml_editor
 from yamlpath import YAMLPath
@@ -335,8 +336,27 @@ def main():
 
     # Save the changed file
     log.verbose("Writing changed data to {}.".format(args.yaml_file))
-    with open(args.yaml_file, 'w') as yaml_dump:
-        yaml.dump(yaml_data, yaml_dump)
+    with tempfile.TemporaryFile() as tmphnd:
+        with open(args.yaml_file, 'rb') as inhnd:
+            copyfileobj(inhnd, tmphnd)
+
+        with open(args.yaml_file, 'w') as yaml_dump:
+            try:
+                yaml.dump(yaml_data, yaml_dump)
+            except AssertionError as ex:
+                yaml_dump.close()
+                tmphnd.seek(0)
+                with open(args.yaml_file, 'wb') as outhnd:
+                    copyfileobj(tmphnd, outhnd)
+
+                # No sense in preserving a backup file with no changes
+                if args.backup:
+                    remove(backup_file)
+
+                log.critical((
+                    "Indeterminate assertion error encountered while"
+                    + " attempting to write updated data to {}.  The original"
+                    + " file content was restored.").format(args.yaml_file), 3)
 
 if __name__ == "__main__":
     main()  # pragma: no cover
