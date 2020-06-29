@@ -1,3 +1,12 @@
+2.3.6:
+Bug Fixes:
+* When using yaml-set with --format=folded and --eyamlcrypt, the encrypted
+  value was being mistakenly appended with a spurious newline character at its
+  end.  Note that this affected only Puppet's Hiera lookup and not EYAML
+  itself; on the command-line, the eyaml command would not show the extra
+  newline character.  The yaml-get command was also not affected, making it
+  very difficult to set up a unit-test for this case.
+
 2.3.5:
 Bug Fixes:
 * Certain YAML constructs trigger AssertionErrors in ruamel.yaml during YAML
