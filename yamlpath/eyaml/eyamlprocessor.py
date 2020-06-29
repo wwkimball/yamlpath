@@ -141,7 +141,7 @@ class EYAMLProcessor(Processor):
 
         cmd: List[str] = cmdstr.split()
         cleanval: str = str(value).replace("\n", "").replace(" ", "").rstrip()
-        bval: bytes = (cleanval + "\n").encode("ascii")
+        bval: bytes = cleanval.encode("ascii")
         self.logger.debug(
             "EYAMLPath::decrypt_eyaml:  About to execute {} against:\n{}"
             .format(cmdstr, cleanval)
@@ -212,7 +212,7 @@ class EYAMLProcessor(Processor):
             "EYAMLPath::encrypt_eyaml:  About to execute:  {}"
             .format(" ".join(cmd))
         )
-        bval: bytes = (value + "\n").encode("ascii")
+        bval: bytes = value.encode("ascii")
 
         try:
             # self.eyaml is untrusted, so shell must always be False and
