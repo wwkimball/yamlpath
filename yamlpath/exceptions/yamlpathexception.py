@@ -34,7 +34,7 @@ class YAMLPathException(Exception):
         self.yaml_path: str = yaml_path
         self.segment: Optional[str] = segment
 
-        super(YAMLPathException, self).__init__(
+        super().__init__(
             "user_message: {}, yaml_path: {}, segment: {}"
             .format(user_message, yaml_path, segment))
 

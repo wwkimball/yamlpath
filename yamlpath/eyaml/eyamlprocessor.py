@@ -161,7 +161,7 @@ class EYAMLProcessor(Processor):
             raise EYAMLCommandException(
                 "The {} command cannot be run due to exit code:  {}"
                 .format(self.eyaml, ex.returncode)
-            )
+            ) from ex
 
         # Check for bad decryptions
         self.logger.debug(
@@ -227,9 +227,13 @@ class EYAMLProcessor(Processor):
             raise EYAMLCommandException(
                 "The {} command cannot be run due to exit code:  {}"
                 .format(self.eyaml, ex.returncode)
-            )
+            ) from ex
 
-        if not retval:
+        # While exceedingly rare and difficult to test for, it is possible
+        # for custom eyaml commands to produce no output.  This is a critical
+        # error in every conceivable case but pycov will never get a test
+        # that works multi-platform.  So, ignore covering this case.
+        if not retval: # pragma: no cover
             raise EYAMLCommandException(
                 ("The {} command was unable to encrypt your value.  Please"
                  + " verify this process can run that command and read your"

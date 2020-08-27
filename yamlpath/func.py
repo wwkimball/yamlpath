@@ -230,7 +230,7 @@ def wrap_type(value: Any) -> Any:
     elif typ is int:
         wrapped_value = ScalarInt(value)
     elif typ is float:
-        wrapped_value = ScalarFloat(value)
+        wrapped_value = make_float_node(ast_value)
     elif typ is bool:
         wrapped_value = ScalarBoolean(value)
 
@@ -264,7 +264,45 @@ def clone_node(node: Any) -> Any:
         return type(node)(clone_value, anchor=node.anchor.value)
     return type(node)(clone_value)
 
-# pylint: disable=locally-disabled,too-many-branches,too-many-statements
+def make_float_node(value: float, anchor: str = None):
+    """
+    Create a new ScalarFloat data node from a bare float.
+
+    An optional anchor may be attached.
+
+    Parameters:
+    1. value (float) The bare float to wrap.
+    2. anchor (str) OPTIONAL anchor to add.
+
+    Returns: (ScalarNode) The new node
+    """
+    minus_sign = "-" if value < 0.0 else None
+    strval = format(value, '.15f').rstrip('0').rstrip('.')
+    precision = 0
+    width = len(strval)
+    lastdot = strval.rfind(".")
+    if -1 < lastdot:
+        precision = strval.rfind(".")
+
+    if anchor is None:
+        new_node = ScalarFloat(
+            value,
+            m_sign=minus_sign,
+            prec=precision,
+            width=width
+        )
+    else:
+        new_node = ScalarFloat(
+            value
+            , anchor=anchor
+            , m_sign=minus_sign
+            , prec=precision
+            , width=width
+        )
+
+    return new_node
+
+# pylint: disable=locally-disabled,too-many-branches,too-many-statements,too-many-locals
 def make_new_node(source_node: Any, value: Any,
                   value_format: YAMLValueFormats) -> Any:
     """
@@ -297,14 +335,14 @@ def make_new_node(source_node: Any, value: Any,
         strform = str(value_format)
         try:
             valform = YAMLValueFormats.from_str(strform)
-        except NameError:
+        except NameError as wrap_ex:
             raise NameError(
                 "Unknown YAML Value Format:  {}".format(strform)
                 + ".  Please specify one of:  "
                 + ", ".join(
                     [l.lower() for l in YAMLValueFormats.get_names()]
                 )
-            )
+            ) from wrap_ex
 
     if valform == YAMLValueFormats.BARE:
         new_type = PlainScalarString
@@ -330,43 +368,35 @@ def make_new_node(source_node: Any, value: Any,
     elif valform == YAMLValueFormats.FLOAT:
         try:
             new_value = float(value)
-        except ValueError:
+        except ValueError as wrap_ex:
             raise ValueError(
                 ("The requested value format is {}, but '{}' cannot be"
                  + " cast to a floating-point number.")
                 .format(valform, value)
-            )
+            ) from wrap_ex
 
-        strval = str(value)
-        precision = 0
-        width = len(strval)
-        lastdot = strval.rfind(".")
-        if -1 < lastdot:
-            precision = strval.rfind(".")
-
+        anchor_val = None
         if hasattr(source_node, "anchor"):
-            new_node = ScalarFloat(
-                new_value
-                , anchor=source_node.anchor.value
-                , prec=precision
-                , width=width
-            )
-        else:
-            new_node = ScalarFloat(new_value, prec=precision, width=width)
+            anchor_val = source_node.anchor.value
+        new_node = make_float_node(new_value, anchor_val)
     elif valform == YAMLValueFormats.INT:
         new_type = ScalarInt
 
         try:
             new_value = int(value)
-        except ValueError:
+        except ValueError as wrap_ex:
             raise ValueError(
                 ("The requested value format is {}, but '{}' cannot be"
                  + " cast to an integer number.")
                 .format(valform, value)
-            )
+            ) from wrap_ex
     else:
         # Punt to whatever the best type may be
-        new_type = type(wrap_type(value))
+        wrapped_value = wrap_type(value)
+        new_type = type(wrapped_value)
+        new_format = YAMLValueFormats.from_node(wrapped_value)
+        if new_format is not YAMLValueFormats.DEFAULT:
+            new_node = make_new_node(source_node, value, new_format)
 
     if new_node is None:
         if hasattr(source_node, "anchor"):
