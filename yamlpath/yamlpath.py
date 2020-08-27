@@ -547,12 +547,12 @@ class YAMLPath:
                 ):
                     try:
                         idx = int(segment_id)
-                    except ValueError:
+                    except ValueError as wrap_ex:
                         raise YAMLPathException(
                             "Not an integer index:  {}".format(segment_id)
                             , yaml_path
                             , segment_id
-                        )
+                        ) from wrap_ex
                     path_segments.append((segment_type, idx))
                 elif (
                         segment_type is PathSegmentTypes.SEARCH

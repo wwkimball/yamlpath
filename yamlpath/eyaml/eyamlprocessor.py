@@ -161,7 +161,7 @@ class EYAMLProcessor(Processor):
             raise EYAMLCommandException(
                 "The {} command cannot be run due to exit code:  {}"
                 .format(self.eyaml, ex.returncode)
-            )
+            ) from ex
 
         # Check for bad decryptions
         self.logger.debug(
@@ -227,7 +227,7 @@ class EYAMLProcessor(Processor):
             raise EYAMLCommandException(
                 "The {} command cannot be run due to exit code:  {}"
                 .format(self.eyaml, ex.returncode)
-            )
+            ) from ex
 
         if not retval:
             raise EYAMLCommandException(

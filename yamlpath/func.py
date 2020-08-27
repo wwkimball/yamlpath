@@ -277,7 +277,7 @@ def clone_node(node: Any) -> Any:
         return type(node)(clone_value, anchor=node.anchor.value)
     return type(node)(clone_value)
 
-# pylint: disable=locally-disabled,too-many-branches,too-many-statements
+# pylint: disable=locally-disabled,too-many-branches,too-many-statements,too-many-locals
 def make_new_node(source_node: Any, value: Any,
                   value_format: YAMLValueFormats) -> Any:
     """
@@ -310,14 +310,14 @@ def make_new_node(source_node: Any, value: Any,
         strform = str(value_format)
         try:
             valform = YAMLValueFormats.from_str(strform)
-        except NameError:
+        except NameError as wrap_ex:
             raise NameError(
                 "Unknown YAML Value Format:  {}".format(strform)
                 + ".  Please specify one of:  "
                 + ", ".join(
                     [l.lower() for l in YAMLValueFormats.get_names()]
                 )
-            )
+            ) from wrap_ex
 
     if valform == YAMLValueFormats.BARE:
         new_type = PlainScalarString
@@ -343,12 +343,12 @@ def make_new_node(source_node: Any, value: Any,
     elif valform == YAMLValueFormats.FLOAT:
         try:
             new_value = float(value)
-        except ValueError:
+        except ValueError as wrap_ex:
             raise ValueError(
                 ("The requested value format is {}, but '{}' cannot be"
                  + " cast to a floating-point number.")
                 .format(valform, value)
-            )
+            ) from wrap_ex
 
         minus_sign = "-" if new_value < 0.0 else None
         strval = format(new_value, '.15f').rstrip('0').rstrip('.')
@@ -378,12 +378,12 @@ def make_new_node(source_node: Any, value: Any,
 
         try:
             new_value = int(value)
-        except ValueError:
+        except ValueError as wrap_ex:
             raise ValueError(
                 ("The requested value format is {}, but '{}' cannot be"
                  + " cast to an integer number.")
                 .format(valform, value)
-            )
+            ) from wrap_ex
     else:
         # Punt to whatever the best type may be
         wrapped_value = wrap_type(value)
