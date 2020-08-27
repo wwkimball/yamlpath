@@ -343,6 +343,21 @@ def main():
         with open(args.yaml_file, 'w') as yaml_dump:
             try:
                 yaml.dump(yaml_data, yaml_dump)
+            except TypeError as ex:
+                yaml_dump.close()
+                tmphnd.seek(0)
+                with open(args.yaml_file, 'wb') as outhnd:
+                    copyfileobj(tmphnd, outhnd)
+
+                # No sense in preserving a backup file with no changes
+                if args.backup:
+                    remove(backup_file)
+
+                log.debug("Data Type error: {}".format(ex))
+                log.critical((
+                    "Indeterminate data type error encountered while"
+                    + " attempting to write updated data to {}.  The original"
+                    + " file content was restored.").format(args.yaml_file), 3)
             except AssertionError as ex:
                 yaml_dump.close()
                 tmphnd.seek(0)

@@ -160,6 +160,10 @@ class Test_Processor():
         ("aliases[&testAnchor]", "Updated Value", 1, True, YAMLValueFormats.DEFAULT, PathSeperators.AUTO),
         (YAMLPath("top_scalar"), "New top-level value", 1, False, YAMLValueFormats.DEFAULT, PathSeperators.DOT),
         ("/top_array/2", 42, 1, False, YAMLValueFormats.INT, PathSeperators.FSLASH),
+        ("/top_hash/positive_float", 0.009, 1, True, YAMLValueFormats.FLOAT, PathSeperators.FSLASH),
+        ("/top_hash/negative_float", -0.009, 1, True, YAMLValueFormats.FLOAT, PathSeperators.FSLASH),
+        ("/top_hash/positive_float", -2.71828, 1, True, YAMLValueFormats.FLOAT, PathSeperators.FSLASH),
+        ("/top_hash/negative_float", 5283.4, 1, True, YAMLValueFormats.FLOAT, PathSeperators.FSLASH),
     ])
     def test_set_value(self, quiet_logger, yamlpath, value, tally, mustexist, vformat, pathsep):
         yamldata = """---
@@ -172,6 +176,9 @@ class Test_Processor():
           - 2
         # Comment N
         top_scalar: Top-level plain scalar string
+        top_hash:
+          positive_float: 3.14159265358
+          negative_float: -11.034
         """
         yaml = YAML()
         data = yaml.load(yamldata)

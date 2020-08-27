@@ -230,7 +230,20 @@ def wrap_type(value: Any) -> Any:
     elif typ is int:
         wrapped_value = ScalarInt(value)
     elif typ is float:
-        wrapped_value = ScalarFloat(value)
+        minus_sign = "-" if ast_value < 0.0 else None
+        strval = format(ast_value, '.15f').rstrip('0').rstrip('.')
+        precision = 0
+        width = len(strval)
+        lastdot = strval.rfind(".")
+        if -1 < lastdot:
+            precision = strval.rfind(".")
+
+        wrapped_value = ScalarFloat(
+            ast_value,
+            m_sign=minus_sign,
+            prec=precision,
+            width=width
+        )
     elif typ is bool:
         wrapped_value = ScalarBoolean(value)
 
@@ -337,7 +350,8 @@ def make_new_node(source_node: Any, value: Any,
                 .format(valform, value)
             )
 
-        strval = str(value)
+        minus_sign = "-" if new_value < 0.0 else None
+        strval = format(new_value, '.15f').rstrip('0').rstrip('.')
         precision = 0
         width = len(strval)
         lastdot = strval.rfind(".")
@@ -348,11 +362,17 @@ def make_new_node(source_node: Any, value: Any,
             new_node = ScalarFloat(
                 new_value
                 , anchor=source_node.anchor.value
+                , m_sign=minus_sign
                 , prec=precision
                 , width=width
             )
         else:
-            new_node = ScalarFloat(new_value, prec=precision, width=width)
+            new_node = ScalarFloat(
+                new_value,
+                m_sign=minus_sign,
+                prec=precision,
+                width=width
+            )
     elif valform == YAMLValueFormats.INT:
         new_type = ScalarInt
 

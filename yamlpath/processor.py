@@ -170,8 +170,9 @@ class Processor:
                     self.data, yaml_path, value
             ):
                 self.logger.debug(
-                    "Processor::set_value:  Matched optional node coord, {}."
-                    .format(node_coord)
+                    ("Processor::set_value:  Matched optional node coord, {};"
+                     + " setting its value to {}<{}>.")
+                    .format(node_coord, value, value_format)
                 )
                 self._update_node(
                     node_coord.parent, node_coord.parentref, value,
@@ -884,4 +885,18 @@ class Processor:
 
         change_node = parent[parentref]
         new_node = make_new_node(change_node, value, value_format)
+
+        self.logger.debug(
+            ("Processor::_update_node:  Changing the following node of"
+             + " type {} to {}<{}> as {}, a {} YAML element:"
+            ).format(type(change_node), value, value_format,
+                     new_node, type(new_node))
+        )
+        self.logger.debug(change_node)
+
         recurse(self.data, parent, parentref, change_node, new_node)
+
+        self.logger.debug(
+            "Processor::_update_node:  Parent after change:"
+        )
+        self.logger.debug(parent)
