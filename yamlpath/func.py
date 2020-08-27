@@ -386,7 +386,11 @@ def make_new_node(source_node: Any, value: Any,
             )
     else:
         # Punt to whatever the best type may be
-        new_type = type(wrap_type(value))
+        wrapped_value = wrap_type(value)
+        new_type = type(wrapped_value)
+        new_format = YAMLValueFormats.from_node(wrapped_value)
+        if new_format is not YAMLValueFormats.DEFAULT:
+            new_node = make_new_node(source_node, value, new_format)
 
     if new_node is None:
         if hasattr(source_node, "anchor"):
