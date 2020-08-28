@@ -170,8 +170,9 @@ class Processor:
                     self.data, yaml_path, value
             ):
                 self.logger.debug(
-                    "Processor::set_value:  Matched optional node coord, {}."
-                    .format(node_coord)
+                    ("Processor::set_value:  Matched optional node coord, {};"
+                     + " setting its value to {}<{}>.")
+                    .format(node_coord, value, value_format)
                 )
                 self._update_node(
                     node_coord.parent, node_coord.parentref, value,
@@ -333,13 +334,13 @@ class Processor:
                 try:
                     intmin: int = int(min_match)
                     intmax: int = int(max_match)
-                except ValueError:
+                except ValueError as wrap_ex:
                     raise YAMLPathException(
                         "{} is not an integer array slice"
                         .format(str_stripped),
                         str(yaml_path),
                         str(unstripped_attrs)
-                    )
+                    ) from wrap_ex
 
                 if intmin == intmax and len(data) > intmin:
                     yield NodeCoords([data[intmin]], data, intmin)
@@ -353,13 +354,13 @@ class Processor:
         else:
             try:
                 idx: int = int(str_stripped)
-            except ValueError:
+            except ValueError as wrap_ex:
                 raise YAMLPathException(
                     "{} is not an integer array index"
                     .format(str_stripped),
                     str(yaml_path),
                     str(unstripped_attrs)
-                )
+                ) from wrap_ex
 
             if isinstance(data, list) and len(data) > idx:
                 yield NodeCoords(data[idx], data, idx)
@@ -762,14 +763,14 @@ class Processor:
                         else:
                             try:
                                 newidx = int(str(stripped_attrs))
-                            except ValueError:
+                            except ValueError as wrap_ex:
                                 raise YAMLPathException(
                                     ("Cannot add non-integer {} subreference"
                                      + " to lists")
                                     .format(str(segment_type)),
                                     str(yaml_path),
                                     except_segment
-                                )
+                                ) from wrap_ex
                         for _ in range(len(data) - 1, newidx):
                             next_node = build_next_node(
                                 yaml_path, depth + 1, value
@@ -884,4 +885,18 @@ class Processor:
 
         change_node = parent[parentref]
         new_node = make_new_node(change_node, value, value_format)
+
+        self.logger.debug(
+            ("Processor::_update_node:  Changing the following node of"
+             + " type {} to {}<{}> as {}, a {} YAML element:"
+            ).format(type(change_node), value, value_format,
+                     new_node, type(new_node))
+        )
+        self.logger.debug(change_node)
+
         recurse(self.data, parent, parentref, change_node, new_node)
+
+        self.logger.debug(
+            "Processor::_update_node:  Parent after change:"
+        )
+        self.logger.debug(parent)

@@ -192,7 +192,7 @@ class Test_eyaml_rotate_keys():
             yaml_file
         )
         assert not result.success, result.stderr
-        assert "unable to encrypt" in result.stderr
+        assert "unable to encrypt" in result.stderr or "cannot be run due to exit code:  1" in result.stderr
 
     def test_backup_file(self, script_runner, tmp_path_factory, old_eyaml_keys, new_eyaml_keys):
         import os
