@@ -1,3 +1,9 @@
+2.3.7:
+Bug Fixes:
+* Setting negative floats could cause the leading "-" symbol to be replaced
+  with an unexpcted "0" when specifying a float format, or crash when using
+  the default format.
+
 2.3.6:
 Bug Fixes:
 * When using yaml-set with --format=folded and --eyamlcrypt, the encrypted
