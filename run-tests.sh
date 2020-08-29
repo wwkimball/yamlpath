@@ -28,8 +28,8 @@ EOF
 	echo "...upgrading testing tools"
 	pip install --upgrade mypy pytest pytest-cov pytest-console-scripts \
 		pylint coveralls pep257 >/dev/null
-    echo "...installing self"
-    pip install -e . >/dev/null
+	echo "...installing self"
+	pip install -e . >/dev/null
 
 	echo -e "\nPEP257..."
 	if ! pep257 yamlpath; then
