@@ -30,21 +30,67 @@ some.path.pointing.at.an.array.of.hashes:
   identity: key_with_unique_identifying_values
 
 ================================== EXAMPLE ====================================
-key: lhs value
+aliases:
+ - &scalar_anchor LHS aliased value
+ - &unchanging_anchor Same value everywhere
+key: LHS value
 hash:
-  key1: sub lhs value 1
-  key2: sub lhs value 2
-<<
-key: rhs value
+  key1: sub LHS value 1
+  key2: sub LHS value 2
+  complex:
+    subkeyA: *scalar_anchor
+array:
+  - LHS element 1
+  - non-unique element
+  - *scalar_anchor
+  - *unchanging_anchor
+
+<< (RHS overrides LHS scalars;
+    deep Hash merge;
+    keep only unique Array elements; and
+    rename conflicting anchors)
+
+aliases:
+ - &scalar_anchor RHS aliased value
+ - &unchanging_anchor Same value everywhere
+key: RHS value
 hash:
-  key1: sub rhs value 1
-  key3: sub rhs value 3
+  key1: sub RHS value 1
+  key3: sub RHS value 3
+  complex:
+    subkeyA: *scalar_anchor
+    subkeyB:
+      - a
+      - list
+array:
+  - RHS element 1
+  - non-unique element
+  - *scalar_anchor
+  - *unchanging_anchor
+
 ==
-key: rhs value
+
+aliases:
+ - &scalar_anchor_1 LHS aliased value
+ - &scalar_anchor_2 RHS aliased value
+ - &unchanging_anchor Same value everywhere
+key: RHS value
 hash:
-  key1: sub rhs value 1
-  key2: sub lhs value 2
-  key3: sub rhs value 3
+  key1: sub RHS value 1
+  key2: sub LHS value 2
+  key3: sub RHS value 3
+  complex:
+    subkeyA: *scalar_anchor_2  # Because "RHS overrides LHS scalars"
+    subkeyB:
+      - a
+      - list
+array:
+  - LHS element 1
+  - non-unique element
+  - *scalar_anchor_1
+  - *unchanging_anchor
+  - RHS element 1
+  - *scalar_anchor_2
 ===============================================================================
 
 Processing Requirements:
