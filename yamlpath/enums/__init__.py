@@ -1,4 +1,5 @@
 """Make all the YAML Path enumerations available."""
+from .anchorconflictresolutions import AnchorConflictResolutions
 from .anchormatches import AnchorMatches
 from .collectoroperators import CollectorOperators
 from .includealiases import IncludeAliases

@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="yamlpath",
-    version="2.3.7",
+    version="2.4.0",
     description="Read and change YAML/Compatible data using powerful, intuitive, command-line friendly syntax",
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -30,6 +30,7 @@ setuptools.setup(
             "yaml-get = yamlpath.commands.yaml_get:main",
             "yaml-paths = yamlpath.commands.yaml_paths:main",
             "yaml-set = yamlpath.commands.yaml_set:main",
+            "yaml-merge = yamlpath.commands.yaml_merge:main",
         ]
     },
     python_requires=">3.6.0",
