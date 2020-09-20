@@ -112,6 +112,9 @@ Processing Requirements:
 """
 from typing import Any
 
+import ruamel.yaml
+from ruamel.yaml.scalarstring import ScalarString
+
 from yamlpath.wrappers import ConsolePrinter
 from yamlpath.enums import AnchorConflictResolutions
 from yamlpath.func import append_list_element
@@ -270,7 +273,10 @@ class Merger:
 
     def merge_with(self, rhs: Any) -> None:
         """Merge this document with another."""
-        # Start by resolving any anchor conflicts
+        # Remove all comments (no sensible way to merge them)
+        Merger.delete_all_comments(rhs)
+
+        # Resolve any anchor conflicts
         self._resolve_anchor_conflicts(rhs)
 
         # Loop through all elements in RHS
@@ -323,3 +329,26 @@ class Merger:
                 Merger.rename_anchor(ele, anchor, new_anchor)
         elif hasattr(dom, "anchor") and dom.anchor.value == anchor:
             dom.anchor.value = new_anchor
+
+    # pylint: disable=line-too-long
+    @classmethod
+    def delete_all_comments(cls, dom: Any) -> None:
+        """
+        Recursively delete all comments from a YAML document.
+
+        See:  https://stackoverflow.com/questions/60080325/how-to-delete-all-comments-in-ruamel-yaml/60099750#60099750
+        """
+        if isinstance(dom, dict):
+            for key, val in dom.items():
+                Merger.delete_all_comments(key)
+                Merger.delete_all_comments(val)
+        elif isinstance(dom, list):
+            for ele in dom:
+                Merger.delete_all_comments(ele)
+        try:
+            # literal scalarstring might have comment associated with them
+            attr = "comment" if isinstance(dom, ScalarString) \
+                else ruamel.yaml.comments.Comment.attrib
+            delattr(dom, attr)
+        except AttributeError:
+            pass

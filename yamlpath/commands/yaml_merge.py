@@ -104,6 +104,14 @@ def main():
     prime_data = get_yaml_data(prime_yaml, log, prime_file)
     merger = Merger(log, args, prime_data, config_processor)
 
+    # ryamel.yaml unfortunately tracks comments AFTER each YAML key/value.  As
+    # such, it is impossible to copy comments from RHS to LHS in any sensible
+    # way.  This leads to absurd merge results that are data-accurate but
+    # comment-insane.  This ruamel.yaml design decision forces me to simply
+    # delete all comments from all merge documents to produce a sensible
+    # result.
+    Merger.delete_all_comments(prime_data)
+
     # Merge additional input files into the prime
     exit_state = 0
     rhs_yaml = get_yaml_editor()
