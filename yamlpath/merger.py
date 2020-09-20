@@ -162,10 +162,17 @@ class Merger:
                           .format(type(rhs)))
         self.logger.debug(rhs)
 
+        buffer = []
+        buffer_pos = 0
         for key, val in rhs.items():
             self.logger.debug("merge_dicts: Processing key {}{}"
                               .format(key, type(key)))
             if key in lhs:
+                # Write the buffer if populated
+                for b_key, b_val in buffer:
+                    lhs.insert(buffer_pos, b_key, b_val)
+                buffer = []
+
                 # LHS has the RHS key
                 if isinstance(val, dict):
                     lhs[key] = self._merge_dicts(
@@ -176,14 +183,19 @@ class Merger:
                         lhs[key], val,
                         path + "." + str(key).replace(".", "\\."))
                 else:
-                    # TODO: Insert this new key ahead of whatever key(s) follow
-                    # this one in RHS to keep anchor definitions before their
-                    # aliases.  This will require peeking ahead to identify any
-                    # later key which already exists within LHS.
+                    # TODO: User options dictate which value to keep
                     lhs[key] = val
             else:
-                # LHS lacks the RHS key
-                lhs[key] = val
+                # LHS lacks the RHS key.  Buffer this key-value pair in order
+                # to insert it ahead of whatever key(s) follow this one in RHS
+                # to keep anchor definitions before their aliases.
+                buffer.append((key, val))
+
+            buffer_pos += 1
+
+        # Write any remaining buffered content to the end of LHS
+        for b_key, b_val in buffer:
+            lhs[b_key] = b_val
 
         return lhs
 
