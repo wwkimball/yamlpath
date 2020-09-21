@@ -12,7 +12,7 @@ yaml-merge [OPTIONS] file1 [file... [fileN]]
 OPTIONS:
 * DEFAULT behaviors when handling:
   * arrays (keep LHS, keep RHS, append uniques, append all [default])
-  * hashes (keep LHS, keep RHS, shallow merge, deep merge [default])
+  * hashes (keep LHS, keep RHS, deep merge [default])
   * arrays-of-hashes (requires identifier key; then regular hash options)
   * arrays-of-arrays (regular array options)
 * anchor conflict handling (keep LHS, keep RHS, rename per file [aliases in
@@ -116,7 +116,7 @@ import ruamel.yaml
 from ruamel.yaml.scalarstring import ScalarString
 
 from yamlpath.wrappers import ConsolePrinter
-from yamlpath.enums import AnchorConflictResolutions
+from yamlpath.enums import AnchorConflictResolutions, HashMergeOpts
 from yamlpath.func import append_list_element
 from yamlpath import Processor
 
@@ -147,6 +147,10 @@ class Merger:
 
     def _merge_dicts(self, lhs: dict, rhs: dict, path: str = "") -> dict:
         """Merges two YAML maps (dicts)."""
+        self.logger.debug(
+            "Merger::_merge_dicts:  Evaluating dict at '{}'."
+            .format(path))
+
         # lhs_is_dict = isinstance(lhs, dict)
         # rhs_is_dict = isinstance(rhs, dict)
         # if not rhs_is_dict:
@@ -158,15 +162,23 @@ class Merger:
         #     self.logger.error("Incompatible data-types found at {}."
         #               .format(path), 30)
 
-        self.logger.debug("merge_dicts: About to process RHS {}:"
-                          .format(type(rhs)))
-        self.logger.debug(rhs)
+        # The document root is ALWAYS a Hash.  For everything deeper, do not
+        # merge when the user sets LEFT|RIGHT Hash merge options.
+        if len(path) > 0:
+            merge_mode = HashMergeOpts.from_str(self.args.hashes)
+            if merge_mode is HashMergeOpts.LEFT:
+                return lhs
+            if merge_mode is HashMergeOpts.RIGHT:
+                return rhs
 
+        # Deep merge
         buffer = []
         buffer_pos = 0
         for key, val in rhs.items():
-            self.logger.debug("merge_dicts: Processing key {}{}"
-                              .format(key, type(key)))
+            path_next = path + "/" + str(key).replace("/", "\\/")
+            self.logger.debug(
+                "Merger::_merge_dicts:  Processing key {}{} at '{}'."
+                .format(key, type(key), path_next))
             if key in lhs:
                 # Write the buffer if populated
                 for b_key, b_val in buffer:
@@ -176,14 +188,11 @@ class Merger:
                 # LHS has the RHS key
                 if isinstance(val, dict):
                     lhs[key] = self._merge_dicts(
-                        lhs[key], val,
-                        path + "." + str(key).replace(".", "\\."))
+                        lhs[key], val, path_next)
                 elif isinstance(val, list):
                     lhs[key] = self._merge_lists(
-                        lhs[key], val,
-                        path + "." + str(key).replace(".", "\\."))
+                        lhs[key], val, path_next)
                 else:
-                    # TODO: User options dictate which value to keep
                     lhs[key] = val
             else:
                 # LHS lacks the RHS key.  Buffer this key-value pair in order
@@ -201,21 +210,25 @@ class Merger:
 
     def _merge_lists(self, lhs: list, rhs: list, path: str = "") -> list:
         """Merge two lists."""
-        for ele in rhs:
+        for idx, ele in enumerate(rhs):
+            path_next = path + "[{}]".format(idx)
+            self.logger.debug(
+                "Merger::_merge_lists:  Processing element {}{} at {}."
+                .format(ele, type(ele), path_next))
             # TODO: Deeply traverse each element when non-scalar
             append_list_element(lhs, ele, ele.anchor.value)
         return lhs
 
     def _calc_unique_anchor(self, anchor: str, known_anchors: dict):
         """Generate a unique anchor name within a document pair."""
-        self.logger.debug("Merger::calc_unique_anchor: Preexisting Anchors:")
+        self.logger.debug("Merger::_calc_unique_anchor:  Preexisting Anchors:")
         self.logger.debug(known_anchors)
         while anchor in known_anchors:
             anchor = "{}_{}".format(
                 anchor,
                 str(hash(anchor)).replace("-", "_"))
             self.logger.debug(
-                "Merger::calc_unique_anchor: Trying new anchor name, {}."
+                "Merger::_calc_unique_anchor:  Trying new anchor name, {}."
                 .format(anchor))
         return anchor
 
@@ -223,12 +236,12 @@ class Merger:
         """Resolve anchor conflicts."""
         lhs_anchors = {}
         Merger.scan_for_anchors(self.data, lhs_anchors)
-        self.logger.debug("LHS Anchors:")
+        self.logger.debug("Merger::_resolve_anchor_conflicts:  LHS Anchors:")
         self.logger.debug(lhs_anchors)
 
         rhs_anchors = {}
         Merger.scan_for_anchors(rhs, rhs_anchors)
-        self.logger.debug("RHS Anchors:")
+        self.logger.debug("Merger::_resolve_anchor_conflicts:  RHS Anchors:")
         self.logger.debug(rhs_anchors)
 
         for anchor in [anchor

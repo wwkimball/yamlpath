@@ -2,6 +2,7 @@
 from .anchorconflictresolutions import AnchorConflictResolutions
 from .anchormatches import AnchorMatches
 from .collectoroperators import CollectorOperators
+from .hashmergeopts import HashMergeOpts
 from .includealiases import IncludeAliases
 from .pathsearchmethods import PathSearchMethods
 from .pathsegmenttypes import PathSegmentTypes

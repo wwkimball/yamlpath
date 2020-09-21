@@ -11,7 +11,7 @@ import argparse
 from os import access, R_OK
 from os.path import isfile
 
-from yamlpath.enums import AnchorConflictResolutions
+from yamlpath.enums import AnchorConflictResolutions, HashMergeOpts
 from yamlpath.func import get_yaml_data, get_yaml_editor
 from yamlpath import Processor, Merger
 
@@ -43,6 +43,14 @@ def processcli():
         choices=[l.lower() for l in AnchorConflictResolutions.get_names()],
         type=str.lower,
         help="default means by which Anchor name conflicts are resolved\
+              (overridden on a YAML Path basis via --config|-c);\
+              default=stop")
+    parser.add_argument(
+        "-H", "--hashes",
+        default="deep",
+        choices=[l.lower() for l in HashMergeOpts.get_names()],
+        type=str.lower,
+        help="default means by which Hashes are merged together\
               (overridden on a YAML Path basis via --config|-c);\
               default=stop")
 
