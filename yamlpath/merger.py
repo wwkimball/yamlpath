@@ -116,7 +116,11 @@ import ruamel.yaml
 from ruamel.yaml.scalarstring import ScalarString
 
 from yamlpath.wrappers import ConsolePrinter
-from yamlpath.enums import AnchorConflictResolutions, HashMergeOpts
+from yamlpath.enums import (
+    AnchorConflictResolutions,
+    ArrayMergeOpts,
+    HashMergeOpts
+)
 from yamlpath.func import append_list_element
 from yamlpath import Processor
 
@@ -210,13 +214,25 @@ class Merger:
 
     def _merge_lists(self, lhs: list, rhs: list, path: str = "") -> list:
         """Merge two lists."""
+        merge_mode = ArrayMergeOpts.from_str(self.args.arrays)
+        if merge_mode is ArrayMergeOpts.LEFT:
+            return lhs
+        if merge_mode is ArrayMergeOpts.RIGHT:
+            return rhs
+
+        append_all = merge_mode is ArrayMergeOpts.ALL
         for idx, ele in enumerate(rhs):
             path_next = path + "[{}]".format(idx)
             self.logger.debug(
                 "Merger::_merge_lists:  Processing element {}{} at {}."
                 .format(ele, type(ele), path_next))
+
             # TODO: Deeply traverse each element when non-scalar
-            append_list_element(lhs, ele, ele.anchor.value)
+
+            if append_all or (ele not in lhs):
+                append_list_element(
+                    lhs, ele,
+                    ele.anchor.value if hasattr(ele, "anchor") else None)
         return lhs
 
     def _calc_unique_anchor(self, anchor: str, known_anchors: dict):

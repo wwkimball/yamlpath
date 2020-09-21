@@ -11,7 +11,11 @@ import argparse
 from os import access, R_OK
 from os.path import isfile
 
-from yamlpath.enums import AnchorConflictResolutions, HashMergeOpts
+from yamlpath.enums import (
+    AnchorConflictResolutions,
+    ArrayMergeOpts,
+    HashMergeOpts
+)
 from yamlpath.func import get_yaml_data, get_yaml_editor
 from yamlpath import Processor, Merger
 
@@ -24,7 +28,7 @@ def processcli():
     """Process command-line arguments."""
     parser = argparse.ArgumentParser(
         description="Merges two or more YAML/Compatible files together.",
-        epilog="The left-to-right order of rhs_files is significant.  Except\
+        epilog="The left-to-right order of YAML_FILEs is significant.  Except\
             when this behavior is deliberately altered by your options, data\
             from files on the right overrides data in files to their left.  \
             For more information about YAML Paths, please visit\
@@ -53,6 +57,14 @@ def processcli():
         help="default means by which Hashes are merged together\
               (overridden on a YAML Path basis via --config|-c);\
               default=stop")
+    parser.add_argument(
+        "-A", "--arrays",
+        default="all",
+        choices=[l.lower() for l in ArrayMergeOpts.get_names()],
+        type=str.lower,
+        help="default means by which Arrays are merged together\
+              (overridden on a YAML Path basis via --config|-c);\
+              default=all")
 
     noise_group = parser.add_mutually_exclusive_group()
     noise_group.add_argument(
