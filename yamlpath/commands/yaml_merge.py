@@ -5,6 +5,10 @@ Due to the complexities of merging, users are given deep control over the merge
 operation via both default behaviors as well as per YAML Path behaviors.
 
 Copyright 2020 William W. Kimball, Jr. MBA MSIS
+
+=== TODOs ===
+This must permit output to STDOUT, suppressing all non-critical output.
+This must also permit taking RHS from STDIN and as a parameter value.
 """
 import sys
 import argparse
@@ -17,7 +21,7 @@ from yamlpath.enums import (
     HashMergeOpts
 )
 from yamlpath.func import get_yaml_data, get_yaml_editor
-from yamlpath import Processor, Merger
+from yamlpath import Merger, MergerConfig
 
 from yamlpath.wrappers import ConsolePrinter
 
@@ -38,16 +42,18 @@ def processcli():
                         version="%(prog)s " + MY_VERSION)
 
     parser.add_argument("-c", "--config",
-                        help="configuration file for YAML Path specified merge\
-                              control options")
+                        help="INI syle configuration file for YAML Path\
+                              specified merge control options in a [rules]\
+                              section")
 
     parser.add_argument(
         "-a", "--anchors",
         default="stop",
         choices=[l.lower() for l in AnchorConflictResolutions.get_names()],
         type=str.lower,
-        help="default means by which Anchor name conflicts are resolved\
-              (overridden on a YAML Path basis via --config|-c);\
+        help="means by which Anchor name conflicts are resolved\
+              (overrides [defaults]anchors set via --config|-c and cannot be\
+              overridden by [rules] because Anchors apply to the whole file);\
               default=stop")
     parser.add_argument(
         "-H", "--hashes",
@@ -55,16 +61,16 @@ def processcli():
         choices=[l.lower() for l in HashMergeOpts.get_names()],
         type=str.lower,
         help="default means by which Hashes are merged together\
-              (overridden on a YAML Path basis via --config|-c);\
-              default=stop")
+              (overrides [defaults]hashes but is overridden on a YAML Path\
+              basis in [rules] set via --config|-c); default=stop")
     parser.add_argument(
         "-A", "--arrays",
         default="all",
         choices=[l.lower() for l in ArrayMergeOpts.get_names()],
         type=str.lower,
         help="default means by which Arrays are merged together\
-              (overridden on a YAML Path basis via --config|-c);\
-              default=all")
+              (overrides [defaults]arrays but is overridden on a YAML Path\
+              basis via --config|-c); default=all")
 
     noise_group = parser.add_mutually_exclusive_group()
     noise_group.add_argument(
@@ -98,7 +104,7 @@ def validateargs(args, log):
     ):
         has_errors = True
         log.error(
-            "YAML configuration file is not readable:  " + args.config)
+            "INI style configuration file is not readable:  " + args.config)
 
     if has_errors:
         sys.exit(1)
@@ -109,20 +115,12 @@ def main():
     log = ConsolePrinter(args)
     validateargs(args, log)
 
-    # Load the configuration file when one is specified
-    config_processor = Processor(log, None)
-    if args.config:
-        config_yaml = get_yaml_editor()
-        config_data = get_yaml_data(config_yaml, log, args.config)
-        if config_data:
-            config_processor.data = config_data
-
     # The first input file is the prime
     fileiterator = iter(args.rhs_files)
     prime_yaml = get_yaml_editor()
     prime_file = next(fileiterator)
     prime_data = get_yaml_data(prime_yaml, log, prime_file)
-    merger = Merger(log, args, prime_data, config_processor)
+    merger = Merger(log, prime_data, MergerConfig(log, args))
 
     # ryamel.yaml unfortunately tracks comments AFTER each YAML key/value.  As
     # such, it is impossible to copy comments from RHS to LHS in any sensible

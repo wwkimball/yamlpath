@@ -122,14 +122,15 @@ from yamlpath.enums import (
     HashMergeOpts
 )
 from yamlpath.func import append_list_element
-from yamlpath import Processor
+from yamlpath import Processor, MergerConfig
 
 
 class Merger:
     """Performs YAML document merges."""
 
-    def __init__(self, logger: ConsolePrinter, args: dict, lhs: Any,
-            config: Processor) -> None:
+    def __init__(
+            self, logger: ConsolePrinter, lhs: Any, config: MergerConfig
+    ) -> None:
         """
         Instantiate this class into an object.
 
@@ -145,7 +146,6 @@ class Merger:
         Raises:  N/A
         """
         self.logger: ConsolePrinter = logger
-        self.args: dict = args
         self.data: Any = lhs
         self.config: Processor = config
 
@@ -169,7 +169,7 @@ class Merger:
         # The document root is ALWAYS a Hash.  For everything deeper, do not
         # merge when the user sets LEFT|RIGHT Hash merge options.
         if len(path) > 0:
-            merge_mode = HashMergeOpts.from_str(self.args.hashes)
+            merge_mode = self.config.hash_merge_mode(rhs, path)
             if merge_mode is HashMergeOpts.LEFT:
                 return lhs
             if merge_mode is HashMergeOpts.RIGHT:
@@ -214,7 +214,7 @@ class Merger:
 
     def _merge_lists(self, lhs: list, rhs: list, path: str = "") -> list:
         """Merge two lists."""
-        merge_mode = ArrayMergeOpts.from_str(self.args.arrays)
+        merge_mode = self.config.array_merge_mode(lhs, path)
         if merge_mode is ArrayMergeOpts.LEFT:
             return lhs
         if merge_mode is ArrayMergeOpts.RIGHT:
@@ -270,8 +270,7 @@ class Merger:
             # checked for equality (or pointing at identical anchors).
             prime_alias = lhs_anchors[anchor]
             reader_alias = rhs_anchors[anchor]
-            conflict_mode = AnchorConflictResolutions.from_str(
-                self.args.anchors)
+            conflict_mode = self.config.anchor_merge_mode()
 
             if isinstance(prime_alias, dict):
                 self.logger.error(
@@ -319,6 +318,9 @@ class Merger:
 
         # Resolve any anchor conflicts
         self._resolve_anchor_conflicts(rhs)
+
+        # Prepare the merge rules
+        self.config.prepare(rhs)
 
         # Loop through all elements in RHS
         if isinstance(rhs, dict):
