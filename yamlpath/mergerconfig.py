@@ -29,16 +29,26 @@ class MergerConfig:
         """Get Anchor merge options."""
         return AnchorConflictResolutions.from_str(self.args.anchors)
 
-    def hash_merge_mode(self, node: Any) -> HashMergeOpts:
+    def hash_merge_mode(self, node_coord: NodeCoords) -> HashMergeOpts:
         """Get Hash merge options applicable to the indicated path."""
-        if self.rules[node]:
-            return HashMergeOpts.from_str(self.rules[node]['merge'])
+        merge_rule = self._get_rule_for(node_coord)
+        if merge_rule:
+            self.log.debug(
+                "MergerConfig::hash_merge_mode:  Matched {}"
+                .format(merge_rule))
+            return HashMergeOpts.from_str(merge_rule)
+        self.log.debug("MergerConfig::hash_merge_mode:  NOT Matched")
         return HashMergeOpts.from_str(self.args.hashes)
 
-    def array_merge_mode(self, node: Any) -> ArrayMergeOpts:
+    def array_merge_mode(self, node_coord: NodeCoords) -> ArrayMergeOpts:
         """Get Array merge options application to the indicated path."""
-        if self.rules[node]:
-            return ArrayMergeOpts.from_str(self.rules[node]['merge'])
+        merge_rule = self._get_rule_for(node_coord)
+        if merge_rule:
+            self.log.debug(
+                "MergerConfig::array_merge_mode:  Matched {}"
+                .format(merge_rule))
+            return ArrayMergeOpts.from_str(merge_rule)
+        self.log.debug("MergerConfig::array_merge_mode:  NOT Matched")
         return ArrayMergeOpts.from_str(self.args.arrays)
 
     def prepare(self, data: Any) -> None:
@@ -49,11 +59,7 @@ class MergerConfig:
         proc = Processor(self.log, data)
         for yaml_path in self.config['rules']:
             for node_coord in proc.get_nodes(yaml_path):
-                self.rules[node_coord.node] = dict(
-                    parent = node_coord.parent,
-                    parentref = node_coord.parentref,
-                    merge = self.config['rules'][yaml_path]
-                )
+                self.rules[node_coord] = self.config['rules'][yaml_path]
 
         self.log.debug("MergerConfig::prepare:  Matched rules to nodes:")
         self.log.debug(self.rules)
@@ -68,3 +74,16 @@ class MergerConfig:
             config.read(config_file)
             if config.sections():
                 self.config = config
+
+    def _get_rule_for(self, node_coord: NodeCoords) -> str:
+        """Get a user configured merge rule for a node."""
+        if self.config is None:
+            return None
+
+        for rule_coord, merge_rule in self.rules.items():
+            if rule_coord.node == node_coord.node \
+                    and rule_coord.parent == node_coord.parent \
+                    and rule_coord.parentref == node_coord.parentref:
+                return merge_rule
+
+        return None

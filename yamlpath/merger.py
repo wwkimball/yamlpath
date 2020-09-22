@@ -115,7 +115,7 @@ from typing import Any
 import ruamel.yaml
 from ruamel.yaml.scalarstring import ScalarString
 
-from yamlpath.wrappers import ConsolePrinter
+from yamlpath.wrappers import ConsolePrinter, NodeCoords
 from yamlpath.enums import (
     AnchorConflictResolutions,
     ArrayMergeOpts,
@@ -149,8 +149,13 @@ class Merger:
         self.data: Any = lhs
         self.config: Processor = config
 
-    def _merge_dicts(self, lhs: dict, rhs: dict, path: str = "") -> dict:
+    def _merge_dicts(
+        self, lhs: dict, rhs: dict,
+        parent: Any = None, parentref: Any = None,
+        path: str = ""
+    ) -> dict:
         """Merges two YAML maps (dicts)."""
+        node_coord = NodeCoords(rhs, parent, parentref)
         self.logger.debug(
             "Merger::_merge_dicts:  Evaluating dict at '{}'."
             .format(path))
@@ -169,7 +174,7 @@ class Merger:
         # The document root is ALWAYS a Hash.  For everything deeper, do not
         # merge when the user sets LEFT|RIGHT Hash merge options.
         if len(path) > 0:
-            merge_mode = self.config.hash_merge_mode(rhs, path)
+            merge_mode = self.config.hash_merge_mode(node_coord)
             if merge_mode is HashMergeOpts.LEFT:
                 return lhs
             if merge_mode is HashMergeOpts.RIGHT:
@@ -192,10 +197,10 @@ class Merger:
                 # LHS has the RHS key
                 if isinstance(val, dict):
                     lhs[key] = self._merge_dicts(
-                        lhs[key], val, path_next)
+                        lhs[key], val, rhs, key, path_next)
                 elif isinstance(val, list):
                     lhs[key] = self._merge_lists(
-                        lhs[key], val, path_next)
+                        lhs[key], val, rhs, key, path_next)
                 else:
                     lhs[key] = val
             else:
@@ -212,9 +217,14 @@ class Merger:
 
         return lhs
 
-    def _merge_lists(self, lhs: list, rhs: list, path: str = "") -> list:
+    def _merge_lists(
+        self, lhs: list, rhs: list,
+        parent: Any = None, parentref: Any = None,
+        path: str = ""
+    ) -> list:
         """Merge two lists."""
-        merge_mode = self.config.array_merge_mode(lhs, path)
+        node_coord = NodeCoords(rhs, parent, parentref)
+        merge_mode = self.config.array_merge_mode(node_coord)
         if merge_mode is ArrayMergeOpts.LEFT:
             return lhs
         if merge_mode is ArrayMergeOpts.RIGHT:
