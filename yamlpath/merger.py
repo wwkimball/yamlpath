@@ -120,9 +120,10 @@ from yamlpath.enums import (
     AnchorConflictResolutions,
     AoHMergeOpts,
     ArrayMergeOpts,
-    HashMergeOpts
+    HashMergeOpts,
+    PathSeperators
 )
-from yamlpath.func import append_list_element
+from yamlpath.func import append_list_element, escape_path_section
 from yamlpath import Processor, MergerConfig
 
 
@@ -362,22 +363,31 @@ class Merger:
                                 .union(set(rhs_anchors.keys()))
                             )
                         )
-                    elif conflict_mode is AnchorConflictResolutions.FIRST:
+                    elif conflict_mode is AnchorConflictResolutions.LEFT:
                         self.logger.debug(
-                            "Anchor {} conflict; FIRST will override."
+                            "Anchor {} conflict; LEFT will override."
                             .format(anchor))
-                        Merger.overwrite_aliased_values(
+                        self._overwrite_aliased_values(
                             rhs, anchor, prime_alias)
-                    elif conflict_mode is AnchorConflictResolutions.LAST:
+                    elif conflict_mode is AnchorConflictResolutions.RIGHT:
                         self.logger.debug(
-                            "Anchor {} conflict; LAST will override."
+                            "Anchor {} conflict; RIGHT will override."
                             .format(anchor))
-                        Merger.overwrite_aliased_values(
+                        self._overwrite_aliased_values(
                             self.data, anchor, reader_alias)
                     else:
                         self.logger.error(
                             "Aborting due to anchor conflict, {}"
                             .format(anchor), 4)
+
+    def _overwrite_aliased_values(self, dom: Any, anchor: str, value: Any):
+        """Replace the value of every alias of an anchor."""
+        # Use Processor to perform the operation.  To do so, a Path to at least
+        # one alias must be known; so find the first one and build its YAML
+        # Path during the scan.
+        first_path = Merger.search_for_anchor(dom, anchor)
+        proc = Processor(self.logger, dom)
+        proc.set_value(first_path, value, mustexist=True)
 
     def merge_with(self, rhs: Any) -> None:
         """Merge this document with another."""
@@ -421,9 +431,25 @@ class Merger:
             anchors[dom.anchor.value] = dom
 
     @classmethod
-    def overwrite_aliased_values(cls, dom: Any, anchor: str, value: Any):
-        """Replace the value of every alias of an anchor."""
-        # TODO:  Implement this method
+    def search_for_anchor(cls, dom: Any, anchor: str, path: str = "") -> str:
+        """Returns the YAML Path to the first appearance of an Anchor."""
+        if isinstance(dom, dict):
+            for key, val in dom.items():
+                path_next = path + "/{}".format(
+                    escape_path_section(str(key), PathSeperators.FSLASH))
+                if hasattr(key, "anchor") and key.anchor.value == anchor:
+                    return path + "/&{}".format(anchor)
+                if hasattr(val, "anchor") and val.anchor.value == anchor:
+                    return path_next
+                return Merger.search_for_anchor(val, anchor, path_next)
+        elif isinstance(dom, list):
+            for idx, ele in enumerate(dom):
+                path_next = path + "[{}]".format(idx)
+                return Merger.search_for_anchor(ele, anchor, path_next)
+        elif hasattr(dom, "anchor") and dom.anchor.value == anchor:
+            return path
+
+        return None
 
     @classmethod
     def rename_anchor(cls, dom: Any, anchor: str, new_anchor: str):

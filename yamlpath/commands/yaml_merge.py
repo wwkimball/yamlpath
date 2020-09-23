@@ -44,8 +44,7 @@ def processcli():
 
     parser.add_argument("-c", "--config",
                         help="INI syle configuration file for YAML Path\
-                              specified merge control options in a [rules]\
-                              section")
+                              specified merge control options")
 
     parser.add_argument(
         "-a", "--anchors",

@@ -16,10 +16,10 @@ class AnchorConflictResolutions(Enum):
     `STOP`
         Abort the merge upon conflict detection.
 
-    `FIRST`
+    `LEFT`
         The first-encountered definition overrides all other uses.
 
-    `LAST`
+    `RIGHT`
         The last-encountered definition overrides all other uses.
 
     `RENAME`
@@ -27,8 +27,8 @@ class AnchorConflictResolutions(Enum):
     """
 
     STOP = auto()
-    FIRST = auto()
-    LAST = auto()
+    LEFT = auto()
+    RIGHT = auto()
     RENAME = auto()
 
     @staticmethod
