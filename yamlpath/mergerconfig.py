@@ -8,6 +8,7 @@ from typing import Any
 
 from yamlpath.enums import (
     AnchorConflictResolutions,
+    AoHKeySources,
     AoHMergeOpts,
     ArrayMergeOpts,
     HashMergeOpts
@@ -65,15 +66,28 @@ class MergerConfig:
         self.log.debug("MergerConfig::aoh_merge_mode:  NOT Matched")
         return AoHMergeOpts.from_str(self.args.aoh)
 
+    def aoh_merge_key(self, data: dict, path: str) -> str:
+        """Get the identity key of a dict based on user settings."""
+        key_source = AoHKeySources.from_str(self.args.aohkey)
+
+        if key_source is AoHKeySources.FIRST:
+            # Treat the first key as an identity key
+            merge_key = list(data)[0]
+        else:
+            # Seek user-specified identity key in supplied config
+            merge_key = self.config["keys"][path]
+
+        return merge_key
+
     def prepare(self, data: Any) -> None:
         """Load references to all nodes which match config rules."""
         if self.config is None:
             return
 
         proc = Processor(self.log, data)
-        for yaml_path in self.config['rules']:
+        for yaml_path in self.config["rules"]:
             for node_coord in proc.get_nodes(yaml_path):
-                self.rules[node_coord] = self.config['rules'][yaml_path]
+                self.rules[node_coord] = self.config["rules"][yaml_path]
 
         self.log.debug("MergerConfig::prepare:  Matched rules to nodes:")
         self.log.debug(self.rules)

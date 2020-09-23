@@ -236,7 +236,6 @@ class Merger:
                 "Merger::_merge_simple_lists:  Processing element {}{} at {}."
                 .format(ele, type(ele), path_next))
 
-            # In a Scalar List
             if append_all or (ele not in lhs):
                 append_list_element(
                     lhs, ele,
@@ -262,10 +261,7 @@ class Merger:
                 .format(ele, type(ele), path_next))
 
             if merge_mode is AoHMergeOpts.DEEP:
-                # TODO:  Handle case of AoHMergeKeySource.CONFIG
-
-                # Treat the first key as an identity key
-                rhs_key_name = list(ele)[0]
+                rhs_key_name = self.config.aoh_merge_key(ele, path)
                 rhs_key_value = ele[rhs_key_name]
                 merged_hash = False
                 for lhs_hash in lhs:
