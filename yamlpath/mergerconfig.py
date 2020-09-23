@@ -8,7 +8,6 @@ from typing import Any
 
 from yamlpath.enums import (
     AnchorConflictResolutions,
-    AoHKeySources,
     AoHMergeOpts,
     ArrayMergeOpts,
     HashMergeOpts
@@ -24,6 +23,7 @@ class MergerConfig:
         self.args = args
         self.config = None
         self.rules = {}
+        self.keys = {}
 
         self._load_config()
 
@@ -68,15 +68,15 @@ class MergerConfig:
 
     def aoh_merge_key(self, data: dict, path: str) -> str:
         """Get the identity key of a dict based on user settings."""
-        key_source = AoHKeySources.from_str(self.args.aohkey)
-
-        if key_source is AoHKeySources.FIRST:
-            # Treat the first key as an identity key
-            merge_key = list(data)[0]
-        else:
-            # Seek user-specified identity key in supplied config
+        # Check the user config for a specific key; fallback to first key.
+        merge_key = None
+        if "keys" in self.config and path in self.config["keys"]:
             merge_key = self.config["keys"][path]
-
+        elif len(data.keys()) > 0:
+            merge_key = list(data)[0]
+        self.log.debug(
+            "MergerConfig::aoh_merge_key:  Found key {} at {}."
+            .format(merge_key, path))
         return merge_key
 
     def prepare(self, data: Any) -> None:
@@ -88,6 +88,10 @@ class MergerConfig:
         for yaml_path in self.config["rules"]:
             for node_coord in proc.get_nodes(yaml_path):
                 self.rules[node_coord] = self.config["rules"][yaml_path]
+
+        for yaml_path in self.config["keys"]:
+            for node_coord in proc.get_nodes(yaml_path):
+                self.keys[node_coord] = self.config["keys"][yaml_path]
 
         self.log.debug("MergerConfig::prepare:  Matched rules to nodes:")
         self.log.debug(self.rules)
@@ -103,15 +107,23 @@ class MergerConfig:
             if config.sections():
                 self.config = config
 
-    def _get_rule_for(self, node_coord: NodeCoords) -> str:
-        """Get a user configured merge rule for a node."""
+    def _get_config_for(self, node_coord: NodeCoords, section: dict) -> str:
+        """Get user configuration applicable to a node."""
         if self.config is None:
             return None
 
-        for rule_coord, merge_rule in self.rules.items():
+        for rule_coord, rule_config in section.items():
             if rule_coord.node == node_coord.node \
                     and rule_coord.parent == node_coord.parent \
                     and rule_coord.parentref == node_coord.parentref:
-                return merge_rule
+                return rule_config
 
         return None
+
+    def _get_rule_for(self, node_coord: NodeCoords) -> str:
+        """Get a user configured merge rule for a node."""
+        return self._get_config_for(node_coord, self.rules)
+
+    def _get_key_for(self, node_coord: NodeCoords) -> str:
+        """Get a user configured merge rule for a node."""
+        return self._get_config_for(node_coord, self.keys)

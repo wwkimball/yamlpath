@@ -17,7 +17,6 @@ from os.path import isfile
 
 from yamlpath.enums import (
     AnchorConflictResolutions,
-    AoHKeySources,
     AoHMergeOpts,
     ArrayMergeOpts,
     HashMergeOpts
@@ -81,14 +80,6 @@ def processcli():
         help="default means by which Arrays-of-Hashes are merged together\
               (overrides [defaults]aoh but is overridden on a YAML Path\
               basis in [rules] set via --config|-c); default=all")
-    parser.add_argument(
-        "-O", "--aohkey",
-        default="first",
-        choices=[l.lower() for l in AoHKeySources.get_names()],
-        type=str.lower,
-        help="source of identity keys for deeply merging Arrays-of-Hashes\
-              (overrides [defaults]aohkey but is overridden on a YAML Path\
-              basis in [rules] set via --config|-c); default=first")
 
     noise_group = parser.add_mutually_exclusive_group()
     noise_group.add_argument(
