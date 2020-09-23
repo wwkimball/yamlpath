@@ -29,10 +29,17 @@ class MergerConfig:
 
     def anchor_merge_mode(self) -> AnchorConflictResolutions:
         """Get Anchor merge options."""
-        return AnchorConflictResolutions.from_str(self.args.anchors)
+        # Precedence: CLI > config[defaults] > default
+        if self.args.anchors:
+            return AnchorConflictResolutions.from_str(self.args.anchors)
+        if "defaults" in self.config and "anchors" in self.config["defaults"]:
+            return AnchorConflictResolutions.from_str(
+                self.config["defaults"]["anchors"])
+        return AnchorConflictResolutions.STOP
 
     def hash_merge_mode(self, node_coord: NodeCoords) -> HashMergeOpts:
         """Get Hash merge options applicable to the indicated path."""
+        # Precedence: config[rules] > CLI > config[defaults] > default
         merge_rule = self._get_rule_for(node_coord)
         if merge_rule:
             self.log.debug(
@@ -40,10 +47,15 @@ class MergerConfig:
                 .format(merge_rule))
             return HashMergeOpts.from_str(merge_rule)
         self.log.debug("MergerConfig::hash_merge_mode:  NOT Matched")
-        return HashMergeOpts.from_str(self.args.hashes)
+        if self.args.hashes:
+            return HashMergeOpts.from_str(self.args.hashes)
+        if "defaults" in self.config and "hashes" in self.config["defaults"]:
+            return HashMergeOpts.from_str(self.config["defaults"]["hashes"])
+        return HashMergeOpts.DEEP
 
     def array_merge_mode(self, node_coord: NodeCoords) -> ArrayMergeOpts:
-        """Get Array merge options application to the indicated path."""
+        """Get Array merge options applicable to the indicated path."""
+        # Precedence: config[rules] > CLI > config[defaults] > default
         merge_rule = self._get_rule_for(node_coord)
         if merge_rule:
             self.log.debug(
@@ -51,12 +63,17 @@ class MergerConfig:
                 .format(merge_rule))
             return ArrayMergeOpts.from_str(merge_rule)
         self.log.debug("MergerConfig::array_merge_mode:  NOT Matched")
-        return ArrayMergeOpts.from_str(self.args.arrays)
+        if self.args.arrays:
+            return ArrayMergeOpts.from_str(self.args.arrays)
+        if "defaults" in self.config and "arrays" in self.config["defaults"]:
+            return ArrayMergeOpts.from_str(self.config["defaults"]["arrays"])
+        return ArrayMergeOpts.ALL
 
     def aoh_merge_mode(self, node_coord: NodeCoords) -> AoHMergeOpts:
         """
-        Get Array-of-Hashes merge options application to the indicated path.
+        Get Array-of-Hashes merge options applicable to the indicated path.
         """
+        # Precedence: config[rules] > CLI > config[defaults] > default
         merge_rule = self._get_rule_for(node_coord)
         if merge_rule:
             self.log.debug(
@@ -64,7 +81,11 @@ class MergerConfig:
                 .format(merge_rule))
             return AoHMergeOpts.from_str(merge_rule)
         self.log.debug("MergerConfig::aoh_merge_mode:  NOT Matched")
-        return AoHMergeOpts.from_str(self.args.aoh)
+        if self.args.aoh:
+            return AoHMergeOpts.from_str(self.args.aoh)
+        if "defaults" in self.config and "aoh" in self.config["defaults"]:
+            return AoHMergeOpts.from_str(self.config["defaults"]["aoh"])
+        return AoHMergeOpts.ALL
 
     def aoh_merge_key(
         self, node_coord: NodeCoords, data: dict

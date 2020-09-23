@@ -49,7 +49,6 @@ def processcli():
 
     parser.add_argument(
         "-a", "--anchors",
-        default="stop",
         choices=[l.lower() for l in AnchorConflictResolutions.get_names()],
         type=str.lower,
         help="means by which Anchor name conflicts are resolved\
@@ -58,7 +57,6 @@ def processcli():
               default=stop")
     parser.add_argument(
         "-A", "--arrays",
-        default="all",
         choices=[l.lower() for l in ArrayMergeOpts.get_names()],
         type=str.lower,
         help="default means by which Arrays are merged together\
@@ -66,7 +64,6 @@ def processcli():
               basis via --config|-c); default=all")
     parser.add_argument(
         "-H", "--hashes",
-        default="deep",
         choices=[l.lower() for l in HashMergeOpts.get_names()],
         type=str.lower,
         help="default means by which Hashes are merged together\
@@ -74,7 +71,6 @@ def processcli():
               basis in [rules] set via --config|-c); default=stop")
     parser.add_argument(
         "-o", "--aoh",
-        default="all",
         choices=[l.lower() for l in AoHMergeOpts.get_names()],
         type=str.lower,
         help="default means by which Arrays-of-Hashes are merged together\
