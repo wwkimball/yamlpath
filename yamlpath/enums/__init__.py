@@ -1,6 +1,8 @@
 """Make all the YAML Path enumerations available."""
 from .anchorconflictresolutions import AnchorConflictResolutions
 from .anchormatches import AnchorMatches
+from .aohkeysources import AoHKeySources
+from .aohmergeopts import AoHMergeOpts
 from .arraymergeopts import ArrayMergeOpts
 from .collectoroperators import CollectorOperators
 from .hashmergeopts import HashMergeOpts

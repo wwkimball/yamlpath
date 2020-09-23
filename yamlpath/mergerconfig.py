@@ -8,6 +8,7 @@ from typing import Any
 
 from yamlpath.enums import (
     AnchorConflictResolutions,
+    AoHMergeOpts,
     ArrayMergeOpts,
     HashMergeOpts
 )
@@ -50,6 +51,19 @@ class MergerConfig:
             return ArrayMergeOpts.from_str(merge_rule)
         self.log.debug("MergerConfig::array_merge_mode:  NOT Matched")
         return ArrayMergeOpts.from_str(self.args.arrays)
+
+    def aoh_merge_mode(self, node_coord: NodeCoords) -> AoHMergeOpts:
+        """
+        Get Array-of-Hashes merge options application to the indicated path.
+        """
+        merge_rule = self._get_rule_for(node_coord)
+        if merge_rule:
+            self.log.debug(
+                "MergerConfig::aoh_merge_mode:  Matched {}"
+                .format(merge_rule))
+            return AoHMergeOpts.from_str(merge_rule)
+        self.log.debug("MergerConfig::aoh_merge_mode:  NOT Matched")
+        return AoHMergeOpts.from_str(self.args.aoh)
 
     def prepare(self, data: Any) -> None:
         """Load references to all nodes which match config rules."""

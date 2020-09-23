@@ -17,6 +17,8 @@ from os.path import isfile
 
 from yamlpath.enums import (
     AnchorConflictResolutions,
+    AoHKeySources,
+    AoHMergeOpts,
     ArrayMergeOpts,
     HashMergeOpts
 )
@@ -56,6 +58,14 @@ def processcli():
               overridden by [rules] because Anchors apply to the whole file);\
               default=stop")
     parser.add_argument(
+        "-A", "--arrays",
+        default="all",
+        choices=[l.lower() for l in ArrayMergeOpts.get_names()],
+        type=str.lower,
+        help="default means by which Arrays are merged together\
+              (overrides [defaults]arrays but is overridden on a YAML Path\
+              basis via --config|-c); default=all")
+    parser.add_argument(
         "-H", "--hashes",
         default="deep",
         choices=[l.lower() for l in HashMergeOpts.get_names()],
@@ -64,13 +74,21 @@ def processcli():
               (overrides [defaults]hashes but is overridden on a YAML Path\
               basis in [rules] set via --config|-c); default=stop")
     parser.add_argument(
-        "-A", "--arrays",
+        "-o", "--aoh",
         default="all",
-        choices=[l.lower() for l in ArrayMergeOpts.get_names()],
+        choices=[l.lower() for l in AoHMergeOpts.get_names()],
         type=str.lower,
-        help="default means by which Arrays are merged together\
-              (overrides [defaults]arrays but is overridden on a YAML Path\
-              basis via --config|-c); default=all")
+        help="default means by which Arrays-of-Hashes are merged together\
+              (overrides [defaults]aoh but is overridden on a YAML Path\
+              basis in [rules] set via --config|-c); default=all")
+    parser.add_argument(
+        "-O", "--aohkey",
+        default="first",
+        choices=[l.lower() for l in AoHKeySources.get_names()],
+        type=str.lower,
+        help="source of identity keys for deeply merging Arrays-of-Hashes\
+              (overrides [defaults]aohkey but is overridden on a YAML Path\
+              basis in [rules] set via --config|-c); default=first")
 
     noise_group = parser.add_mutually_exclusive_group()
     noise_group.add_argument(

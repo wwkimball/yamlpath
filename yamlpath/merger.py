@@ -118,6 +118,7 @@ from ruamel.yaml.scalarstring import ScalarString
 from yamlpath.wrappers import ConsolePrinter, NodeCoords
 from yamlpath.enums import (
     AnchorConflictResolutions,
+    AoHMergeOpts,
     ArrayMergeOpts,
     HashMergeOpts
 )
@@ -217,13 +218,11 @@ class Merger:
 
         return lhs
 
-    def _merge_lists(
+    def _merge_simple_lists(
         self, lhs: list, rhs: list,
-        parent: Any = None, parentref: Any = None,
-        path: str = ""
+        node_coord: NodeCoords, path: str = ""
     ) -> list:
-        """Merge two lists."""
-        node_coord = NodeCoords(rhs, parent, parentref)
+        """Merge two lists of Scalars or lists."""
         merge_mode = self.config.array_merge_mode(node_coord)
         if merge_mode is ArrayMergeOpts.LEFT:
             return lhs
@@ -234,15 +233,77 @@ class Merger:
         for idx, ele in enumerate(rhs):
             path_next = path + "[{}]".format(idx)
             self.logger.debug(
-                "Merger::_merge_lists:  Processing element {}{} at {}."
+                "Merger::_merge_simple_lists:  Processing element {}{} at {}."
                 .format(ele, type(ele), path_next))
 
-            # TODO: Deeply traverse each element when non-scalar
-
+            # In a Scalar List
             if append_all or (ele not in lhs):
                 append_list_element(
                     lhs, ele,
                     ele.anchor.value if hasattr(ele, "anchor") else None)
+        return lhs
+
+    def _merge_arrays_of_hashes(
+        self, lhs: list, rhs: list,
+        node_coord: NodeCoords, path: str = ""
+    ) -> list:
+        """Merge two lists of dicts (Arrays-of-Hashes)."""
+        merge_mode = self.config.aoh_merge_mode(node_coord)
+        if merge_mode is AoHMergeOpts.LEFT:
+            return lhs
+        if merge_mode is AoHMergeOpts.RIGHT:
+            return rhs
+
+        for idx, ele in enumerate(rhs):
+            path_next = path + "[{}]".format(idx)
+            self.logger.debug(
+                "Merger::_merge_arrays_of_hashes:  Processing element {}{}\
+                 at {}."
+                .format(ele, type(ele), path_next))
+
+            if merge_mode is AoHMergeOpts.DEEP:
+                # TODO:  Handle case of AoHMergeKeySource.CONFIG
+
+                # Treat the first key as an identity key
+                rhs_key_name = list(ele)[0]
+                rhs_key_value = ele[rhs_key_name]
+                merged_hash = False
+                for lhs_hash in lhs:
+                    if rhs_key_name in lhs_hash \
+                            and lhs_hash[rhs_key_name] == rhs_key_value:
+                        lhs_hash = self._merge_dicts(
+                            lhs_hash, ele, rhs, idx, path_next)
+                        merged_hash = True
+                        break
+                if not merged_hash:
+                    append_list_element(lhs, ele,
+                        ele.anchor.value if hasattr(ele, "anchor") else None)
+            elif merge_mode is AoHMergeOpts.UNIQUE:
+                if ele not in lhs:
+                    append_list_element(
+                        lhs, ele,
+                        ele.anchor.value if hasattr(ele, "anchor") else None)
+            else:
+                append_list_element(lhs, ele,
+                    ele.anchor.value if hasattr(ele, "anchor") else None)
+        return lhs
+
+    def _merge_lists(
+        self, lhs: list, rhs: list,
+        parent: Any = None, parentref: Any = None,
+        path: str = ""
+    ) -> list:
+        """Merge two lists."""
+        node_coord = NodeCoords(rhs, parent, parentref)
+        if len(rhs) > 0:
+            if isinstance(rhs[0], dict):
+                # This list is an Array-of-Hashes
+                return self._merge_arrays_of_hashes(lhs, rhs, node_coord, path)
+
+            # This list is an Array-of-Arrays or a simple list of Scalars
+            return self._merge_simple_lists(lhs, rhs, node_coord, path)
+
+        # No RHS list
         return lhs
 
     def _calc_unique_anchor(self, anchor: str, known_anchors: dict):
@@ -365,7 +426,7 @@ class Merger:
     @classmethod
     def overwrite_aliased_values(cls, dom: Any, anchor: str, value: Any):
         """Replace the value of every alias of an anchor."""
-        pass
+        # TODO:  Implement this method
 
     @classmethod
     def rename_anchor(cls, dom: Any, anchor: str, new_anchor: str):
