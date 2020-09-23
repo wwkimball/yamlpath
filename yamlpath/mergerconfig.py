@@ -89,6 +89,11 @@ class MergerConfig:
         if self.config is None:
             return
 
+        # Eliminate previous rules and keys to limit scanning to only those
+        # nodes which exist within this new document.
+        self.rules = {}
+        self.keys = {}
+
         proc = Processor(self.log, data)
         for yaml_path in self.config["rules"]:
             for node_coord in proc.get_nodes(yaml_path):
