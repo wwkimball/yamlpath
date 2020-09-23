@@ -255,18 +255,19 @@ class Merger:
 
         for idx, ele in enumerate(rhs):
             path_next = path + "[{}]".format(idx)
+            node_next = NodeCoords(ele, rhs, idx)
             self.logger.debug(
                 "Merger::_merge_arrays_of_hashes:  Processing element {}{}\
                  at {}."
                 .format(ele, type(ele), path_next))
 
             if merge_mode is AoHMergeOpts.DEEP:
-                rhs_key_name = self.config.aoh_merge_key(ele, path)
-                rhs_key_value = ele[rhs_key_name]
+                id_key = self.config.aoh_merge_key(node_next, ele)
+                rhs_key_value = ele[id_key]
                 merged_hash = False
                 for lhs_hash in lhs:
-                    if rhs_key_name in lhs_hash \
-                            and lhs_hash[rhs_key_name] == rhs_key_value:
+                    if id_key in lhs_hash \
+                            and lhs_hash[id_key] == rhs_key_value:
                         lhs_hash = self._merge_dicts(
                             lhs_hash, ele, rhs, idx, path_next)
                         merged_hash = True

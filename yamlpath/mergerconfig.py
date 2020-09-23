@@ -66,17 +66,22 @@ class MergerConfig:
         self.log.debug("MergerConfig::aoh_merge_mode:  NOT Matched")
         return AoHMergeOpts.from_str(self.args.aoh)
 
-    def aoh_merge_key(self, data: dict, path: str) -> str:
+    def aoh_merge_key(
+        self, node_coord: NodeCoords, data: dict
+    ) -> str:
         """Get the identity key of a dict based on user settings."""
         # Check the user config for a specific key; fallback to first key.
-        merge_key = None
-        if "keys" in self.config and path in self.config["keys"]:
-            merge_key = self.config["keys"][path]
-        elif len(data.keys()) > 0:
+        merge_key = self._get_key_for(node_coord)
+        if not merge_key:
+            # This node may be a child of one of the registered keys.  That
+            # registered key's node will match this node's parent.
+            for eval_nc, eval_key in self.keys.items():
+                if node_coord.parent == eval_nc.node:
+                    merge_key = eval_key
+                    break
+        if not merge_key and len(data.keys()) > 0:
+            # Fallback to using the first key of the dict as an identity key
             merge_key = list(data)[0]
-        self.log.debug(
-            "MergerConfig::aoh_merge_key:  Found key {} at {}."
-            .format(merge_key, path))
         return merge_key
 
     def prepare(self, data: Any) -> None:
@@ -88,13 +93,14 @@ class MergerConfig:
         for yaml_path in self.config["rules"]:
             for node_coord in proc.get_nodes(yaml_path):
                 self.rules[node_coord] = self.config["rules"][yaml_path]
+        self.log.debug("MergerConfig::prepare:  Matched rules to nodes:")
+        self.log.debug(self.rules)
 
         for yaml_path in self.config["keys"]:
             for node_coord in proc.get_nodes(yaml_path):
                 self.keys[node_coord] = self.config["keys"][yaml_path]
-
-        self.log.debug("MergerConfig::prepare:  Matched rules to nodes:")
-        self.log.debug(self.rules)
+        self.log.debug("MergerConfig::prepare:  Matched keys to nodes:")
+        self.log.debug(self.keys)
 
     def _load_config(self) -> None:
         """Load the external configuration file."""
