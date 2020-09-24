@@ -5,10 +5,6 @@ Due to the complexities of merging, users are given deep control over the merge
 operation via both default behaviors as well as per YAML Path behaviors.
 
 Copyright 2020 William W. Kimball, Jr. MBA MSIS
-
-=== TODOs ===
-This must permit output to STDOUT, suppressing all non-critical output.
-This must also permit taking RHS from STDIN and as a parameter value.
 """
 import sys
 import argparse
@@ -32,55 +28,77 @@ MY_VERSION = "0.0.1"
 def processcli():
     """Process command-line arguments."""
     parser = argparse.ArgumentParser(
+        formatter_class=argparse.RawTextHelpFormatter,
         description="Merges two or more YAML/Compatible files together.",
-        epilog="The left-to-right order of YAML_FILEs is significant.  Except\
-            when this behavior is deliberately altered by your options, data\
-            from files on the right overrides data in files to their left.  \
-            For more information about YAML Paths, please visit\
-            https://github.com/wwkimball/yamlpath."
+        epilog="""
+            The CONFIG file is an INI file with up to three sections:
+            [defaults] Sets equivalents of -a|--anchors, -A|--arrays,
+                       -H|--hashes, and -O|--aoh.
+            [rules]    Each entry is a YAML Path assigning -A|--arrays,
+                       -H|--hashes, or -O|--aoh for precise nodes.
+            [keys]     Wherever -O|--aoh=DEEP, each entry is treated as a
+                       record with an identity key.  In order to match RHS
+                       records to LHS records, a key must be known and is
+                       identified on a YAML Path basis via this section.
+                       Where not specified, the first attribute of the first
+                       record in the Array-of-Hashes is presumed the identity
+                       key for all records in the set.
+
+            The left-to-right order of YAML_FILEs is significant.  Except
+            when this behavior is deliberately altered by your options, data
+            from files on the right overrides data in files to their left.
+            For more information about YAML Paths, please visit
+            https://github.com/wwkimball/yamlpath."""
     )
     parser.add_argument("-V", "--version", action="version",
                         version="%(prog)s " + MY_VERSION)
 
-    parser.add_argument("-c", "--config",
-                        help="INI syle configuration file for YAML Path\
-                              specified merge control options")
+    parser.add_argument(
+        "-c", "--config", help=(
+            "INI syle configuration file for YAML Path specified\n"
+            "merge control options"))
 
     parser.add_argument(
         "-a", "--anchors",
         choices=[l.lower() for l in AnchorConflictResolutions.get_names()],
         type=str.lower,
-        help="means by which Anchor name conflicts are resolved\
-              (overrides [defaults]anchors set via --config|-c and cannot be\
-              overridden by [rules] because Anchors apply to the whole file);\
-              default=stop")
+        help=(
+            "means by which Anchor name conflicts are resolved\n"
+            "(overrides [defaults]anchors set via --config|-c and\n"
+            "cannot be overridden by [rules] because Anchors apply\n"
+            "to the whole file); default=stop"))
     parser.add_argument(
         "-A", "--arrays",
         choices=[l.lower() for l in ArrayMergeOpts.get_names()],
         type=str.lower,
-        help="default means by which Arrays are merged together\
-              (overrides [defaults]arrays but is overridden on a YAML Path\
-              basis via --config|-c); default=all")
+        help=(
+            "default means by which Arrays are merged together\n"
+            "(overrides [defaults]arrays but is overridden on a\n"
+            "YAML Path basis via --config|-c); default=all"))
     parser.add_argument(
         "-H", "--hashes",
         choices=[l.lower() for l in HashMergeOpts.get_names()],
         type=str.lower,
-        help="default means by which Hashes are merged together\
-              (overrides [defaults]hashes but is overridden on a YAML Path\
-              basis in [rules] set via --config|-c); default=stop")
+        help=(
+            "default means by which Hashes are merged together\n"
+            "(overrides [defaults]hashes but is overridden on a\n"
+            "YAML Path basis in [rules] set via --config|-c);\n"
+            "default=deep"))
     parser.add_argument(
         "-O", "--aoh",
         choices=[l.lower() for l in AoHMergeOpts.get_names()],
         type=str.lower,
-        help="default means by which Arrays-of-Hashes are merged together\
-              (overrides [defaults]aoh but is overridden on a YAML Path\
-              basis in [rules] set via --config|-c); default=all")
+        help=(
+            "default means by which Arrays-of-Hashes are merged\n"
+            "together (overrides [defaults]aoh but is overridden on\n"
+            "a YAML Path basis in [rules] set via --config|-c);\n"
+            "default=all"))
 
     parser.add_argument(
         "-o", "--output",
-        help="Write the merged result to the indicated file (or STDOUT when\
-              unset, which also implies -q|--quiet)"
-    )
+        help=(
+            "Write the merged result to the indicated file (or\n"
+            "STDOUT when unset, which also implies -q|--quiet)"))
 
     noise_group = parser.add_mutually_exclusive_group()
     noise_group.add_argument(
@@ -91,11 +109,15 @@ def processcli():
         help="increase output verbosity")
     noise_group.add_argument(
         "-q", "--quiet", action="store_true",
-        help="suppress all output except errors")
+        help=(
+            "suppress all output except errors (implied when\n"
+            "-o|--output is set)"))
 
-    parser.add_argument("rhs_files", metavar="YAML_FILE", nargs="+",
-                        help="one or more YAML files to merge,\
-                              order-significant; use - to read from STDIN")
+    parser.add_argument(
+        "rhs_files", metavar="YAML_FILE", nargs="+",
+        help=(
+            "one or more YAML files to merge, order-significant;\n"
+            "use - to read from STDIN"))
     return parser.parse_args()
 
 def validateargs(args, log):

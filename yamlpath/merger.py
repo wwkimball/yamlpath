@@ -1,7 +1,7 @@
 """
 Implement YAML document Merger.
 
-Copyright 2019, 2020 William W. Kimball, Jr. MBA MSIS
+Copyright 2020 William W. Kimball, Jr. MBA MSIS
 
 
 =========
