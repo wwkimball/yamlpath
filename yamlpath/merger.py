@@ -367,27 +367,65 @@ class Merger:
                         self.logger.debug(
                             "Anchor {} conflict; LEFT will override."
                             .format(anchor))
-                        self._overwrite_aliased_values(
-                            rhs, anchor, prime_alias)
+                        self._overwrite_aliased_values(self.data, rhs, anchor)
                     elif conflict_mode is AnchorConflictResolutions.RIGHT:
                         self.logger.debug(
                             "Anchor {} conflict; RIGHT will override."
                             .format(anchor))
-                        self._overwrite_aliased_values(
-                            self.data, anchor, reader_alias)
+                        self._overwrite_aliased_values(rhs, self.data, anchor)
                     else:
                         self.logger.error(
                             "Aborting due to anchor conflict, {}"
                             .format(anchor), 4)
 
-    def _overwrite_aliased_values(self, dom: Any, anchor: str, value: Any):
+    def _overwrite_aliased_values(
+        self, source_dom: Any, target_dom: Any, anchor: str
+    ) -> None:
         """Replace the value of every alias of an anchor."""
-        # Use Processor to perform the operation.  To do so, a Path to at least
-        # one alias must be known; so find the first one and build its YAML
-        # Path during the scan.
-        first_path = Merger.search_for_anchor(dom, anchor)
-        proc = Processor(self.logger, dom)
-        proc.set_value(first_path, value, mustexist=True)
+        def recursive_anchor_replace(
+            data: Any, anchor_val: str, repl_node: Any
+        ):
+            if isinstance(data, dict):
+                for idx, key in [
+                    (idx, key) for idx, key in enumerate(data.keys())
+                    if hasattr(key, "anchor")
+                        and key.anchor.value == anchor_val
+                ]:
+                    data.insert(idx, repl_node, data.pop(key))
+
+                for key, val in data.non_merged_items():
+                    if (hasattr(val, "anchor")
+                            and val.anchor.value == anchor_val):
+                        data[key] = repl_node
+                    else:
+                        recursive_anchor_replace(
+                            val, anchor_val, repl_node)
+            elif isinstance(data, list):
+                for idx, ele in enumerate(data):
+                    if (hasattr(ele, "anchor")
+                            and ele.anchor.value == anchor_val):
+                        data[idx] = repl_node
+                    else:
+                        recursive_anchor_replace(ele, anchor_val, repl_node)
+
+        # Python will treat the source and target anchors as distinct even
+        # after if their string names are identical.  This will cause the
+        # resulting YAML to have duplicate anchor definitions, which is illegal
+        # and would produce illegible output.  In order for Python to treat all
+        # of the post-synchronized aliases as copies of each other -- and thus
+        # produce a useful, de-duplicated YAML output -- a reference to the
+        # source anchor node must be copied over the target nodes.  To do so, a
+        # Path to at least one alias in the source document must be known.
+        # With it, retrieve one of the source nodes and use it to recursively
+        # overwrite every occurence of the same anchor within the target DOM.
+        source_path = Merger.search_for_anchor(source_dom, anchor)
+        source_proc = Processor(self.logger, source_dom)
+        source_node = None
+        for node_coord in source_proc.get_nodes(source_path, mustexist=True):
+            source_node = node_coord.node
+            break
+
+        recursive_anchor_replace(target_dom, anchor, source_node)
 
     def merge_with(self, rhs: Any) -> None:
         """Merge this document with another."""
