@@ -60,19 +60,13 @@ class Merger:
         """Merges two YAML maps (dicts)."""
         node_coord = NodeCoords(rhs, parent, parentref)
         self.logger.debug(
-            "Merger::_merge_dicts:  Evaluating dict at '{}'."
+            "Merger::_merge_dicts:  Evaluating dict at {}."
             .format(path))
 
-        # lhs_is_dict = isinstance(lhs, dict)
-        # rhs_is_dict = isinstance(rhs, dict)
-        # if not rhs_is_dict:
-        #     self.logger.error("The RHS data is not a Hash.", 30)
-        # if not lhs_is_dict:
-        #     self.logger.error("The LHS data is not a Hash.", 30)
-        # if (rhs_is_dict and not lhs_is_dict) or (
-        #         lhs_is_dict and not rhs_is_dict):
-        #     self.logger.error("Incompatible data-types found at {}."
-        #               .format(path), 30)
+        if not isinstance(lhs, dict):
+            self.logger.error(
+                "Impossible to add Hash data to non-Hash destination at {}."
+                .format(path), 30)
 
         # The document root is ALWAYS a Hash.  For everything deeper, do not
         # merge when the user sets LEFT|RIGHT Hash merge options.
