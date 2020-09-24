@@ -95,6 +95,14 @@ def processcli():
             "default=all"))
 
     parser.add_argument(
+        "-m", "--mergeat",
+        metavar="YAML_PATH",
+        default="/",
+        help=(
+            "YAML Path indicating where in left YAML_FILE the right\n"
+            "YAML_FILE content is to be merged; default=/"))
+
+    parser.add_argument(
         "-o", "--output",
         help=(
             "Write the merged result to the indicated file (or\n"

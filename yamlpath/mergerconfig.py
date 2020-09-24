@@ -12,7 +12,7 @@ from yamlpath.enums import (
     ArrayMergeOpts,
     HashMergeOpts
 )
-from yamlpath import Processor
+from yamlpath import Processor, YAMLPath
 from yamlpath.wrappers import ConsolePrinter, NodeCoords
 
 
@@ -127,6 +127,10 @@ class MergerConfig:
                 self.keys[node_coord] = self.config["keys"][yaml_path]
         self.log.debug("MergerConfig::prepare:  Matched keys to nodes:")
         self.log.debug(self.keys)
+
+    def get_insertion_point(self) -> YAMLPath:
+        """Returns the YAML Path at which merging shall be performed."""
+        return YAMLPath(self.args.mergeat)
 
     def _load_config(self) -> None:
         """Load the external configuration file."""

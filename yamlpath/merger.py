@@ -3,109 +3,11 @@ Implement YAML document Merger.
 
 Copyright 2020 William W. Kimball, Jr. MBA MSIS
 
-
 =========
-DEV NOTES
+TODOs
 =========
-yaml-merge [OPTIONS] file1 [file... [fileN]]
-
-OPTIONS:
-* DEFAULT behaviors when handling:
-  * arrays (keep LHS, keep RHS, append uniques, append all [default])
-  * hashes (keep LHS, keep RHS, deep merge [default])
-  * arrays-of-hashes (requires identifier key; then regular hash options)
-  * arrays-of-arrays (regular array options)
-* anchor conflict handling (keep LHS, keep RHS, rename per file [aliases in
-  same file follow suit], stop merge [default])
-* merge-at (a YAML Path which indicates where in the LHS document all RHS
-  documents are merged into [default=/])
-* output (file)
-* Configuration file for per-path options, like:
----
-/just/an/array:  first|last|unique|all
-/juat/a/hash:  first|last|shallow|deep
-some.path.pointing.at.an.array.of.hashes:
-  identity: key_with_unique_identifying_values
-  merge: deep
-
-Array-of-Arrays:
-[[5,6],[1,2],[4,3]]
-- - 5
-  - 6
-- - 1
-  - 2
-- - 4
-  - 3
-
-================================== EXAMPLE ====================================
-aliases:
- - &scalar_anchor LHS aliased value
- - &unchanging_anchor Same value everywhere
-key: LHS value
-hash:
-  key1: sub LHS value 1
-  key2: sub LHS value 2
-  complex:
-    subkeyA: *scalar_anchor
-array:
-  - LHS element 1
-  - non-unique element
-  - *scalar_anchor
-  - *unchanging_anchor
-
-<< (RHS overrides LHS scalars;
-    deep Hash merge;
-    keep only unique Array elements; and
-    rename conflicting anchors)
-
-aliases:
- - &scalar_anchor RHS aliased value
- - &unchanging_anchor Same value everywhere
-key: RHS value
-hash:
-  key1: sub RHS value 1
-  key3: sub RHS value 3
-  complex:
-    subkeyA: *scalar_anchor
-    subkeyB:
-      - a
-      - list
-array:
-  - RHS element 1
-  - non-unique element
-  - *scalar_anchor
-  - *unchanging_anchor
-
-==
-
-aliases:
- - &scalar_anchor_1 LHS aliased value
- - &scalar_anchor_2 RHS aliased value
- - &unchanging_anchor Same value everywhere
-key: RHS value
-hash:
-  key1: sub RHS value 1
-  key2: sub LHS value 2
-  key3: sub RHS value 3
-  complex:
-    subkeyA: *scalar_anchor_2  # Because "RHS overrides LHS scalars"
-    subkeyB:
-      - a
-      - list
-array:
-  - LHS element 1
-  - non-unique element
-  - *scalar_anchor_1
-  - *unchanging_anchor
-  - RHS element 1
-  - *scalar_anchor_2
-===============================================================================
-
 Processing Requirements:
-1. Upon opening a YAML document, immediately scan the entire file for all
-   anchor names.  Track those names across all documents as they are opened
-   because conflicts must be resolved per user option selection.
-2. LHS and RHS anchored maps must have identical names AND anchor names to be
+1. LHS and RHS anchored maps must have identical names AND anchor names to be
    readily merged.  If only one of them is anchored, a merge is possible; keep
    the only anchor name on the map.  If they have different anchor names, treat
    as an anchor conflict and resolve per user option setting.
@@ -429,6 +331,9 @@ class Merger:
 
     def merge_with(self, rhs: Any) -> None:
         """Merge this document with another."""
+        lhs_proc = Processor(self.logger, self.data)
+        insert_at = self.config.get_insertion_point()
+
         # Remove all comments (no sensible way to merge them)
         Merger.delete_all_comments(rhs)
 
@@ -438,13 +343,14 @@ class Merger:
         # Prepare the merge rules
         self.config.prepare(rhs)
 
-        # Loop through all elements in RHS
-        if isinstance(rhs, dict):
-            # The document root is a map
-            self.data = self._merge_dicts(self.data, rhs)
-        elif isinstance(rhs, list):
-            # The document root is a list
-            self.data = self._merge_lists(self.data, rhs)
+        # Loop through all insertion points and the elements in RHS
+        for node_coord in lhs_proc.get_nodes(insert_at):
+            if isinstance(rhs, dict):
+                # The document root is a map
+                self._merge_dicts(node_coord.node, rhs)
+            elif isinstance(rhs, list):
+                # The document root is a list
+                self._merge_lists(node_coord.node, rhs)
 
     @classmethod
     def scan_for_anchors(cls, dom: Any, anchors: dict):
