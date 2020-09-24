@@ -13,7 +13,7 @@ This must also permit taking RHS from STDIN and as a parameter value.
 import sys
 import argparse
 from os import access, R_OK
-from os.path import isfile
+from os.path import isfile, exists
 
 from yamlpath.enums import (
     AnchorConflictResolutions,
@@ -69,12 +69,18 @@ def processcli():
               (overrides [defaults]hashes but is overridden on a YAML Path\
               basis in [rules] set via --config|-c); default=stop")
     parser.add_argument(
-        "-o", "--aoh",
+        "-O", "--aoh",
         choices=[l.lower() for l in AoHMergeOpts.get_names()],
         type=str.lower,
         help="default means by which Arrays-of-Hashes are merged together\
               (overrides [defaults]aoh but is overridden on a YAML Path\
               basis in [rules] set via --config|-c); default=all")
+
+    parser.add_argument(
+        "-o", "--output",
+        help="Write the merged result to the indicated file (or STDOUT when\
+              unset, which also implies -q|--quiet)"
+    )
 
     noise_group = parser.add_mutually_exclusive_group()
     noise_group.add_argument(
@@ -108,7 +114,19 @@ def validateargs(args, log):
     ):
         has_errors = True
         log.error(
-            "INI style configuration file is not readable:  " + args.config)
+            "INI style configuration file is not readable:  {}"
+            .format(args.config))
+
+    # When set, the output file must not already exist
+    if args.output:
+        if exists(args.output):
+            has_errors = True
+            log.error("Output file already exists:  {}".format(args.output))
+    else:
+        # When dumping the document to STDOUT, mute all non-errors
+        args.quiet = True
+        args.verbose = False
+        args.debug = False
 
     if has_errors:
         sys.exit(1)
@@ -161,7 +179,12 @@ def main():
         log.debug(merger.data)
 
     # Output the final document
-    prime_yaml.dump(merger.data, sys.stdout)
+    if args.output:
+        with open(args.output, 'w') as yaml_dump:
+            prime_yaml.dump(merger.data, yaml_dump)
+    else:
+        prime_yaml.dump(merger.data, sys.stdout)
+
     sys.exit(exit_state)
 
 if __name__ == "__main__":
