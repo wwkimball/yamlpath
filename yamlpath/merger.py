@@ -344,13 +344,26 @@ class Merger:
         self.config.prepare(rhs)
 
         # Loop through all insertion points and the elements in RHS
-        for node_coord in lhs_proc.get_nodes(insert_at):
+        default_val = rhs
+        if isinstance(rhs, dict):
+            default_val = {}
+        elif isinstance(rhs, list):
+            default_val = []
+
+        for node_coord in lhs_proc.get_nodes(
+                insert_at, default_value=default_val
+        ):
+            if isinstance(node_coord.node, (dict, list)):
+                target_node = node_coord.node
+            else:
+                target_node = node_coord.parent
+
             if isinstance(rhs, dict):
                 # The document root is a map
-                self._merge_dicts(node_coord.node, rhs)
+                self._merge_dicts(target_node, rhs)
             elif isinstance(rhs, list):
                 # The document root is a list
-                self._merge_lists(node_coord.node, rhs)
+                self._merge_lists(target_node, rhs)
 
     @classmethod
     def scan_for_anchors(cls, dom: Any, anchors: dict):
