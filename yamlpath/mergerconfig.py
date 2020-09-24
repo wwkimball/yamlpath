@@ -32,7 +32,9 @@ class MergerConfig:
         # Precedence: CLI > config[defaults] > default
         if self.args.anchors:
             return AnchorConflictResolutions.from_str(self.args.anchors)
-        if "defaults" in self.config and "anchors" in self.config["defaults"]:
+        if (self.config is not None
+                and "defaults" in self.config
+                and "anchors" in self.config["defaults"]):
             return AnchorConflictResolutions.from_str(
                 self.config["defaults"]["anchors"])
         return AnchorConflictResolutions.STOP
@@ -49,7 +51,9 @@ class MergerConfig:
         self.log.debug("MergerConfig::hash_merge_mode:  NOT Matched")
         if self.args.hashes:
             return HashMergeOpts.from_str(self.args.hashes)
-        if "defaults" in self.config and "hashes" in self.config["defaults"]:
+        if (self.config is not None
+                and "defaults" in self.config
+                and "hashes" in self.config["defaults"]):
             return HashMergeOpts.from_str(self.config["defaults"]["hashes"])
         return HashMergeOpts.DEEP
 
@@ -65,7 +69,9 @@ class MergerConfig:
         self.log.debug("MergerConfig::array_merge_mode:  NOT Matched")
         if self.args.arrays:
             return ArrayMergeOpts.from_str(self.args.arrays)
-        if "defaults" in self.config and "arrays" in self.config["defaults"]:
+        if (self.config is not None
+                and "defaults" in self.config
+                and "arrays" in self.config["defaults"]):
             return ArrayMergeOpts.from_str(self.config["defaults"]["arrays"])
         return ArrayMergeOpts.ALL
 
@@ -83,7 +89,9 @@ class MergerConfig:
         self.log.debug("MergerConfig::aoh_merge_mode:  NOT Matched")
         if self.args.aoh:
             return AoHMergeOpts.from_str(self.args.aoh)
-        if "defaults" in self.config and "aoh" in self.config["defaults"]:
+        if (self.config is not None
+                and "defaults" in self.config
+                and "aoh" in self.config["defaults"]):
             return AoHMergeOpts.from_str(self.config["defaults"]["aoh"])
         return AoHMergeOpts.ALL
 

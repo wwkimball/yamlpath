@@ -26,7 +26,7 @@ from yamlpath.enums import (
     PathSeperators
 )
 from yamlpath.func import append_list_element, escape_path_section
-from yamlpath import Processor, MergerConfig
+from yamlpath import YAMLPath, Processor, MergerConfig
 
 
 class Merger:
@@ -54,9 +54,8 @@ class Merger:
         self.config: Processor = config
 
     def _merge_dicts(
-        self, lhs: dict, rhs: dict,
+        self, lhs: dict, rhs: dict, path: YAMLPath,
         parent: Any = None, parentref: Any = None,
-        path: str = ""
     ) -> dict:
         """Merges two YAML maps (dicts)."""
         node_coord = NodeCoords(rhs, parent, parentref)
@@ -88,7 +87,7 @@ class Merger:
         buffer = []
         buffer_pos = 0
         for key, val in rhs.items():
-            path_next = path + "/" + str(key).replace("/", "\\/")
+            path_next = path.append(str(key))
             self.logger.debug(
                 "Merger::_merge_dicts:  Processing key {}{} at '{}'."
                 .format(key, type(key), path_next))
@@ -101,10 +100,10 @@ class Merger:
                 # LHS has the RHS key
                 if isinstance(val, dict):
                     lhs[key] = self._merge_dicts(
-                        lhs[key], val, rhs, key, path_next)
+                        lhs[key], val, path_next, rhs, key)
                 elif isinstance(val, list):
                     lhs[key] = self._merge_lists(
-                        lhs[key], val, rhs, key, path_next)
+                        lhs[key], val, path_next, rhs, key)
                 else:
                     lhs[key] = val
             else:
@@ -122,8 +121,8 @@ class Merger:
         return lhs
 
     def _merge_simple_lists(
-        self, lhs: list, rhs: list,
-        node_coord: NodeCoords, path: str = ""
+        self, lhs: list, rhs: list, path: YAMLPath,
+        node_coord: NodeCoords
     ) -> list:
         """Merge two lists of Scalars or lists."""
         merge_mode = self.config.array_merge_mode(node_coord)
@@ -134,7 +133,7 @@ class Merger:
 
         append_all = merge_mode is ArrayMergeOpts.ALL
         for idx, ele in enumerate(rhs):
-            path_next = path + "[{}]".format(idx)
+            path_next = path.append("[{}]".format(idx))
             self.logger.debug(
                 "Merger::_merge_simple_lists:  Processing element {}{} at {}."
                 .format(ele, type(ele), path_next))
@@ -146,8 +145,8 @@ class Merger:
         return lhs
 
     def _merge_arrays_of_hashes(
-        self, lhs: list, rhs: list,
-        node_coord: NodeCoords, path: str = ""
+        self, lhs: list, rhs: list, path: YAMLPath,
+        node_coord: NodeCoords
     ) -> list:
         """Merge two lists of dicts (Arrays-of-Hashes)."""
         merge_mode = self.config.aoh_merge_mode(node_coord)
@@ -157,7 +156,7 @@ class Merger:
             return rhs
 
         for idx, ele in enumerate(rhs):
-            path_next = path + "[{}]".format(idx)
+            path_next = path.append("[{}]".format(idx))
             node_next = NodeCoords(ele, rhs, idx)
             self.logger.debug(
                 "Merger::_merge_arrays_of_hashes:  Processing element {}{}\
@@ -189,19 +188,18 @@ class Merger:
         return lhs
 
     def _merge_lists(
-        self, lhs: list, rhs: list,
-        parent: Any = None, parentref: Any = None,
-        path: str = ""
+        self, lhs: list, rhs: list, path: YAMLPath,
+        parent: Any = None, parentref: Any = None
     ) -> list:
         """Merge two lists."""
         node_coord = NodeCoords(rhs, parent, parentref)
         if len(rhs) > 0:
             if isinstance(rhs[0], dict):
                 # This list is an Array-of-Hashes
-                return self._merge_arrays_of_hashes(lhs, rhs, node_coord, path)
+                return self._merge_arrays_of_hashes(lhs, rhs, path, node_coord)
 
             # This list is an Array-of-Arrays or a simple list of Scalars
-            return self._merge_simple_lists(lhs, rhs, node_coord, path)
+            return self._merge_simple_lists(lhs, rhs, path, node_coord)
 
         # No RHS list
         return lhs
@@ -360,10 +358,10 @@ class Merger:
 
             if isinstance(rhs, dict):
                 # The document root is a map
-                self._merge_dicts(target_node, rhs)
+                self._merge_dicts(target_node, rhs, insert_at)
             elif isinstance(rhs, list):
                 # The document root is a list
-                self._merge_lists(target_node, rhs)
+                self._merge_lists(target_node, rhs, insert_at)
 
     @classmethod
     def scan_for_anchors(cls, dom: Any, anchors: dict):

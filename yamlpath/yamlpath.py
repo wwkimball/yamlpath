@@ -110,6 +110,22 @@ class YAMLPath:
         return ("{}('{}', '{}')".format(self.__class__.__name__,
                                         self.original, self.seperator))
 
+    def __len__(self) -> int:
+        """Indicate how many segments comprise this YAML Path."""
+        return len(self._escaped)
+
+    def append(self, segment: str) -> "YAMLPath":
+        """Append a new segment to this YAML Path (without seperator)."""
+        seperator = (
+            PathSeperators.FSLASH
+            if self.seperator is PathSeperators.AUTO
+            else self.seperator)
+        if len(self._original) < 1:
+            self.original = segment
+        else:
+            self.original += "{}{}".format(seperator, segment)
+        return self
+
     @property
     def original(self) -> str:
         """
