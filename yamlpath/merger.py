@@ -58,11 +58,6 @@ class Merger:
         parent: Any = None, parentref: Any = None,
     ) -> dict:
         """Merges two YAML maps (dicts)."""
-        node_coord = NodeCoords(rhs, parent, parentref)
-        self.logger.debug(
-            "Merger::_merge_dicts:  Evaluating dict at {}."
-            .format(path))
-
         if not isinstance(lhs, dict):
             self.logger.error(
                 "Impossible to add Hash data to non-Hash destination at {}."
@@ -70,6 +65,7 @@ class Merger:
 
         # The document root is ALWAYS a Hash.  For everything deeper, do not
         # merge when the user sets LEFT|RIGHT Hash merge options.
+        node_coord = NodeCoords(rhs, parent, parentref)
         if len(path) > 0:
             merge_mode = self.config.hash_merge_mode(node_coord)
             if merge_mode is HashMergeOpts.LEFT:
@@ -119,6 +115,11 @@ class Merger:
         node_coord: NodeCoords
     ) -> list:
         """Merge two lists of Scalars or lists."""
+        if not isinstance(lhs, list):
+            self.logger.error(
+                "Impossible to add Array data to non-Array destination at {}."
+                .format(path), 30)
+
         merge_mode = self.config.array_merge_mode(node_coord)
         if merge_mode is ArrayMergeOpts.LEFT:
             return lhs
@@ -143,6 +144,12 @@ class Merger:
         node_coord: NodeCoords
     ) -> list:
         """Merge two lists of dicts (Arrays-of-Hashes)."""
+        if not isinstance(lhs, list):
+            self.logger.error(
+                "Impossible to add Array-of-Hash data to non-Array"
+                " destination at {}."
+                .format(path), 30)
+
         merge_mode = self.config.aoh_merge_mode(node_coord)
         if merge_mode is AoHMergeOpts.LEFT:
             return lhs
@@ -153,9 +160,8 @@ class Merger:
             path_next = path.append("[{}]".format(idx))
             node_next = NodeCoords(ele, rhs, idx)
             self.logger.debug(
-                "Merger::_merge_arrays_of_hashes:  Processing element {}{}\
-                 at {}."
-                .format(ele, type(ele), path_next))
+                "Merger::_merge_arrays_of_hashes:  Processing element {} {}"
+                " at {}.".format(ele, type(ele), path_next))
 
             if merge_mode is AoHMergeOpts.DEEP:
                 id_key = self.config.aoh_merge_key(node_next, ele)
