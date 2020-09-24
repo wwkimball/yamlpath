@@ -95,7 +95,7 @@ def processcli():
 
     parser.add_argument("rhs_files", metavar="YAML_FILE", nargs="+",
                         help="one or more YAML files to merge,\
-                              order-significant")
+                              order-significant; use - to read from STDIN")
     return parser.parse_args()
 
 def validateargs(args, log):
@@ -156,14 +156,15 @@ def main():
     exit_state = 0
     rhs_yaml = get_yaml_editor()
     for rhs_file in fileiterator:
-        # Each YAML_FILE must actually be a file; because merge data is
-        # expected, this is a fatal failure.
-        if not isfile(rhs_file):
+        # Except for - (STDIN), each YAML_FILE must actually be a file; because
+        # merge data is expected, this is a fatal failure.
+        if rhs_file != "-" and not isfile(rhs_file):
             log.error("Not a file:  {}".format(rhs_file))
             exit_state = 2
             break
 
-        log.info("Processing {}...".format(rhs_file))
+        log.info("Processing {}..."
+                 .format("STDIN" if rhs_file == "-" else rhs_file))
 
         # Try to open the file; failures are fatal
         rhs_data = get_yaml_data(rhs_yaml, log, rhs_file)
