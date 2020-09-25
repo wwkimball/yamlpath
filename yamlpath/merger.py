@@ -357,6 +357,7 @@ class Merger:
         elif isinstance(rhs, list):
             default_val = []
 
+        merge_performed = False
         for node_coord in lhs_proc.get_nodes(
                 insert_at, default_value=default_val
         ):
@@ -368,9 +369,33 @@ class Merger:
             if isinstance(rhs, dict):
                 # The document root is a map
                 self._merge_dicts(target_node, rhs, insert_at)
+                merge_performed = True
             elif isinstance(rhs, list):
                 # The document root is a list
                 self._merge_lists(target_node, rhs, insert_at)
+                merge_performed = True
+            else:
+                # The document root is a Scalar value
+                target_node = node_coord.node
+                if isinstance(target_node, list):
+                    append_list_element(target_node, rhs)
+                    merge_performed = True
+                elif isinstance(target_node, dict):
+                    self.logger.error(
+                        "Impossible to add Scalar value, {}, to a Hash at {}."
+                        "  Change the value to a 'key: value' pair, a"
+                        "'{{key: value}}' Hash, or change the merge target to"
+                        " an Array or other Scalar value."
+                        .format(rhs, insert_at), 80)
+                else:
+                    lhs_proc.set_value(insert_at, rhs)
+                    merge_performed = True
+
+        if not merge_performed:
+            self.logger.error(
+                "A merge was not performed at {}.  Ensure this path matches at"
+                " least one node in the left document(s)."
+                .format(insert_at), 90)
 
     @classmethod
     def scan_for_anchors(cls, dom: Any, anchors: dict):
