@@ -18,6 +18,7 @@ import ruamel.yaml
 from ruamel.yaml.scalarstring import ScalarString
 
 from yamlpath.wrappers import ConsolePrinter, NodeCoords
+from yamlpath.exceptions import MergeException
 from yamlpath.enums import (
     AnchorConflictResolutions,
     AoHMergeOpts,
@@ -59,9 +60,8 @@ class Merger:
     ) -> dict:
         """Merges two YAML maps (dicts)."""
         if not isinstance(lhs, dict):
-            self.logger.error(
-                "Impossible to add Hash data to non-Hash destination at {}."
-                .format(path), 30)
+            raise MergeException(
+                "Impossible to add Hash data to non-Hash destination.", path)
 
         # The document root is ALWAYS a Hash.  For everything deeper, do not
         # merge when the user sets LEFT|RIGHT Hash merge options.
@@ -93,7 +93,7 @@ class Merger:
                         lhs[key], val, path_next, rhs, key)
                 elif isinstance(val, list):
                     lhs[key] = self._merge_lists(
-                        lhs[key], val, path_next, rhs, key)
+                        lhs[key], val, path_next, parent=rhs, parentref=key)
                 else:
                     lhs[key] = val
             else:
@@ -116,9 +116,8 @@ class Merger:
     ) -> list:
         """Merge two lists of Scalars or lists."""
         if not isinstance(lhs, list):
-            self.logger.error(
-                "Impossible to add Array data to non-Array destination at {}."
-                .format(path), 30)
+            raise MergeException(
+                "Impossible to add Array data to non-Array destination.", path)
 
         merge_mode = self.config.array_merge_mode(node_coord)
         if merge_mode is ArrayMergeOpts.LEFT:
@@ -145,10 +144,10 @@ class Merger:
     ) -> list:
         """Merge two lists of dicts (Arrays-of-Hashes)."""
         if not isinstance(lhs, list):
-            self.logger.error(
+            raise MergeException(
                 "Impossible to add Array-of-Hash data to non-Array"
-                " destination at {}."
-                .format(path), 30)
+                " destination."
+                , path)
 
         self.logger.debug(
             "Merger::_merge_arrays_of_hashes:  Merging {} Hash(es)."
@@ -172,10 +171,12 @@ class Merger:
                 if id_key in ele:
                     id_val = ele[id_key]
                 else:
-                    self.logger.error(
-                        "Mandatory identity key, {}, not present in RHS Hash"
-                        " at {} with keys:  {}."
-                        .format(id_key, path_next, ", ".join(ele.keys())), 40)
+                    raise MergeException(
+                        "Mandatory identity key, {}, not present in Hash with"
+                        " keys:  {}."
+                        .format(id_key, ", ".join(ele.keys()))
+                        , path_next
+                    )
 
                 merged_hash = False
                 for lhs_hash in lhs:
@@ -197,10 +198,24 @@ class Merger:
         return lhs
 
     def _merge_lists(
-        self, lhs: list, rhs: list, path: YAMLPath,
-        parent: Any = None, parentref: Any = None
+        self, lhs: list, rhs: list, path: YAMLPath, **kwargs: Any
     ) -> list:
-        """Merge two lists."""
+        """
+        Merge two lists; understands lists-of-dicts.
+
+        Parameters:
+        1. lhs (list) The list to merge into.
+        2. rhs (list) The list to merge from.
+        3. path (YAMLPath) Location of the `rsh` source list within its DOM.
+
+        Keyword Parameters:
+        * parent (Any) Parent node of `rhs`
+        * parentref (Any) Child Key or Index of `rhs` within `parent`.
+
+        Returns:  (list) The merged result.
+        """
+        parent: Any = kwargs.pop("parent", None)
+        parentref: Any = kwargs.pop("parentref", None)
         node_coord = NodeCoords(rhs, parent, parentref)
         if len(rhs) > 0:
             if isinstance(rhs[0], dict):
@@ -213,8 +228,17 @@ class Merger:
         # No RHS list
         return lhs
 
-    def _calc_unique_anchor(self, anchor: str, known_anchors: dict):
-        """Generate a unique anchor name within a document pair."""
+    def _calc_unique_anchor(self, anchor: str, known_anchors: dict) -> str:
+        """
+        Generate a unique anchor name within a document pair.
+
+        Parameters:
+        1. anchor (str) The original anchor name.
+        2. known_anchors (dict) Dictionary of every anchor already in the
+           document.
+
+        Returns:  (str) The new, unique anchor name.
+        """
         self.logger.debug("Merger::_calc_unique_anchor:  Preexisting Anchors:")
         self.logger.debug(known_anchors)
         while anchor in known_anchors:
@@ -226,8 +250,15 @@ class Merger:
                 .format(anchor))
         return anchor
 
-    def _resolve_anchor_conflicts(self, rhs):
-        """Resolve anchor conflicts."""
+    def _resolve_anchor_conflicts(self, rhs: Any) -> None:
+        """
+        Resolve anchor conflicts between this and another document.
+
+        Parameters:
+        1. rhs (Any) The other document to consolidate with this one.
+
+        Returns:  N/A
+        """
         lhs_anchors = {}
         Merger.scan_for_anchors(self.data, lhs_anchors)
         self.logger.debug("Merger::_resolve_anchor_conflicts:  LHS Anchors:")
@@ -274,14 +305,25 @@ class Merger:
                         .format(anchor))
                     self._overwrite_aliased_values(rhs, self.data, anchor)
                 else:
-                    self.logger.error(
-                        "Aborting due to anchor conflict, {}"
-                        .format(anchor), 4)
+                    raise MergeException(
+                        "Aborting due to anchor conflict with, {}."
+                        .format(anchor))
 
     def _overwrite_aliased_values(
         self, source_dom: Any, target_dom: Any, anchor: str
     ) -> None:
-        """Replace the value of every alias of an anchor."""
+        """
+        Replace the value of every alias of an anchor.
+
+        Parameters:
+        1. source_dom (Any) The document from which to copy the replacement
+           value.
+        2. target_dom (Any) The document in which to replace the value for
+           every use of the target anchor.
+        3. anchor (str) The anchor to replace in `target_dom`.
+
+        Returns:  N/A
+        """
         def recursive_anchor_replace(
             data: Any, anchor_val: str, repl_node: Any
         ):
@@ -318,9 +360,12 @@ class Merger:
         # Path to at least one alias in the source document must be known.
         # With it, retrieve one of the source nodes and use it to recursively
         # overwrite every occurence of the same anchor within the target DOM.
-        source_path = Merger.search_for_anchor(source_dom, anchor)
-        source_proc = Processor(self.logger, source_dom)
         source_node = None
+        source_proc = Processor(self.logger, source_dom)
+        source_path = Merger.search_for_anchor(source_dom, anchor)
+        self.logger.debug(
+            "Merger::_overwrite_aliased_values: Found source anchor at {}."
+            .format(source_path))
         for node_coord in source_proc.get_nodes(source_path, mustexist=True):
             source_node = node_coord.node
             break
@@ -328,7 +373,17 @@ class Merger:
         recursive_anchor_replace(target_dom, anchor, source_node)
 
     def merge_with(self, rhs: Any) -> None:
-        """Merge this document with another."""
+        """
+        Merge this document with another.
+
+        Parameters:
+        1. rhs (Any) The document to merge into this one.
+
+        Returns:  N/A
+
+        Raises:
+        - `MergeException` when a clean merge is impossible.
+        """
         lhs_proc = Processor(self.logger, self.data)
         insert_at = self.config.get_insertion_point()
 
@@ -372,25 +427,33 @@ class Merger:
                     append_list_element(target_node, rhs)
                     merge_performed = True
                 elif isinstance(target_node, dict):
-                    self.logger.error(
-                        "Impossible to add Scalar value, {}, to a Hash at {}."
-                        "  Change the value to a 'key: value' pair, a"
-                        "'{{key: value}}' Hash, or change the merge target to"
+                    raise MergeException(
+                        "Impossible to add Scalar value, {}, to a Hash without"
+                        " a key.  Change the value to a 'key: value' pair, a"
+                        " '{{key: value}}' Hash, or change the merge target to"
                         " an Array or other Scalar value."
-                        .format(rhs, insert_at), 80)
+                        .format(rhs), insert_at)
                 else:
                     lhs_proc.set_value(insert_at, rhs)
                     merge_performed = True
 
         if not merge_performed:
-            self.logger.error(
-                "A merge was not performed at {}.  Ensure this path matches at"
-                " least one node in the left document(s)."
-                .format(insert_at), 90)
+            raise MergeException(
+                "A merge was not performed.  Ensure your target path matches"
+                " at least one node in the left document(s).", insert_at)
 
     @classmethod
     def scan_for_anchors(cls, dom: Any, anchors: dict):
-        """Scan a document for all anchors contained within."""
+        """
+        Scan a document for all anchors contained within.
+
+        Parameters:
+        1. dom (Any) The document to scan.
+        2. anchors (dict) Collection of discovered anchors along with
+           references to the nodes they apply to.
+
+        Returns:  N/A
+        """
         if isinstance(dom, dict):
             for key, val in dom.items():
                 if hasattr(key, "anchor") and key.anchor.value is not None:
@@ -412,7 +475,17 @@ class Merger:
 
     @classmethod
     def search_for_anchor(cls, dom: Any, anchor: str, path: str = "") -> str:
-        """Returns the YAML Path to the first appearance of an Anchor."""
+        """
+        Returns the YAML Path to the first appearance of an Anchor.
+
+        Parameters:
+        1. dom (Any) The document to scan.
+        2. anchor (str) The anchor name to search for.
+        3. path (str) YAML Path tracking the scan location within `dom`.
+
+        Returns:  (None|str) YAML Path to the first use of `anchor` within
+        `dom` or None when it cannot be found.
+        """
         if isinstance(dom, dict):
             for key, val in dom.items():
                 path_next = path + "/{}".format(
@@ -433,7 +506,16 @@ class Merger:
 
     @classmethod
     def rename_anchor(cls, dom: Any, anchor: str, new_anchor: str):
-        """Rename every use of an anchor in a document."""
+        """
+        Rename every use of an anchor in a document.
+
+        Parameters:
+        1. dom (Any) The document to modify.
+        2. anchor (str) The old anchor name to rename.
+        3. new_anchor (str) The new name to apply to the anchor.
+
+        Returns:  N/A
+        """
         if isinstance(dom, dict):
             for key, val in dom.items():
                 if hasattr(key, "anchor") and key.anchor.value == anchor:
@@ -454,6 +536,11 @@ class Merger:
         Recursively delete all comments from a YAML document.
 
         See:  https://stackoverflow.com/questions/60080325/how-to-delete-all-comments-in-ruamel-yaml/60099750#60099750
+
+        Parameters:
+        1. dom (Any) The document to strip of all comments.
+
+        Returns:  N/A
         """
         if isinstance(dom, dict):
             for key, val in dom.items():

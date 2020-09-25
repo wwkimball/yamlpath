@@ -18,6 +18,7 @@ from yamlpath.enums import (
     HashMergeOpts
 )
 from yamlpath.func import get_yaml_data, get_yaml_editor
+from yamlpath.exceptions import MergeException
 from yamlpath import Merger, MergerConfig
 
 from yamlpath.wrappers import ConsolePrinter
@@ -204,17 +205,19 @@ def main():
             break
 
         # Merge the new RHS into the prime LHS
-        merger.merge_with(rhs_data)
-
-        log.debug("main: resulting document:")
-        log.debug(merger.data)
+        try:
+            merger.merge_with(rhs_data)
+        except MergeException as mex:
+            log.error(mex)
+            exit_state = 4
 
     # Output the final document
-    if args.output:
-        with open(args.output, 'w') as yaml_dump:
-            prime_yaml.dump(merger.data, yaml_dump)
-    else:
-        prime_yaml.dump(merger.data, sys.stdout)
+    if exit_state == 0:
+        if args.output:
+            with open(args.output, 'w') as yaml_dump:
+                prime_yaml.dump(merger.data, yaml_dump)
+        else:
+            prime_yaml.dump(merger.data, sys.stdout)
 
     sys.exit(exit_state)
 
