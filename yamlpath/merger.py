@@ -79,7 +79,7 @@ class Merger:
         for key, val in rhs.items():
             path_next = path.append(str(key))
             self.logger.debug(
-                "Merger::_merge_dicts:  Processing key {}{} at '{}'."
+                "Merger::_merge_dicts:  Processing key {} {} at {}."
                 .format(key, type(key), path_next))
             if key in lhs:
                 # Write the buffer if populated
@@ -150,6 +150,10 @@ class Merger:
                 " destination at {}."
                 .format(path), 30)
 
+        self.logger.debug(
+            "Merger::_merge_arrays_of_hashes:  Merging {} Hash(es)."
+            .format(len(rhs)))
+
         merge_mode = self.config.aoh_merge_mode(node_coord)
         if merge_mode is AoHMergeOpts.LEFT:
             return lhs
@@ -165,13 +169,18 @@ class Merger:
 
             if merge_mode is AoHMergeOpts.DEEP:
                 id_key = self.config.aoh_merge_key(node_next, ele)
-                rhs_key_value = ele[id_key]
+                if id_key in ele:
+                    id_val = ele[id_key]
+                else:
+                    self.logger.error(
+                        "Mandatory identity key, {}, not present in RHS Hash"
+                        " at {} with keys:  {}."
+                        .format(id_key, path_next, ", ".join(ele.keys())), 40)
+
                 merged_hash = False
                 for lhs_hash in lhs:
-                    if id_key in lhs_hash \
-                            and lhs_hash[id_key] == rhs_key_value:
-                        lhs_hash = self._merge_dicts(
-                            lhs_hash, ele, rhs, idx, path_next)
+                    if id_key in lhs_hash and lhs_hash[id_key] == id_val:
+                        self._merge_dicts(lhs_hash, ele, path_next, rhs, idx)
                         merged_hash = True
                         break
                 if not merged_hash:

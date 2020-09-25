@@ -6,11 +6,13 @@ Copyright 2020 William W. Kimball, Jr. MBA MSIS
 import configparser
 from typing import Any
 
+from yamlpath.exceptions import YAMLPathException
 from yamlpath.enums import (
     AnchorConflictResolutions,
     AoHMergeOpts,
     ArrayMergeOpts,
-    HashMergeOpts
+    HashMergeOpts,
+    PathSeperators
 )
 from yamlpath import Processor, YAMLPath
 from yamlpath.wrappers import ConsolePrinter, NodeCoords
@@ -123,16 +125,63 @@ class MergerConfig:
         self.rules = {}
         self.keys = {}
 
+        # Prefix data when mergeat is set
+        # if self.args.mergeat:
+        #     proc_data = {}
+        #     prefix_proc = Processor(self.log, proc_data)
+        #     # prefix_proc.set_value(self.args.mergeat, data)
+        #     for node_coord in prefix_proc.get_nodes(self.args.mergeat):
+        #         self.log.debug("MergerConfig::prepare:  Assigning data...")
+        #         node_coord.parent[node_coord.parentref] = data
+        #     self.log.debug("MergerConfig::prepare:  Built prefixed data:")
+        #     self.log.debug(proc_data)
+        # else:
+        #     proc_data = data
+
+        # proc = Processor(self.log, proc_data)
+
+        # Adjust data paths for mergeat prefix
+        merge_path = None
+        if self.args.mergeat:
+            merge_path = YAMLPath(self.args.mergeat)
+            merge_path.seperator = PathSeperators.FSLASH
+
+        def strip_path_prefix(prefix: YAMLPath, path: str) -> YAMLPath:
+            if prefix is None:
+                return YAMLPath(path)
+
+            yaml_path = YAMLPath(path)
+            prefix.seperator = PathSeperators.FSLASH
+            yaml_path.seperator = PathSeperators.FSLASH
+            prefix_str = str(prefix)
+            path_str = str(yaml_path)
+            if path_str.startswith(prefix_str):
+                path_str = path_str[len(prefix_str):]
+                return YAMLPath(path_str)
+            return yaml_path
+
         proc = Processor(self.log, data)
-        for yaml_path in self.config["rules"]:
-            for node_coord in proc.get_nodes(yaml_path):
-                self.rules[node_coord] = self.config["rules"][yaml_path]
+        for rule_path in self.config["rules"]:
+            yaml_path = strip_path_prefix(merge_path, rule_path)
+            try:
+                for node_coord in proc.get_nodes(yaml_path, mustexist=True):
+                    self.rules[node_coord] = self.config["rules"][rule_path]
+            except YAMLPathException:
+                self.log.warning("Rule YAML Path matches no nodes:  {}"
+                                 .format(yaml_path))
+
         self.log.debug("MergerConfig::prepare:  Matched rules to nodes:")
         self.log.debug(self.rules)
 
-        for yaml_path in self.config["keys"]:
-            for node_coord in proc.get_nodes(yaml_path):
-                self.keys[node_coord] = self.config["keys"][yaml_path]
+        for key_path in self.config["keys"]:
+            yaml_path = strip_path_prefix(merge_path, key_path)
+            try:
+                for node_coord in proc.get_nodes(yaml_path, mustexist=True):
+                    self.keys[node_coord] = self.config["keys"][key_path]
+            except YAMLPathException:
+                self.log.warning("Merge key YAML Path matches no nodes:  {}"
+                                 .format(yaml_path))
+
         self.log.debug("MergerConfig::prepare:  Matched keys to nodes:")
         self.log.debug(self.keys)
 
