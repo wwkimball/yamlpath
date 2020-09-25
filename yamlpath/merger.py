@@ -250,42 +250,33 @@ class Merger:
             reader_alias = rhs_anchors[anchor]
             conflict_mode = self.config.anchor_merge_mode()
 
-            if isinstance(prime_alias, dict):
-                self.logger.error(
-                    "Dictionary-based anchor conflict resolution is not yet"
-                    " implemented.", 142)
-            elif isinstance(prime_alias, list):
-                self.logger.error(
-                    "List-based anchor conflict resolution is not yet"
-                    " implemented.", 142)
-            else:
-                if prime_alias != reader_alias:
-                    if conflict_mode is AnchorConflictResolutions.RENAME:
-                        self.logger.debug(
-                            "Anchor {} conflict; will RENAME anchors."
-                            .format(anchor))
-                        Merger.rename_anchor(
-                            rhs, anchor,
-                            self._calc_unique_anchor(
-                                anchor,
-                                set(lhs_anchors.keys())
-                                .union(set(rhs_anchors.keys()))
-                            )
+            if prime_alias != reader_alias:
+                if conflict_mode is AnchorConflictResolutions.RENAME:
+                    self.logger.debug(
+                        "Anchor {} conflict; will RENAME anchors."
+                        .format(anchor))
+                    Merger.rename_anchor(
+                        rhs, anchor,
+                        self._calc_unique_anchor(
+                            anchor,
+                            set(lhs_anchors.keys())
+                            .union(set(rhs_anchors.keys()))
                         )
-                    elif conflict_mode is AnchorConflictResolutions.LEFT:
-                        self.logger.debug(
-                            "Anchor {} conflict; LEFT will override."
-                            .format(anchor))
-                        self._overwrite_aliased_values(self.data, rhs, anchor)
-                    elif conflict_mode is AnchorConflictResolutions.RIGHT:
-                        self.logger.debug(
-                            "Anchor {} conflict; RIGHT will override."
-                            .format(anchor))
-                        self._overwrite_aliased_values(rhs, self.data, anchor)
-                    else:
-                        self.logger.error(
-                            "Aborting due to anchor conflict, {}"
-                            .format(anchor), 4)
+                    )
+                elif conflict_mode is AnchorConflictResolutions.LEFT:
+                    self.logger.debug(
+                        "Anchor {} conflict; LEFT will override."
+                        .format(anchor))
+                    self._overwrite_aliased_values(self.data, rhs, anchor)
+                elif conflict_mode is AnchorConflictResolutions.RIGHT:
+                    self.logger.debug(
+                        "Anchor {} conflict; RIGHT will override."
+                        .format(anchor))
+                    self._overwrite_aliased_values(rhs, self.data, anchor)
+                else:
+                    self.logger.error(
+                        "Aborting due to anchor conflict, {}"
+                        .format(anchor), 4)
 
     def _overwrite_aliased_values(
         self, source_dom: Any, target_dom: Any, anchor: str
@@ -318,9 +309,9 @@ class Merger:
                         recursive_anchor_replace(ele, anchor_val, repl_node)
 
         # Python will treat the source and target anchors as distinct even
-        # after if their string names are identical.  This will cause the
+        # when their string values are identical.  This will cause the
         # resulting YAML to have duplicate anchor definitions, which is illegal
-        # and would produce illegible output.  In order for Python to treat all
+        # and would produce unusable output.  In order for Python to treat all
         # of the post-synchronized aliases as copies of each other -- and thus
         # produce a useful, de-duplicated YAML output -- a reference to the
         # source anchor node must be copied over the target nodes.  To do so, a
