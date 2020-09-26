@@ -240,7 +240,11 @@ class MergerConfig:
         config = configparser.ConfigParser()
 
         # Load the configuration file when one is specified
-        config_file = self.args.config
+        config_file = (
+            self.args.config
+            if hasattr(self.args, "config")
+            else None)
+
         if config_file:
             config.read(config_file)
             if config.sections():
