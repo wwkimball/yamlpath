@@ -345,15 +345,19 @@ class Merger:
                 target_node = node_coord.parent
 
             if isinstance(rhs, dict):
-                # The document root is a map
-                self._merge_dicts(target_node, rhs, insert_at)
+                # The RHS document root is a map
+                if isinstance(target_node, list):
+                    # But the destination is a list
+                    self._merge_lists(target_node, [rhs], insert_at)
+                else:
+                    self._merge_dicts(target_node, rhs, insert_at)
                 merge_performed = True
             elif isinstance(rhs, list):
-                # The document root is a list
+                # The RHS document root is a list
                 self._merge_lists(target_node, rhs, insert_at)
                 merge_performed = True
             else:
-                # The document root is a Scalar value
+                # The RHS document root is a Scalar value
                 target_node = node_coord.node
                 if isinstance(target_node, list):
                     append_list_element(target_node, rhs)
