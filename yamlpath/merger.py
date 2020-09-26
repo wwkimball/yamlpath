@@ -77,7 +77,7 @@ class Merger:
         buffer = []
         buffer_pos = 0
         for key, val in rhs.items():
-            path_next = path.append(str(key))
+            path_next = YAMLPath(path).append(str(key))
             self.logger.debug(
                 "Merger::_merge_dicts:  Processing key {} {} at {}."
                 .format(key, type(key), path_next))
@@ -127,7 +127,7 @@ class Merger:
 
         append_all = merge_mode is ArrayMergeOpts.ALL
         for idx, ele in enumerate(rhs):
-            path_next = path.append("[{}]".format(idx))
+            path_next = YAMLPath(path).append("[{}]".format(idx))
             self.logger.debug(
                 "Merger::_merge_simple_lists:  Processing element {}{} at {}."
                 .format(ele, type(ele), path_next))
@@ -150,8 +150,8 @@ class Merger:
                 , path)
 
         self.logger.debug(
-            "Merger::_merge_arrays_of_hashes:  Merging {} Hash(es)."
-            .format(len(rhs)))
+            "Merger::_merge_arrays_of_hashes:  Merging {} Hash(es) at {}."
+            .format(len(rhs), path))
 
         merge_mode = self.config.aoh_merge_mode(node_coord)
         if merge_mode is AoHMergeOpts.LEFT:
@@ -160,7 +160,7 @@ class Merger:
             return rhs
 
         for idx, ele in enumerate(rhs):
-            path_next = path.append("[{}]".format(idx))
+            path_next = YAMLPath(path).append("[{}]".format(idx))
             node_next = NodeCoords(ele, rhs, idx)
             self.logger.debug(
                 "Merger::_merge_arrays_of_hashes:  Processing element {} {}"
