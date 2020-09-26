@@ -339,10 +339,9 @@ class Merger:
         for node_coord in lhs_proc.get_nodes(
                 insert_at, default_value=default_val
         ):
-            if isinstance(node_coord.node, (dict, list)):
-                target_node = node_coord.node
-            else:
-                target_node = node_coord.parent
+            target_node = (node_coord.node
+                if isinstance(node_coord.node, (dict, list))
+                else node_coord.parent)
 
             if isinstance(rhs, dict):
                 # The RHS document root is a map
