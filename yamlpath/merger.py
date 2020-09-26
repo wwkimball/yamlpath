@@ -406,37 +406,6 @@ class Merger:
             anchors[dom.anchor.value] = dom
 
     @classmethod
-    def search_for_anchor(cls, dom: Any, anchor: str, path: str = "") -> str:
-        """
-        Returns the YAML Path to the first appearance of an Anchor.
-
-        Parameters:
-        1. dom (Any) The document to scan.
-        2. anchor (str) The anchor name to search for.
-        3. path (str) YAML Path tracking the scan location within `dom`.
-
-        Returns:  (None|str) YAML Path to the first use of `anchor` within
-        `dom` or None when it cannot be found.
-        """
-        if isinstance(dom, dict):
-            for key, val in dom.items():
-                path_next = path + "/{}".format(
-                    escape_path_section(str(key), PathSeperators.FSLASH))
-                if hasattr(key, "anchor") and key.anchor.value == anchor:
-                    return path + "/&{}".format(anchor)
-                if hasattr(val, "anchor") and val.anchor.value == anchor:
-                    return path_next
-                return Merger.search_for_anchor(val, anchor, path_next)
-        elif isinstance(dom, list):
-            for idx, ele in enumerate(dom):
-                path_next = path + "[{}]".format(idx)
-                return Merger.search_for_anchor(ele, anchor, path_next)
-        elif hasattr(dom, "anchor") and dom.anchor.value == anchor:
-            return path
-
-        return None
-
-    @classmethod
     def rename_anchor(cls, dom: Any, anchor: str, new_anchor: str):
         """
         Rename every use of an anchor in a document.
@@ -465,7 +434,19 @@ class Merger:
     def replace_merge_anchor(
         cls, data: Any, old_node: Any, repl_node: Any
     ) -> None:
-        """Scan a data node for anchor merge references and replace matches."""
+        """
+        Replace anchor merge references.
+
+        Anchor merge references in YAML are formed using the `<<: *anchor`
+        operator.
+
+        Parameters:
+        1. data (Any) The DOM to adjust.
+        2. old_node (Any) The former anchor node.
+        3. repl_node (Any) The replacement anchor node.
+
+        Returns:  N/A
+        """
         if hasattr(data, "merge") and len(data.merge) > 0:
             for midx, merge_node in enumerate(data.merge):
                 if merge_node[1] is old_node:
@@ -475,7 +456,16 @@ class Merger:
     def replace_anchor(
         cls, data: Any, old_node: Any, repl_node: Any
     ) -> None:
-        """Recursively replace every use of an anchor within a DOM."""
+        """
+        Recursively replace every use of an anchor within a DOM.
+
+        Parameters:
+        1. data (Any) The DOM to adjust.
+        2. old_node (Any) The former anchor node.
+        3. repl_node (Any) The replacement anchor node.
+
+        Returns:  N/A
+        """
         anchor_name = repl_node.anchor.value
         if isinstance(data, dict):
             Merger.replace_merge_anchor(data, old_node, repl_node)
