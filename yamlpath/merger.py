@@ -345,8 +345,10 @@ class Merger:
                 if isinstance(node_coord.node, (dict, list))
                 else node_coord.parent)
 
-            if hasattr(target_node, "fa"):
-                Merger.set_flow_style(rhs, target_node.fa.flow_style())
+            Merger.set_flow_style(
+                rhs, (target_node.fa.flow_style()
+                      if hasattr(target_node, "fa")
+                      else None))
 
             if isinstance(rhs, dict):
                 # The RHS document root is a map
