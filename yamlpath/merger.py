@@ -2,15 +2,6 @@
 Implement YAML document Merger.
 
 Copyright 2020 William W. Kimball, Jr. MBA MSIS
-
-=========
-TODOs
-=========
-Processing Requirements:
-1. LHS and RHS anchored maps must have identical names AND anchor names to be
-   readily merged.  If only one of them is anchored, a merge is possible; keep
-   the only anchor name on the map.  If they have different anchor names, treat
-   as an anchor conflict and resolve per user option setting.
 """
 from typing import Any
 
@@ -55,8 +46,7 @@ class Merger:
         self.config: Processor = config
 
     def _merge_dicts(
-        self, lhs: dict, rhs: dict, path: YAMLPath,
-        parent: Any = None, parentref: Any = None,
+        self, lhs: dict, rhs: dict, path: YAMLPath, **kwargs: Any
     ) -> dict:
         """Merges two YAML maps (dicts)."""
         if not isinstance(lhs, dict):
@@ -65,9 +55,11 @@ class Merger:
 
         # The document root is ALWAYS a Hash.  For everything deeper, do not
         # merge when the user sets LEFT|RIGHT Hash merge options.
-        node_coord = NodeCoords(rhs, parent, parentref)
+        parent: Any = kwargs.pop("parent", None)
+        parentref: Any = kwargs.pop("parentref", None)
         if len(path) > 0:
-            merge_mode = self.config.hash_merge_mode(node_coord)
+            merge_mode = self.config.hash_merge_mode(
+                NodeCoords(rhs, parent, parentref))
             if merge_mode is HashMergeOpts.LEFT:
                 return lhs
             if merge_mode is HashMergeOpts.RIGHT:
@@ -90,7 +82,7 @@ class Merger:
                 # LHS has the RHS key
                 if isinstance(val, dict):
                     lhs[key] = self._merge_dicts(
-                        lhs[key], val, path_next, rhs, key)
+                        lhs[key], val, path_next, parent=rhs, parentref=key)
                 elif isinstance(val, list):
                     lhs[key] = self._merge_lists(
                         lhs[key], val, path_next, parent=rhs, parentref=key)
@@ -179,11 +171,14 @@ class Merger:
                     )
 
                 merged_hash = False
-                for lhs_hash in lhs:
-                    if id_key in lhs_hash and lhs_hash[id_key] == id_val:
-                        self._merge_dicts(lhs_hash, ele, path_next, rhs, idx)
-                        merged_hash = True
-                        break
+                for lhs_hash in (
+                    lhs_hash for lhs_hash in lhs
+                    if id_key in lhs_hash and lhs_hash[id_key] == id_val
+                ):
+                    self._merge_dicts(
+                        lhs_hash, ele, path_next, parent=rhs, parentref=idx)
+                    merged_hash = True
+                    break
                 if not merged_hash:
                     append_list_element(lhs, ele,
                         ele.anchor.value if hasattr(ele, "anchor") else None)
