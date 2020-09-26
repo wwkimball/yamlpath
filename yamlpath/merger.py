@@ -277,11 +277,11 @@ class Merger:
             # value may be a scalar, list, or dict.  Further, lists and
             # dicts may contain other aliased values which must also be
             # checked for equality (or pointing at identical anchors).
-            prime_alias = lhs_anchors[anchor]
-            reader_alias = rhs_anchors[anchor]
+            lhs_anchor = lhs_anchors[anchor]
+            rhs_anchor = rhs_anchors[anchor]
             conflict_mode = self.config.anchor_merge_mode()
 
-            if prime_alias != reader_alias:
+            if lhs_anchor != rhs_anchor:
                 if conflict_mode is AnchorConflictResolutions.RENAME:
                     self.logger.debug(
                         "Anchor {} conflict; will RENAME anchors."
@@ -298,29 +298,27 @@ class Merger:
                     self.logger.debug(
                         "Anchor {} conflict; LEFT will override."
                         .format(anchor))
-                    self._overwrite_aliased_values(self.data, rhs, anchor)
+                    self._overwrite_aliased_values(lhs_anchor, rhs)
                 elif conflict_mode is AnchorConflictResolutions.RIGHT:
                     self.logger.debug(
                         "Anchor {} conflict; RIGHT will override."
                         .format(anchor))
-                    self._overwrite_aliased_values(rhs, self.data, anchor)
+                    self._overwrite_aliased_values(rhs_anchor, self.data)
                 else:
                     raise MergeException(
                         "Aborting due to anchor conflict with, {}."
                         .format(anchor))
 
     def _overwrite_aliased_values(
-        self, source_dom: Any, target_dom: Any, anchor: str
+        self, source_node: Any, target_dom: Any
     ) -> None:
         """
         Replace the value of every alias of an anchor.
 
         Parameters:
-        1. source_dom (Any) The document from which to copy the replacement
-           value.
+        1. source_node (Any) The original anchor with its value.
         2. target_dom (Any) The document in which to replace the value for
-           every use of the target anchor.
-        3. anchor (str) The anchor to replace in `target_dom`.
+           every use of the source_node
 
         Returns:  N/A
         """
@@ -328,27 +326,82 @@ class Merger:
             data: Any, anchor_val: str, repl_node: Any
         ):
             if isinstance(data, dict):
+                data_anchor = (data.anchor.value
+                    if hasattr(data, "anchor") else "")
+                self.logger.debug(
+                    "Merger::_overwrite_aliased_values"
+                    "::recursive_anchor_replace:  Entering a dict with keys:"
+                    "  {}; and anchor={}."
+                    .format(", ".join(data.keys()), data_anchor))
                 for idx, key in [
                     (idx, key) for idx, key in enumerate(data.keys())
                     if hasattr(key, "anchor")
                         and key.anchor.value == anchor_val
                 ]:
+                    self.logger.debug(
+                        "Merger::_overwrite_aliased_values"
+                        "::recursive_anchor_replace:  REPLACING aliased key,"
+                        " {}.".format(key))
                     data.insert(idx, repl_node, data.pop(key))
 
-                for key, val in data.non_merged_items():
+                for key, val in data.items():
+                    key_anchor = (key.anchor.value
+                        if hasattr(key, "anchor") else "")
+                    val_anchor = (val.anchor.value
+                        if hasattr(val, "anchor") else "")
+                    self.logger.debug(
+                        "Merger::_overwrite_aliased_values"
+                        "::recursive_anchor_replace:  key_anchor={},"
+                        " val_anchor={}".format(key_anchor, val_anchor))
+
                     if (hasattr(val, "anchor")
                             and val.anchor.value == anchor_val):
+                        self.logger.debug(
+                            "Merger::_overwrite_aliased_values"
+                            "::recursive_anchor_replace:  REPLACING aliased"
+                            " value of key, {}.".format(key))
                         data[key] = repl_node
                     else:
+                        self.logger.debug(
+                            "Merger::_overwrite_aliased_values"
+                            "::recursive_anchor_replace:  Recursing into"
+                            " non-matched value at key, {}.".format(key))
                         recursive_anchor_replace(
                             val, anchor_val, repl_node)
             elif isinstance(data, list):
+                self.logger.debug(
+                    "Merger::_overwrite_aliased_values"
+                    "::recursive_anchor_replace:  Entering a list with {}"
+                    " element(s).".format(len(data)))
                 for idx, ele in enumerate(data):
+                    ele_anchor = (ele.anchor.value
+                        if hasattr(ele, "anchor") else "")
+                    self.logger.debug(
+                        "Merger::_overwrite_aliased_values"
+                        "::recursive_anchor_replace:  ele_anchor={}."
+                        .format(ele_anchor))
+
                     if (hasattr(ele, "anchor")
                             and ele.anchor.value == anchor_val):
+                        self.logger.debug(
+                            "Merger::_overwrite_aliased_values"
+                            "::recursive_anchor_replace:  REPLACING aliased"
+                            " value of list at index, {}.".format(idx))
                         data[idx] = repl_node
                     else:
+                        self.logger.debug(
+                            "Merger::_overwrite_aliased_values"
+                            "::recursive_anchor_replace:  Recursing into"
+                            " non-matched list element at index, {}."
+                            .format(idx))
                         recursive_anchor_replace(ele, anchor_val, repl_node)
+            else:
+                self.logger.debug(
+                    "Merger::_overwrite_aliased_values"
+                    "::recursive_anchor_replace:  Stuck with a Scalar, {},"
+                    " having Anchor, {}."
+                    .format(data, data.anchor.value
+                        if hasattr(data, "anchor") else "None"))
 
         # Python will treat the source and target anchors as distinct even
         # when their string values are identical.  This will cause the
@@ -360,17 +413,8 @@ class Merger:
         # Path to at least one alias in the source document must be known.
         # With it, retrieve one of the source nodes and use it to recursively
         # overwrite every occurence of the same anchor within the target DOM.
-        source_node = None
-        source_proc = Processor(self.logger, source_dom)
-        source_path = Merger.search_for_anchor(source_dom, anchor)
-        self.logger.debug(
-            "Merger::_overwrite_aliased_values: Found source anchor at {}."
-            .format(source_path))
-        for node_coord in source_proc.get_nodes(source_path, mustexist=True):
-            source_node = node_coord.node
-            break
-
-        recursive_anchor_replace(target_dom, anchor, source_node)
+        recursive_anchor_replace(
+            target_dom, source_node.anchor.value, source_node)
 
     def merge_with(self, rhs: Any) -> None:
         """
