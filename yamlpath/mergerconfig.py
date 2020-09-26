@@ -30,7 +30,7 @@ class MergerConfig:
         self._load_config()
 
     def anchor_merge_mode(self) -> AnchorConflictResolutions:
-        """Get Anchor merge options."""
+        """Get Anchor merge mode."""
         # Precedence: CLI > config[defaults] > default
         if self.args.anchors:
             return AnchorConflictResolutions.from_str(self.args.anchors)
@@ -42,7 +42,14 @@ class MergerConfig:
         return AnchorConflictResolutions.STOP
 
     def hash_merge_mode(self, node_coord: NodeCoords) -> HashMergeOpts:
-        """Get Hash merge options applicable to the indicated path."""
+        """
+        Get Hash merge mode applicable to the indicated path.
+
+        Parameters:
+        1. node_coord (NodeCoords) The node for which to query.
+
+        Returns:  (HashMergeOpts) Applicable mode.
+        """
         # Precedence: config[rules] > CLI > config[defaults] > default
         merge_rule = self._get_rule_for(node_coord)
         if merge_rule:
@@ -60,7 +67,14 @@ class MergerConfig:
         return HashMergeOpts.DEEP
 
     def array_merge_mode(self, node_coord: NodeCoords) -> ArrayMergeOpts:
-        """Get Array merge options applicable to the indicated path."""
+        """
+        Get Array merge mode applicable to the indicated path.
+
+        Parameters:
+        1. node_coord (NodeCoords) The node for which to query.
+
+        Returns:  (ArrayMergeOpts) Applicable mode.
+        """
         # Precedence: config[rules] > CLI > config[defaults] > default
         merge_rule = self._get_rule_for(node_coord)
         if merge_rule:
@@ -79,7 +93,12 @@ class MergerConfig:
 
     def aoh_merge_mode(self, node_coord: NodeCoords) -> AoHMergeOpts:
         """
-        Get Array-of-Hashes merge options applicable to the indicated path.
+        Get Array-of-Hashes merge mode applicable to the indicated path.
+
+        Parameters:
+        1. node_coord (NodeCoords) The node for which to query.
+
+        Returns:  (AoHMergeOpts) Applicable mode.
         """
         # Precedence: config[rules] > CLI > config[defaults] > default
         merge_rule = self._get_rule_for(node_coord)
@@ -100,7 +119,16 @@ class MergerConfig:
     def aoh_merge_key(
         self, node_coord: NodeCoords, data: dict
     ) -> str:
-        """Get the identity key of a dict based on user settings."""
+        """
+        Get the user-defined identity key for Array-of-Hashes merging.
+
+        Parameters:
+        1. node_coord (NodeCoords) The node for which to query.
+        2. data (dict) The merge source node from which an identity key will
+           be inferred if not explicity provided via user configuration.
+
+        Returns: (str) The identity key field name.
+        """
         # Check the user config for a specific key; fallback to first key.
         merge_key = self._get_key_for(node_coord)
         if not merge_key:
@@ -116,7 +144,14 @@ class MergerConfig:
         return merge_key
 
     def prepare(self, data: Any) -> None:
-        """Load references to all nodes which match config rules."""
+        """
+        Load references to all nodes which match config rules.
+
+        Parameters:
+        1. data (Any) The DOM for which to load configuration.
+
+        Returns:  N/A
+        """
         if self.config is None:
             return
 
@@ -212,7 +247,15 @@ class MergerConfig:
                 self.config = config
 
     def _get_config_for(self, node_coord: NodeCoords, section: dict) -> str:
-        """Get user configuration applicable to a node."""
+        """
+        Get user configuration applicable to a node.
+
+        Parameters:
+        1. node_coord (NodeCoords) The node for which to retrieve config.
+        2. section (dict) The configuration section to query.
+
+        Returns: (str) The requested configuration.
+        """
         if self.config is None:
             return None
 
@@ -225,9 +268,23 @@ class MergerConfig:
         return None
 
     def _get_rule_for(self, node_coord: NodeCoords) -> str:
-        """Get a user configured merge rule for a node."""
+        """
+        Get a user configured merge rule for a node.
+
+        Parameters:
+        1. node_coord (NodeCoords) The node for which to retrieve config.
+
+        Returns: (str) The requested configuration.
+        """
         return self._get_config_for(node_coord, self.rules)
 
     def _get_key_for(self, node_coord: NodeCoords) -> str:
-        """Get a user configured merge rule for a node."""
+        """
+        Get a user configured merge identity key (field) for a node.
+
+        Parameters:
+        1. node_coord (NodeCoords) The node for which to retrieve config.
+
+        Returns: (str) The requested configuration.
+        """
         return self._get_config_for(node_coord, self.keys)

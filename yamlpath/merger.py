@@ -48,7 +48,24 @@ class Merger:
     def _merge_dicts(
         self, lhs: dict, rhs: dict, path: YAMLPath, **kwargs: Any
     ) -> dict:
-        """Merges two YAML maps (dicts)."""
+        """
+        Merges two YAML maps (dicts).
+
+        Parameters:
+        1. lhs (list) The merge target.
+        2. rhs (list) The merge source.
+        3. path (YAMLPath) Location within the DOM where this merge is taking
+           place.
+
+        Keyword Parameters:
+        * parent (Any) Parent node of `rhs`
+        * parentref (Any) Child Key or Index of `rhs` within `parent`.
+
+        Returns:  (dict) The merged result.
+
+        Raises:
+        - `MergeException` when a clean merge is impossible.
+        """
         if not isinstance(lhs, dict):
             raise MergeException(
                 "Impossible to add Hash data to non-Hash destination.", path)
@@ -106,7 +123,22 @@ class Merger:
         self, lhs: list, rhs: list, path: YAMLPath,
         node_coord: NodeCoords
     ) -> list:
-        """Merge two lists of Scalars or lists."""
+        """
+        Merge two lists of Scalars or lists.
+
+        Parameters:
+        1. lhs (list) The merge target.
+        2. rhs (list) The merge source.
+        3. path (YAMLPath) Location within the DOM where this merge is taking
+           place.
+        4. node_coord (NodeCoords) The RHS root node, its parent, and reference
+           within its parent; used for config lookups.
+
+        Returns: (list) The merged result.
+
+        Raises:
+        - `MergeException` when a clean merge is impossible.
+        """
         if not isinstance(lhs, list):
             raise MergeException(
                 "Impossible to add Array data to non-Array destination.", path)
@@ -134,7 +166,28 @@ class Merger:
         self, lhs: list, rhs: list, path: YAMLPath,
         node_coord: NodeCoords
     ) -> list:
-        """Merge two lists of dicts (Arrays-of-Hashes)."""
+        """
+        Merge two lists of dicts (Arrays-of-Hashes).
+
+        This is a deep merge operation.  Each dict is treated as a record with
+        an identity key.  RHS records are merged with LHS records for which the
+        identity key matches.  As such, an identity key is required in both LHS
+        and RHS records.  This key is configurable.  When there is no LHS match
+        for an RHS key, the RHS record is appended to the LHS list.
+
+        Parameters:
+        1. lhs (list) The merge target.
+        2. rhs (list) The merge source.
+        3. path (YAMLPath) Location within the DOM where this merge is taking
+           place.
+        4. node_coord (NodeCoords) The RHS root node, its parent, and reference
+           within its parent; used for config lookups.
+
+        Returns: (list) The merged result.
+
+        Raises:
+        - `MergeException` when a clean merge is impossible.
+        """
         if not isinstance(lhs, list):
             raise MergeException(
                 "Impossible to add Array-of-Hash data to non-Array"
@@ -386,7 +439,15 @@ class Merger:
 
     @classmethod
     def set_flow_style(cls, node: Any, is_flow: bool) -> None:
-        """Recursively apply flow|block style to a node."""
+        """
+        Recursively apply flow|block style to a node.
+
+        Parameters:
+        1. node (Any) The node to apply flow|block style to.
+        2. is_flow (bool) True=flow-style, False=block-style
+
+        Returns:  N/A
+        """
         if hasattr(node, "fa"):
             if is_flow:
                 node.fa.set_flow_style()
