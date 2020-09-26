@@ -298,19 +298,21 @@ class Merger:
                     self.logger.debug(
                         "Anchor {} conflict; LEFT will override."
                         .format(anchor))
-                    self._overwrite_aliased_values(lhs_anchor, rhs)
+                    self._overwrite_aliased_values(
+                        lhs_anchor, rhs_anchor, rhs)
                 elif conflict_mode is AnchorConflictResolutions.RIGHT:
                     self.logger.debug(
                         "Anchor {} conflict; RIGHT will override."
                         .format(anchor))
-                    self._overwrite_aliased_values(rhs_anchor, self.data)
+                    self._overwrite_aliased_values(
+                        rhs_anchor, lhs_anchor, self.data)
                 else:
                     raise MergeException(
                         "Aborting due to anchor conflict with, {}."
                         .format(anchor))
 
     def _overwrite_aliased_values(
-        self, source_node: Any, target_dom: Any
+        self, source_node: Any, overwrite_node: Any, target_dom: Any
     ) -> None:
         """
         Replace the value of every alias of an anchor.
@@ -323,7 +325,7 @@ class Merger:
         Returns:  N/A
         """
         def recursive_anchor_replace(
-            data: Any, anchor_val: str, repl_node: Any
+            data: Any, anchor_val: str, old_node: Any, repl_node: Any
         ):
             if isinstance(data, dict):
                 data_anchor = (data.anchor.value
@@ -333,6 +335,21 @@ class Merger:
                     "::recursive_anchor_replace:  Entering a dict with keys:"
                     "  {}; and anchor={}."
                     .format(", ".join(data.keys()), data_anchor))
+
+                if hasattr(data, "merge") and len(data.merge) > 0:
+                    self.logger.debug(
+                        "Merger::_overwrite_aliased_values"
+                        "::recursive_anchor_replace:  Found dict merge data:")
+                    self.logger.debug(data.merge)
+                    for midx, merge_node in enumerate(data.merge):
+                        if merge_node[1] is old_node:
+                            self.logger.debug(
+                                "Merger::_overwrite_aliased_values"
+                                "::recursive_anchor_replace:  REPLACING"
+                                " dict merge node at its internal index,"
+                                " {}!".format(midx))
+                            data.merge[midx] = (data.merge[midx][0], repl_node)
+
                 for idx, key in [
                     (idx, key) for idx, key in enumerate(data.keys())
                     if hasattr(key, "anchor")
@@ -342,6 +359,22 @@ class Merger:
                         "Merger::_overwrite_aliased_values"
                         "::recursive_anchor_replace:  REPLACING aliased key,"
                         " {}.".format(key))
+                    if hasattr(key, "merge") and len(key.merge) > 0:
+                        self.logger.debug(
+                            "Merger::_overwrite_aliased_values"
+                            "::recursive_anchor_replace:  Found key merge"
+                            " data:")
+                        self.logger.debug(key.merge)
+                        for midx, merge_node in enumerate(key.merge):
+                            if merge_node[1] is old_node:
+                                self.logger.debug(
+                                    "Merger::_overwrite_aliased_values"
+                                    "::recursive_anchor_replace:  REPLACING"
+                                    " key merge node at its internal index,"
+                                    " {}!".format(midx))
+                                key.merge[midx] = (
+                                    key.merge[midx][0], repl_node)
+
                     data.insert(idx, repl_node, data.pop(key))
 
                 for key, val in data.items():
@@ -353,6 +386,35 @@ class Merger:
                         "Merger::_overwrite_aliased_values"
                         "::recursive_anchor_replace:  key_anchor={},"
                         " val_anchor={}".format(key_anchor, val_anchor))
+                    if hasattr(key, "merge") and len(key.merge) > 0:
+                        self.logger.debug(
+                            "Merger::_overwrite_aliased_values"
+                            "::recursive_anchor_replace:  Found key merge"
+                            " data:")
+                        self.logger.debug(key.merge)
+                        for midx, merge_node in enumerate(key.merge):
+                            if merge_node[1] is old_node:
+                                self.logger.debug(
+                                    "Merger::_overwrite_aliased_values"
+                                    "::recursive_anchor_replace:  REPLACING"
+                                    " key merge node at its internal index,"
+                                    " {}!".format(midx))
+                            key.merge[midx] = (key.merge[midx][0], repl_node)
+                    if hasattr(val, "merge") and len(val.merge) > 0:
+                        self.logger.debug(
+                            "Merger::_overwrite_aliased_values"
+                            "::recursive_anchor_replace:  Found value merge"
+                            " data:")
+                        self.logger.debug(val.merge)
+                        for midx, merge_node in enumerate(val.merge):
+                            if merge_node[1] is old_node:
+                                self.logger.debug(
+                                    "Merger::_overwrite_aliased_values"
+                                    "::recursive_anchor_replace:  REPLACING"
+                                    " val merge node at its internal index,"
+                                    " {}!".format(midx))
+                                val.merge[midx] = (
+                                    val.merge[midx][0], repl_node)
 
                     if (hasattr(val, "anchor")
                             and val.anchor.value == anchor_val):
@@ -367,7 +429,7 @@ class Merger:
                             "::recursive_anchor_replace:  Recursing into"
                             " non-matched value at key, {}.".format(key))
                         recursive_anchor_replace(
-                            val, anchor_val, repl_node)
+                            val, anchor_val, overwrite_node, repl_node)
             elif isinstance(data, list):
                 self.logger.debug(
                     "Merger::_overwrite_aliased_values"
@@ -380,6 +442,23 @@ class Merger:
                         "Merger::_overwrite_aliased_values"
                         "::recursive_anchor_replace:  ele_anchor={}."
                         .format(ele_anchor))
+
+                    if hasattr(ele, "merge") and len(ele.merge) > 0:
+                        self.logger.debug(
+                            "Merger::_overwrite_aliased_values"
+                            "::recursive_anchor_replace:  Found ele merge"
+                            " data:")
+                        self.logger.debug(ele.merge)
+
+                        for midx, merge_node in enumerate(ele.merge):
+                            if merge_node[1] is old_node:
+                                self.logger.debug(
+                                    "Merger::_overwrite_aliased_values"
+                                    "::recursive_anchor_replace:  REPLACING"
+                                    " ele merge node at its internal index,"
+                                    " {}!".format(midx))
+                                ele.merge[midx] = (
+                                    ele.merge[midx][0], repl_node)
 
                     if (hasattr(ele, "anchor")
                             and ele.anchor.value == anchor_val):
@@ -394,7 +473,8 @@ class Merger:
                             "::recursive_anchor_replace:  Recursing into"
                             " non-matched list element at index, {}."
                             .format(idx))
-                        recursive_anchor_replace(ele, anchor_val, repl_node)
+                        recursive_anchor_replace(
+                            ele, anchor_val, overwrite_node, repl_node)
             else:
                 self.logger.debug(
                     "Merger::_overwrite_aliased_values"
@@ -414,7 +494,7 @@ class Merger:
         # With it, retrieve one of the source nodes and use it to recursively
         # overwrite every occurence of the same anchor within the target DOM.
         recursive_anchor_replace(
-            target_dom, source_node.anchor.value, source_node)
+            target_dom, source_node.anchor.value, overwrite_node, source_node)
 
     def merge_with(self, rhs: Any) -> None:
         """
