@@ -328,13 +328,15 @@ class Merger:
         # Prepare the merge rules
         self.config.prepare(rhs)
 
-        # Loop through all insertion points and the elements in RHS
+        # Identify a reasonable default should a DOM need to be built up to
+        # receive the RHS data.
         default_val = rhs
         if isinstance(rhs, dict):
             default_val = {}
         elif isinstance(rhs, list):
             default_val = []
 
+        # Loop through all insertion points and the elements in RHS
         merge_performed = False
         for node_coord in lhs_proc.get_nodes(
                 insert_at, default_value=default_val
@@ -342,6 +344,9 @@ class Merger:
             target_node = (node_coord.node
                 if isinstance(node_coord.node, (dict, list))
                 else node_coord.parent)
+
+            if hasattr(target_node, "fa"):
+                Merger.set_flow_style(rhs, target_node.fa.flow_style())
 
             if isinstance(rhs, dict):
                 # The RHS document root is a map
@@ -376,6 +381,23 @@ class Merger:
             raise MergeException(
                 "A merge was not performed.  Ensure your target path matches"
                 " at least one node in the left document(s).", insert_at)
+
+    @classmethod
+    def set_flow_style(cls, node: Any, is_flow: bool) -> None:
+        """Recursively apply flow|block style to a node."""
+        if hasattr(node, "fa"):
+            if is_flow:
+                node.fa.set_flow_style()
+            else:
+                node.fa.set_block_style()
+
+        if isinstance(node, dict):
+            for key, val in node.items():
+                Merger.set_flow_style(key, is_flow)
+                Merger.set_flow_style(val, is_flow)
+        elif isinstance(node, list):
+            for ele in node:
+                Merger.set_flow_style(ele, is_flow)
 
     @classmethod
     def scan_for_anchors(cls, dom: Any, anchors: dict):
