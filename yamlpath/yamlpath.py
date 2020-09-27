@@ -642,3 +642,32 @@ class YAMLPath:
             path_segments.append((segment_type, segment_id))
 
         return path_segments
+
+    @classmethod
+    def strip_path_prefix(cls, prefix: "YAMLPath",
+                          path: "YAMLPath") -> "YAMLPath":
+        """
+        Remove a prefix from a YAML Path.
+
+        Parameters:
+        1. prefix (YAMLPath) The prefix to remove (except "/").
+        2. path (YAMLPath) The path from which to remove the prefix.
+
+        Returns:  (YAMLPath) The trimmed YAML Path.
+        """
+        if prefix is None:
+            return path
+
+        prefix.seperator = PathSeperators.FSLASH
+        if str(prefix) == "/":
+            return path
+
+        prefix.seperator = PathSeperators.FSLASH
+        path.seperator = PathSeperators.FSLASH
+        prefix_str = str(prefix)
+        path_str = str(path)
+        if path_str.startswith(prefix_str):
+            path_str = path_str[len(prefix_str):]
+            return YAMLPath(path_str)
+
+        return path

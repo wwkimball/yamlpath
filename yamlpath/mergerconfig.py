@@ -11,8 +11,7 @@ from yamlpath.enums import (
     AnchorConflictResolutions,
     AoHMergeOpts,
     ArrayMergeOpts,
-    HashMergeOpts,
-    PathSeperators
+    HashMergeOpts
 )
 from yamlpath import Processor, YAMLPath
 from yamlpath.wrappers import ConsolePrinter, NodeCoords
@@ -164,76 +163,57 @@ class MergerConfig:
         merge_path = None
         if self.args.mergeat:
             merge_path = YAMLPath(self.args.mergeat)
-            merge_path.seperator = PathSeperators.FSLASH
-
-        def strip_path_prefix(prefix: YAMLPath, path: str) -> YAMLPath:
-            if prefix is None:
-                self.log.debug(
-                    "MergerConfig::prepare::strip_path_prefix:  No prefix to"
-                    " strip.")
-                return YAMLPath(path)
-
-            prefix.seperator = PathSeperators.FSLASH
-            if str(prefix) == "/":
-                self.log.debug(
-                    "MergerConfig::prepare::strip_path_prefix:  Ignoring root"
-                    " prefix.")
-                return YAMLPath(path)
-
-            self.log.debug(
-                "MergerConfig::prepare::strip_path_prefix:  Starting with"
-                " path={}, prefix={}.".format(path, prefix))
-            yaml_path = YAMLPath(path)
-            prefix.seperator = PathSeperators.FSLASH
-            yaml_path.seperator = PathSeperators.FSLASH
-            prefix_str = str(prefix)
-            path_str = str(yaml_path)
-            if path_str.startswith(prefix_str):
-                path_str = path_str[len(prefix_str):]
-                self.log.debug(
-                    "MergerConfig::prepare::strip_path_prefix:  Reduced path"
-                    " to {}.".format(path_str))
-                return YAMLPath(path_str)
-
-            self.log.debug(
-                "MergerConfig::prepare::strip_path_prefix:  Prefix, {}, NOT"
-                " present in path, {}.".format(prefix, yaml_path))
-            return yaml_path
 
         proc = Processor(self.log, data)
-        for rule_path in self.config["rules"]:
-            yaml_path = strip_path_prefix(merge_path, rule_path)
-            self.log.debug(
-                "MergerConfig::prepare:  Matching 'rules' nodes to {} from {}."
-                .format(yaml_path, rule_path))
-            try:
-                for node_coord in proc.get_nodes(yaml_path, mustexist=True):
-                    self.rules[node_coord] = self.config["rules"][rule_path]
-            except YAMLPathException:
-                self.log.warning("Rule YAML Path matches no nodes:  {}"
-                                 .format(yaml_path))
-
-        self.log.debug("MergerConfig::prepare:  Matched rules to nodes:")
-        self.log.debug(self.rules)
-
-        for key_path in self.config["keys"]:
-            yaml_path = strip_path_prefix(merge_path, key_path)
-            self.log.debug(
-                "MergerConfig::prepare:  Matching 'keys' nodes to {} from {}."
-                .format(yaml_path, key_path))
-            try:
-                for node_coord in proc.get_nodes(yaml_path, mustexist=True):
-                    self.keys[node_coord] = self.config["keys"][key_path]
-            except YAMLPathException:
-                self.log.warning("Merge key YAML Path matches no nodes:  {}"
-                                 .format(yaml_path))
-
-        self.log.debug("MergerConfig::prepare:  Matched keys to nodes:")
-        self.log.debug(self.keys)
+        self._prepare_user_rules(proc, merge_path, "rules", self.rules)
+        self._prepare_user_rules(proc, merge_path, "keys", self.keys)
 
     def get_insertion_point(self) -> YAMLPath:
         """Returns the YAML Path at which merging shall be performed."""
         return YAMLPath(self.args.mergeat)
+
+    def _prepare_user_rules(
+        self, proc: Processor, merge_path: YAMLPath, section: str,
+        collector: dict
+    ) -> None:
+        """
+        Identify DOM nodes matching user-defined merge rules.
+
+        Parameters:
+        1. proc (Processor) Reference to the DOM Processor.
+        2. merge_path (YAMLPath) User-specified path within the DOM at which
+           merging will take place.
+        3. section (str) User-configuration file section defining the merge
+           rules to apply.
+        4. collector (dict) Storage collector for matching nodes.
+
+        Returns:  N/A
+        """
+        if self.config is None:
+            return
+
+        if not section in self.config:
+            self.log.warning(
+                "User-specified configuration file has no {} section."
+                .format(section))
+            return
+
+        for rule_path in self.config[section]:
+            yaml_path = YAMLPath.strip_path_prefix(merge_path, rule_path)
+            self.log.debug(
+                "MergerConfig::_prepare_user_rules:  Matching '{}' nodes to {}"
+                " from {}."
+                .format(section, yaml_path, rule_path))
+            try:
+                for node_coord in proc.get_nodes(yaml_path, mustexist=True):
+                    collector[node_coord] = self.config[section][rule_path]
+            except YAMLPathException:
+                self.log.warning("{} YAML Path matches no nodes:  {}"
+                                .format(section, yaml_path))
+
+        self.log.debug(
+            "MergerConfig::_prepare_user_rules:  Matched rules to nodes:")
+        self.log.debug(collector)
 
     def _load_config(self) -> None:
         """Load the external configuration file."""

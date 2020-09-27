@@ -14,10 +14,9 @@ from yamlpath.enums import (
     AnchorConflictResolutions,
     AoHMergeOpts,
     ArrayMergeOpts,
-    HashMergeOpts,
-    PathSeperators
+    HashMergeOpts
 )
-from yamlpath.func import append_list_element, escape_path_section
+from yamlpath.func import append_list_element
 from yamlpath import YAMLPath, Processor, MergerConfig
 
 
