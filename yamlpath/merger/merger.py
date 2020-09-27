@@ -10,15 +10,16 @@ from ruamel.yaml.scalarstring import ScalarString
 from ruamel.yaml.comments import CommentedSeq, CommentedMap
 
 from yamlpath.wrappers import ConsolePrinter, NodeCoords
-from yamlpath.exceptions import MergeException
-from yamlpath.enums import (
+from yamlpath.merger.exceptions import MergeException
+from yamlpath.merger.enums import (
     AnchorConflictResolutions,
     AoHMergeOpts,
     ArrayMergeOpts,
     HashMergeOpts
 )
 from yamlpath.func import append_list_element
-from yamlpath import YAMLPath, Processor, MergerConfig
+from yamlpath.merger import MergerConfig
+from yamlpath import YAMLPath, Processor
 
 
 class Merger:

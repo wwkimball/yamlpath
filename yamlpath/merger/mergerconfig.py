@@ -8,7 +8,7 @@ from typing import Any, Dict, Union
 from argparse import Namespace
 
 from yamlpath.exceptions import YAMLPathException
-from yamlpath.enums import (
+from yamlpath.merger.enums import (
     AnchorConflictResolutions,
     AoHMergeOpts,
     ArrayMergeOpts,

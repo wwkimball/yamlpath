@@ -11,15 +11,15 @@ import argparse
 from os import access, R_OK
 from os.path import isfile, exists
 
-from yamlpath.enums import (
+from yamlpath.merger.enums import (
     AnchorConflictResolutions,
     AoHMergeOpts,
     ArrayMergeOpts,
     HashMergeOpts
 )
 from yamlpath.func import get_yaml_data, get_yaml_editor
-from yamlpath.exceptions import MergeException
-from yamlpath import Merger, MergerConfig
+from yamlpath.merger.exceptions import MergeException
+from yamlpath.merger import Merger, MergerConfig
 
 from yamlpath.wrappers import ConsolePrinter
 

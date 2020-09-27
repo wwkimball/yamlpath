@@ -2,14 +2,14 @@ import pytest
 from types import SimpleNamespace
 
 from yamlpath.func import get_yaml_editor, get_yaml_data
-from yamlpath.enums import (
+from yamlpath.merger.enums import (
     AnchorConflictResolutions,
     AoHMergeOpts,
     ArrayMergeOpts,
     HashMergeOpts
 )
 from yamlpath.wrappers import NodeCoords
-from yamlpath import MergerConfig
+from yamlpath.merger import MergerConfig
 from tests.conftest import quiet_logger, create_temp_yaml_file
 
 class Test_MergerConfig():
