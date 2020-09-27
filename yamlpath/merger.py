@@ -3,10 +3,11 @@ Implement YAML document Merger.
 
 Copyright 2020 William W. Kimball, Jr. MBA MSIS
 """
-from typing import Any
+from typing import Any, Dict, List, Set, Tuple
 
-import ruamel.yaml
+import ruamel.yaml # type: ignore
 from ruamel.yaml.scalarstring import ScalarString
+from ruamel.yaml.comments import CommentedSeq, CommentedMap
 
 from yamlpath.wrappers import ConsolePrinter, NodeCoords
 from yamlpath.exceptions import MergeException
@@ -31,10 +32,8 @@ class Merger:
 
         Parameters:
         1. logger (ConsolePrinter) Instance of ConsoleWriter or subclass
-        2. args (dict) Default options for merge rules
-        3. lhs (Any) The prime left-hand-side parsed YAML data
-        4. config (Processor) Processor-wrapped user-defined YAML Paths
-            providing precise document merging rules
+        2. lhs (Any) The prime left-hand-side parsed YAML data
+        3. config (MergerConfig) User-defined document merging rules
 
         Returns:  N/A
 
@@ -42,17 +41,18 @@ class Merger:
         """
         self.logger: ConsolePrinter = logger
         self.data: Any = lhs
-        self.config: Processor = config
+        self.config: MergerConfig = config
 
     def _merge_dicts(
-        self, lhs: dict, rhs: dict, path: YAMLPath, **kwargs: Any
-    ) -> dict:
+        self, lhs: CommentedMap, rhs: CommentedMap, path: YAMLPath,
+        **kwargs: Any
+    ) -> CommentedMap:
         """
-        Merges two YAML maps (dicts).
+        Merge two YAML maps (CommentedMap-wrapped dicts).
 
         Parameters:
-        1. lhs (list) The merge target.
-        2. rhs (list) The merge source.
+        1. lhs (CommentedMap) The merge target.
+        2. rhs (CommentedMap) The merge source.
         3. path (YAMLPath) Location within the DOM where this merge is taking
            place.
 
@@ -60,12 +60,12 @@ class Merger:
         * parent (Any) Parent node of `rhs`
         * parentref (Any) Child Key or Index of `rhs` within `parent`.
 
-        Returns:  (dict) The merged result.
+        Returns:  (CommentedMap) The merged result.
 
         Raises:
         - `MergeException` when a clean merge is impossible.
         """
-        if not isinstance(lhs, dict):
+        if not isinstance(lhs, CommentedMap):
             raise MergeException(
                 "Impossible to add Hash data to non-Hash destination.", path)
 
@@ -82,7 +82,7 @@ class Merger:
                 return rhs
 
         # Deep merge
-        buffer = []
+        buffer: List[Tuple[Any, Any]] = []
         buffer_pos = 0
         for key, val in rhs.items():
             path_next = YAMLPath(path).append(str(key))
@@ -96,10 +96,10 @@ class Merger:
                 buffer = []
 
                 # LHS has the RHS key
-                if isinstance(val, dict):
+                if isinstance(val, CommentedMap):
                     lhs[key] = self._merge_dicts(
                         lhs[key], val, path_next, parent=rhs, parentref=key)
-                elif isinstance(val, list):
+                elif isinstance(val, CommentedSeq):
                     lhs[key] = self._merge_lists(
                         lhs[key], val, path_next, parent=rhs, parentref=key)
                 else:
@@ -119,15 +119,15 @@ class Merger:
         return lhs
 
     def _merge_simple_lists(
-        self, lhs: list, rhs: list, path: YAMLPath,
+        self, lhs: CommentedSeq, rhs: CommentedSeq, path: YAMLPath,
         node_coord: NodeCoords
-    ) -> list:
+    ) -> CommentedSeq:
         """
-        Merge two lists of Scalars or lists.
+        Merge two CommentedSeq-wrapped lists of Scalars or CommentedSeqs.
 
         Parameters:
-        1. lhs (list) The merge target.
-        2. rhs (list) The merge source.
+        1. lhs (CommentedSeq) The merge target.
+        2. rhs (CommentedSeq) The merge source.
         3. path (YAMLPath) Location within the DOM where this merge is taking
            place.
         4. node_coord (NodeCoords) The RHS root node, its parent, and reference
@@ -138,7 +138,7 @@ class Merger:
         Raises:
         - `MergeException` when a clean merge is impossible.
         """
-        if not isinstance(lhs, list):
+        if not isinstance(lhs, CommentedSeq):
             raise MergeException(
                 "Impossible to add Array data to non-Array destination.", path)
 
@@ -162,11 +162,11 @@ class Merger:
         return lhs
 
     def _merge_arrays_of_hashes(
-        self, lhs: list, rhs: list, path: YAMLPath,
+        self, lhs: CommentedSeq, rhs: CommentedSeq, path: YAMLPath,
         node_coord: NodeCoords
-    ) -> list:
+    ) -> CommentedSeq:
         """
-        Merge two lists of dicts (Arrays-of-Hashes).
+        Merge two Arrays-of-Hashes.
 
         This is a deep merge operation.  Each dict is treated as a record with
         an identity key.  RHS records are merged with LHS records for which the
@@ -175,19 +175,19 @@ class Merger:
         for an RHS key, the RHS record is appended to the LHS list.
 
         Parameters:
-        1. lhs (list) The merge target.
-        2. rhs (list) The merge source.
+        1. lhs (CommentedSeq) The merge target.
+        2. rhs (CommentedSeq) The merge source.
         3. path (YAMLPath) Location within the DOM where this merge is taking
            place.
         4. node_coord (NodeCoords) The RHS root node, its parent, and reference
            within its parent; used for config lookups.
 
-        Returns: (list) The merged result.
+        Returns:  (CommentedSeq) The merged result.
 
         Raises:
         - `MergeException` when a clean merge is impossible.
         """
-        if not isinstance(lhs, list):
+        if not isinstance(lhs, CommentedSeq):
             raise MergeException(
                 "Impossible to add Array-of-Hash data to non-Array"
                 " destination."
@@ -245,27 +245,28 @@ class Merger:
         return lhs
 
     def _merge_lists(
-        self, lhs: list, rhs: list, path: YAMLPath, **kwargs: Any
-    ) -> list:
+        self, lhs: CommentedSeq, rhs: CommentedSeq, path: YAMLPath,
+        **kwargs: Any
+    ) -> CommentedSeq:
         """
         Merge two lists; understands lists-of-dicts.
 
         Parameters:
-        1. lhs (list) The list to merge into.
-        2. rhs (list) The list to merge from.
+        1. lhs (CommentedSeq) The list to merge into.
+        2. rhs (CommentedSeq) The list to merge from.
         3. path (YAMLPath) Location of the `rsh` source list within its DOM.
 
         Keyword Parameters:
         * parent (Any) Parent node of `rhs`
         * parentref (Any) Child Key or Index of `rhs` within `parent`.
 
-        Returns:  (list) The merged result.
+        Returns:  (CommentedSeq) The merged result.
         """
         parent: Any = kwargs.pop("parent", None)
         parentref: Any = kwargs.pop("parentref", None)
         node_coord = NodeCoords(rhs, parent, parentref)
         if len(rhs) > 0:
-            if isinstance(rhs[0], dict):
+            if isinstance(rhs[0], CommentedMap):
                 # This list is an Array-of-Hashes
                 return self._merge_arrays_of_hashes(lhs, rhs, path, node_coord)
 
@@ -275,7 +276,7 @@ class Merger:
         # No RHS list
         return lhs
 
-    def _calc_unique_anchor(self, anchor: str, known_anchors: dict) -> str:
+    def _calc_unique_anchor(self, anchor: str, known_anchors: Set[str]) -> str:
         """
         Generate a unique anchor name within a document pair.
 
@@ -306,12 +307,12 @@ class Merger:
 
         Returns:  N/A
         """
-        lhs_anchors = {}
+        lhs_anchors: Dict[str, Any] = {}
         Merger.scan_for_anchors(self.data, lhs_anchors)
         self.logger.debug("Merger::_resolve_anchor_conflicts:  LHS Anchors:")
         self.logger.debug(lhs_anchors)
 
-        rhs_anchors = {}
+        rhs_anchors: Dict[str, Any] = {}
         Merger.scan_for_anchors(rhs, rhs_anchors)
         self.logger.debug("Merger::_resolve_anchor_conflicts:  RHS Anchors:")
         self.logger.debug(rhs_anchors)
@@ -383,9 +384,9 @@ class Merger:
         # Identify a reasonable default should a DOM need to be built up to
         # receive the RHS data.
         default_val = rhs
-        if isinstance(rhs, dict):
+        if isinstance(rhs, CommentedMap):
             default_val = {}
-        elif isinstance(rhs, list):
+        elif isinstance(rhs, CommentedSeq):
             default_val = []
 
         # Loop through all insertion points and the elements in RHS
@@ -394,7 +395,7 @@ class Merger:
                 insert_at, default_value=default_val
         ):
             target_node = (node_coord.node
-                if isinstance(node_coord.node, (dict, list))
+                if isinstance(node_coord.node, (CommentedMap, CommentedSeq))
                 else node_coord.parent)
 
             Merger.set_flow_style(
@@ -402,25 +403,25 @@ class Merger:
                       if hasattr(target_node, "fa")
                       else None))
 
-            if isinstance(rhs, dict):
+            if isinstance(rhs, CommentedMap):
                 # The RHS document root is a map
-                if isinstance(target_node, list):
+                if isinstance(target_node, CommentedSeq):
                     # But the destination is a list
                     self._merge_lists(target_node, [rhs], insert_at)
                 else:
                     self._merge_dicts(target_node, rhs, insert_at)
                 merge_performed = True
-            elif isinstance(rhs, list):
+            elif isinstance(rhs, CommentedSeq):
                 # The RHS document root is a list
                 self._merge_lists(target_node, rhs, insert_at)
                 merge_performed = True
             else:
                 # The RHS document root is a Scalar value
                 target_node = node_coord.node
-                if isinstance(target_node, list):
+                if isinstance(target_node, CommentedSeq):
                     append_list_element(target_node, rhs)
                     merge_performed = True
-                elif isinstance(target_node, dict):
+                elif isinstance(target_node, CommentedMap):
                     raise MergeException(
                         "Impossible to add Scalar value, {}, to a Hash without"
                         " a key.  Change the value to a 'key: value' pair, a"
@@ -453,16 +454,16 @@ class Merger:
             else:
                 node.fa.set_block_style()
 
-        if isinstance(node, dict):
+        if isinstance(node, CommentedMap):
             for key, val in node.items():
                 Merger.set_flow_style(key, is_flow)
                 Merger.set_flow_style(val, is_flow)
-        elif isinstance(node, list):
+        elif isinstance(node, CommentedSeq):
             for ele in node:
                 Merger.set_flow_style(ele, is_flow)
 
     @classmethod
-    def scan_for_anchors(cls, dom: Any, anchors: dict):
+    def scan_for_anchors(cls, dom: Any, anchors: Dict[str, Any]):
         """
         Scan a document for all anchors contained within.
 
@@ -473,7 +474,7 @@ class Merger:
 
         Returns:  N/A
         """
-        if isinstance(dom, dict):
+        if isinstance(dom, CommentedMap):
             for key, val in dom.items():
                 if hasattr(key, "anchor") and key.anchor.value is not None:
                     anchors[key.anchor.value] = key
@@ -482,10 +483,10 @@ class Merger:
                     anchors[val.anchor.value] = val
 
                 # Recurse into complex values
-                if isinstance(val, (dict, list)):
+                if isinstance(val, (CommentedMap, CommentedSeq)):
                     Merger.scan_for_anchors(val, anchors)
 
-        elif isinstance(dom, list):
+        elif isinstance(dom, CommentedSeq):
             for ele in dom:
                 Merger.scan_for_anchors(ele, anchors)
 
@@ -504,14 +505,14 @@ class Merger:
 
         Returns:  N/A
         """
-        if isinstance(dom, dict):
+        if isinstance(dom, CommentedMap):
             for key, val in dom.items():
                 if hasattr(key, "anchor") and key.anchor.value == anchor:
                     key.anchor.value = new_anchor
                 if hasattr(val, "anchor") and val.anchor.value == anchor:
                     val.anchor.value = new_anchor
                 Merger.rename_anchor(val, anchor, new_anchor)
-        elif isinstance(dom, list):
+        elif isinstance(dom, CommentedSeq):
             for ele in dom:
                 Merger.rename_anchor(ele, anchor, new_anchor)
         elif hasattr(dom, "anchor") and dom.anchor.value == anchor:
@@ -554,7 +555,7 @@ class Merger:
         Returns:  N/A
         """
         anchor_name = repl_node.anchor.value
-        if isinstance(data, dict):
+        if isinstance(data, CommentedMap):
             Merger.replace_merge_anchor(data, old_node, repl_node)
             for idx, key in [
                 (idx, key) for idx, key in enumerate(data.keys())
@@ -572,7 +573,7 @@ class Merger:
                     data[key] = repl_node
                 else:
                     Merger.replace_anchor(val, old_node, repl_node)
-        elif isinstance(data, list):
+        elif isinstance(data, CommentedSeq):
             for idx, ele in enumerate(data):
                 Merger.replace_merge_anchor(ele, old_node, repl_node)
                 if (hasattr(ele, "anchor")
@@ -594,11 +595,11 @@ class Merger:
 
         Returns:  N/A
         """
-        if isinstance(dom, dict):
+        if isinstance(dom, CommentedMap):
             for key, val in dom.items():
                 Merger.delete_all_comments(key)
                 Merger.delete_all_comments(val)
-        elif isinstance(dom, list):
+        elif isinstance(dom, CommentedSeq):
             for ele in dom:
                 Merger.delete_all_comments(ele)
         try:

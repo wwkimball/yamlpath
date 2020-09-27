@@ -22,8 +22,8 @@ class ArrayMergeOpts(Enum):
     `RIGHT`
         RHS Arrays fully replace LHS Arrays (no merge).
 
-	`UNIQUE`
-		Only unique RHS Array elements are appended to LHS Arrays (merge).
+    `UNIQUE`
+        Only unique RHS Array elements are appended to LHS Arrays (merge).
     """
 
     ALL = auto()

@@ -3,26 +3,28 @@ Implements MergeException.
 
 Copyright 2020 William W. Kimball, Jr. MBA MSIS
 """
-from typing import Optional
+from typing import Optional, Union
+
+from yamlpath import YAMLPath
 
 
 class MergeException(Exception):
     """Express an issue with a document merge."""
 
     def __init__(self, user_message: str,
-                 yaml_path: Optional[str] = None) -> None:
+                 yaml_path: Optional[Union[YAMLPath, str]] = None) -> None:
         """
         Initialize this Exception with all pertinent data.
 
         Parameters:
         1. user_message (str) The message to convey to the user
-        2. yaml_path (str) Location within the document where the issue was
-           found, if available.
+        2. yaml_path (YAMLPath) Location within the document where the issue
+           was found, if available.
 
         Returns:  N/A
         """
-        self.user_message: str = user_message
-        self.yaml_path: Optional[str] = yaml_path
+        self.user_message = user_message
+        self.yaml_path = yaml_path
 
         super().__init__("user_message: {}, yaml_path: {}"
                          .format(user_message, yaml_path))

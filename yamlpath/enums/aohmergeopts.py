@@ -19,7 +19,7 @@ class AoHMergeOpts(Enum):
 
     `DEEP`
         RHS Hashes are deeply merged into LHS Hashes (full merge) IIF an
-		identifier key is also provided via the --aohkey option.
+        identifier key is also provided via the --aohkey option.
 
     `LEFT`
         RHS Hashes are neither merged with nor appended to LHS Hashes (no
@@ -30,7 +30,7 @@ class AoHMergeOpts(Enum):
 
     `UNIQUE`
         RHS Hashes which do not already exist IN FULL within LHS are appended
-		to the LHS Array (no merge).
+        to the LHS Array (no merge).
     """
 
     ALL = auto()

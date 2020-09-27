@@ -4,7 +4,8 @@ Config file processor for the Merger.
 Copyright 2020 William W. Kimball, Jr. MBA MSIS
 """
 import configparser
-from typing import Any
+from typing import Any, Dict, Union
+from argparse import Namespace
 
 from yamlpath.exceptions import YAMLPathException
 from yamlpath.enums import (
@@ -19,12 +20,22 @@ from yamlpath.wrappers import ConsolePrinter, NodeCoords
 
 class MergerConfig:
     """Config file processor for the Merger."""
-    def __init__(self, logger: ConsolePrinter, args: dict) -> None:
+
+    def __init__(self, logger: ConsolePrinter, args: Namespace) -> None:
+        """
+        Instantiate this class into an object.
+
+        Parameters:
+        1. logger (ConsolePrinter) Instance of ConsoleWriter or subclass
+        2. args (dict) Default options for merge rules
+
+        Returns:  N/A
+        """
         self.log = logger
         self.args = args
-        self.config = None
-        self.rules = {}
-        self.keys = {}
+        self.config: Union[None, configparser.ConfigParser] = None
+        self.rules: Dict[NodeCoords, str] = {}
+        self.keys: Dict[NodeCoords, str] = {}
 
         self._load_config()
 
@@ -160,7 +171,7 @@ class MergerConfig:
         self.keys = {}
 
         # Adjust data paths for mergeat prefix
-        merge_path = None
+        merge_path = YAMLPath("/")
         if self.args.mergeat:
             merge_path = YAMLPath(self.args.mergeat)
 
@@ -169,7 +180,7 @@ class MergerConfig:
         self._prepare_user_rules(proc, merge_path, "keys", self.keys)
 
     def get_insertion_point(self) -> YAMLPath:
-        """Returns the YAML Path at which merging shall be performed."""
+        """Get the YAML Path at which merging shall be performed."""
         return YAMLPath(self.args.mergeat)
 
     def _prepare_user_rules(
@@ -198,15 +209,16 @@ class MergerConfig:
                 .format(section))
             return
 
-        for rule_path in self.config[section]:
+        for rule_str in self.config[section]:
+            rule_path = YAMLPath(rule_str)
             yaml_path = YAMLPath.strip_path_prefix(merge_path, rule_path)
             self.log.debug(
                 "MergerConfig::_prepare_user_rules:  Matching '{}' nodes to {}"
                 " from {}."
-                .format(section, yaml_path, rule_path))
+                .format(section, yaml_path, rule_str))
             try:
                 for node_coord in proc.get_nodes(yaml_path, mustexist=True):
-                    collector[node_coord] = self.config[section][rule_path]
+                    collector[node_coord] = self.config[section][rule_str]
             except YAMLPathException:
                 self.log.warning("{} YAML Path matches no nodes:  {}"
                                 .format(section, yaml_path))
@@ -241,15 +253,15 @@ class MergerConfig:
         Returns: (str) The requested configuration.
         """
         if self.config is None:
-            return None
+            return ""
 
         for rule_coord, rule_config in section.items():
             if rule_coord.node == node_coord.node \
                     and rule_coord.parent == node_coord.parent \
                     and rule_coord.parentref == node_coord.parentref:
-                return rule_config
+                return str(rule_config)
 
-        return None
+        return ""
 
     def _get_rule_for(self, node_coord: NodeCoords) -> str:
         """
