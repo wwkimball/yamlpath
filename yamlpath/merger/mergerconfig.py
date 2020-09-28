@@ -170,11 +170,8 @@ class MergerConfig:
         self.rules = {}
         self.keys = {}
 
-        # Adjust data paths for mergeat prefix
-        merge_path = YAMLPath("/")
-        if self.args.mergeat:
-            merge_path = YAMLPath(self.args.mergeat)
-
+        # Load new rules and keys
+        merge_path = self.get_insertion_point()
         proc = Processor(self.log, data)
         self._prepare_user_rules(proc, merge_path, "rules", self.rules)
         self._prepare_user_rules(proc, merge_path, "keys", self.keys)
@@ -202,10 +199,7 @@ class MergerConfig:
 
         Returns:  N/A
         """
-        if self.config is None:
-            return
-
-        if not section in self.config:
+        if self.config is None or not section in self.config:
             self.log.warning(
                 "User-specified configuration file has no {} section."
                 .format(section))

@@ -11,7 +11,11 @@ from yamlpath.merger.enums import (
 from yamlpath.wrappers import NodeCoords
 from yamlpath.merger import MergerConfig
 from yamlpath import YAMLPath
-from tests.conftest import quiet_logger, create_temp_yaml_file
+from tests.conftest import (
+    info_warn_logger,
+    quiet_logger,
+    create_temp_yaml_file
+)
 
 class Test_MergerConfig():
     """Tests for the MergerConfig class."""
@@ -170,7 +174,6 @@ class Test_MergerConfig():
 
         mc = MergerConfig(quiet_logger, SimpleNamespace(
             config=config_file
-            , mergeat="/"
             , hashes=cli))
         mc.prepare(lhs_data)
 
@@ -275,7 +278,6 @@ class Test_MergerConfig():
 
         mc = MergerConfig(quiet_logger, SimpleNamespace(
             config=config_file
-            , mergeat="/"
             , arrays=cli))
         mc.prepare(lhs_data)
 
@@ -384,7 +386,6 @@ class Test_MergerConfig():
 
         mc = MergerConfig(quiet_logger, SimpleNamespace(
             config=config_file
-            , mergeat="/"
             , aoh=cli))
         mc.prepare(lhs_data)
 
@@ -419,7 +420,7 @@ class Test_MergerConfig():
         lhs_yaml = get_yaml_editor()
         lhs_data = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
 
-        mc = MergerConfig(quiet_logger, SimpleNamespace(mergeat="/"))
+        mc = MergerConfig(quiet_logger, SimpleNamespace())
         mc.prepare(lhs_data)
 
         node = lhs_data["array_of_hashes"]
@@ -454,9 +455,7 @@ class Test_MergerConfig():
         lhs_yaml = get_yaml_editor()
         lhs_data = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
 
-        mc = MergerConfig(quiet_logger, SimpleNamespace(
-            config=config_file
-            , mergeat="/"))
+        mc = MergerConfig(quiet_logger, SimpleNamespace(config=config_file))
         mc.prepare(lhs_data)
 
         node = lhs_data["array_of_hashes"]
@@ -493,9 +492,7 @@ class Test_MergerConfig():
         lhs_yaml = get_yaml_editor()
         lhs_data = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
 
-        mc = MergerConfig(quiet_logger, SimpleNamespace(
-            config=config_file
-            , mergeat="/"))
+        mc = MergerConfig(quiet_logger, SimpleNamespace(config=config_file))
         mc.prepare(lhs_data)
 
         node = lhs_data["array_of_hashes"][1]
@@ -505,3 +502,39 @@ class Test_MergerConfig():
 
         assert mc.aoh_merge_key(
             NodeCoords(node, parent, parentref), record) == "prop"
+
+
+    ###
+    # Edge Cases
+    ###
+    def test_warn_when_rules_matches_zero_nodes(
+        self, capsys, info_warn_logger, tmp_path_factory
+    ):
+        config_file = create_temp_yaml_file(tmp_path_factory, """
+        [rules]
+        /does_not_exist = left
+        """)
+        lhs_yaml_file = create_temp_yaml_file(tmp_path_factory, """---
+        hash:
+          lhs_exclusive: lhs value 1
+          merge_targets:
+            subkey: lhs value 2
+            subarray:
+              - one
+              - two
+        array_of_hashes:
+          - name: LHS Record 1
+            id: 1
+            prop: LHS value AoH 1
+          - name: LHS Record 2
+            id: 2
+            prop: LHS value AoH 2
+        """)
+        lhs_yaml = get_yaml_editor()
+        lhs_data = get_yaml_data(lhs_yaml, info_warn_logger, lhs_yaml_file)
+
+        mc = MergerConfig(info_warn_logger, SimpleNamespace(config=config_file))
+        mc.prepare(lhs_data)
+
+        console = capsys.readouterr()
+        assert "YAML Path matches no nodes" in console.out
