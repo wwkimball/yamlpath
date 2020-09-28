@@ -10,10 +10,23 @@ from yamlpath.merger.enums import (
 )
 from yamlpath.wrappers import NodeCoords
 from yamlpath.merger import MergerConfig
+from yamlpath import YAMLPath
 from tests.conftest import quiet_logger, create_temp_yaml_file
 
 class Test_MergerConfig():
     """Tests for the MergerConfig class."""
+
+    ###
+    # get_insertion_point
+    ###
+    def test_get_insertion_point_default(self, quiet_logger):
+        mc = MergerConfig(quiet_logger, SimpleNamespace())
+        assert mc.get_insertion_point() == YAMLPath("/")
+
+    def test_get_insertion_point_cli(self, quiet_logger):
+        mc = MergerConfig(quiet_logger, SimpleNamespace(mergeat="la.tee.dah"))
+        assert mc.get_insertion_point() == YAMLPath("/la/tee/dah")
+
 
     ###
     # anchor_merge_mode
@@ -453,3 +466,42 @@ class Test_MergerConfig():
 
         assert mc.aoh_merge_key(
             NodeCoords(node, parent, parentref), record) == "id"
+
+    def test_aoh_merge_key_ini_inferred_parent(
+        self, quiet_logger, tmp_path_factory
+    ):
+        config_file = create_temp_yaml_file(tmp_path_factory, """
+        [keys]
+        /array_of_hashes = prop
+        """)
+        lhs_yaml_file = create_temp_yaml_file(tmp_path_factory, """---
+        hash:
+          lhs_exclusive: lhs value 1
+          merge_targets:
+            subkey: lhs value 2
+            subarray:
+              - one
+              - two
+        array_of_hashes:
+          - name: LHS Record 1
+            id: 1
+            prop: LHS value AoH 1
+          - name: LHS Record 2
+            id: 2
+            prop: LHS value AoH 2
+        """)
+        lhs_yaml = get_yaml_editor()
+        lhs_data = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
+
+        mc = MergerConfig(quiet_logger, SimpleNamespace(
+            config=config_file
+            , mergeat="/"))
+        mc.prepare(lhs_data)
+
+        node = lhs_data["array_of_hashes"][1]
+        parent = lhs_data["array_of_hashes"]
+        parentref = 1
+        record = node
+
+        assert mc.aoh_merge_key(
+            NodeCoords(node, parent, parentref), record) == "prop"

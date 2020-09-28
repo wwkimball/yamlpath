@@ -181,7 +181,9 @@ class MergerConfig:
 
     def get_insertion_point(self) -> YAMLPath:
         """Get the YAML Path at which merging shall be performed."""
-        return YAMLPath(self.args.mergeat)
+        if hasattr(self.args, "mergeat"):
+            return YAMLPath(self.args.mergeat)
+        return YAMLPath("/")
 
     def _prepare_user_rules(
         self, proc: Processor, merge_path: YAMLPath, section: str,
