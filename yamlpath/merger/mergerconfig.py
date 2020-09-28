@@ -42,7 +42,7 @@ class MergerConfig:
     def anchor_merge_mode(self) -> AnchorConflictResolutions:
         """Get Anchor merge mode."""
         # Precedence: CLI > config[defaults] > default
-        if self.args.anchors:
+        if hasattr(self.args, "anchors") and self.args.anchors:
             return AnchorConflictResolutions.from_str(self.args.anchors)
         if (self.config is not None
                 and "defaults" in self.config
@@ -68,7 +68,7 @@ class MergerConfig:
                 .format(merge_rule))
             return HashMergeOpts.from_str(merge_rule)
         self.log.debug("MergerConfig::hash_merge_mode:  NOT Matched")
-        if self.args.hashes:
+        if hasattr(self.args, "hashes") and self.args.hashes:
             return HashMergeOpts.from_str(self.args.hashes)
         if (self.config is not None
                 and "defaults" in self.config
@@ -93,7 +93,7 @@ class MergerConfig:
                 .format(merge_rule))
             return ArrayMergeOpts.from_str(merge_rule)
         self.log.debug("MergerConfig::array_merge_mode:  NOT Matched")
-        if self.args.arrays:
+        if hasattr(self.args, "arrays") and self.args.arrays:
             return ArrayMergeOpts.from_str(self.args.arrays)
         if (self.config is not None
                 and "defaults" in self.config
@@ -118,7 +118,7 @@ class MergerConfig:
                 .format(merge_rule))
             return AoHMergeOpts.from_str(merge_rule)
         self.log.debug("MergerConfig::aoh_merge_mode:  NOT Matched")
-        if self.args.aoh:
+        if hasattr(self.args, "aoh") and self.args.aoh:
             return AoHMergeOpts.from_str(self.args.aoh)
         if (self.config is not None
                 and "defaults" in self.config
