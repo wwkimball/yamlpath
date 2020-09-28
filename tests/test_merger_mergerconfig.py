@@ -17,7 +17,7 @@ from tests.conftest import (
     create_temp_yaml_file
 )
 
-class Test_MergerConfig():
+class Test_merger_MergerConfig():
     """Tests for the MergerConfig class."""
 
     ###
