@@ -67,8 +67,7 @@ class AoHMergeOpts(Enum):
         Raises:  N/A
         """
         names = [l.lower() for l in AoHMergeOpts.get_names()]
-        symbols = [str(e) for e in AoHMergeOpts]
-        choices = list(set(names + symbols))
+        choices = list(set(names))
         choices.sort()
         return choices
 

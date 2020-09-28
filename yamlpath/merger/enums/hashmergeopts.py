@@ -55,8 +55,7 @@ class HashMergeOpts(Enum):
         Raises:  N/A
         """
         names = [l.lower() for l in HashMergeOpts.get_names()]
-        symbols = [str(e) for e in HashMergeOpts]
-        choices = list(set(names + symbols))
+        choices = list(set(names))
         choices.sort()
         return choices
 

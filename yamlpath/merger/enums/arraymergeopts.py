@@ -59,8 +59,7 @@ class ArrayMergeOpts(Enum):
         Raises:  N/A
         """
         names = [l.lower() for l in ArrayMergeOpts.get_names()]
-        symbols = [str(e) for e in ArrayMergeOpts]
-        choices = list(set(names + symbols))
+        choices = list(set(names))
         choices.sort()
         return choices
 
