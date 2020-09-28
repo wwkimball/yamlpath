@@ -119,7 +119,7 @@ class YAMLPath:
 
     def __len__(self) -> int:
         """Indicate how many segments comprise this YAML Path."""
-        return len(self._escaped)
+        return len(self.escaped)
 
     def __eq__(self, other: object) -> bool:
         """Indicate equivalence of two YAMLPaths."""
