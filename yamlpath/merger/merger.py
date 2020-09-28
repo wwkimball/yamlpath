@@ -290,13 +290,10 @@ class Merger:
         """
         self.logger.debug("Merger::_calc_unique_anchor:  Preexisting Anchors:")
         self.logger.debug(known_anchors)
+        aid = 1
         while anchor in known_anchors:
-            anchor = "{}_{}".format(
-                anchor,
-                str(hash(anchor)).replace("-", "_"))
-            self.logger.debug(
-                "Merger::_calc_unique_anchor:  Trying new anchor name, {}."
-                .format(anchor))
+            anchor = "{}_{}".format(anchor, aid)
+            aid += 1
         return anchor
 
     def _resolve_anchor_conflicts(self, rhs: Any) -> None:
@@ -357,6 +354,12 @@ class Merger:
                     raise MergeException(
                         "Aborting due to anchor conflict with, {}."
                         .format(anchor))
+            else:
+                # While the anchors are identical, the reference nodes are not.
+                # So, overwrite all matching LHS nodes with their RHS
+                # equivalents in order to stave off spurious anchor
+                # re-definitions.
+                Merger.replace_anchor(self.data, lhs_anchor, rhs_anchor)
 
     def merge_with(self, rhs: Any) -> None:
         """
