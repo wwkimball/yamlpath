@@ -7,6 +7,9 @@ Enhancements:
 * YAMLPath instances now support arbitrary changes to seperator.
 * YAMLPath instances now support equality testing (against the stored path),
   immune to differences in seperator.
+* The get_yaml_data function now supports "-" as a source file.
+  This is interpreted as a read from STDIN.  Every command-line tool using this
+  function will automatically support this new capability.
 
 2.3.7:
 Bug Fixes:
