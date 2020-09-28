@@ -59,8 +59,7 @@ class AnchorConflictResolutions(Enum):
         Raises:  N/A
         """
         names = [l.lower() for l in AnchorConflictResolutions.get_names()]
-        symbols = [str(e) for e in AnchorConflictResolutions]
-        choices = list(set(names + symbols))
+        choices = list(set(names))
         choices.sort()
         return choices
 
