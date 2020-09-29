@@ -11,9 +11,10 @@ Enhancements:
   interpreted as a read from STDIN.
 * Due to the change to the get_yaml_data function, the yaml-get reference
   command-line tool now supports retrieving nodes from YAML/Compatible data
-  passed to it via STDIN.  The new yaml-merge reference command-line tool also
-  reads from STDIN when one of its input files is -.  No other reference
-  command-line tools support this change at this time.
+  passed to it via STDIN when its YAML_FILE argument is set to -.  The new
+  yaml-merge reference command-line tool also reads from STDIN when one of its
+  YAML_FILE input arguments is -.  No other reference command-line tools
+  support this change at this time.
 
 2.3.7:
 Bug Fixes:
