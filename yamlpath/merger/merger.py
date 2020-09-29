@@ -2,10 +2,6 @@
 Implement YAML document Merger.
 
 Copyright 2020 William W. Kimball, Jr. MBA MSIS
-
-TODOs:
-1. Raise a MergeException when two anchored hashes have the same hash name yet
-   different hash structures/values.
 """
 from typing import Any, Dict, List, Set, Tuple
 
