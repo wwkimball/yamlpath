@@ -1754,7 +1754,7 @@ merged_hash:
   even_more_rhs: values
 """)
 
-        output_dir = tmp_path / "test_merge_anchored_hash"
+        output_dir = tmp_path / "test_merge_combines_anchored_hashes"
         output_dir.mkdir()
         output_file = output_dir / "output.yaml"
 
@@ -1764,6 +1764,252 @@ merged_hash:
         rhs_data = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
 
         args = SimpleNamespace()
+        mc = MergerConfig(quiet_logger, args)
+        merger = Merger(quiet_logger, lhs_data, mc)
+        merger.merge_with(rhs_data)
+
+        with open(output_file, 'w') as yaml_dump:
+            lhs_yaml.dump(merger.data, yaml_dump)
+
+        # DEBUG:
+        # with open(output_file, 'r') as output_fnd, open(merged_yaml, 'r') as merged_fnd:
+        #     print("Expected:")
+        #     print(merged_fnd.read())
+        #     print("Got:")
+        #     print(output_fnd.read())
+
+        assert (
+            (os.path.getsize(output_file) == os.path.getsize(merged_yaml))
+            and (open(output_file,'r').read() == open(merged_yaml,'r').read())
+        )
+
+    def test_merge_rename_anchored_scalar_hash_key(
+        self, quiet_logger, tmp_path, tmp_path_factory
+    ):
+        lhs_yaml_file = create_temp_yaml_file(tmp_path_factory, """---
+aliases:
+  - &key_name LHS Key Name
+*key_name :
+  subkey: LHS value
+""")
+        rhs_yaml_file = create_temp_yaml_file(tmp_path_factory, """---
+aliases:
+  - &key_name RHS Key Name
+*key_name :
+  subkey: RHS value
+""")
+        merged_yaml = create_temp_yaml_file(tmp_path_factory, """---
+aliases:
+  - &key_name LHS Key Name
+  - &key_name_1 RHS Key Name
+*key_name :
+  subkey: LHS value
+*key_name_1 :
+  subkey: RHS value
+""")
+
+        output_dir = tmp_path / "test_merge_rename_anchored_scalar_hash_key"
+        output_dir.mkdir()
+        output_file = output_dir / "output.yaml"
+
+        lhs_yaml = get_yaml_editor()
+        rhs_yaml = get_yaml_editor()
+        lhs_data = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
+        rhs_data = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
+
+        args = SimpleNamespace(anchors="rename")
+        mc = MergerConfig(quiet_logger, args)
+        merger = Merger(quiet_logger, lhs_data, mc)
+        merger.merge_with(rhs_data)
+
+        with open(output_file, 'w') as yaml_dump:
+            lhs_yaml.dump(merger.data, yaml_dump)
+
+        # DEBUG:
+        # with open(output_file, 'r') as output_fnd, open(merged_yaml, 'r') as merged_fnd:
+        #     print("Expected:")
+        #     print(merged_fnd.read())
+        #     print("Got:")
+        #     print(output_fnd.read())
+
+        assert (
+            (os.path.getsize(output_file) == os.path.getsize(merged_yaml))
+            and (open(output_file,'r').read() == open(merged_yaml,'r').read())
+        )
+
+    def test_merge_left_anchored_scalar_hash_key(
+        self, quiet_logger, tmp_path, tmp_path_factory
+    ):
+        lhs_yaml_file = create_temp_yaml_file(tmp_path_factory, """---
+aliases:
+  - &key_name LHS Key Name
+*key_name :
+  subkey: LHS value
+""")
+        rhs_yaml_file = create_temp_yaml_file(tmp_path_factory, """---
+aliases:
+  - &key_name RHS Key Name
+*key_name :
+  subkey: RHS value
+""")
+        merged_yaml = create_temp_yaml_file(tmp_path_factory, """---
+aliases:
+  - &key_name LHS Key Name
+  - *key_name
+*key_name :
+  subkey: RHS value
+""")
+
+        output_dir = tmp_path / "test_merge_left_anchored_scalar_hash_key"
+        output_dir.mkdir()
+        output_file = output_dir / "output.yaml"
+
+        lhs_yaml = get_yaml_editor()
+        rhs_yaml = get_yaml_editor()
+        lhs_data = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
+        rhs_data = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
+
+        args = SimpleNamespace(anchors="left")
+        mc = MergerConfig(quiet_logger, args)
+        merger = Merger(quiet_logger, lhs_data, mc)
+        merger.merge_with(rhs_data)
+
+        with open(output_file, 'w') as yaml_dump:
+            lhs_yaml.dump(merger.data, yaml_dump)
+
+        # DEBUG:
+        # with open(output_file, 'r') as output_fnd, open(merged_yaml, 'r') as merged_fnd:
+        #     print("Expected:")
+        #     print(merged_fnd.read())
+        #     print("Got:")
+        #     print(output_fnd.read())
+
+        assert (
+            (os.path.getsize(output_file) == os.path.getsize(merged_yaml))
+            and (open(output_file,'r').read() == open(merged_yaml,'r').read())
+        )
+
+    def test_merge_rename_anchored_complex_hash_key(
+        self, quiet_logger, tmp_path, tmp_path_factory
+    ):
+        lhs_yaml_file = create_temp_yaml_file(tmp_path_factory, """---
+anchorKeys:
+  &keyOne lhsAliasOne: 1 1 Alpha 1
+  &keyTwo lhsAliasTwo: 2 2 Beta 2
+hash:
+  *keyOne :
+    subval: lhs 1.1
+  *keyTwo :
+    subval: lhs 2.2
+""")
+        rhs_yaml_file = create_temp_yaml_file(tmp_path_factory, """---
+anchorKeys:
+  &keyOne rhsAliasOne: 1 1 Alpha 1
+  &keyTwo rhsAliasTwo: 2 2 Beta 2
+hash:
+  *keyOne :
+    subval: rhs 1.1
+  *keyTwo :
+    subval: rhs 2.2
+""")
+        merged_yaml = create_temp_yaml_file(tmp_path_factory, """---
+anchorKeys:
+  &keyOne lhsAliasOne: 1 1 Alpha 1
+  &keyTwo lhsAliasTwo: 2 2 Beta 2
+  &keyOne_1 rhsAliasOne: 1 1 Alpha 1
+  &keyTwo_1 rhsAliasTwo: 2 2 Beta 2
+hash:
+  *keyOne :
+    subval: lhs 1.1
+  *keyTwo :
+    subval: lhs 2.2
+  *keyOne_1 :
+    subval: rhs 1.1
+  *keyTwo_1 :
+    subval: rhs 2.2
+""")
+
+        output_dir = tmp_path / "test_merge_rename_anchored_complex_hash_key"
+        output_dir.mkdir()
+        output_file = output_dir / "output.yaml"
+
+        lhs_yaml = get_yaml_editor()
+        rhs_yaml = get_yaml_editor()
+        lhs_data = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
+        rhs_data = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
+
+        args = SimpleNamespace(anchors="rename")
+        mc = MergerConfig(quiet_logger, args)
+        merger = Merger(quiet_logger, lhs_data, mc)
+        merger.merge_with(rhs_data)
+
+        with open(output_file, 'w') as yaml_dump:
+            lhs_yaml.dump(merger.data, yaml_dump)
+
+        # DEBUG:
+        # with open(output_file, 'r') as output_fnd, open(merged_yaml, 'r') as merged_fnd:
+        #     print("Expected:")
+        #     print(merged_fnd.read())
+        #     print("Got:")
+        #     print(output_fnd.read())
+
+        assert (
+            (os.path.getsize(output_file) == os.path.getsize(merged_yaml))
+            and (open(output_file,'r').read() == open(merged_yaml,'r').read())
+        )
+
+
+    def test_merge_rename_anchored_hash_value(
+        self, quiet_logger, tmp_path, tmp_path_factory
+    ):
+        lhs_yaml_file = create_temp_yaml_file(tmp_path_factory, """---
+lhs_template: &default
+  name: LHS
+  prop: LHS value
+records:
+  - <<: *default
+    name: LHS Test
+  - <<: *default
+    prop: LHS Something
+""")
+        rhs_yaml_file = create_temp_yaml_file(tmp_path_factory, """---
+rhs_template: &default
+  name: RHS
+  prop: RHS value
+records:
+  - <<: *default
+    name: RHS Test
+  - <<: *default
+    prop: RHS Something
+""")
+        merged_yaml = create_temp_yaml_file(tmp_path_factory, """---
+lhs_template: &default
+  name: LHS
+  prop: LHS value
+rhs_template: &default_1
+  name: RHS
+  prop: RHS value
+records:
+  - <<: *default
+    name: LHS Test
+  - <<: *default
+    prop: LHS Something
+  - <<: *default_1
+    name: RHS Test
+  - <<: *default_1
+    prop: RHS Something
+""")
+
+        output_dir = tmp_path / "test_merge_rename_anchored_hash_value"
+        output_dir.mkdir()
+        output_file = output_dir / "output.yaml"
+
+        lhs_yaml = get_yaml_editor()
+        rhs_yaml = get_yaml_editor()
+        lhs_data = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
+        rhs_data = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
+
+        args = SimpleNamespace(anchors="rename")
         mc = MergerConfig(quiet_logger, args)
         merger = Merger(quiet_logger, lhs_data, mc)
         merger.merge_with(rhs_data)

@@ -2,6 +2,10 @@
 Implement YAML document Merger.
 
 Copyright 2020 William W. Kimball, Jr. MBA MSIS
+
+TODOs:
+1. Raise a MergeException when two anchored hashes have the same hash name yet
+   different hash structures/values.
 """
 from typing import Any, Dict, List, Set, Tuple
 
@@ -87,17 +91,9 @@ class Merger:
         buffer_pos = 0
         for key, val in rhs.non_merged_items():
             path_next = YAMLPath(path).append(str(key))
-            # self.logger.debug(
-            #     "Merger::_merge_dicts:  Processing key {} {} at {}."
-            #     .format(key, type(key), path_next))
             if key in lhs:
                 # Write the buffer if populated
                 for b_key, b_val in buffer:
-                    # self.logger.debug(
-                    #     "Merger::_merge_dicts:  Injecting buffered key, {},"
-                    #     " at {} into LHS with value:"
-                    #     .format(b_key, buffer_pos))
-                    # self.logger.debug(b_val)
                     lhs.insert(buffer_pos, b_key, b_val)
                     buffer_pos += 1
                 buffer = []
@@ -117,20 +113,12 @@ class Merger:
                 # LHS lacks the RHS key.  Buffer this key-value pair in order
                 # to insert it ahead of whatever key(s) follow this one in RHS
                 # to keep anchor definitions before their aliases.
-                # self.logger.debug(
-                #     "Merger::_merge_dicts:  Buffering key, {}, from RHS with"
-                #     " value:".format(key))
-                # self.logger.debug(val)
                 buffer.append((key, val))
 
             buffer_pos += 1
 
         # Write any remaining buffered content to the end of LHS
         for b_key, b_val in buffer:
-            # self.logger.debug(
-            #     "Merger::_merge_dicts:  Appending buffered key, {}, to LHS"
-            #     " with value:".format(b_key))
-            # self.logger.debug(b_val)
             lhs[b_key] = b_val
 
         return lhs
@@ -604,46 +592,14 @@ class Merger:
         if len(rhs.merge) < 1:
             return
 
-        # self.logger.debug(
-        #     "Merger::_merge_dicts:  {} LHS <<:* merges:"
-        #     .format(len(lhs.merge)))
-        # for midx, mele in enumerate(lhs.merge):
-        #     self.logger.debug(
-        #         "Merger::_merge_dicts:  ... LHS merge[{}]:"
-        #         .format(midx))
-        #     self.logger.debug(mele)
-        # self.logger.debug(
-        #     "Merger::_merge_dicts:  {} RHS <<:* merges:"
-        #     .format(len(rhs.merge)))
-        # for midx, mele in enumerate(rhs.merge):
-        #     self.logger.debug(
-        #         "Merger::_merge_dicts:  ... RHS merge[{}]:"
-        #         .format(midx))
-        #     self.logger.debug(mele)
         next_merge_index = -1
         for mele in lhs.merge:
             if mele[0] > next_merge_index:
                 next_merge_index = mele[0]
-        # self.logger.debug(
-        #     "Merger::_merge_dicts:  next_merge_index = {}"
-        #     .format(next_merge_index))
+
         for mele in rhs.merge:
-            # self.logger.debug(
-            #     "Merger::_merge_dicts:  RHS value has <<:*"
-            #     " reference at {} for:".format(midx))
-            # self.logger.debug(mele)
             next_merge_index += 1
             lhs.merge.append((next_merge_index, mele[1]))
-
-        # self.logger.debug(
-        #     "Merger::_merge_dicts:  {} FINAL merged <<:* merges:"
-        #     .format(len(lhs.merge)))
-        # for midx, mele in enumerate(lhs.merge):
-        #     self.logger.debug(
-        #         "Merger::_merge_dicts:  ... FINAL merge[{}]:"
-        #         .format(midx))
-        #     self.logger.debug(mele)
-
 
     @classmethod
     def replace_anchor(
