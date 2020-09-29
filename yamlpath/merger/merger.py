@@ -501,7 +501,7 @@ class Merger:
                 node.fa.set_block_style()
 
         if isinstance(node, CommentedMap):
-            for key, val in node.items():
+            for key, val in node.non_merged_items():
                 Merger.set_flow_style(key, is_flow)
                 Merger.set_flow_style(val, is_flow)
         elif isinstance(node, CommentedSeq):
@@ -552,7 +552,7 @@ class Merger:
         Returns:  N/A
         """
         if isinstance(dom, CommentedMap):
-            for key, val in dom.items():
+            for key, val in dom.non_merged_items():
                 if hasattr(key, "anchor") and key.anchor.value == anchor:
                     key.anchor.value = new_anchor
                 if hasattr(val, "anchor") and val.anchor.value == anchor:
@@ -626,7 +626,7 @@ class Merger:
                 Merger.replace_merge_anchor(key, old_node, repl_node)
                 data.insert(idx, repl_node, data.pop(key))
 
-            for key, val in data.items():
+            for key, val in data.non_merged_items():
                 Merger.replace_merge_anchor(key, old_node, repl_node)
                 Merger.replace_merge_anchor(val, old_node, repl_node)
                 if (hasattr(val, "anchor")
