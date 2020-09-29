@@ -162,6 +162,7 @@ class Merger:
                     ele.anchor.value if hasattr(ele, "anchor") else None)
         return lhs
 
+    # pylint: disable=locally-disabled,too-many-branches
     def _merge_arrays_of_hashes(
         self, lhs: CommentedSeq, rhs: CommentedSeq, path: YAMLPath,
         node_coord: NodeCoords
@@ -204,6 +205,14 @@ class Merger:
         if merge_mode is AoHMergeOpts.RIGHT:
             return rhs
 
+        id_key: str = ""
+        if len(lhs) > 0 and isinstance(lhs[0], CommentedMap):
+            id_key = self.config.aoh_merge_key(
+                NodeCoords(lhs[0], lhs, 0), lhs[0])
+            self.logger.debug(
+                "Merger::_merge_arrays_of_hashes:  LHS AoH yielded id_key:"
+                "  {}.".format(id_key))
+
         for idx, ele in enumerate(rhs):
             path_next = YAMLPath(path).append("[{}]".format(idx))
             node_next = NodeCoords(ele, rhs, idx)
@@ -212,7 +221,12 @@ class Merger:
                 " at {}.".format(ele, type(ele), path_next))
 
             if merge_mode is AoHMergeOpts.DEEP:
-                id_key = self.config.aoh_merge_key(node_next, ele)
+                if not id_key:
+                    id_key = self.config.aoh_merge_key(node_next, ele)
+                    self.logger.debug(
+                        "Merger::_merge_arrays_of_hashes:  RHS AoH yielded"
+                        " id_key:  {}.".format(id_key))
+
                 if id_key in ele:
                     id_val = ele[id_key]
                 else:
@@ -226,7 +240,9 @@ class Merger:
                 merged_hash = False
                 for lhs_hash in (
                     lhs_hash for lhs_hash in lhs
-                    if id_key in lhs_hash and lhs_hash[id_key] == id_val
+                    if isinstance(lhs_hash, CommentedMap)
+                    and id_key in lhs_hash
+                    and lhs_hash[id_key] == id_val
                 ):
                     self._merge_dicts(
                         lhs_hash, ele, path_next, parent=rhs, parentref=idx)
@@ -373,6 +389,15 @@ class Merger:
         Raises:
         - `MergeException` when a clean merge is impossible.
         """
+        # Do nothing when RHS is None (empty document)
+        if rhs is None:
+            return
+
+        # When LHS is None (empty document), just dump all of RHS into it
+        if self.data is None:
+            self.data = rhs
+            return
+
         lhs_proc = Processor(self.logger, self.data)
         insert_at = self.config.get_insertion_point()
 
