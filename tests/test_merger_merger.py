@@ -1023,7 +1023,7 @@ array_of_hashes:
     rhs: true
 """)
 
-        output_dir = tmp_path / "test_merge_deep_aoh"
+        output_dir = tmp_path / "test_merge_deep_aoh_inferred_rhs_key"
         output_dir.mkdir()
         output_file = output_dir / "output.yaml"
 
@@ -1436,7 +1436,7 @@ merge_into:
       hash: "i.e.:  map"
 """)
 
-        output_dir = tmp_path / "test_merge_with_defaults_nonconflict_hash_anchors"
+        output_dir = tmp_path / "test_merge_with_defaults_hash_appends_to_array"
         output_dir.mkdir()
         output_file = output_dir / "output.yaml"
 
@@ -1726,30 +1726,35 @@ array: [1, 2, key: val]
             and (open(output_file,'r').read() == open(merged_yaml,'r').read())
         )
 
-
-    def test_merge_anchored_hash(
+    def test_merge_combines_anchored_hashes(
         self, quiet_logger, tmp_path, tmp_path_factory
     ):
         lhs_yaml_file = create_temp_yaml_file(tmp_path_factory, """---
-hash: &hash_anchor
+lhs_hash: &lhs_hash_anchor
   lhs: LHS value
-another_hash:
-  <<: *hash_anchor
-  more: values
+merged_hash:
+  <<: *lhs_hash_anchor
+  more_lhs: values
 """)
         rhs_yaml_file = create_temp_yaml_file(tmp_path_factory, """---
-hash: &hash_anchor
+rhs_hash: &rhs_hash_anchor
   rhs: RHS value
-another_hash:
-  <<: *hash_anchor
-  even_more: values
+merged_hash:
+  <<: *rhs_hash_anchor
+  even_more_rhs: values
 """)
         merged_yaml = create_temp_yaml_file(tmp_path_factory, """---
-hash:
-  subkey: replacement
+lhs_hash: &lhs_hash_anchor
+  lhs: LHS value
+rhs_hash: &rhs_hash_anchor
+  rhs: RHS value
+merged_hash:
+  <<: [*lhs_hash_anchor, *rhs_hash_anchor]
+  more_lhs: values
+  even_more_rhs: values
 """)
 
-        output_dir = tmp_path / "test_merge_scalar_to_leaf_node"
+        output_dir = tmp_path / "test_merge_anchored_hash"
         output_dir.mkdir()
         output_file = output_dir / "output.yaml"
 
@@ -1758,7 +1763,7 @@ hash:
         lhs_data = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
         rhs_data = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
 
-        args = SimpleNamespace(mergeat="/hash/subkey")
+        args = SimpleNamespace()
         mc = MergerConfig(quiet_logger, args)
         merger = Merger(quiet_logger, lhs_data, mc)
         merger.merge_with(rhs_data)

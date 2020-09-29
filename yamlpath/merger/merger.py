@@ -85,21 +85,29 @@ class Merger:
         # Deep merge
         buffer: List[Tuple[Any, Any]] = []
         buffer_pos = 0
-        for key, val in rhs.items():
+        for key, val in rhs.non_merged_items():
             path_next = YAMLPath(path).append(str(key))
-            self.logger.debug(
-                "Merger::_merge_dicts:  Processing key {} {} at {}."
-                .format(key, type(key), path_next))
+            # self.logger.debug(
+            #     "Merger::_merge_dicts:  Processing key {} {} at {}."
+            #     .format(key, type(key), path_next))
             if key in lhs:
                 # Write the buffer if populated
                 for b_key, b_val in buffer:
+                    # self.logger.debug(
+                    #     "Merger::_merge_dicts:  Injecting buffered key, {},"
+                    #     " at {} into LHS with value:"
+                    #     .format(b_key, buffer_pos))
+                    # self.logger.debug(b_val)
                     lhs.insert(buffer_pos, b_key, b_val)
+                    buffer_pos += 1
                 buffer = []
 
                 # LHS has the RHS key
                 if isinstance(val, CommentedMap):
                     lhs[key] = self._merge_dicts(
                         lhs[key], val, path_next, parent=rhs, parentref=key)
+                    Merger.combine_merge_anchors(lhs[key], val)
+
                 elif isinstance(val, CommentedSeq):
                     lhs[key] = self._merge_lists(
                         lhs[key], val, path_next, parent=rhs, parentref=key)
@@ -109,12 +117,20 @@ class Merger:
                 # LHS lacks the RHS key.  Buffer this key-value pair in order
                 # to insert it ahead of whatever key(s) follow this one in RHS
                 # to keep anchor definitions before their aliases.
+                # self.logger.debug(
+                #     "Merger::_merge_dicts:  Buffering key, {}, from RHS with"
+                #     " value:".format(key))
+                # self.logger.debug(val)
                 buffer.append((key, val))
 
             buffer_pos += 1
 
         # Write any remaining buffered content to the end of LHS
         for b_key, b_val in buffer:
+            # self.logger.debug(
+            #     "Merger::_merge_dicts:  Appending buffered key, {}, to LHS"
+            #     " with value:".format(b_key))
+            # self.logger.debug(b_val)
             lhs[b_key] = b_val
 
         return lhs
@@ -343,6 +359,16 @@ class Merger:
             rhs_anchor = rhs_anchors[anchor]
             conflict_mode = self.config.anchor_merge_mode()
 
+            self.logger.debug(
+                "Merger::_resolve_anchor_conflicts:  Anchor {} is in both"
+                " documents.".format(anchor))
+            self.logger.debug(
+                "Merger::_resolve_anchor_conflicts:  lhs_anchor:")
+            self.logger.debug(lhs_anchor)
+            self.logger.debug(
+                "Merger::_resolve_anchor_conflicts:  rhs_anchor:")
+            self.logger.debug(rhs_anchor)
+
             if lhs_anchor != rhs_anchor:
                 if conflict_mode is AnchorConflictResolutions.RENAME:
                     self.logger.debug(
@@ -371,6 +397,9 @@ class Merger:
                         "Aborting due to anchor conflict with, {}."
                         .format(anchor))
             else:
+                self.logger.debug(
+                    "Anchor {} is symmetric; RIGHT will override to eliminate"
+                    " spurious anchor re-definition.".format(anchor))
                 # While the anchors are identical, the reference nodes are not.
                 # So, overwrite all matching LHS nodes with their RHS
                 # equivalents in order to stave off spurious anchor
@@ -568,6 +597,53 @@ class Merger:
             for midx, merge_node in enumerate(data.merge):
                 if merge_node[1] is old_node:
                     data.merge[midx] = (data.merge[midx][0], repl_node)
+
+    @classmethod
+    def combine_merge_anchors(cls, lhs: CommentedMap, rhs: CommentedMap):
+        """Merge YAML merge keys."""
+        if len(rhs.merge) < 1:
+            return
+
+        # self.logger.debug(
+        #     "Merger::_merge_dicts:  {} LHS <<:* merges:"
+        #     .format(len(lhs.merge)))
+        # for midx, mele in enumerate(lhs.merge):
+        #     self.logger.debug(
+        #         "Merger::_merge_dicts:  ... LHS merge[{}]:"
+        #         .format(midx))
+        #     self.logger.debug(mele)
+        # self.logger.debug(
+        #     "Merger::_merge_dicts:  {} RHS <<:* merges:"
+        #     .format(len(rhs.merge)))
+        # for midx, mele in enumerate(rhs.merge):
+        #     self.logger.debug(
+        #         "Merger::_merge_dicts:  ... RHS merge[{}]:"
+        #         .format(midx))
+        #     self.logger.debug(mele)
+        next_merge_index = -1
+        for mele in lhs.merge:
+            if mele[0] > next_merge_index:
+                next_merge_index = mele[0]
+        # self.logger.debug(
+        #     "Merger::_merge_dicts:  next_merge_index = {}"
+        #     .format(next_merge_index))
+        for mele in rhs.merge:
+            # self.logger.debug(
+            #     "Merger::_merge_dicts:  RHS value has <<:*"
+            #     " reference at {} for:".format(midx))
+            # self.logger.debug(mele)
+            next_merge_index += 1
+            lhs.merge.append((next_merge_index, mele[1]))
+
+        # self.logger.debug(
+        #     "Merger::_merge_dicts:  {} FINAL merged <<:* merges:"
+        #     .format(len(lhs.merge)))
+        # for midx, mele in enumerate(lhs.merge):
+        #     self.logger.debug(
+        #         "Merger::_merge_dicts:  ... FINAL merge[{}]:"
+        #         .format(midx))
+        #     self.logger.debug(mele)
+
 
     @classmethod
     def replace_anchor(
