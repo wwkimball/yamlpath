@@ -173,6 +173,12 @@ def main():
     prime_yaml = get_yaml_editor()
     prime_file = next(fileiterator)
     prime_data = get_yaml_data(prime_yaml, log, prime_file)
+    if prime_data is None:
+        # An error message has already been logged
+        log.critical(
+            "The first input file, {}, has nothing to merge into."
+            .format(prime_file), 1)
+
     merger = Merger(log, prime_data, MergerConfig(log, args))
 
     # ryamel.yaml unfortunately tracks comments AFTER each YAML key/value.  As
