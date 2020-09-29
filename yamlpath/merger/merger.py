@@ -449,7 +449,8 @@ class Merger:
                 # The RHS document root is a map
                 if isinstance(target_node, CommentedSeq):
                     # But the destination is a list
-                    self._merge_lists(target_node, [rhs], insert_at)
+                    self._merge_lists(
+                        target_node, CommentedSeq([rhs]), insert_at)
                 else:
                     self._merge_dicts(target_node, rhs, insert_at)
                 merge_performed = True
