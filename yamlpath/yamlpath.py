@@ -56,25 +56,24 @@ class YAMLPath:
         else:
             self.original = yaml_path
 
-    def __str__(self) -> str:
-        """Get a stringified version of this object."""
+    @classmethod
+    def _stringify_yamlpath_segments(
+        cls, segments: Deque[PathSegment], seperator: PathSeperators
+    ) -> str:
+        """Stringify segments of a YAMLPath."""
         # The following import must not occur at the toplevel because doing so
         # causes a cyclic dependency error.  The import must occur only when
         # this method is invoked.
         # pylint: disable=import-outside-toplevel
         from yamlpath.func import ensure_escaped
 
-        if self._stringified:
-            return self._stringified
-
-        segments = self.unescaped
-        pathsep: str = str(self.seperator)
+        pathsep: str = str(seperator)
         add_sep: bool = False
         ppath: str = ""
 
         # FSLASH seperator requires a path starting with a /
-        if self.seperator is PathSeperators.FSLASH:
-            ppath = "/"
+        if seperator is PathSeperators.FSLASH:
+            ppath = pathsep
 
         for (segment_type, segment_attrs) in segments:
             if segment_type == PathSegmentTypes.KEY:
@@ -102,13 +101,56 @@ class YAMLPath:
 
             add_sep = True
 
-        self._stringified = ppath
         return ppath
+
+    def __str__(self) -> str:
+        """Get a stringified version of this object."""
+        if self._stringified:
+            return self._stringified
+
+        self._stringified = YAMLPath._stringify_yamlpath_segments(
+            self.unescaped, self.seperator)
+        return self._stringified
 
     def __repr__(self) -> str:
         """Generate an eval()-safe representation of this object."""
         return ("{}('{}', '{}')".format(self.__class__.__name__,
                                         self.original, self.seperator))
+
+    def __len__(self) -> int:
+        """Indicate how many segments comprise this YAML Path."""
+        return len(self.escaped)
+
+    def __eq__(self, other: object) -> bool:
+        """Indicate equivalence of two YAMLPaths."""
+        if not isinstance(other, (YAMLPath, str)):
+            return False
+
+        equiv_this = YAMLPath(self)
+        equiv_this.seperator = PathSeperators.FSLASH
+        cmp_this = str(equiv_this)
+
+        equiv_that = YAMLPath(other)
+        equiv_that.seperator = PathSeperators.FSLASH
+        cmp_that = str(equiv_that)
+
+        return cmp_this == cmp_that
+
+    def __ne__(self, other: object) -> bool:
+        """Indicate non-equivalence of two YAMLPaths."""
+        return not self == other
+
+    def append(self, segment: str) -> "YAMLPath":
+        """Append a new segment to this YAML Path (without seperator)."""
+        seperator = (
+            PathSeperators.FSLASH
+            if self.seperator is PathSeperators.AUTO
+            else self.seperator)
+        if len(self._original) < 1:
+            self.original = segment
+        else:
+            self.original += "{}{}".format(seperator, segment)
+        return self
 
     @property
     def original(self) -> str:
@@ -180,9 +222,9 @@ class YAMLPath:
 
         # This changes only the stringified representation
         if not value == old_value:
+            self._stringified = YAMLPath._stringify_yamlpath_segments(
+                self.unescaped, value)
             self._seperator = value
-            self._stringified = ""
-            self._stringified = str(self)
 
     @property
     def escaped(self) -> Deque[PathSegment]:
@@ -626,3 +668,32 @@ class YAMLPath:
             path_segments.append((segment_type, segment_id))
 
         return path_segments
+
+    @classmethod
+    def strip_path_prefix(cls, prefix: "YAMLPath",
+                          path: "YAMLPath") -> "YAMLPath":
+        """
+        Remove a prefix from a YAML Path.
+
+        Parameters:
+        1. prefix (YAMLPath) The prefix to remove (except "/").
+        2. path (YAMLPath) The path from which to remove the prefix.
+
+        Returns:  (YAMLPath) The trimmed YAML Path.
+        """
+        if prefix is None:
+            return path
+
+        prefix.seperator = PathSeperators.FSLASH
+        if str(prefix) == "/":
+            return path
+
+        prefix.seperator = PathSeperators.FSLASH
+        path.seperator = PathSeperators.FSLASH
+        prefix_str = str(prefix)
+        path_str = str(path)
+        if path_str.startswith(prefix_str):
+            path_str = path_str[len(prefix_str):]
+            return YAMLPath(path_str)
+
+        return path

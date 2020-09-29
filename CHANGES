@@ -1,3 +1,21 @@
+2.4.0:
+Enhancements:
+* Added new reference command-line tool:  yaml-merge.  This is a very complex
+  tool, so a comprehensive treatise will be added to the project Wiki to
+  explore its capabilities.  Along with those of its component classes, its
+  unit tests also provide many examples of the same.
+* YAMLPath instances now support arbitrary changes to seperator.
+* YAMLPath instances now support equality testing (against the stored path),
+  immune to differences in seperator.
+* The get_yaml_data function now supports "-" as a source file.  This is
+  interpreted as a read from STDIN.
+* Due to the change to the get_yaml_data function, the yaml-get reference
+  command-line tool now supports retrieving nodes from YAML/Compatible data
+  passed to it via STDIN when its YAML_FILE argument is set to -.  The new
+  yaml-merge reference command-line tool also reads from STDIN when one of its
+  YAML_FILE input arguments is -.  No other reference command-line tools
+  support this change at this time.
+
 2.3.7:
 Bug Fixes:
 * Setting negative floats could cause the leading "-" symbol to be replaced

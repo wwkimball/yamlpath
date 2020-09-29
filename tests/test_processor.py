@@ -146,13 +146,22 @@ class Test_Processor():
             nodes = list(processor.get_nodes(yamlpath, mustexist=mustexist))
         assert -1 < str(ex.value).find("does not match any nodes")
 
-    def test_set_value_in_none_data(self, capsys, quiet_logger):
+    def test_set_value_in_empty_data(self, capsys, quiet_logger):
         import sys
         yamldata = ""
         yaml = YAML()
         data = yaml.load(yamldata)
         processor = Processor(quiet_logger, data)
         processor.set_value("abc", "void")
+        yaml.dump(data, sys.stdout)
+        assert -1 == capsys.readouterr().out.find("abc")
+
+    def test_set_value_in_none_data(self, capsys, quiet_logger):
+        import sys
+        yaml = YAML()
+        data = None
+        processor = Processor(quiet_logger, data)
+        processor._update_node(None, None, None, YAMLValueFormats.DEFAULT)
         yaml.dump(data, sys.stdout)
         assert -1 == capsys.readouterr().out.find("abc")
 

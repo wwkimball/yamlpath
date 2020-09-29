@@ -6,7 +6,7 @@ Copyright 2018, 2019, 2020 William W. Kimball, Jr. MBA MSIS
 import warnings
 import ast
 import re
-from sys import maxsize
+from sys import maxsize, stdin
 from distutils.util import strtobool
 from typing import Any, List, Optional
 
@@ -73,10 +73,13 @@ def get_yaml_data(parser: Any, logger: ConsolePrinter, source: str) -> Any:
     # warnings are treated as errors by ruamel.yaml, so these are also
     # coallesced into cleaner feedback.
     try:
-        with open(source, 'r') as fhnd:
-            with warnings.catch_warnings():
-                warnings.filterwarnings("error")
-                yaml_data = parser.load(fhnd)
+        with warnings.catch_warnings():
+            warnings.filterwarnings("error")
+            if source == "-":
+                yaml_data = parser.load(stdin.read())
+            else:
+                with open(source, 'r') as fhnd:
+                    yaml_data = parser.load(fhnd)
     except KeyboardInterrupt:
         logger.error("Aborting data load due to keyboard interrupt!")
         yaml_data = None

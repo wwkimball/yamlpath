@@ -36,18 +36,63 @@ class Test_path_Path():
     def test_repr(self):
         assert repr(YAMLPath("abc.123")) == "YAMLPath('abc.123', '.')"
 
+    @pytest.mark.parametrize("yamlpath,length", [
+        ("", 0),
+        ("/abc", 1),
+        ("abc.def", 2),
+        ("abc[def%'ghi'].jkl", 3),
+    ])
+    def test_len(self, yamlpath, length):
+        assert len(YAMLPath(yamlpath)) == length
+
+    @pytest.mark.parametrize("lhs,rhs,iseq", [
+        (YAMLPath(""), YAMLPath(""), True),
+        (YAMLPath(""), "", True),
+        ("", YAMLPath(""), True),
+        (YAMLPath("/abc"), YAMLPath("/abc"), True),
+        (YAMLPath("/abc"), "/abc", True),
+        ("/abc", YAMLPath("/abc"), True),
+        (YAMLPath("abc.def"), YAMLPath("/abc/def"), True),
+        (YAMLPath("abc.def"), "/abc/def", True),
+        ("abc.def", YAMLPath("/abc/def"), True),
+        (YAMLPath("abc.def"), True, False),
+        (YAMLPath("abc.def"), None, False),
+        (YAMLPath("abc.def"), 5280, False),
+        (YAMLPath("abc.def"), "def.abc", False),
+    ])
+    def test_eq(self, lhs, rhs, iseq):
+        if iseq:
+            assert lhs == rhs
+        else:
+            assert not lhs == rhs
+
+    @pytest.mark.parametrize("lhs,rhs,isne", [
+        (YAMLPath(""), YAMLPath(""), False),
+        (YAMLPath(""), "", False),
+        ("", YAMLPath(""), False),
+        (YAMLPath("/abc"), YAMLPath("/abc"), False),
+        (YAMLPath("/abc"), "/abc", False),
+        ("/abc", YAMLPath("/abc"), False),
+        (YAMLPath("abc.def"), YAMLPath("/abc/def"), False),
+        (YAMLPath("abc.def"), "/abc/def", False),
+        ("abc.def", YAMLPath("/abc/def"), False),
+        (YAMLPath("abc.def"), False, True),
+        (YAMLPath("abc.def"), None, True),
+        (YAMLPath("abc.def"), 5280, True),
+        (YAMLPath("abc.def"), "def.abc", True),
+    ])
+    def test_ne(self, lhs, rhs, isne):
+        if isne:
+            assert lhs != rhs
+        else:
+            assert not lhs != rhs
+
     def test_seperator_change(self):
-        # IMPORTANT:  The YAML Path is only lazily parsed!  This means parsing
-        # ONLY happens when the path is in some way used.  Casting it to string
-        # qualifies as one form of use, so this test will instigate parsing via
-        # stringification.  THIS MATTERS WHEN YOUR INTENTION IS TO **CHANGE**
-        # THE PATH SEPERATOR!  So, if an original path uses dot-notation and
-        # you wish to change it to forward-slash-notation, you must first cause
-        # the original to become parsed, AND THEN change the seperator.
-        testpath = YAMLPath("abc.def")
-        dotted = str(testpath)
+        dotted = "abc.def"
+        slashed = "/abc/def"
+        testpath = YAMLPath(dotted)
         testpath.seperator = PathSeperators.FSLASH
-        assert "/abc/def" == str(testpath) != dotted
+        assert slashed == str(testpath) != dotted
 
     def test_escaped(self):
         testpath = YAMLPath(r"abc.def\.ghi")
@@ -62,6 +107,26 @@ class Test_path_Path():
             (PathSegmentTypes.KEY, "abc"),
             (PathSegmentTypes.KEY, r"def\.ghi"),
         ]
+
+    def test_append(self):
+        yp = YAMLPath("", PathSeperators.DOT)
+        yp.append("abc")
+        yp.append("def")
+        yp.append("ghi").append("jkl").append("mno")
+        assert yp == "abc.def.ghi.jkl.mno"
+
+    @pytest.mark.parametrize("path,prefix,result", [
+        ("/abc/def", "/abc", "/def"),
+        ("/abc/def", None, "/abc/def"),
+        ("/abc/def", "/", "/abc/def"),
+        ("/abc/def", "/jkl", "/abc/def"),
+    ])
+    def test_strip_path_prefix(self, path, prefix, result):
+        original = YAMLPath(path)
+        remove = YAMLPath(prefix) if prefix is not None else None
+        compare = YAMLPath(result)
+        stripped = YAMLPath.strip_path_prefix(remove, original)
+        assert compare == stripped
 
     def test_parse_double_inversion_error(self):
         with pytest.raises(YAMLPathException) as ex:
