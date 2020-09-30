@@ -16,6 +16,45 @@ Enhancements:
   YAML_FILE input arguments is -.  No other reference command-line tools
   support this change at this time.
 
+Known Issues:
+1. Neither yaml-set nor yaml-merge will add override keys to a Hash which uses
+   the YAML merge operator (<<:) and which does not already have a matching
+   override key.  This issue has existed for a very long time but was only
+   discovered during preparation for this release.  This will be logged and
+   tracked as a Known Issue for this release -- to be fixed at another time --
+   because no one (not even myself) has yet encountered/reported this issue, it
+   is non-trivial to fix, and it is an edge-case.  Here is an example of this
+   issue:
+
+   For ex.yaml:
+   ---
+   anchored_hash: &its_anchor
+     ah_key: Base value
+   merging_hash:
+     <<: *its_anchor
+     mh_key: Implementation value
+
+   ... both of these commands:
+   `yaml-set --change=/merging_hash/ah_key --value='Override value' ex.yaml`
+   `echo 'Override value' | yaml-merge -m /merging_hash/ah_key ex.yaml -`
+
+   ... will fail to affect the expected change.  The expectation would be:
+   ---
+   anchored_hash: &its_anchor
+     ah_key: Base value
+   merging_hash:
+     <<: *its_anchor
+     mh_key: Implementation value
+     ah_key: Override value
+
+   ... but the actual result is (without any indication of an error):
+   ---
+   anchored_hash: &its_anchor
+     ah_key: Base value
+   merging_hash:
+     <<: *its_anchor
+     mh_key: Implementation value
+
 2.3.7:
 Bug Fixes:
 * Setting negative floats could cause the leading "-" symbol to be replaced
