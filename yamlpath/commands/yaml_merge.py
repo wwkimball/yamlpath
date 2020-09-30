@@ -25,7 +25,7 @@ from yamlpath.exceptions import YAMLPathException
 from yamlpath.wrappers import ConsolePrinter
 
 # Implied Constants
-MY_VERSION = "0.0.1"
+MY_VERSION = "0.0.2"
 
 def processcli():
     """Process command-line arguments."""
