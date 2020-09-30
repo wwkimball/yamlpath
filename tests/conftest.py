@@ -26,6 +26,12 @@ def quiet_logger():
     args = SimpleNamespace(verbose=False, quiet=True, debug=False)
     return ConsolePrinter(args)
 
+@pytest.fixture
+def info_warn_logger():
+    """Returns a quiet ConsolePrinter."""
+    args = SimpleNamespace(verbose=False, quiet=False, debug=False)
+    return ConsolePrinter(args)
+
 @pytest.fixture(scope="session")
 def old_eyaml_keys(tmp_path_factory):
     """Creates temporary keys for encryption/decryption tests."""

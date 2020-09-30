@@ -24,7 +24,7 @@ from yamlpath.eyaml import EYAMLProcessor
 from yamlpath.wrappers import ConsolePrinter
 
 # Implied Constants
-MY_VERSION = "1.0.5"
+MY_VERSION = "1.1.0"
 
 def processcli():
     """Process command-line arguments."""
@@ -84,7 +84,7 @@ def processcli():
 
     parser.add_argument(
         "yaml_file", metavar="YAML_FILE",
-        help="the YAML file to query")
+        help="the YAML file to query; use - to read from STDIN")
     return parser.parse_args()
 
 def validateargs(args, log):

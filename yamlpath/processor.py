@@ -857,6 +857,10 @@ class Processor:
 
         Raises: N/A
         """
+        if parent is None:
+            # Empty document
+            return
+
         # This update_refs function was contributed by Anthon van der Neut, the
         # author of ruamel.yaml, to resolve how to update all references to an
         # Anchor throughout the parsed data structure.
