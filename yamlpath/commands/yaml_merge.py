@@ -20,6 +20,7 @@ from yamlpath.merger.enums import (
 from yamlpath.func import get_yaml_data, get_yaml_editor
 from yamlpath.merger.exceptions import MergeException
 from yamlpath.merger import Merger, MergerConfig
+from yamlpath.exceptions import YAMLPathException
 
 from yamlpath.wrappers import ConsolePrinter
 
@@ -216,6 +217,9 @@ def main():
         except MergeException as mex:
             log.error(mex)
             exit_state = 4
+        except YAMLPathException as yex:
+            log.error(yex)
+            exit_state = 5
 
     # Output the final document
     if exit_state == 0:

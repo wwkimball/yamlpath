@@ -202,3 +202,21 @@ hash:
 
         assert 0 == result.returncode, result.stderr
         assert merged_yaml_content == result.stdout
+
+    def test_bad_mergeat_yamlpath(self, script_runner, tmp_path_factory):
+        lhs_file = create_temp_yaml_file(tmp_path_factory, """---
+hash:
+  lhs_exclusive: LHS exclusive
+  merge_target: LHS original value
+""")
+        rhs_file = create_temp_yaml_file(tmp_path_factory, """---
+new_key: New value
+""")
+
+        result = script_runner.run(
+            self.command
+            , "--mergeat=/[.~='']"
+            , lhs_file
+            , rhs_file)
+        assert not result.success, result.stderr
+        assert "Unexpected use of ~ operator" in result.stderr
