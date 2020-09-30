@@ -33,6 +33,7 @@ for other projects to readily employ YAML Paths.
       2. [Get a YAML Value](#get-a-yaml-value)
       3. [Search For YAML Paths](#search-for-yaml-paths)
       4. [Change a YAML Value](#change-a-yaml-value)
+      5. [Merge YAML/Compatible Files](#merge-yaml-compatible-files)
    2. [Basic Usage:  Libraries](#basic-usage--libraries)
       1. [Initialize ruamel.yaml and These Helpers](#initialize-ruamelyaml-and-these-helpers)
       2. [Searching for YAML Nodes](#searching-for-yaml-nodes)
@@ -374,6 +375,76 @@ EYAML options:
 
 For more information about YAML Paths, please visit
 https://github.com/wwkimball/yamlpath.
+```
+* [yaml-merge](yamlpath/commands/yaml_merge.py)
+
+```text
+usage: yaml-merge [-h] [-V] [-c CONFIG] [-a {stop,left,right,rename}]
+                  [-A {all,left,right,unique}] [-H {deep,left,right}]
+                  [-O {all,deep,left,right,unique}] [-m YAML_PATH] [-o OUTPUT]
+                  [-d | -v | -q]
+                  YAML_FILE [YAML_FILE ...]
+
+Merges two or more YAML/Compatible files together.
+
+positional arguments:
+  YAML_FILE             one or more YAML files to merge, order-significant;
+                        use - to read from STDIN
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -V, --version         show program's version number and exit
+  -c CONFIG, --config CONFIG
+                        INI syle configuration file for YAML Path specified
+                        merge control options
+  -a {stop,left,right,rename}, --anchors {stop,left,right,rename}
+                        means by which Anchor name conflicts are resolved
+                        (overrides [defaults]anchors set via --config|-c and
+                        cannot be overridden by [rules] because Anchors apply
+                        to the whole file); default=stop
+  -A {all,left,right,unique}, --arrays {all,left,right,unique}
+                        default means by which Arrays are merged together
+                        (overrides [defaults]arrays but is overridden on a
+                        YAML Path basis via --config|-c); default=all
+  -H {deep,left,right}, --hashes {deep,left,right}
+                        default means by which Hashes are merged together
+                        (overrides [defaults]hashes but is overridden on a
+                        YAML Path basis in [rules] set via --config|-c);
+                        default=deep
+  -O {all,deep,left,right,unique}, --aoh {all,deep,left,right,unique}
+                        default means by which Arrays-of-Hashes are merged
+                        together (overrides [defaults]aoh but is overridden on
+                        a YAML Path basis in [rules] set via --config|-c);
+                        default=all
+  -m YAML_PATH, --mergeat YAML_PATH
+                        YAML Path indicating where in left YAML_FILE the right
+                        YAML_FILE content is to be merged; default=/
+  -o OUTPUT, --output OUTPUT
+                        Write the merged result to the indicated file (or
+                        STDOUT when unset)
+  -d, --debug           output debugging details
+  -v, --verbose         increase output verbosity
+  -q, --quiet           suppress all output except errors (implied when
+                        -o|--output is not set)
+
+            The CONFIG file is an INI file with up to three sections:
+            [defaults] Sets equivalents of -a|--anchors, -A|--arrays,
+                       -H|--hashes, and -O|--aoh.
+            [rules]    Each entry is a YAML Path assigning -A|--arrays,
+                       -H|--hashes, or -O|--aoh for precise nodes.
+            [keys]     Wherever -O|--aoh=DEEP, each entry is treated as a
+                       record with an identity key.  In order to match RHS
+                       records to LHS records, a key must be known and is
+                       identified on a YAML Path basis via this section.
+                       Where not specified, the first attribute of the first
+                       record in the Array-of-Hashes is presumed the identity
+                       key for all records in the set.
+
+            The left-to-right order of YAML_FILEs is significant.  Except
+            when this behavior is deliberately altered by your options, data
+            from files on the right overrides data in files to their left.
+            For more information about YAML Paths, please visit
+            https://github.com/wwkimball/yamlpath.
 ```
 
 * [yaml-paths](yamlpath/commands/yaml_paths.py)
@@ -722,6 +793,60 @@ your command-line, process list, and command history by swapping out `--value`
 for one of `--stdin`, `--file`, or even `--random LENGTH` (use Python's
 strongest random value generator if you don't need to specify the replacement
 value in advance).
+
+#### Merge YAML/Compatible Files
+
+At its simplest, the `yaml-merge` command accepts two or more input files and
+merges them together from left-to-right, writing the result to STDOUT:
+
+```shell
+yaml-merge leftmost.yaml middle.yaml right.json
+```
+
+If you'd rather write the results to a new output file (which must not already
+exist):
+
+```shell
+yaml-merge \
+  --output=newfile.yaml \
+  leftmost.yaml \
+  middle.yaml \
+  right.json
+```
+
+Should you wish to merge the content of the files into a specific location (or
+even multiple locations) within the leftmost document, specify a YAML Path via
+the `--mergeat` or `-m` argument:
+
+```shell
+yaml-merge \
+  --mergeat=/anywhere/within/the/document \
+  leftmost.yaml \
+  middle.yaml \
+  right.json
+```
+
+To write arbitrary data from STDIN into a document, use the `-` pseudo-file:
+
+```shell
+echo "{arbitrary: [document, structure]}" | yaml-merge target.yaml -
+```
+
+Combine `--mergeat` or `-m` with the STDIN pseudo-file to control where the
+data is to be written:
+
+```shell
+echo "{arbitrary: [document, structure]}" | \
+  yaml-merge \
+    --mergeat=/anywhere/within/the/document \
+    target.yaml -
+```
+
+There are many options for precisely controlling how the merge is performed,
+including the ability to specify complex rules on a YAML Path basis via a
+configuration file.  Review the command's `--help` or the
+[related Wiki](https://github.com/wwkimball/yamlpath/wiki/yaml-merge) for
+more detail.
 
 ### Basic Usage:  Libraries
 
