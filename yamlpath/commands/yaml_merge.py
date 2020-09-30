@@ -107,7 +107,7 @@ def processcli():
         "-o", "--output",
         help=(
             "Write the merged result to the indicated file (or\n"
-            "STDOUT when unset, which also implies -q|--quiet)"))
+            "STDOUT when unset)"))
 
     noise_group = parser.add_mutually_exclusive_group()
     noise_group.add_argument(
@@ -120,7 +120,7 @@ def processcli():
         "-q", "--quiet", action="store_true",
         help=(
             "suppress all output except errors (implied when\n"
-            "-o|--output is set)"))
+            "-o|--output is not set)"))
 
     parser.add_argument(
         "rhs_files", metavar="YAML_FILE", nargs="+",
