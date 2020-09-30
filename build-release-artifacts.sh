@@ -21,17 +21,16 @@ python3 setup.py sdist bdist_wheel || exit $?
 
 # Generate a ZIP file for Windows users
 cd dist || exit 2
-relname=$(basename $(ls -1 *.tar.gz) .tar.gz)
+relname=$(basename $(ls -1 ./*.tar.gz) .tar.gz)
 mkdir win \
-	&& cp ${relname}.tar.gz win/ \
+	&& cp "${relname}.tar.gz" win/ \
 	&& cd win/ \
-	&& tar xvzf *.tar.gz \
-	&& rm -f *.gz \
-	&& zip --recurse-paths --test --verbose ${relname}.zip ${relname}/ \
-	&& mv *.zip .. \
+	&& tar xvzf ./*.tar.gz \
+	&& rm -f ./*.gz \
+	&& zip --recurse-paths --test --verbose "${relname}.zip" "${relname}"/ \
+	&& mv ./*.zip .. \
 	&& cd .. \
 	&& rm -rf win
 
 # Show the final release artifacts
-ls -1 *
-
+ls -1 ./*
