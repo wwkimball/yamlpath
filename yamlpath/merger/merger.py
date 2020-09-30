@@ -537,7 +537,7 @@ class Merger:
             for ele in dom:
                 Merger.scan_for_anchors(ele, anchors)
 
-        elif hasattr(dom, "anchor"):
+        elif hasattr(dom, "anchor") and dom.anchor.value is not None:
             anchors[dom.anchor.value] = dom
 
     @classmethod
