@@ -318,6 +318,54 @@ hash:
             and (open(output_file,'r').read() == open(merged_yaml,'r').read())
         )
 
+    def test_merge_with_defaults_array_of_floats(
+        self, quiet_logger, tmp_path, tmp_path_factory
+    ):
+        lhs_yaml_file = create_temp_yaml_file(tmp_path_factory, """---
+- 1.1
+- 2.2
+""")
+        rhs_yaml_file = create_temp_yaml_file(tmp_path_factory, """---
+- 2.2
+- 3.3
+""")
+        merged_yaml = create_temp_yaml_file(tmp_path_factory, """---
+  - 1.1
+  - 2.2
+  - 2.2
+  - 3.3
+""")
+
+        output_dir = tmp_path / "test_merge_with_defaults_simple_array"
+        output_dir.mkdir()
+        output_file = output_dir / "output.yaml"
+
+        lhs_yaml = get_yaml_editor()
+        rhs_yaml = get_yaml_editor()
+        lhs_data = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
+        rhs_data = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
+
+        args = SimpleNamespace()
+        mc = MergerConfig(quiet_logger, args)
+        merger = Merger(quiet_logger, lhs_data, mc)
+        merger.merge_with(rhs_data)
+
+        with open(output_file, 'w') as yaml_dump:
+            lhs_yaml.dump(merger.data, yaml_dump)
+
+        # DEBUG:
+        # with open(output_file, 'r') as output_fnd, open(merged_yaml, 'r') as merged_fnd:
+        #     print("Expected:")
+        #     print(merged_fnd.read())
+        #     print("Got:")
+        #     print(output_fnd.read())
+
+        assert (
+            (os.path.getsize(output_file) == os.path.getsize(merged_yaml))
+            and (open(output_file,'r').read() == open(merged_yaml,'r').read())
+        )
+
+
     def test_merge_with_defaults_simple_array(
         self, quiet_logger, tmp_path, tmp_path_factory
     ):

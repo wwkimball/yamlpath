@@ -1,3 +1,10 @@
+2.4.1:
+Bug Fixes:
+* The yaml-merge tool (and underlying Merger class) incorrectly assigned "None"
+  Anchors to all floating-point numbers.  This preventing all merging when both
+  the LHS and RHS documents contained at least one floating-point number, each.
+  The yaml-merge command now reports version 0.0.2 to reflect this change.
+
 2.4.0:
 Enhancements:
 * Added new reference command-line tool:  yaml-merge.  This is a very complex
