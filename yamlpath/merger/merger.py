@@ -433,9 +433,13 @@ class Merger:
 
         # Loop through all insertion points and the elements in RHS
         merge_performed = False
+        nodes: List[NodeCoords] = []
         for node_coord in lhs_proc.get_nodes(
                 insert_at, default_value=default_val
         ):
+            nodes.append(node_coord)
+
+        for node_coord in nodes:
             target_node = (node_coord.node
                 if isinstance(node_coord.node, (CommentedMap, CommentedSeq))
                 else node_coord.parent)
