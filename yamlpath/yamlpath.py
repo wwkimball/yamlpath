@@ -713,24 +713,3 @@ class YAMLPath:
             return YAMLPath(path_str)
 
         return path
-
-    @classmethod
-    def get_path_parent(cls, path: "YAMLPath") -> "YAMLPath":
-        """
-        Get a path pointing one less level than a YAML Path.
-
-        Will return the document root path when the path already points at the
-        root.
-
-        Parameters:
-        1. path (YAMLPath) The YAML Path to evaluate.
-
-        Returns:  (YAMLPath) The adjusted YAML Path.
-        """
-        segments: Deque[PathSegment] = path.escaped
-        if len(segments) < 1:
-            return path
-
-        segments.pop()
-        return YAMLPath(YAMLPath._stringify_yamlpath_segments(
-            segments, PathSeperators.FSLASH))
