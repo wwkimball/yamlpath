@@ -95,6 +95,11 @@ class Merger:
                 buffer = []
 
                 # LHS has the RHS key
+                merge_mode = self.config.hash_merge_mode(
+                    NodeCoords(val, rhs, key))
+                if merge_mode is HashMergeOpts.LEFT:
+                    continue
+
                 if isinstance(val, CommentedMap):
                     lhs[key] = self._merge_dicts(
                         lhs[key], val, path_next, parent=rhs, parentref=key)

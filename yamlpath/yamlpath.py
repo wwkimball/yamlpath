@@ -56,53 +56,6 @@ class YAMLPath:
         else:
             self.original = yaml_path
 
-    @classmethod
-    def _stringify_yamlpath_segments(
-        cls, segments: Deque[PathSegment], seperator: PathSeperators
-    ) -> str:
-        """Stringify segments of a YAMLPath."""
-        # The following import must not occur at the toplevel because doing so
-        # causes a cyclic dependency error.  The import must occur only when
-        # this method is invoked.
-        # pylint: disable=import-outside-toplevel
-        from yamlpath.func import ensure_escaped
-
-        pathsep: str = str(seperator)
-        add_sep: bool = False
-        ppath: str = ""
-
-        # FSLASH seperator requires a path starting with a /
-        if seperator is PathSeperators.FSLASH:
-            ppath = pathsep
-
-        for (segment_type, segment_attrs) in segments:
-            if segment_type == PathSegmentTypes.KEY:
-                if add_sep:
-                    ppath += pathsep
-
-                # Replace a subset of special characters to alert users to
-                # potentially unintentional demarcation.
-                ppath += ensure_escaped(
-                    str(segment_attrs),
-                    pathsep,
-                    '(', ')', '[', ']', '^', '$', '%', ' ', "'", '"'
-                )
-            elif segment_type == PathSegmentTypes.INDEX:
-                ppath += "[{}]".format(segment_attrs)
-            elif segment_type == PathSegmentTypes.ANCHOR:
-                if add_sep:
-                    ppath += "[&{}]".format(segment_attrs)
-                else:
-                    ppath += "&{}".format(segment_attrs)
-            elif segment_type == PathSegmentTypes.SEARCH:
-                ppath += str(segment_attrs)
-            elif segment_type == PathSegmentTypes.COLLECTOR:
-                ppath += str(segment_attrs)
-
-            add_sep = True
-
-        return ppath
-
     def __str__(self) -> str:
         """Get a stringified version of this object."""
         if self._stringified:
@@ -122,7 +75,14 @@ class YAMLPath:
         return len(self.escaped)
 
     def __eq__(self, other: object) -> bool:
-        """Indicate equivalence of two YAMLPaths."""
+        """
+        Indicate equivalence of two YAMLPaths.
+
+        Parameters:
+        1. other (object) The other YAMLPath to compare against.
+
+        Returns:  (bool) true = Both are identical; false, otherwise
+        """
         if not isinstance(other, (YAMLPath, str)):
             return False
 
@@ -141,7 +101,16 @@ class YAMLPath:
         return not self == other
 
     def append(self, segment: str) -> "YAMLPath":
-        """Append a new segment to this YAML Path (without seperator)."""
+        """
+        Append a new segment to this YAML Path.
+
+        Parameters:
+        1. segment (str) The new -- pre-escaped -- segment to append to this
+           YAML Path.  Do NOT include any seperator with this value; it will be
+           added for you.
+
+        Returns:  (YAMLPath) The adjusted YAMLPath
+        """
         seperator = (
             PathSeperators.FSLASH
             if self.seperator is PathSeperators.AUTO
@@ -670,14 +639,61 @@ class YAMLPath:
         return path_segments
 
     @classmethod
-    def strip_path_prefix(cls, prefix: "YAMLPath",
-                          path: "YAMLPath") -> "YAMLPath":
+    def _stringify_yamlpath_segments(
+        cls, segments: Deque[PathSegment], seperator: PathSeperators
+    ) -> str:
+        """Stringify segments of a YAMLPath."""
+        # The following import must not occur at the toplevel because doing so
+        # causes a cyclic dependency error.  The import must occur only when
+        # this method is invoked.
+        # pylint: disable=import-outside-toplevel
+        from yamlpath.func import ensure_escaped
+
+        pathsep: str = str(seperator)
+        add_sep: bool = False
+        ppath: str = ""
+
+        # FSLASH seperator requires a path starting with a /
+        if seperator is PathSeperators.FSLASH:
+            ppath = pathsep
+
+        for (segment_type, segment_attrs) in segments:
+            if segment_type == PathSegmentTypes.KEY:
+                if add_sep:
+                    ppath += pathsep
+
+                # Replace a subset of special characters to alert users to
+                # potentially unintentional demarcation.
+                ppath += ensure_escaped(
+                    str(segment_attrs),
+                    pathsep,
+                    '(', ')', '[', ']', '^', '$', '%', ' ', "'", '"'
+                )
+            elif segment_type == PathSegmentTypes.INDEX:
+                ppath += "[{}]".format(segment_attrs)
+            elif segment_type == PathSegmentTypes.ANCHOR:
+                if add_sep:
+                    ppath += "[&{}]".format(segment_attrs)
+                else:
+                    ppath += "&{}".format(segment_attrs)
+            elif segment_type == PathSegmentTypes.SEARCH:
+                ppath += str(segment_attrs)
+            elif segment_type == PathSegmentTypes.COLLECTOR:
+                ppath += str(segment_attrs)
+
+            add_sep = True
+
+        return ppath
+
+    @classmethod
+    def strip_path_prefix(cls, path: "YAMLPath",
+                          prefix: "YAMLPath") -> "YAMLPath":
         """
         Remove a prefix from a YAML Path.
 
         Parameters:
-        1. prefix (YAMLPath) The prefix to remove (except "/").
-        2. path (YAMLPath) The path from which to remove the prefix.
+        1. path (YAMLPath) The path from which to remove the prefix.
+        2. prefix (YAMLPath) The prefix to remove (except "/").
 
         Returns:  (YAMLPath) The trimmed YAML Path.
         """
@@ -697,3 +713,24 @@ class YAMLPath:
             return YAMLPath(path_str)
 
         return path
+
+    @classmethod
+    def get_path_parent(cls, path: "YAMLPath") -> "YAMLPath":
+        """
+        Get a path pointing one less level than a YAML Path.
+
+        Will return the document root path when the path already points at the
+        root.
+
+        Parameters:
+        1. path (YAMLPath) The YAML Path to evaluate.
+
+        Returns:  (YAMLPath) The adjusted YAML Path.
+        """
+        segments: Deque[PathSegment] = path.escaped
+        if len(segments) < 1:
+            return path
+
+        segments.pop()
+        return YAMLPath(YAMLPath._stringify_yamlpath_segments(
+            segments, PathSeperators.FSLASH))
