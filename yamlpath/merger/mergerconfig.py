@@ -205,23 +205,48 @@ class MergerConfig:
                 .format(section))
             return
 
-        for rule_str in self.config[section]:
-            rule_path = YAMLPath(rule_str)
-            yaml_path = YAMLPath.strip_path_prefix(merge_path, rule_path)
+        for rule_key in self.config[section]:
+            rule_value = self.config[section][rule_key]
+
+            if "=" in rule_value:
+                # There were at least two = signs on the configuration line
+                conf_line = rule_key + "=" + rule_value
+                delim_pos = conf_line.rfind("=")
+                rule_key = conf_line[0:delim_pos].strip()
+                rule_value = conf_line[delim_pos + 1:].strip()
+                self.log.debug(
+                    "MergerConfig::_prepare_user_rules:  Reconstituted"
+                    " configuration line '{}' to extract adjusted key '{}'"
+                    " with value '{}'".format(conf_line, rule_key, rule_value))
+
+            rule_path = YAMLPath(rule_key)
+            yaml_path = YAMLPath.strip_path_prefix(rule_path, merge_path)
             self.log.debug(
-                "MergerConfig::_prepare_user_rules:  Matching '{}' nodes to {}"
-                " from {}."
-                .format(section, yaml_path, rule_str))
+                "MergerConfig::_prepare_user_rules:  Matching '{}' nodes to"
+                " YAML Path '{}' from key, {}."
+                .format(section, yaml_path, rule_key))
             try:
                 for node_coord in proc.get_nodes(yaml_path, mustexist=True):
-                    collector[node_coord] = self.config[section][rule_str]
+                    self.log.debug(
+                        "MergerConfig::_prepare_user_rules:  Node will"
+                        " have merging rule, {}:".format(rule_value))
+                    self.log.debug(node_coord.node)
+                    collector[node_coord] = rule_value
+
             except YAMLPathException:
                 self.log.warning("{} YAML Path matches no nodes:  {}"
                                 .format(section, yaml_path))
 
         self.log.debug(
             "MergerConfig::_prepare_user_rules:  Matched rules to nodes:")
-        self.log.debug(collector)
+        for node_coord, merge_rule in collector.items():
+            self.log.debug("... RULE:  {}".format(merge_rule))
+            self.log.debug("... NODE:")
+            self.log.debug(node_coord.node)
+            self.log.debug("... PARENT:")
+            self.log.debug(node_coord.parent)
+            self.log.debug("... REF:")
+            self.log.debug(node_coord.parentref)
 
     def _load_config(self) -> None:
         """Load the external configuration file."""
@@ -268,6 +293,13 @@ class MergerConfig:
 
         Returns: (str) The requested configuration.
         """
+        self.log.debug("MergerConfig::_get_rule_for:  Seeking rule for node:")
+        self.log.debug("... NODE:")
+        self.log.debug(node_coord.node)
+        self.log.debug("... PARENT:")
+        self.log.debug(node_coord.parent)
+        self.log.debug("... REF:")
+        self.log.debug(node_coord.parentref)
         return self._get_config_for(node_coord, self.rules)
 
     def _get_key_for(self, node_coord: NodeCoords) -> str:

@@ -44,9 +44,9 @@ class Merger:
         self.data: Any = lhs
         self.config: MergerConfig = config
 
+    #pylint: disable=too-many-branches
     def _merge_dicts(
-        self, lhs: CommentedMap, rhs: CommentedMap, path: YAMLPath,
-        **kwargs: Any
+        self, lhs: CommentedMap, rhs: CommentedMap, path: YAMLPath
     ) -> CommentedMap:
         """
         Merge two YAML maps (CommentedMap-wrapped dicts).
@@ -70,19 +70,7 @@ class Merger:
             raise MergeException(
                 "Impossible to add Hash data to non-Hash destination.", path)
 
-        # The document root is ALWAYS a Hash.  For everything deeper, do not
-        # merge when the user sets LEFT|RIGHT Hash merge options.
-        parent: Any = kwargs.pop("parent", None)
-        parentref: Any = kwargs.pop("parentref", None)
-        if len(path) > 0:
-            merge_mode = self.config.hash_merge_mode(
-                NodeCoords(rhs, parent, parentref))
-            if merge_mode is HashMergeOpts.LEFT:
-                return lhs
-            if merge_mode is HashMergeOpts.RIGHT:
-                return rhs
-
-        # Deep merge
+        # Assume deep merge until a node's merge rule indicates otherwise
         buffer: List[Tuple[Any, Any]] = []
         buffer_pos = 0
         for key, val in rhs.non_merged_items():
@@ -94,15 +82,21 @@ class Merger:
                     buffer_pos += 1
                 buffer = []
 
-                # LHS has the RHS key
-                if isinstance(val, CommentedMap):
-                    lhs[key] = self._merge_dicts(
-                        lhs[key], val, path_next, parent=rhs, parentref=key)
-                    Merger.combine_merge_anchors(lhs[key], val)
+                # Short-circuit the deep merge if a different merge rule
+                # applies to this node.
+                merge_mode = self.config.hash_merge_mode(
+                    NodeCoords(val, rhs, key))
+                if merge_mode is HashMergeOpts.LEFT:
+                    continue
+                if merge_mode is HashMergeOpts.RIGHT:
+                    lhs[key] = val
+                    continue
 
+                if isinstance(val, CommentedMap):
+                    lhs[key] = self._merge_dicts(lhs[key], val, path_next)
+                    Merger.combine_merge_anchors(lhs[key], val)
                 elif isinstance(val, CommentedSeq):
-                    lhs[key] = self._merge_lists(
-                        lhs[key], val, path_next, parent=rhs, parentref=key)
+                    lhs[key] = self._merge_lists(lhs[key], val, path_next)
                 else:
                     lhs[key] = val
             else:
@@ -244,8 +238,7 @@ class Merger:
                     and id_key in lhs_hash
                     and lhs_hash[id_key] == id_val
                 ):
-                    self._merge_dicts(
-                        lhs_hash, ele, path_next, parent=rhs, parentref=idx)
+                    self._merge_dicts(lhs_hash, ele, path_next)
                     merged_hash = True
                     break
                 if not merged_hash:

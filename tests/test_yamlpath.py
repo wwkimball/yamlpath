@@ -125,7 +125,7 @@ class Test_path_Path():
         original = YAMLPath(path)
         remove = YAMLPath(prefix) if prefix is not None else None
         compare = YAMLPath(result)
-        stripped = YAMLPath.strip_path_prefix(remove, original)
+        stripped = YAMLPath.strip_path_prefix(original, remove)
         assert compare == stripped
 
     def test_parse_double_inversion_error(self):
