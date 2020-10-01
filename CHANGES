@@ -1,16 +1,16 @@
 2.4.2:
+Enhancements:
+* In the INI file's [rules] section, different merge rules can now be applied
+  to specific parts -- no matter how deeply nested -- of the same Hash
+  structure.
+
 Bug Fixes:
-* In the INI file's [rules] section, YAML Paths which would have fruitlessly
-  applied merge rules to Scalar leaf nodes (having no effect on the merge,
-  which is conducted on keys rather than values) now apply to that leaf's
-  parent node.  This produces the reasonably expected result for particularly
-  complex merges, enabling different merge rules to be applied to specific
-  parts of the same Hash structure.
 * The 3rd-party Python INI file parser had no way of differentiating between
   the key and value of a YAML Path entry containing an = sign in its key, like
   "/path[.=name]/key = left".  This update reconstitutes such lines and
   correctly parses an affected YAML Path from the merge rule.
-* The yaml-merge command now reports version 0.0.3 to reflect this change.
+
+The yaml-merge command now reports version 0.0.3 to reflect these changes.
 
 2.4.1:
 Bug Fixes:
