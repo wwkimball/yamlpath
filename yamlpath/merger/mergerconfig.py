@@ -205,16 +205,29 @@ class MergerConfig:
                 .format(section))
             return
 
-        for rule_str in self.config[section]:
-            rule_path = YAMLPath(rule_str)
+        for rule_key in self.config[section]:
+            rule_value = self.config[section][rule_key]
+
+            if "=" in rule_value:
+                # There were at least two = signs on the configuration line
+                conf_line = rule_key + "=" + rule_value
+                delim_pos = conf_line.rfind("=")
+                rule_key = conf_line[0:delim_pos].strip()
+                rule_value = conf_line[delim_pos + 1:].strip()
+                self.log.debug(
+                    "MergerConfig::_prepare_user_rules:  Reconstituted"
+                    " configuration line '{}' to extract adjusted key '{}'"
+                    " with value '{}'".format(conf_line, rule_key, rule_value))
+
+            rule_path = YAMLPath(rule_key)
             yaml_path = YAMLPath.strip_path_prefix(merge_path, rule_path)
             self.log.debug(
                 "MergerConfig::_prepare_user_rules:  Matching '{}' nodes to {}"
                 " from {}."
-                .format(section, yaml_path, rule_str))
+                .format(section, yaml_path, rule_key))
             try:
                 for node_coord in proc.get_nodes(yaml_path, mustexist=True):
-                    collector[node_coord] = self.config[section][rule_str]
+                    collector[node_coord] = rule_value
             except YAMLPathException:
                 self.log.warning("{} YAML Path matches no nodes:  {}"
                                 .format(section, yaml_path))
