@@ -6,8 +6,8 @@
 [ -e dist ] && rm -rf dist
 
 # Update pip and install release tools
-python -m pip install --upgrade pip
-pip install wheel || exit $?
+python3 -m pip install --upgrade pip
+pip3 install wheel || exit $?
 
 # Require successful tests
 if [ ! -x run-tests.sh ]; then
