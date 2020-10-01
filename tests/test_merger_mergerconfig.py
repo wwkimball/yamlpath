@@ -513,6 +513,7 @@ class Test_merger_MergerConfig():
         config_file = create_temp_yaml_file(tmp_path_factory, """
         [rules]
         /does_not_exist = left
+        /array_of_hashes[name = "Does Not Compute"] = right
         """)
         lhs_yaml_file = create_temp_yaml_file(tmp_path_factory, """---
         hash:
