@@ -200,12 +200,6 @@ class Merger:
             "Merger::_merge_arrays_of_hashes:  Merging {} Hash(es) at {}."
             .format(len(rhs), path))
 
-        merge_mode = self.config.aoh_merge_mode(node_coord)
-        if merge_mode is AoHMergeOpts.LEFT:
-            return lhs
-        if merge_mode is AoHMergeOpts.RIGHT:
-            return rhs
-
         id_key: str = ""
         if len(rhs) > 0 and isinstance(rhs[0], CommentedMap):
             id_key = self.config.aoh_merge_key(
@@ -214,6 +208,7 @@ class Merger:
                 "Merger::_merge_arrays_of_hashes:  RHS AoH yielded id_key:"
                 "  {}.".format(id_key))
 
+        merge_mode = self.config.aoh_merge_mode(node_coord)
         for idx, ele in enumerate(rhs):
             path_next = YAMLPath(path).append("[{}]".format(idx))
             self.logger.debug(
