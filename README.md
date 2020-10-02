@@ -33,7 +33,7 @@ for other projects to readily employ YAML Paths.
       2. [Get a YAML Value](#get-a-yaml-value)
       3. [Search For YAML Paths](#search-for-yaml-paths)
       4. [Change a YAML Value](#change-a-yaml-value)
-      5. [Merge YAML/Compatible Files](#merge-yaml-compatible-files)
+      5. [Merge YAML/Compatible Files](#merge-yamlcompatible-files)
    2. [Basic Usage:  Libraries](#basic-usage--libraries)
       1. [Initialize ruamel.yaml and These Helpers](#initialize-ruamelyaml-and-these-helpers)
       2. [Searching for YAML Nodes](#searching-for-yaml-nodes)
