@@ -84,11 +84,17 @@ class Merger:
 
                 # Short-circuit the deep merge if a different merge rule
                 # applies to this node.
-                merge_mode = self.config.hash_merge_mode(
-                    NodeCoords(val, rhs, key))
-                if merge_mode is HashMergeOpts.LEFT:
+                node_coord = NodeCoords(val, rhs, key)
+                merge_mode = (
+                    self.config.hash_merge_mode(node_coord)
+                    if isinstance(val, CommentedMap)
+                    else self.config.aoh_merge_mode(node_coord)
+                )
+                self.logger.debug("Merger::_merge_dicts:  Got merge mode, {}."
+                                  .format(merge_mode))
+                if merge_mode in (HashMergeOpts.LEFT, AoHMergeOpts.LEFT):
                     continue
-                if merge_mode is HashMergeOpts.RIGHT:
+                if merge_mode in (HashMergeOpts.RIGHT, AoHMergeOpts.RIGHT):
                     lhs[key] = val
                     continue
 
@@ -96,7 +102,8 @@ class Merger:
                     lhs[key] = self._merge_dicts(lhs[key], val, path_next)
                     Merger.combine_merge_anchors(lhs[key], val)
                 elif isinstance(val, CommentedSeq):
-                    lhs[key] = self._merge_lists(lhs[key], val, path_next)
+                    lhs[key] = self._merge_lists(
+                        lhs[key], val, path_next, parent=rhs, parentref=key)
                 else:
                     lhs[key] = val
             else:
@@ -193,34 +200,22 @@ class Merger:
             "Merger::_merge_arrays_of_hashes:  Merging {} Hash(es) at {}."
             .format(len(rhs), path))
 
-        merge_mode = self.config.aoh_merge_mode(node_coord)
-        if merge_mode is AoHMergeOpts.LEFT:
-            return lhs
-        if merge_mode is AoHMergeOpts.RIGHT:
-            return rhs
-
         id_key: str = ""
-        if len(lhs) > 0 and isinstance(lhs[0], CommentedMap):
+        if len(rhs) > 0 and isinstance(rhs[0], CommentedMap):
             id_key = self.config.aoh_merge_key(
-                NodeCoords(lhs[0], lhs, 0), lhs[0])
+                NodeCoords(rhs[0], rhs, 0), rhs[0])
             self.logger.debug(
-                "Merger::_merge_arrays_of_hashes:  LHS AoH yielded id_key:"
+                "Merger::_merge_arrays_of_hashes:  RHS AoH yielded id_key:"
                 "  {}.".format(id_key))
 
+        merge_mode = self.config.aoh_merge_mode(node_coord)
         for idx, ele in enumerate(rhs):
             path_next = YAMLPath(path).append("[{}]".format(idx))
-            node_next = NodeCoords(ele, rhs, idx)
             self.logger.debug(
                 "Merger::_merge_arrays_of_hashes:  Processing element {} {}"
                 " at {}.".format(ele, type(ele), path_next))
 
             if merge_mode is AoHMergeOpts.DEEP:
-                if not id_key:
-                    id_key = self.config.aoh_merge_key(node_next, ele)
-                    self.logger.debug(
-                        "Merger::_merge_arrays_of_hashes:  RHS AoH yielded"
-                        " id_key:  {}.".format(id_key))
-
                 if id_key in ele:
                     id_val = ele[id_key]
                 else:
@@ -264,7 +259,7 @@ class Merger:
         Parameters:
         1. lhs (CommentedSeq) The list to merge into.
         2. rhs (CommentedSeq) The list to merge from.
-        3. path (YAMLPath) Location of the `rsh` source list within its DOM.
+        3. path (YAMLPath) Location of the `rhs` source list within its DOM.
 
         Keyword Parameters:
         * parent (Any) Parent node of `rhs`

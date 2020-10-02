@@ -2359,3 +2359,145 @@ force_right: true
             (os.path.getsize(output_file) == os.path.getsize(merged_yaml))
             and (open(output_file,'r').read() == open(merged_yaml,'r').read())
         )
+
+
+    def test_merge_with_complex_aoh_rules(
+        self, quiet_logger, tmp_path, tmp_path_factory
+    ):
+        config_file = create_temp_yaml_file(tmp_path_factory, """
+[rules]
+baubles = deep
+/coordinates = unique
+
+[keys]
+/baubles[name = Whatchamacallit] = sku
+""")
+        lhs_yaml_file = create_temp_yaml_file(tmp_path_factory, """---
+baubles:
+  - name: Doohickey
+    sku: 0-000-1
+    price: 4.75
+    weight: 2.7g
+  - name: Doodad
+    sku: 0-000-2
+    price: 10.5
+    weight: 5g
+  - name: Oddball
+    sku: 0-000-3
+    price: 25.99
+    weight: 25kg
+coordinates:
+  - x: 4
+    y: -2
+  - x: 1
+    y: -1
+  - x: 0
+    y: 0
+lhs_exclusive:
+  - step: 1
+    action: echo Hello, lefties of the World!
+  - step: 2
+    action: exit 0
+""")
+        rhs1_yaml_file = create_temp_yaml_file(tmp_path_factory, """---
+baubles:
+  - name: Fob
+    sku: 0-000-4
+    price: 0.99
+    weight: 18mg
+  - name: Doohickey
+    price: 10.5
+  - name: Oddball
+    sku: 0-000-3
+    description: This ball is odd
+coordinates:
+  - x: 0
+    y: 0
+  - x: 1
+    y: 1
+  - x: 4
+    y: 2
+rhs_exclusive:
+  - step: 1
+    action: echo Hello, righties of the World!
+  - step: 2
+    action: exit 0
+""")
+        rhs2_yaml_file = create_temp_yaml_file(tmp_path_factory, """---
+baubles:
+  - name: Whatchamacallit
+    sku: 0-000-1
+""")
+        merged_yaml = create_temp_yaml_file(tmp_path_factory, """---
+baubles:
+  - name: Whatchamacallit
+    sku: 0-000-1
+    price: 10.5
+    weight: 2.7g
+  - name: Doodad
+    sku: 0-000-2
+    price: 10.5
+    weight: 5g
+  - name: Oddball
+    sku: 0-000-3
+    price: 25.99
+    weight: 25kg
+    description: This ball is odd
+  - name: Fob
+    sku: 0-000-4
+    price: 0.99
+    weight: 18mg
+coordinates:
+  - x: 4
+    y: -2
+  - x: 1
+    y: -1
+  - x: 0
+    y: 0
+  - x: 1
+    y: 1
+  - x: 4
+    y: 2
+lhs_exclusive:
+  - step: 1
+    action: echo Hello, lefties of the World!
+  - step: 2
+    action: exit 0
+rhs_exclusive:
+  - step: 1
+    action: echo Hello, righties of the World!
+  - step: 2
+    action: exit 0
+""")
+
+        output_dir = tmp_path / "test_merge_with_complex_aoh_rules"
+        output_dir.mkdir()
+        output_file = output_dir / "output.yaml"
+
+        lhs_yaml = get_yaml_editor()
+        rhs1_yaml = get_yaml_editor()
+        rhs2_yaml = get_yaml_editor()
+        lhs_data = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
+        rhs1_data = get_yaml_data(rhs1_yaml, quiet_logger, rhs1_yaml_file)
+        rhs2_data = get_yaml_data(rhs2_yaml, quiet_logger, rhs2_yaml_file)
+
+        args = SimpleNamespace(config=config_file)
+        mc = MergerConfig(quiet_logger, args)
+        merger = Merger(quiet_logger, lhs_data, mc)
+        merger.merge_with(rhs1_data)
+        merger.merge_with(rhs2_data)
+
+        with open(output_file, 'w') as yaml_dump:
+            lhs_yaml.dump(merger.data, yaml_dump)
+
+        # DEBUG:
+        # with open(output_file, 'r') as output_fnd, open(merged_yaml, 'r') as merged_fnd:
+        #     print("Expected:")
+        #     print(merged_fnd.read())
+        #     print("Got:")
+        #     print(output_fnd.read())
+
+        assert (
+            (os.path.getsize(output_file) == os.path.getsize(merged_yaml))
+            and (open(output_file,'r').read() == open(merged_yaml,'r').read())
+        )

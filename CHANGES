@@ -1,3 +1,10 @@
+2.4.3:
+Bug Fixes:
+* Array-of-Hashes were not being detected for the purpose of applying merge
+  rules defined via the INI-style configuration file.
+* Array-of-Hashes identity key inference was looking first to the LHS document.
+  This was backwards for an RHS-to-LHS merge and has been corrected.
+
 2.4.2:
 Enhancements:
 * In the INI file's [rules] section, different merge rules can now be applied
