@@ -5,6 +5,8 @@ Bug Fixes:
 * Array-of-Hashes identity key inference was looking first to the LHS document.
   This was backwards for an RHS-to-LHS merge and has been corrected.
 
+The yaml-merge command now reports version 0.0.4 to reflect these changes.
+
 2.4.2:
 Enhancements:
 * In the INI file's [rules] section, different merge rules can now be applied
