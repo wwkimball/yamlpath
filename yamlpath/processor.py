@@ -178,17 +178,21 @@ class Processor:
                     node_coord.parent, node_coord.parentref, value,
                     value_format)
 
-    def _get_nodes_by_traversal_segment(self, data: Any, yaml_path: YAMLPath,
-                                        segment_index: int, **kwargs: Any
-                                        ) -> Generator[Any, None, None]:
+    def _get_nodes_by_traversal(self, data: Any, yaml_path: YAMLPath,
+                                segment_index: int, **kwargs: Any
+                                ) -> Generator[Any, None, None]:
         """
         Deeply traverse the document tree, returning all or filtered nodes.
         """
-        if data is None:
-            return
-
         parent = kwargs.pop("parent", None)
         parentref = kwargs.pop("parentref", None)
+
+        self.logger.debug(
+            "Processor::_get_nodes_by_traversal:  TRAVERSING the tree at {}."
+            .format(parentref))
+
+        if data is None:
+            return
 
         # Is there a next segment?
         segments = yaml_path.escaped
@@ -196,23 +200,78 @@ class Processor:
             # This traversal is gathering every leaf node
             if isinstance(data, dict):
                 for val in data.values():
-                    for node_coord in self._get_nodes_by_traversal_segment(
+                    for node_coord in self._get_nodes_by_traversal(
                         val, yaml_path, segment_index,
                         parent=parent, parentref=parentref
                     ):
+                        self.logger.debug(
+                            "Processor::_get_nodes_by_traversal:  Yielding"
+                            " Hash value:")
+                        self.logger.debug(node_coord.node)
                         yield node_coord
             elif isinstance(data, list):
                 for ele in data:
-                    for node_coord in self._get_nodes_by_traversal_segment(
+                    for node_coord in self._get_nodes_by_traversal(
                         ele, yaml_path, segment_index,
                         parent=parent, parentref=parentref
                     ):
+                        self.logger.debug(
+                            "Processor::_get_nodes_by_traversal:  Yielding"
+                            " Array value:")
+                        self.logger.debug(node_coord.node)
                         yield node_coord
             else:
+                self.logger.debug(
+                    "Processor::_get_nodes_by_traversal:  Yielding Scalar"
+                    " value:")
+                self.logger.debug(data)
                 yield NodeCoords(data, parent, parentref)
         else:
             # There is a filter in the next segment
-            raise NotImplementedError
+            if isinstance(data, dict):
+                for key, val in data.items():
+                    # Depth-first expansion
+                    for node_coord in self._get_nodes_by_traversal(
+                        val, yaml_path, segment_index,
+                        parent=data, parentref=key
+                    ):
+                        self.logger.debug(
+                            "Processor::_get_nodes_by_traversal:  Yielding"
+                            " depth-first Hash value:")
+                        self.logger.debug(node_coord.node)
+                        yield node_coord
+
+                    # Find direct match
+                    for node_coord in self._get_nodes_by_path_segment(
+                        val, yaml_path, segment_index + 1, data, key
+                    ):
+                        self.logger.debug(
+                            "Processor::_get_nodes_by_traversal:  Yielding"
+                            " direct-match Hash value:")
+                        self.logger.debug(node_coord.node)
+                        yield node_coord
+            elif isinstance(data, list):
+                for idx, ele in enumerate(data):
+                    # Depth-first expansion
+                    for node_coord in self._get_nodes_by_traversal(
+                        ele, yaml_path, segment_index,
+                        parent=data, parentref=ele
+                    ):
+                        self.logger.debug(
+                            "Processor::_get_nodes_by_traversal:  Yielding"
+                            " depth-first Array value:")
+                        self.logger.debug(node_coord.node)
+                        yield node_coord
+
+                    # Find direct match
+                    for node_coord in self._get_nodes_by_path_segment(
+                        ele, yaml_path, segment_index + 1, data, idx
+                    ):
+                        self.logger.debug(
+                            "Processor::_get_nodes_by_traversal:  Yielding"
+                            " direct-match Array value:")
+                        self.logger.debug(node_coord.node)
+                        yield node_coord
 
     # pylint: disable=locally-disabled,too-many-branches,too-many-arguments
     def _get_nodes_by_path_segment(self, data: Any,
@@ -275,8 +334,9 @@ class Processor:
                 data, yaml_path, segment_index, stripped_attrs,
                 parent, parentref)
         elif segment_type == PathSegmentTypes.TRAVERSE:
-            node_coords = self._get_nodes_by_traversal_segment(
-                data, yaml_path, segment_index)
+            node_coords = self._get_nodes_by_traversal(
+                data, yaml_path, segment_index, parent=parent,
+                parentref=parentref)
         else:
             raise NotImplementedError
 

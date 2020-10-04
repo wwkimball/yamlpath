@@ -753,6 +753,10 @@ class YAMLPath:
                 ppath += str(segment_attrs)
             elif segment_type == PathSegmentTypes.COLLECTOR:
                 ppath += str(segment_attrs)
+            elif segment_type == PathSegmentTypes.TRAVERSE:
+                if add_sep:
+                    ppath += pathsep
+                ppath += "**"
 
             add_sep = True
 
