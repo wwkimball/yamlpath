@@ -597,8 +597,8 @@ class YAMLPath:
                     # type, assume it is a KEY.
                     if segment_type is None:
                         segment_type = PathSegmentTypes.KEY
-                    path_segments.append(
-                        self._expand_splats(segment_id, segment_type))
+                    path_segments.append(self._expand_splats(
+                        yaml_path, segment_id, segment_type))
                     segment_id = ""
 
                 segment_type = None
@@ -635,12 +635,15 @@ class YAMLPath:
             # type, assume it is a KEY.
             if segment_type is None:
                 segment_type = PathSegmentTypes.KEY
-            path_segments.append(self._expand_splats(segment_id, segment_type))
+            path_segments.append(self._expand_splats(
+                yaml_path, segment_id, segment_type))
 
         return path_segments
 
+    @classmethod
     def _expand_splats(
-        self, segment_id: str, segment_type: Optional[PathSegmentTypes] = None
+        cls, yaml_path: str, segment_id: str,
+        segment_type: Optional[PathSegmentTypes] = None
     ) -> tuple:
         """
         Replace segment IDs with search operators when * is present.
@@ -680,11 +683,23 @@ class YAMLPath:
                             segment_id[0:splat_pos],
                             segment_id[splat_pos + 1:])))
 
+            if splat_count == 2 and segment_len == 2:
+                # Traversal operator
+                return (PathSegmentTypes.TRAVERSE, None)
+
             search_term = ""
+            was_splat = False
             for char in segment_id:
                 if char == "*":
+                    if was_splat:
+                        raise YAMLPathException(
+                            "The ** traversal operator has no meaning when"
+                            " combined with other characters", yaml_path,
+                            segment_id)
+                    was_splat = True
                     search_term += ".*"
                 else:
+                    was_splat = False
                     search_term += char
 
             return (

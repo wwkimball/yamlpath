@@ -28,6 +28,11 @@ class PathSegmentTypes(Enum):
 
     `SEARCH`
         A search operation for which results are returned as they are matched.
+
+    `TRAVERSE`
+        Traverses the document tree deeply.  If there is a next segment, it
+        must match or no data is matched.  When there is no next segment, every
+        leaf node matches.
     """
 
     ANCHOR = auto()
@@ -35,3 +40,4 @@ class PathSegmentTypes(Enum):
     INDEX = auto()
     KEY = auto()
     SEARCH = auto()
+    TRAVERSE = auto()
