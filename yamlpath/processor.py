@@ -178,6 +178,42 @@ class Processor:
                     node_coord.parent, node_coord.parentref, value,
                     value_format)
 
+    def _get_nodes_by_traversal_segment(self, data: Any, yaml_path: YAMLPath,
+                                        segment_index: int, **kwargs: Any
+                                        ) -> Generator[Any, None, None]:
+        """
+        Deeply traverse the document tree, returning all or filtered nodes.
+        """
+        if data is None:
+            return
+
+        parent = kwargs.pop("parent", None)
+        parentref = kwargs.pop("parentref", None)
+
+        # Is there a next segment?
+        segments = yaml_path.escaped
+        if segment_index + 1 == len(segments):
+            # This traversal is gathering every leaf node
+            if isinstance(data, dict):
+                for val in data.values():
+                    for node_coord in self._get_nodes_by_traversal_segment(
+                        val, yaml_path, segment_index,
+                        parent=parent, parentref=parentref
+                    ):
+                        yield node_coord
+            elif isinstance(data, list):
+                for ele in data:
+                    for node_coord in self._get_nodes_by_traversal_segment(
+                        ele, yaml_path, segment_index,
+                        parent=parent, parentref=parentref
+                    ):
+                        yield node_coord
+            else:
+                yield NodeCoords(data, parent, parentref)
+        else:
+            # There is a filter in the next segment
+            raise NotImplementedError
+
     # pylint: disable=locally-disabled,too-many-branches,too-many-arguments
     def _get_nodes_by_path_segment(self, data: Any,
                                    yaml_path: YAMLPath, segment_index: int,
@@ -238,6 +274,9 @@ class Processor:
             node_coords = self._get_nodes_by_collector(
                 data, yaml_path, segment_index, stripped_attrs,
                 parent, parentref)
+        elif segment_type == PathSegmentTypes.TRAVERSE:
+            node_coords = self._get_nodes_by_traversal_segment(
+                data, yaml_path, segment_index)
         else:
             raise NotImplementedError
 
