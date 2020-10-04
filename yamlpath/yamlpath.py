@@ -597,7 +597,8 @@ class YAMLPath:
                     # type, assume it is a KEY.
                     if segment_type is None:
                         segment_type = PathSegmentTypes.KEY
-                    path_segments.append((segment_type, segment_id))
+                    path_segments.append(
+                        self._expand_splats(segment_id, segment_type))
                     segment_id = ""
 
                 segment_type = None
@@ -634,9 +635,66 @@ class YAMLPath:
             # type, assume it is a KEY.
             if segment_type is None:
                 segment_type = PathSegmentTypes.KEY
-            path_segments.append((segment_type, segment_id))
+            path_segments.append(self._expand_splats(segment_id, segment_type))
 
         return path_segments
+
+    def _expand_splats(
+        self, segment_id: str, segment_type: Optional[PathSegmentTypes] = None
+    ) -> tuple:
+        """
+        Replace segment IDs with search operators when * is present.
+        """
+        if '*' in segment_id:
+            splat_count = segment_id.count("*")
+            splat_pos = segment_id.index('*')
+            segment_len = len(segment_id)
+            if splat_count == 1:
+                if segment_len == 1:
+                    # /*/ -> [.!='']
+                    return (
+                        PathSegmentTypes.SEARCH,
+                        SearchTerms(True, PathSearchMethods.EQUALS, ".", "")
+                    )
+                if splat_pos == 0:
+                    # /*text/ -> [.$text]
+                    return (
+                        PathSegmentTypes.SEARCH,
+                        SearchTerms(
+                            False, PathSearchMethods.ENDS_WITH, ".",
+                            segment_id[1:]))
+                if splat_pos == segment_len - 1:
+                    # /text*/ -> [.^text]
+                    return (
+                        PathSegmentTypes.SEARCH,
+                        SearchTerms(
+                            False, PathSearchMethods.STARTS_WITH, ".",
+                            segment_id[0:splat_pos]))
+
+                # /te*xt/ -> [.=~/^te.*xt$/]
+                return (
+                    PathSegmentTypes.SEARCH,
+                    SearchTerms(
+                        False, PathSearchMethods.REGEX, ".",
+                        "^{}.*{}$".format(
+                            segment_id[0:splat_pos],
+                            segment_id[splat_pos + 1:])))
+
+            search_term = ""
+            for char in segment_id:
+                if char == "*":
+                    search_term += ".*"
+                else:
+                    search_term += char
+
+            return (
+                PathSegmentTypes.SEARCH,
+                SearchTerms(
+                    False, PathSearchMethods.REGEX, ".", search_term
+                )
+            )
+
+        return (segment_type, segment_id)
 
     @classmethod
     def _stringify_yamlpath_segments(
