@@ -22,6 +22,15 @@ Bug Fixes:
 * Collectors were breaking search nodes with Regular Expressions, making it
   impossible for collected searches to return expected matches.
 
+API Changes:
+* The various protected _get_* methods of Processor were changed to reduce the
+  number of positional parameters while also allowing for new special-use
+  parameters for future changes.  The formerly optional positional `parent` and
+  `parentref` parameters are now optional keyword arguments by the same names.
+  Because these were all protected methods and the affected parameters were
+  optional anyway, this is not deemed a breaking change; no one should have
+  been directly calling them.
+
 2.4.3:
 Bug Fixes:
 * Array-of-Hashes were not being detected for the purpose of applying merge

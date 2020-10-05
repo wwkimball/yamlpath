@@ -307,9 +307,7 @@ class Test_Processor():
         with pytest.raises(NotImplementedError):
             nodes = list(processor._get_nodes_by_search(
                 data,
-                SearchTerms(True, PathSearchMethods.DNF, ".", "top_scalar"),
-                None,
-                None
+                SearchTerms(True, PathSearchMethods.DNF, ".", "top_scalar")
             ))
 
     def test_adjoined_collectors_error(self, quiet_logger):
