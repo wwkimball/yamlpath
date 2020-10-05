@@ -1,3 +1,4 @@
+#pylint: disable=too-many-lines
 """
 YAML Path processor based on ruamel.yaml.
 
@@ -178,11 +179,25 @@ class Processor:
                     node_coord.parent, node_coord.parentref, value,
                     value_format)
 
+    # pylint: disable=locally-disabled,too-many-branches
     def _get_nodes_by_traversal(self, data: Any, yaml_path: YAMLPath,
                                 segment_index: int, **kwargs: Any
                                 ) -> Generator[Any, None, None]:
         """
         Deeply traverse the document tree, returning all or filtered nodes.
+
+        Parameters:
+        1. data (ruamel.yaml data) The parsed YAML data to process
+        2. yaml_path (yamlpath.Path) The YAML Path being processed
+        3. segment_index (int) Segment index of the YAML Path to process
+
+        Keyword Parameters:
+        * parent (ruamel.yaml node) The parent node from which this query
+          originates
+        * parentref (Any) The Index or Key of data within parent
+
+        Returns:  (Generator[Any, None, None]) Each node coordinate as they are
+        matched.
         """
         parent = kwargs.pop("parent", None)
         parentref = kwargs.pop("parentref", None)
@@ -309,6 +324,7 @@ class Processor:
             return
 
         (segment_type, stripped_attrs) = segments[segment_index]
+        (unesc_type, unesc_attrs) = yaml_path.unescaped[segment_index]
 
         node_coords: Any = None
         if segment_type == PathSegmentTypes.KEY:
@@ -327,12 +343,11 @@ class Processor:
             node_coords = self._get_nodes_by_search(
                 data, stripped_attrs, parent, parentref)
         elif (
-                segment_type == PathSegmentTypes.COLLECTOR
-                and isinstance(stripped_attrs, CollectorTerms)
+                unesc_type == PathSegmentTypes.COLLECTOR
+                and isinstance(unesc_attrs, CollectorTerms)
         ):
             node_coords = self._get_nodes_by_collector(
-                data, yaml_path, segment_index,
-                yaml_path.unescaped[segment_index][1], parent, parentref)
+                data, yaml_path, segment_index, unesc_attrs, parent, parentref)
         elif segment_type == PathSegmentTypes.TRAVERSE:
             node_coords = self._get_nodes_by_traversal(
                 data, yaml_path, segment_index, parent=parent,
