@@ -28,6 +28,8 @@ class Test_Processor():
             matches += 1
         for node in processor._get_required_nodes(None, yamlpath):
             matches += 1
+        for node in processor._get_nodes_by_traversal(None, yamlpath, 0):
+            matches += 1
         assert matches == 0
 
     @pytest.mark.parametrize("yamlpath,results,mustexist,default", [
@@ -65,6 +67,7 @@ class Test_Processor():
         ("**.[.^Hey]", ["Hey, Number Two!"], True, None),
         ("/**/Hey*", ["Hey, Number Two!"], True, None),
         ("lots_of_names.**.name", ["Name 1-1", "Name 2-1", "Name 3-1", "Name 4-1", "Name 4-2", "Name 4-3", "Name 4-4"], True, None),
+        ("/array_of_hashes/**", [1, "one", 2, "two"], True, None),
     ])
     def test_get_nodes(self, quiet_logger, yamlpath, results, mustexist, default):
         yamldata = """---
@@ -155,6 +158,7 @@ lots_of_names:
         ("/floats/[.<4.F]", True),
         ("/floats/[.>=4.F]", True),
         ("/floats/[.<=4.F]", True),
+        ("abc.**", True),
     ])
     def test_get_impossible_nodes_error(self, quiet_logger, yamlpath, mustexist):
         yamldata = """---
