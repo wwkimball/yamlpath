@@ -499,7 +499,7 @@ class Processor:
             if (matches and not invert) or (invert and not matches):
                 yield NodeCoords(data, parent, parentref)
 
-    # pylint: disable=locally-disabled,too-many-arguments
+    # pylint: disable=locally-disabled
     def _get_nodes_by_collector(
             self, data: Any, yaml_path: YAMLPath, segment_index: int,
             terms: CollectorTerms, **kwargs: Any
@@ -828,7 +828,7 @@ class Processor:
 
             yield NodeCoords(data, parent, parentref)
 
-    # pylint: disable=locally-disabled,too-many-statements,too-many-arguments
+    # pylint: disable=locally-disabled,too-many-statements
     def _get_optional_nodes(
             self, data: Any, yaml_path: YAMLPath, value: Any = None,
             depth: int = 0, **kwargs: Any
