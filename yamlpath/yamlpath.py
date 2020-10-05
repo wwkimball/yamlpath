@@ -415,7 +415,8 @@ class YAMLPath:
                     # been identified as a special type, assume it is a KEY.
                     if segment_type is None:
                         segment_type = PathSegmentTypes.KEY
-                    path_segments.append((segment_type, segment_id))
+                    path_segments.append(self._expand_splats(
+                        yaml_path, segment_id, segment_type))
                     segment_id = ""
 
                 demarc_stack.append(char)
@@ -650,7 +651,7 @@ class YAMLPath:
         """
         if '*' in segment_id:
             splat_count = segment_id.count("*")
-            splat_pos = segment_id.index('*')
+            splat_pos = segment_id.index("*")
             segment_len = len(segment_id)
             if splat_count == 1:
                 if segment_len == 1:
