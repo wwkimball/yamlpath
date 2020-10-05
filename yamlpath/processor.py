@@ -331,8 +331,8 @@ class Processor:
                 and isinstance(stripped_attrs, CollectorTerms)
         ):
             node_coords = self._get_nodes_by_collector(
-                data, yaml_path, segment_index, stripped_attrs,
-                parent, parentref)
+                data, yaml_path, segment_index,
+                yaml_path.unescaped[segment_index][1], parent, parentref)
         elif segment_type == PathSegmentTypes.TRAVERSE:
             node_coords = self._get_nodes_by_traversal(
                 data, yaml_path, segment_index, parent=parent,
@@ -596,6 +596,9 @@ class Processor:
             return
 
         node_coords = []    # A list of NodeCoords
+        self.logger.debug(
+            "Processor::_get_nodes_by_collector:  Getting required nodes"
+            " matching search expression:  {}".format(terms.expression))
         for node_coord in self._get_required_nodes(
                 data, YAMLPath(terms.expression), 0, parent, parentref):
             node_coords.append(node_coord)
