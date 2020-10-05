@@ -7,6 +7,10 @@ Enhancements:
   expands results from Collectors, effectively breaking them out from an Array-
   per-line to one-Scalar-per-line.  If you place this inside a Collector, the
   results will still be collected.
+* The * character now also serves as a wildcard character for key-names and
+  Array value comparisons, converting the segment to a Search.  For example, a
+  YAML Path like `abc.d*` becomes `abc[.^d]`, `abc.*f` becomes `abc[.$f]`, and
+  `abc.*e*` becomes `abc[.=~/^.*e.*$/]
 * Added a new YAML Path Segment Type:  **
   This new type is a "Traversal" segment which causes YAML Path operations to
   deeply traverse the document from that point.  When there are no further

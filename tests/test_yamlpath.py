@@ -27,6 +27,16 @@ class Test_path_Path():
         ("abc[def$ghi]", PathSeperators.AUTO, "abc[def$ghi]"),
         ("/abc[def%1]", PathSeperators.AUTO, "/abc[def%1]"),
         ("abc[def%'ghi']", PathSeperators.AUTO, "abc[def%ghi]"),
+        ("abc*", PathSeperators.AUTO, "[.^abc]"),
+        ("*def", PathSeperators.AUTO, "[.$def]"),
+        ("a*f", PathSeperators.AUTO, "[.=~/^a.*f$/]"),
+        ("a*f*z", PathSeperators.AUTO, "[.=~/^a.*f.*z$/]"),
+        ("a*f*z*", PathSeperators.AUTO, "[.=~/^a.*f.*z.*$/]"),
+        ("*", PathSeperators.AUTO, "[.!=]"),
+        ("*.*", PathSeperators.AUTO, "[.!=][.!=]"),
+        ("**", PathSeperators.AUTO, "**"),
+        ("/**/def", PathSeperators.AUTO, "/**/def"),
+        ("abc.**.def", PathSeperators.AUTO, "abc.**.def"),
     ])
     def test_str(self, yamlpath, pathsep, output):
         # Test twice to include cache hits
@@ -171,3 +181,8 @@ class Test_path_Path():
         with pytest.raises(YAMLPathException) as ex:
             str(YAMLPath("abc.'def"))
         assert -1 < str(ex.value).find("contains at least one unmatched demarcation mark")
+
+    def test_parse_meaningless_traversal(self):
+        with pytest.raises(YAMLPathException) as ex:
+            str(YAMLPath("abc**"))
+        assert -1 < str(ex.value).find("The ** traversal operator has no meaning when combined with other characters")

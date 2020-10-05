@@ -696,7 +696,7 @@ class YAMLPath:
                 coal_value = None
             elif splat_count > 1:
                 # Multi-wildcard search
-                search_term = ""
+                search_term = "^"
                 was_splat = False
                 for char in segment_id:
                     if char == "*":
@@ -710,6 +710,7 @@ class YAMLPath:
                     else:
                         was_splat = False
                         search_term += char
+                search_term += "$"
 
                 coal_type = PathSegmentTypes.SEARCH
                 coal_value = SearchTerms(
