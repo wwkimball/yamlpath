@@ -21,6 +21,8 @@ Enhancements:
 Bug Fixes:
 * Collectors were breaking search nodes with Regular Expressions, making it
   impossible for collected searches to return expected matches.
+* Fixed the Known Issue which was logged at version 2.4.0; setting override
+  key-value pairs now correctly update the DOM for aliases.
 
 API Changes:
 * The various protected _get_* methods of Processor were changed to reduce the
