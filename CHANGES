@@ -1,3 +1,23 @@
+2.5.0:
+Enhancements:
+* Added a new YAML Path Segment Type:  *
+  This is identical to a Search segment where the search term is `[.!=""]`.
+  This translates to "match every Hash key for which its name is not empty and
+  every Array element which is not empty".  This operator also vertically
+  expands results from Collectors, effectively breaking them out from an Array-
+  per-line to one-Scalar-per-line.  If you place this inside a Collector, the
+  results will still be collected.
+* Added a new YAML Path Segment Type:  **
+  This new type is a "Traversal" segment which causes YAML Path operations to
+  deeply traverse the document from that point.  When there are no further
+  segments in the YAML Path, every leaf node (Scalar value) is matched.  When
+  the YAML Path has at least one further segment, it must match nodes to return
+  or none are returned.  Results can be collected.
+
+Bug Fixes:
+* Collectors were breaking search nodes with Regular Expressions, making it
+  impossible for collected searches to return expected matches.
+
 2.4.3:
 Bug Fixes:
 * Array-of-Hashes were not being detected for the purpose of applying merge
