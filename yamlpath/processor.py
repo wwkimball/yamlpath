@@ -199,9 +199,8 @@ class Processor:
         * parent (ruamel.yaml node) The parent node from which this query
           originates
         * parentref (Any) The Index or Key of data within parent
-        * traverse_aoh (Boolean) Indicate whether KEY searches against Arrays-
-          of-Hashes are permitted to automatically traverse into the AoH;
-          Default=True
+        * traverse_lists (Boolean) Indicate whether KEY searches against lists
+          are permitted to automatically traverse into the list; Default=True
 
         Returns:  (Generator[Any, None, None]) Each node coordinate or list of
         node coordinates as they are matched.  You must check with isinstance()
@@ -221,14 +220,14 @@ class Processor:
 
         parent = kwargs.pop("parent", None)
         parentref = kwargs.pop("parentref", None)
-        traverse_aoh = kwargs.pop("traverse_aoh", True)
+        traverse_lists = kwargs.pop("traverse_lists", True)
         (segment_type, stripped_attrs) = segments[segment_index]
         (unesc_type, unesc_attrs) = yaml_path.unescaped[segment_index]
 
         node_coords: Any = None
         if segment_type == PathSegmentTypes.KEY:
             node_coords = self._get_nodes_by_key(
-                data, yaml_path, segment_index, traverse_aoh=traverse_aoh)
+                data, yaml_path, segment_index, traverse_lists=traverse_lists)
         elif segment_type == PathSegmentTypes.INDEX:
             node_coords = self._get_nodes_by_index(
                 data, yaml_path, segment_index)
@@ -240,7 +239,8 @@ class Processor:
                 and isinstance(stripped_attrs, SearchTerms)
         ):
             node_coords = self._get_nodes_by_search(
-                data, stripped_attrs, parent=parent, parentref=parentref)
+                data, stripped_attrs, parent=parent, parentref=parentref,
+                traverse_lists=traverse_lists)
         elif (
                 unesc_type == PathSegmentTypes.COLLECTOR
                 and isinstance(unesc_attrs, CollectorTerms)
@@ -274,16 +274,15 @@ class Processor:
         3. segment_index (int) Segment index of the YAML Path to process
 
         Keyword Arguments:
-        * traverse_aoh (Boolean) Indicate whether KEY searches against Arrays-
-          of-Hashes are permitted to automatically traverse into the AoH;
-          Default=True
+        * traverse_lists (Boolean) Indicate whether KEY searches against lists
+          are permitted to automatically traverse into the list; Default=True
 
         Returns:  (Generator[NodeCoords, None, None]) Each NodeCoords as they
         are matched
 
         Raises:  N/A
         """
-        traverse_aoh = kwargs.pop("traverse_aoh", True)
+        traverse_lists = kwargs.pop("traverse_lists", True)
 
         (_, stripped_attrs) = yaml_path.escaped[segment_index]
         str_stripped = str(stripped_attrs)
@@ -313,13 +312,13 @@ class Processor:
             except ValueError:
                 # Pass-through search against possible Array-of-Hashes, if
                 # allowed.
-                if not traverse_aoh:
+                if not traverse_lists:
                     return
 
                 for eleidx, element in enumerate(data):
                     for node_coord in self._get_nodes_by_path_segment(
                             element, yaml_path, segment_index, parent=data,
-                            parentref=eleidx, traverse_aoh=traverse_aoh):
+                            parentref=eleidx, traverse_lists=traverse_lists):
                         yield node_coord
 
     # pylint: disable=locally-disabled,too-many-locals
@@ -449,6 +448,8 @@ class Processor:
         * parent (ruamel.yaml node) The parent node from which this query
           originates
         * parentref (Any) The Index or Key of data within parent
+        * traverse_lists (Boolean) Indicate whether searches against lists are
+          permitted to automatically traverse into the list; Default=True
 
         Returns:  (Generator[NodeCoords, None, None]) Each NodeCoords as they
         are matched
@@ -463,11 +464,12 @@ class Processor:
 
         parent = kwargs.pop("parent", None)
         parentref = kwargs.pop("parentref", None)
+        traverse_lists = kwargs.pop("traverse_lists", True)
         invert = terms.inverted
         method = terms.method
         attr = terms.attribute
         term = terms.term
-        if isinstance(data, list):
+        if traverse_lists and isinstance(data, list):
             for lstidx, ele in enumerate(data):
                 if attr == '.':
                     matches = search_matches(method, term, ele)
@@ -693,7 +695,7 @@ class Processor:
                 " for a next-segment match at {}...".format(parentref))
             for node_coord in self._get_nodes_by_path_segment(
                 data, yaml_path, segment_index + 1, parent=parent,
-                parentref=parentref, traverse_aoh=False
+                parentref=parentref, traverse_lists=False
             ):
                 self.logger.debug(
                     "Processor::_get_nodes_by_traversal:  Yielding"
