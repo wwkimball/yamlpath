@@ -48,7 +48,12 @@ def processcli():
 
             The left-to-right order of YAML_FILEs is significant.  Except
             when this behavior is deliberately altered by your options, data
-            from files on the right overrides data in files to their left.
+            from files on the right overrides data in files to their left.  At
+            least two YAML_FILEs are required.  Only one may be the -
+            pseudo-file.  When only one YAML_FILE is provided, it cannot be the
+            - pseudo-file and in this special-case - will be inferred as the
+            second YAML_FILE as long as you are running this program without a
+            TTY.
             For more information about YAML Paths, please visit
             https://github.com/wwkimball/yamlpath."""
     )
@@ -135,9 +140,24 @@ def validateargs(args, log):
     has_errors = False
 
     # There must be at least two input files
-    if len(args.rhs_files) < 2:
+    input_file_count = len(args.rhs_files)
+    if (input_file_count == 0
+        or input_file_count == 1 and sys.stdin.isatty()
+        or input_file_count == 1 and args.rhs_files[0].strip() == '-'
+    ):
         has_errors = True
-        log.error("There must be at least two YAML_FILEs.")
+        log.error(
+            "There must be at least two YAML_FILEs and only one may be the -"
+            " pseudo-file, explicit or implied.")
+
+    # There can be only one -
+    found_dashes = 0
+    for infile in args.rhs_files:
+        if infile.strip() == '-':
+            found_dashes += 1
+    if found_dashes > 1:
+        has_errors = True
+        log.error("Only one YAML_FILE may be the - pseudo-file.")
 
     # When set, the configuration file must be a readable file
     if args.config and not (

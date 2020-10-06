@@ -17,6 +17,9 @@ Enhancements:
   segments in the YAML Path, every leaf node (Scalar value) is matched.  When
   the YAML Path has at least one further segment, it must match nodes to return
   or none are returned.  Results can be collected.
+* The yaml-merge and yaml-get command-line tools now treat the - pseudo-file as
+  optional.  If the terminal is not a TTY, any waiting (piped or
+  read-from-file) data is read as a YAML/Compatible document.
 
 Bug Fixes:
 * Collectors were breaking search nodes with Regular Expressions, making it
