@@ -57,6 +57,12 @@ def processcli():
         help="indicate which YAML Path seperator to use when rendering\
               results; default=dot")
 
+    parser.add_argument(
+        "-S", "--nostdin", action="store_true",
+        help=(
+            "Do not implicitly read from STDIN, even when YAML_FILE is not set"
+            " and the session is non-TTY"))
+
     eyaml_group = parser.add_argument_group(
         "EYAML options", "Left unset, the EYAML keys will default to your\
          system or user defaults.  Both keys must be set either here or in\
@@ -84,7 +90,10 @@ def processcli():
 
     parser.add_argument(
         "yaml_file", metavar="YAML_FILE",
-        help="the YAML file to query; use - to read from STDIN")
+        nargs="?",
+        help="the YAML file to query; use - to read from STDIN or leave empty"
+             " and send content via a non-TTY session")
+
     return parser.parse_args()
 
 def validateargs(args, log):
@@ -92,7 +101,12 @@ def validateargs(args, log):
     has_errors = False
 
     # Enforce sanity
-    # * When set, --privatekey must be a readable file
+    # When there is no YAML_FILE and no STDIN, there is nothing to read
+    if not args.yaml_file and (sys.stdin.isatty() or args.nostdin):
+        has_errors = True
+        log.error("YAML_FILE must be set or be read from STDIN.")
+
+    # When set, --privatekey must be a readable file
     if args.privatekey and not (
             isfile(args.privatekey) and access(args.privatekey, R_OK)
     ):
@@ -101,7 +115,7 @@ def validateargs(args, log):
             "EYAML private key is not a readable file:  " + args.privatekey
         )
 
-    # * When set, --publickey must be a readable file
+    # When set, --publickey must be a readable file
     if args.publickey and not (
             isfile(args.publickey) and access(args.publickey, R_OK)
     ):
@@ -110,9 +124,9 @@ def validateargs(args, log):
             "EYAML public key is not a readable file:  " + args.publickey
         )
 
-    # * When either --publickey or --privatekey are set, the other must also
-    #   be.  This is because the `eyaml` command requires them both when
-    #   decrypting values.
+    # When either --publickey or --privatekey are set, the other must also
+    # be.  This is because the `eyaml` command requires them both when
+    # decrypting values.
     if (
             (args.publickey and not args.privatekey)
             or (args.privatekey and not args.publickey)
@@ -134,7 +148,9 @@ def main():
     yaml = get_yaml_editor()
 
     # Attempt to open the YAML file; check for parsing errors
-    yaml_data = get_yaml_data(yaml, log, args.yaml_file)
+    yaml_data = get_yaml_data(
+        yaml, log,
+        args.yaml_file if args.yaml_file else "-")
     if yaml_data is None:
         # An error message has already been logged
         sys.exit(1)

@@ -18,8 +18,8 @@ Enhancements:
   the YAML Path has at least one further segment, it must match nodes to return
   or none are returned.  Results can be collected.
 * The yaml-merge and yaml-get command-line tools now treat the - pseudo-file as
-  optional.  If the terminal is not a TTY, any waiting (piped or
-  read-from-file) data is read as a YAML/Compatible document.
+  implicit when NOT specified AND the session is non-TTY.  This can be blocked
+  with --nostdin|-S.
 
 Bug Fixes:
 * Collectors were breaking search nodes with Regular Expressions, making it

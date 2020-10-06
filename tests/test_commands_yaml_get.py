@@ -8,14 +8,14 @@ class Test_yaml_get():
     command = "yaml-get"
 
     def test_no_options(self, script_runner):
-        result = script_runner.run(self.command)
+        result = script_runner.run(self.command, "--nostdin")
         assert not result.success, result.stderr
-        assert "the following arguments are required: -p/--query, YAML_FILE" in result.stderr
+        assert "the following arguments are required: -p/--query" in result.stderr
 
     def test_no_input_file(self, script_runner):
-        result = script_runner.run(self.command, "--query='/test'")
+        result = script_runner.run(self.command, "--nostdin", "--query='/test'")
         assert not result.success, result.stderr
-        assert "the following arguments are required: YAML_FILE" in result.stderr
+        assert "YAML_FILE must be set or be read from STDIN" in result.stderr
 
     def test_bad_input_file(self, script_runner):
         result = script_runner.run(self.command, "--query='/test'", "no-such-file")

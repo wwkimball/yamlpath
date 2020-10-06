@@ -344,9 +344,9 @@ when -b/--backup is specified).
 
 ```text
 usage: yaml-get [-h] [-V] -p YAML_PATH
-                [-t ['.', '/', 'auto', 'dot', 'fslash']] [-x EYAML]
+                [-t ['.', '/', 'auto', 'dot', 'fslash']] [-S] [-x EYAML]
                 [-r PRIVATEKEY] [-u PUBLICKEY] [-d | -v | -q]
-                YAML_FILE
+                [YAML_FILE]
 
 Retrieves one or more values from a YAML file at a specified YAML Path. Output
 is printed to STDOUT, one line per result. When a result is a complex data-
@@ -354,7 +354,8 @@ type (Array or Hash), a JSON dump is produced to represent it. EYAML can be
 employed to decrypt the values.
 
 positional arguments:
-  YAML_FILE             the YAML file to query; use - to read from STDIN
+  YAML_FILE             the YAML file to query; use - to read from STDIN or
+                        leave empty and send content via a non-TTY session
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -362,6 +363,8 @@ optional arguments:
   -t ['.', '/', 'auto', 'dot', 'fslash'], --pathsep ['.', '/', 'auto', 'dot', 'fslash']
                         indicate which YAML Path seperator to use when
                         rendering results; default=dot
+  -S, --nostdin         Do not implicitly read from STDIN, even when YAML_FILE
+                        is not set and the session is non-TTY
   -d, --debug           output debugging details
   -v, --verbose         increase output verbosity
   -q, --quiet           suppress all output except errors
