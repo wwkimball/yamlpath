@@ -25,7 +25,7 @@ from yamlpath.exceptions import YAMLPathException
 from yamlpath.wrappers import ConsolePrinter
 
 # Implied Constants
-MY_VERSION = "0.0.4"
+MY_VERSION = "0.1.0"
 
 def processcli():
     """Process command-line arguments."""
@@ -53,7 +53,7 @@ def processcli():
             pseudo-file.  When only one YAML_FILE is provided, it cannot be the
             - pseudo-file and in this special-case - will be inferred as the
             second YAML_FILE as long as you are running this program without a
-            TTY.
+            TTY (unless you set --nostdin|-S).
             For more information about YAML Paths, please visit
             https://github.com/wwkimball/yamlpath."""
     )
@@ -115,6 +115,12 @@ def processcli():
             "Write the merged result to the indicated file (or\n"
             "STDOUT when unset)"))
 
+    parser.add_argument(
+        "-S", "--nostdin", action="store_true",
+        help=(
+            "Do not implicitly read from STDIN, even when there are\n"
+            "no - pseudo-files in YAML_FILEs with a non-TTY session"))
+
     noise_group = parser.add_mutually_exclusive_group()
     noise_group.add_argument(
         "-d", "--debug", action="store_true",
@@ -142,8 +148,10 @@ def validateargs(args, log):
     # There must be at least two input files
     input_file_count = len(args.rhs_files)
     if (input_file_count == 0
-        or input_file_count == 1 and sys.stdin.isatty()
-        or input_file_count == 1 and args.rhs_files[0].strip() == '-'
+        or input_file_count == 1 and (
+            sys.stdin.isatty()
+            or args.rhs_files[0].strip() == '-'
+            or args.nostdin)
     ):
         has_errors = True
         log.error(
@@ -151,11 +159,11 @@ def validateargs(args, log):
             " pseudo-file, explicit or implied.")
 
     # There can be only one -
-    found_dashes = 0
+    pseudofile_count = 0
     for infile in args.rhs_files:
         if infile.strip() == '-':
-            found_dashes += 1
-    if found_dashes > 1:
+            pseudofile_count += 1
+    if pseudofile_count > 1:
         has_errors = True
         log.error("Only one YAML_FILE may be the - pseudo-file.")
 
@@ -185,6 +193,35 @@ def validateargs(args, log):
 
 def main():
     """Main code."""
+    def process_rhs(rhs_file: str):
+        # Except for - (STDIN), each YAML_FILE must actually be a file; because
+        # merge data is expected, this is a fatal failure.
+        if rhs_file != "-" and not isfile(rhs_file):
+            log.error("Not a file:  {}".format(rhs_file))
+            return 2
+
+        log.info("Processing {}..."
+                 .format("STDIN" if rhs_file == "-" else rhs_file))
+
+        # Try to open the file; failures are fatal
+        rhs_data = get_yaml_data(rhs_yaml, log, rhs_file)
+        if rhs_data is None:
+            # An error message has already been logged
+            return 3
+
+        # Merge the new RHS into the prime LHS
+        exit_state = 0
+        try:
+            merger.merge_with(rhs_data)
+        except MergeException as mex:
+            log.error(mex)
+            exit_state = 4
+        except YAMLPathException as yex:
+            log.error(yex)
+            exit_state = 5
+
+        return exit_state
+
     args = processcli()
     log = ConsolePrinter(args)
     validateargs(args, log)
@@ -193,6 +230,7 @@ def main():
     fileiterator = iter(args.rhs_files)
     prime_yaml = get_yaml_editor()
     prime_file = next(fileiterator)
+    consumed_stdin = prime_file.strip() == '-'
     prime_data = get_yaml_data(prime_yaml, log, prime_file)
     if prime_data is None:
         # An error message has already been logged
@@ -214,32 +252,18 @@ def main():
     exit_state = 0
     rhs_yaml = get_yaml_editor()
     for rhs_file in fileiterator:
-        # Except for - (STDIN), each YAML_FILE must actually be a file; because
-        # merge data is expected, this is a fatal failure.
-        if rhs_file != "-" and not isfile(rhs_file):
-            log.error("Not a file:  {}".format(rhs_file))
-            exit_state = 2
+        proc_state = process_rhs(rhs_file)
+
+        if rhs_file.strip() == '-':
+            consumed_stdin = True
+
+        if proc_state != 0:
+            exit_state = proc_state
             break
 
-        log.info("Processing {}..."
-                 .format("STDIN" if rhs_file == "-" else rhs_file))
-
-        # Try to open the file; failures are fatal
-        rhs_data = get_yaml_data(rhs_yaml, log, rhs_file)
-        if rhs_data is None:
-            # An error message has already been logged
-            exit_state = 3
-            break
-
-        # Merge the new RHS into the prime LHS
-        try:
-            merger.merge_with(rhs_data)
-        except MergeException as mex:
-            log.error(mex)
-            exit_state = 4
-        except YAMLPathException as yex:
-            log.error(yex)
-            exit_state = 5
+    # Check for a waiting STDIN document
+    if not consumed_stdin and not args.nostdin and not sys.stdin.isatty():
+        exit_state = process_rhs('-')
 
     # Output the final document
     if exit_state == 0:

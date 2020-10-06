@@ -13,7 +13,7 @@ class Test_commands_yaml_merge():
         assert "the following arguments are required: YAML_FILE" in result.stderr
 
     def test_missing_input_file_arg(self, script_runner):
-        result = script_runner.run(self.command, "no-file.yaml")
+        result = script_runner.run(self.command, "--nostdin", "no-file.yaml")
         assert not result.success, result.stderr
         assert "There must be at least two YAML_FILEs" in result.stderr
 
@@ -104,6 +104,7 @@ hash:
 
         result = script_runner.run(
             self.command
+            , "--nostdin"
             , lhs_file
             , rhs_file)
         assert result.success, result.stderr
@@ -140,6 +141,7 @@ hash:
 
         result = script_runner.run(
             self.command
+            , "--nostdin"
             , "--output={}".format(output_file)
             , lhs_file
             , rhs_file)
@@ -220,3 +222,11 @@ new_key: New value
             , rhs_file)
         assert not result.success, result.stderr
         assert "Unexpected use of ~ operator" in result.stderr
+
+    def test_too_many_pseudofiles(self, script_runner):
+        result = script_runner.run(
+            self.command
+            , '-'
+            , '-')
+        assert not result.success, result.stderr
+        assert "Only one YAML_FILE may be the - pseudo-file" in result.stderr

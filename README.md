@@ -391,7 +391,7 @@ https://github.com/wwkimball/yamlpath.
 usage: yaml-merge [-h] [-V] [-c CONFIG] [-a {stop,left,right,rename}]
                   [-A {all,left,right,unique}] [-H {deep,left,right}]
                   [-O {all,deep,left,right,unique}] [-m YAML_PATH] [-o OUTPUT]
-                  [-d | -v | -q]
+                  [-S] [-d | -v | -q]
                   YAML_FILE [YAML_FILE ...]
 
 Merges two or more YAML/Compatible files together.
@@ -431,6 +431,8 @@ optional arguments:
   -o OUTPUT, --output OUTPUT
                         Write the merged result to the indicated file (or
                         STDOUT when unset)
+  -S, --nostdin         Do not implicitly read from STDIN, even when there are
+                        no - pseudo-files in YAML_FILEs with a non-TTY session
   -d, --debug           output debugging details
   -v, --verbose         increase output verbosity
   -q, --quiet           suppress all output except errors (implied when
@@ -451,7 +453,12 @@ optional arguments:
 
             The left-to-right order of YAML_FILEs is significant.  Except
             when this behavior is deliberately altered by your options, data
-            from files on the right overrides data in files to their left.
+            from files on the right overrides data in files to their left.  At
+            least two YAML_FILEs are required.  Only one may be the -
+            pseudo-file.  When only one YAML_FILE is provided, it cannot be the
+            - pseudo-file and in this special-case - will be inferred as the
+            second YAML_FILE as long as you are running this program without a
+            TTY (unless you set --nostdin|-S).
             For more information about YAML Paths, please visit
             https://github.com/wwkimball/yamlpath.
 ```

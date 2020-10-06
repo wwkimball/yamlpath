@@ -36,6 +36,11 @@ API Changes:
   optional anyway, this is not deemed a breaking change; no one should have
   been directly calling them.
 
+To reflect these changes:
+* yaml-get is now version 1.2.0
+* yaml-set is now version 1.1.0
+* yaml-merge is now version 0.1.0
+
 2.4.3:
 Bug Fixes:
 * Array-of-Hashes were not being detected for the purpose of applying merge
