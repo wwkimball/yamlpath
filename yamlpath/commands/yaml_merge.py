@@ -10,6 +10,7 @@ import sys
 import argparse
 from os import access, R_OK
 from os.path import isfile, exists
+from typing import Any
 
 from yamlpath.merger.enums import (
     AnchorConflictResolutions,
@@ -193,7 +194,7 @@ def validateargs(args, log):
 
 def main():
     """Main code."""
-    def process_rhs(rhs_file: str):
+    def process_rhs(rhs_yaml: Any, rhs_file: str):
         # Except for - (STDIN), each YAML_FILE must actually be a file; because
         # merge data is expected, this is a fatal failure.
         if rhs_file != "-" and not isfile(rhs_file):
@@ -252,7 +253,7 @@ def main():
     exit_state = 0
     rhs_yaml = get_yaml_editor()
     for rhs_file in fileiterator:
-        proc_state = process_rhs(rhs_file)
+        proc_state = process_rhs(rhs_yaml, rhs_file)
 
         if rhs_file.strip() == '-':
             consumed_stdin = True
@@ -263,10 +264,11 @@ def main():
 
     # Check for a waiting STDIN document
     if not consumed_stdin and not args.nostdin and not sys.stdin.isatty():
-        exit_state = process_rhs('-')
+        exit_state = process_rhs(rhs_yaml, '-')
 
     # Output the final document
     if exit_state == 0:
+        merger.configure_writer_for_dump(prime_yaml)
         if args.output:
             with open(args.output, 'w') as yaml_dump:
                 prime_yaml.dump(merger.data, yaml_dump)

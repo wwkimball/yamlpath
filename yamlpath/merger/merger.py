@@ -9,15 +9,15 @@ import ruamel.yaml # type: ignore
 from ruamel.yaml.scalarstring import ScalarString
 from ruamel.yaml.comments import CommentedSeq, CommentedMap
 
+from yamlpath.func import append_list_element, quote_every_string
 from yamlpath.wrappers import ConsolePrinter, NodeCoords
 from yamlpath.merger.exceptions import MergeException
 from yamlpath.merger.enums import (
     AnchorConflictResolutions,
     AoHMergeOpts,
     ArrayMergeOpts,
-    HashMergeOpts
+    HashMergeOpts,
 )
-from yamlpath.func import append_list_element
 from yamlpath.merger import MergerConfig
 from yamlpath import YAMLPath, Processor
 
@@ -471,6 +471,36 @@ class Merger:
             raise MergeException(
                 "A merge was not performed.  Ensure your target path matches"
                 " at least one node in the left document(s).", insert_at)
+
+    def configure_writer_for_dump(self, yaml_writer: Any) -> None:
+        """
+        Prepare this merged document and its writer for final rendering.
+
+        This coallesces the YAML writer's settings to, in particular,
+        distinguish between YAML and JSON.  It will also force demarcation of
+        every String key and value within the document when the output will be
+        JSON.
+        """
+        # Check whether the document root is in flow or block format.
+        is_flow = False
+        if hasattr(self.data, "fa"):
+            is_flow = self.data.fa.flow_style()
+        else:
+            is_flow = True
+
+        # When it is flow, check for an Anchor.
+        # When there is an anchor, block format must be used.
+        if is_flow:
+            data_anchors: Dict[str, Any] = {}
+            Merger.scan_for_anchors(self.data, data_anchors)
+            is_flow = len(data_anchors) < 1
+
+        # Otherwise, flow requires the writer to not emit a YAML marker.
+        if is_flow:
+            yaml_writer.explicit_start = False
+            self.data = quote_every_string(self.data)
+        else:
+            yaml_writer.explicit_start = True
 
     @classmethod
     def set_flow_style(cls, node: Any, is_flow: bool) -> None:

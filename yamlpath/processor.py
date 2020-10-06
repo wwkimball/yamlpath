@@ -1050,8 +1050,8 @@ class Processor:
         def recurse(data, parent, parentref, reference_node, replacement_node):
             if isinstance(data, dict):
                 for i, k in [
-                        (idx, key) for idx, key in
-                        enumerate(data.keys()) if key is reference_node
+                        (idx, key) for idx, key in enumerate(data.keys())
+                        if key is reference_node
                 ]:
                     data.insert(i, replacement_node, data.pop(k))
                 for k, val in data.items():

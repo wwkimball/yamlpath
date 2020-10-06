@@ -388,6 +388,7 @@ EYAML options:
 For more information about YAML Paths, please visit
 https://github.com/wwkimball/yamlpath.
 ```
+
 * [yaml-merge](yamlpath/commands/yaml_merge.py)
 
 ```text

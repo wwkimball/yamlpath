@@ -91,6 +91,8 @@ def get_yaml_data(parser: Any, logger: ConsolePrinter, source: str) -> Any:
                      .format(str(ex.problem_mark).lstrip(), ex.problem))
         yaml_data = None
     except ComposerError as ex:
+        # TODO:  ERROR:  YAML composition error in "combo.json", line 12, column 1:  but found another document
+        # TODO:  ERROR:  YAML composition error in "combo.yaml", line 16, column 1:  but found another document
         logger.error("YAML composition error {}:  {}"
                      .format(str(ex.problem_mark).lstrip(), ex.problem))
         yaml_data = None
@@ -586,4 +588,32 @@ def unwrap_node_coords(data: Any) -> Any:
             stripped_nodes.append(unwrap_node_coords(ele))
         return stripped_nodes
 
+    return data
+
+def quote_every_string(data: Any) -> Any:
+    """Recursively quote every String in a DOM (presumably for JSON)."""
+    if isinstance(data, dict):
+        # Quote every unquoted string key
+        for key_idx, key_name in [
+            (idx, key)
+            for idx, key in enumerate(data.keys())
+            if isinstance(key, str)
+                and not isinstance(key, (DoubleQuotedScalarString,
+                                         SingleQuotedScalarString))
+        ]:
+            data.insert(
+                key_idx, DoubleQuotedScalarString(key_name),
+                data.pop(key_name))
+
+        # Quote every unquoted string value
+        for key, val in data.items():
+            data[key] = quote_every_string(val)
+    elif isinstance(data, list):
+        for idx, ele in enumerate(data):
+            data[idx] = quote_every_string(ele)
+    elif (isinstance(data, str)
+          and not isinstance(data, (DoubleQuotedScalarString,
+                                    SingleQuotedScalarString))
+    ):
+        return DoubleQuotedScalarString(data)
     return data
