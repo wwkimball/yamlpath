@@ -58,58 +58,28 @@ def get_yaml_editor() -> Any:
     yaml.width = maxsize            # type: ignore
     return yaml
 
-# pylint: disable=locally-disabled,too-many-branches,too-many-statements,too-many-locals
-def get_yaml_data(
-    parser: Any, logger: ConsolePrinter, source: str, **kwargs: Any
-) -> Any:
+# pylint: disable=locally-disabled,too-many-branches,too-many-statements
+def get_yaml_data(parser: Any, logger: ConsolePrinter, source: str) -> Any:
     """
     Parse YAML/Compatible data and return the ruamel.yaml object result.
 
     All known issues are caught and distinctively logged.  Returns None when
     the data could not be loaded.
-
-    Parameters:
-    1. parser (ruamel.yaml.YAML) The YAML data parser
-    2. logger (ConsolePrinter) The logging facility
-    3. source (str) The source file to load; can be - for reading from STDIN
-
-    Keyword Arguments:
-    * allow_multidoc (bool) True = permit automatic multi-document (multiple
-      YAML/JSON/Compatible documents within a single file) loading; False = do
-      not allow automatic switching from a single- to a multi-document load;
-      default=False
-    * load_multidoc (bool) True = perform a multi-document load; False = load
-      only a single-document file; default=False
     """
     yaml_data = None
-    allow_multidoc = kwargs.pop("allow_multidoc", False)
-    load_multidoc = kwargs.pop("load_multidoc", False)
-
-    logger.debug(
-        "get_yaml_data:  Running with allow_multidoc={}, load_multidoc={}"
-        " against source {}.".format(allow_multidoc, load_multidoc, source))
 
     # This code traps errors and warnings from ruamel.yaml, substituting
     # lengthy stack-dumps with specific, meaningful feedback.  Further, some
     # warnings are treated as errors by ruamel.yaml, so these are also
     # coallesced into cleaner feedback.
-    load_method = parser.load_all if load_multidoc else parser.load
     try:
         with warnings.catch_warnings():
             warnings.filterwarnings("error")
             if source == "-":
-                yaml_data = load_method(stdin.read())
+                yaml_data = parser.load(stdin.read())
             else:
                 with open(source, 'r') as fhnd:
-                    if load_multidoc:
-                        for document in load_method(fhnd):
-                            logger.debug(
-                                "get_yaml_data: Yielding document from {}:"
-                                .format(source))
-                            logger.debug(document)
-                            yield document
-                        return
-                    yaml_data = load_method(fhnd)
+                    yaml_data = parser.load(fhnd)
     except KeyboardInterrupt:
         logger.error("Aborting data load due to keyboard interrupt!")
         yaml_data = None
@@ -121,22 +91,10 @@ def get_yaml_data(
                      .format(str(ex.problem_mark).lstrip(), ex.problem))
         yaml_data = None
     except ComposerError as ex:
-        if (allow_multidoc
-            and not load_multidoc
-            and "found another document" in ex.problem
-        ):
-            for document in get_yaml_data(
-                parser, logger, source, load_multidoc=True
-            ):
-                logger.debug(
-                    "get_yaml_data: Subyielding document from {}:"
-                    .format(source))
-                logger.debug(document)
-                yield document
-            return
-
+        # TODO:  ERROR:  YAML composition error in "combo.json", line 12, column 1:  but found another document
+        # TODO:  ERROR:  YAML composition error in "combo.yaml", line 16, column 1:  but found another document
         logger.error("YAML composition error {}:  {}"
-                    .format(str(ex.problem_mark).lstrip(), ex.problem))
+                     .format(str(ex.problem_mark).lstrip(), ex.problem))
         yaml_data = None
     except ConstructorError as ex:
         logger.error("YAML construction error {}:  {}"
@@ -175,8 +133,6 @@ def get_yaml_data(
                          .replace("\n", "\n   ")))
         yaml_data = None
 
-    logger.debug("get_yaml_data: Returning document from {}:".format(source))
-    logger.debug(yaml_data)
     return yaml_data
 
 def build_next_node(yaml_path: YAMLPath, depth: int,
