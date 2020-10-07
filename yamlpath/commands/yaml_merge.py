@@ -8,9 +8,9 @@ Copyright 2020 William W. Kimball, Jr. MBA MSIS
 """
 import sys
 import argparse
+import json
 from os import access, R_OK
 from os.path import isfile, exists
-from types import GeneratorType
 from typing import Any
 
 from yamlpath.merger.enums import (
@@ -241,9 +241,17 @@ def main():
     log = ConsolePrinter(args)
     validateargs(args, log)
 
+    # Is the output JSON?
+    document_format = OutputDocTypes.from_str(args.document_format)
+    output_is_json = document_format is OutputDocTypes.JSON
+    output_is_yaml = not output_is_json
+
     # The first input file is the prime
     fileiterator = iter(args.rhs_files)
-    prime_yaml = get_yaml_editor()
+    prime_yaml = get_yaml_editor(
+        explode_aliases=output_is_json,
+        preserve_quotes=output_is_yaml
+    )
     prime_file = next(fileiterator)
     consumed_stdin = prime_file.strip() == '-'
     got_prime_data = False
@@ -295,10 +303,16 @@ def main():
     if exit_state == 0:
         merger.prepare_for_dump(prime_yaml)
         if args.output:
-            with open(args.output, 'w') as yaml_dump:
-                prime_yaml.dump(merger.data, yaml_dump)
+            with open(args.output, 'w') as out_fhnd:
+                if output_is_json:
+                    json.dump(merger.data, out_fhnd)
+                else:
+                    prime_yaml.dump(merger.data, out_fhnd)
         else:
-            prime_yaml.dump(merger.data, sys.stdout)
+            if output_is_json:
+                json.dump(merger.data, sys.stdout)
+            else:
+                prime_yaml.dump(merger.data, sys.stdout)
 
     sys.exit(exit_state)
 

@@ -39,23 +39,42 @@ from yamlpath.types import PathAttributes
 from yamlpath.path import SearchTerms
 from yamlpath import YAMLPath
 
-def get_yaml_editor() -> Any:
+def get_yaml_editor(**kwargs: Any) -> Any:
     """
     Build and return a generic YAML editor based on ruamel.yaml.
 
     Parameters:  N/A
 
+    Keyword Arguments:
+    * explicit_start (bool) True = ensure the YAML Start-of-Document marker
+      (---<EOL>) is written in the output; False = remove it; default=True
+    * explode_aliases (bool) True = convert all aliases (*name) and YAML merge
+      operators (<<: *name) to their referenced content, removing the aliases
+      and merge operators; False = maintain the references; default=False
+    * preserve_quotes (bool) True = retain any and all quoting of keys and
+      values including whatever demarcation symbol was used (" versus ');
+      False = only quote values when necessary, removing unnecessary
+      demarcation; default=True
+
     Returns (Any) The ready-for-use YAML editor.
 
     Raises:  N/A
     """
+    explicit_start = kwargs.pop("explicit_start", True)
+    explode_aliases = kwargs.pop("explode_aliases", False)
+    preserve_quotes = kwargs.pop("preserve_quotes", True)
+
     # The ruamel.yaml class appears to be missing some typing data, so these
     # valid assignments cannot be type-checked.
     yaml = YAML()
     yaml.indent(mapping=2, sequence=4, offset=2)
-    yaml.explicit_start = True      # type: ignore
-    yaml.preserve_quotes = True     # type: ignore
-    yaml.width = maxsize            # type: ignore
+    yaml.explicit_start = explicit_start       # type: ignore
+    yaml.preserve_quotes = preserve_quotes     # type: ignore
+    yaml.width = maxsize                       # type: ignore
+
+    if explode_aliases:
+        yaml.default_flow_style = False
+
     return yaml
 
 # pylint: disable=locally-disabled,too-many-branches,too-many-statements
