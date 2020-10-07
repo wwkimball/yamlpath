@@ -101,26 +101,26 @@ def get_yaml_data(parser: Any, logger: ConsolePrinter, source: str) -> Any:
                     yaml_data = parser.load(fhnd)
     except KeyboardInterrupt:
         logger.error("Aborting data load due to keyboard interrupt!")
-        yaml_data = None
+        yaml_data = False
     except FileNotFoundError:
         logger.error("File not found:  {}".format(source))
-        yaml_data = None
+        yaml_data = False
     except ParserError as ex:
         logger.error("YAML parsing error {}:  {}"
                      .format(str(ex.problem_mark).lstrip(), ex.problem))
-        yaml_data = None
+        yaml_data = False
     except ComposerError as ex:
         logger.error("YAML composition error {}:  {}"
                      .format(str(ex.problem_mark).lstrip(), ex.problem))
-        yaml_data = None
+        yaml_data = False
     except ConstructorError as ex:
         logger.error("YAML construction error {}:  {}"
                      .format(str(ex.problem_mark).lstrip(), ex.problem))
-        yaml_data = None
+        yaml_data = False
     except ScannerError as ex:
         logger.error("YAML syntax error {}:  {}"
                      .format(str(ex.problem_mark).lstrip(), ex.problem))
-        yaml_data = None
+        yaml_data = False
     except DuplicateKeyError as dke:
         omits = [
             "while constructing", "To suppress this", "readthedocs",
@@ -141,14 +141,14 @@ def get_yaml_data(parser: Any, logger: ConsolePrinter, source: str) -> Any:
                 newmsg += "\n   " + line
         logger.error("Duplicate Hash key detected:  {}"
                      .format(newmsg))
-        yaml_data = None
+        yaml_data = False
     except ReusedAnchorWarning as raw:
         logger.error("Duplicate YAML Anchor detected:  {}"
                      .format(
                          str(raw)
                          .replace("occurrence   ", "occurrence ")
                          .replace("\n", "\n   ")))
-        yaml_data = None
+        yaml_data = False
 
     return yaml_data
 
