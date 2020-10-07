@@ -1,4 +1,4 @@
-2.5.0:
+3.0.0:
 Enhancements:
 * Added a new YAML Path Segment Type:  *
   This is identical to a Search segment where the search term is `[.!=""]`.
@@ -58,7 +58,7 @@ Bug Fixes:
   a YAML document start mark (---) and then a hybrid JSON/YAML result rather
   than valid JSON.
 
-API Changes:
+Non-Breaking API Changes:
 * The various protected _get_* methods of Processor were changed to reduce the
   number of positional parameters while also allowing for new special-use
   parameters for future changes.  The formerly optional positional `parent` and
@@ -68,7 +68,28 @@ API Changes:
   been directly calling them.
 * The get_yaml_editor function now supports several keyword arguments which
   provide for some customization of the returned ruamel.yaml.YAML instance.
-  See its documentation for details.
+  See its documentation for details.  This is a non-breaking change as the
+  defaults for each new keyword argument set the behavior identical to what it
+  was before this change.
+* The get_yaml_data function now returns False rather than None when there is
+  an issue attempting to load data.  This is because an empty-but-viable
+  document correctly returns None but there is no valid YAML or JSON document
+  which can be comprised only of a Scalar Boolean.  This is a non-breaking
+  change because None and False are equivalent for code like:
+  ```python
+  data = get_yaml_data(get_yaml_editor(), ConsoleLogger(), "file.yaml")
+  if not data:
+    print("No data")
+  ```
+  However, you can now differentiate between "No data" and "Invalid document"
+  like so:
+  ```python
+  data = get_yaml_data(get_yaml_editor(), ConsoleLogger(), "file.yaml")
+  if data is None:
+    print("No data")
+  elif not data:
+    print("Invalid document")
+  ```
 
 To reflect these changes:
 * yaml-get is now version 1.2.0

@@ -110,8 +110,6 @@ def get_yaml_data(parser: Any, logger: ConsolePrinter, source: str) -> Any:
                      .format(str(ex.problem_mark).lstrip(), ex.problem))
         yaml_data = None
     except ComposerError as ex:
-        # TODO:  ERROR:  YAML composition error in "combo.json", line 12, column 1:  but found another document
-        # TODO:  ERROR:  YAML composition error in "combo.yaml", line 16, column 1:  but found another document
         logger.error("YAML composition error {}:  {}"
                      .format(str(ex.problem_mark).lstrip(), ex.problem))
         yaml_data = None
