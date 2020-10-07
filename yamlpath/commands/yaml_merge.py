@@ -149,7 +149,7 @@ def processcli():
             "-o|--output is not set)"))
 
     parser.add_argument(
-        "rhs_files", metavar="YAML_FILE", nargs="+",
+        "rhs_files", metavar="YAML_FILE", nargs="*",
         help=(
             "one or more YAML files to merge, order-significant;\n"
             "use - to read from STDIN"))
@@ -159,18 +159,16 @@ def validateargs(args, log):
     """Validate command-line arguments."""
     has_errors = False
 
-    # There must be at least two input files
+    # There must be at least one input file or stream
     input_file_count = len(args.rhs_files)
-    if (input_file_count == 0
-        or input_file_count == 1 and (
+    if (input_file_count == 0 and (
             sys.stdin.isatty()
             or args.rhs_files[0].strip() == '-'
             or args.nostdin)
     ):
         has_errors = True
         log.error(
-            "There must be at least two YAML_FILEs and only one may be the -"
-            " pseudo-file, explicit or implied.")
+            "There must be at least one YAML_FILE.")
 
     # There can be only one -
     pseudofile_count = 0
@@ -245,6 +243,7 @@ def main():
     # Is the output JSON?
     document_format = OutputDocTypes.from_str(args.document_format)
     output_file = args.output
+    output_is_json = False
     if output_file:
         output_is_json = Path(output_file).suffix.lower() == ".json"
     document_is_json = document_format is OutputDocTypes.JSON or output_is_json

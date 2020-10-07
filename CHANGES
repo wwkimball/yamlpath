@@ -40,6 +40,11 @@ Enhancements:
   {"document": 1}
   {"document": 2}
   ```
+* Because any document to yaml-merge can be a multi-document, it no longer
+  requires at least 2 YAML_FILEs be supplied on the command-line.  If users
+  pass only a single file or stream, its content will merely be written out
+  without any merging into it.  This can be useful for trivially converting
+  YAML to JSON or JSON to YAML.
 
 Bug Fixes:
 * Collectors were breaking search nodes with Regular Expressions, making it
@@ -59,6 +64,9 @@ API Changes:
   Because these were all protected methods and the affected parameters were
   optional anyway, this is not deemed a breaking change; no one should have
   been directly calling them.
+* The get_yaml_editor function now supports several keyword arguments which
+  provide for some customization of the returned ruamel.yaml.YAML instance.
+  See its documentation for details.
 
 To reflect these changes:
 * yaml-get is now version 1.2.0
