@@ -1003,9 +1003,10 @@ except MergeException as mex:
 except YAMLPathException as yex:
     log.critical(yex, 130)
 
-# At this point, merger.data is the merged result; do what you will with it.
-# When you are ready to dump (write) out the merged data, you must prepare the
-# document and your ruamel.yaml.YAML instance -- usually obtained from
-# func.get_yaml_editor() -- like this:
+# At this point, merger.data is the merged result; do what you will with it,
+# including merging more data into it.  When you are ready to dump (write)
+# out the merged data, you must prepare the document and your
+# ruamel.yaml.YAML instance -- usually obtained from func.get_yaml_editor()
+# -- like this:
 merger.prepare_for_dump(my_yaml_editor)
 ```

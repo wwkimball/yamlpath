@@ -24,12 +24,22 @@ Enhancements:
   without being forced to specify the - pseudo-file as an argument to them.
 * The yaml-merge command now enables users to force the merged document to be
   written out as YAML, JSON, or whatever type the first document is (AUTO).
-* The yaml-merge command now accepts the YAML standard-specified
-  End-of-Document, Start-of-Document marker pair (...<EOL> followed by
-  ---<EOL>) to enable STDIN to receive multiple YAML documents.  There is no
-  definitive equivalent for JSON other than writing a custom JSON parser which
-  can handle multiple documents in a single stream, so multi-JSON documents in
-  a single STDIN stream are not yet supported.
+* The yaml-merge command now accepts multi-document YAML files, created when
+  the YAML standard-specified End-of-Document, Start-of-Document marker pair
+  (...<EOL> followed by ---<EOL>) is present, like:
+  ```yaml
+  ---
+  document: 1
+  ...
+  ---
+  document: 2
+  ```
+* The yaml-merge command now accepts multi-document JSON files, created when
+  there are multiple root-level entities, like:
+  ```json
+  {"document": 1}
+  {"document": 2}
+  ```
 
 Bug Fixes:
 * Collectors were breaking search nodes with Regular Expressions, making it

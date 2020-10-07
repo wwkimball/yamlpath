@@ -20,7 +20,7 @@ from yamlpath.merger.enums import (
     HashMergeOpts,
     OutputDocTypes,
 )
-from yamlpath.func import get_yaml_data, get_yaml_editor
+from yamlpath.func import get_yaml_multidoc_data, get_yaml_editor
 from yamlpath.merger.exceptions import MergeException
 from yamlpath.merger import Merger, MergerConfig
 from yamlpath.exceptions import YAMLPathException
@@ -217,48 +217,23 @@ def main():
                  .format("STDIN" if rhs_file == "-" else rhs_file))
 
         # Try to open the file; failures are fatal
-        rhs_data = get_yaml_data(rhs_yaml, log, rhs_file, allow_multidoc=True)
-        if rhs_data is None:
-            # An error message has already been logged
-            return 3
-
-        # Merge the new RHS into the prime LHS
+        got_data = False
         exit_state = 0
-        try:
-            merger.merge_with(rhs_data)
-        except MergeException as mex:
-            log.error(mex)
-            exit_state = 4
-        except YAMLPathException as yex:
-            log.error(yex)
-            exit_state = 5
-
-        return exit_state
-
-    def process_multidoc(merger: Merger, docs: GeneratorType):
-        exit_state = 0
-        doc_number = 0
-        for doc in docs:
-            doc_number += 1
-            log.info("Processing multi-doc part {}".format(doc_number))
-
-            if doc is None:
-                continue
-
-            # Merge the new RHS into the prime LHS
-            log.debug("\n")
-            log.debug(
-                "yaml_merge::main::process_multidoc:  Attempting to merge with"
-                " RHS doc:")
-            log.debug(doc)
+        for rhs_data in get_yaml_multidoc_data(rhs_yaml, log, rhs_file):
             try:
-                merger.merge_with(doc)
+                merger.merge_with(rhs_data)
             except MergeException as mex:
                 log.error(mex)
-                exit_state = 6
+                exit_state = 4
             except YAMLPathException as yex:
                 log.error(yex)
-                exit_state = 7
+                exit_state = 5
+            else:
+                got_data = True
+
+        if not got_data:
+            # An error message has already been logged
+            return 3
 
         return exit_state
 
@@ -271,38 +246,28 @@ def main():
     prime_yaml = get_yaml_editor()
     prime_file = next(fileiterator)
     consumed_stdin = prime_file.strip() == '-'
-    prime_data = get_yaml_data(
-        prime_yaml, log, prime_file, allow_multidoc=False)
+    got_prime_data = False
+    merger = Merger(log, None, MergerConfig(log, args))
+    for prime_data in get_yaml_multidoc_data(prime_yaml, log, prime_file):
+        try:
+            merger.merge_with(prime_data)
+        except MergeException as mex:
+            log.error(mex)
+            exit_state = 6
+        except YAMLPathException as yex:
+            log.error(yex)
+            exit_state = 7
+        else:
+            got_prime_data = True
 
-    if isinstance(prime_data, GeneratorType):
-        log.debug(
-            "yaml_merge::main:  Got a multi-document source file, {}."
-            .format(prime_file))
-        lhs_is_multidoc = True
-        lhs_data = next(prime_data, None)
-    else:
-        log.debug(
-            "yaml_merge::main:  Got a single-document source file, {}."
-            .format(prime_file))
-        lhs_is_multidoc = False
-        lhs_data = prime_data
-
-    # lhs_is_multidoc = isinstance(prime_data, GeneratorType)
-    # lhs_data = next(prime_data, None) if lhs_is_multidoc else prime_data
-    if lhs_data is None:
+    if not got_prime_data:
         # An error message has already been logged
         log.critical(
             "The first input file, {}, has nothing to merge into."
             .format(prime_file), 1)
-    merger = Merger(log, lhs_data, MergerConfig(log, args))
 
     # Merge additional documents from the prime data, if any
     exit_state = 0
-    if lhs_is_multidoc:
-        exit_state = process_multidoc(merger, prime_data)
-        if exit_state != 0:
-            # An error message has already been logged
-            sys.exit(exit_state)
 
     # Merge additional input files into the prime
     rhs_yaml = get_yaml_editor()
@@ -311,12 +276,12 @@ def main():
             "yaml_merge::main:  Processing next file, {}".format(rhs_file))
         proc_state = process_rhs(merger, rhs_yaml, rhs_file)
 
-        if rhs_file.strip() == '-':
-            consumed_stdin = True
-
         if proc_state != 0:
             exit_state = proc_state
             break
+
+        if rhs_file.strip() == '-':
+            consumed_stdin = True
 
     # Check for a waiting STDIN document
     if (exit_state == 0
