@@ -6,20 +6,24 @@ Enhancements:
   every Array element which is not empty".  This operator also vertically
   expands results from Collectors, effectively breaking them out from an Array-
   per-line to one-Scalar-per-line.  If you place this inside a Collector, the
-  results will still be collected.
+  results will still be collected into an Array.
 * The * character now also serves as a wildcard character for key-names and
   Array value comparisons, converting the segment to a Search.  For example, a
   YAML Path like `abc.d*` becomes `abc[.^d]`, `abc.*f` becomes `abc[.$f]`, and
-  `abc.*e*` becomes `abc[.=~/^.*e.*$/]
+  `abc.*e*` becomes `abc[.=~/^.*e.*$/], and so on.
 * Added a new YAML Path Segment Type:  **
   This new type is a "Traversal" segment which causes YAML Path operations to
   deeply traverse the document from that point.  When there are no further
   segments in the YAML Path, every leaf node (Scalar value) is matched.  When
-  the YAML Path has at least one further segment, it must match nodes to return
-  or none are returned.  Results can be collected.
+  the YAML Path has at least one further segment, it (and all further segments)
+  must match subsequent nodes (anywhere deeper than that point in the document)
+  or none are matched. Results can be collected.
 * The yaml-merge and yaml-get command-line tools now treat the - pseudo-file as
   implicit when NOT specified AND the session is non-TTY.  This can be blocked
-  with --nostdin|-S.
+  with --nostdin|-S.  This enables, for example, piping into these commands
+  without being forced to specify the - pseudo-file as an argument to them.
+* The yaml-merge command now enables users to force the merged document to be
+  written out as YAML, JSON, or whatever type the first document is (AUTO).
 * The yaml-merge command now accepts the YAML standard-specified
   End-of-Document, Start-of-Document marker pair (...<EOL> followed by
   ---<EOL>) to enable STDIN to receive multiple YAML documents.  There is no
@@ -32,10 +36,9 @@ Bug Fixes:
   impossible for collected searches to return expected matches.
 * Fixed the Known Issue which was logged at version 2.4.0; setting override
   key-value pairs now correctly update the DOM for aliases.
-* When the left-most document is JSON and there are no YAML-specific extensions
-  in the resulting document (like Anchors), yaml-merge will write out JSON
-  results rather than hybrid JSON/YAML; otherwise, fully block-form YAML will
-  be written.
+* When the left-most document was JSON, yaml-merge would improperly write out
+  a YAML document start mark (---) and then a hybrid JSON/YAML result rather
+  than valid JSON.
 
 API Changes:
 * The various protected _get_* methods of Processor were changed to reduce the

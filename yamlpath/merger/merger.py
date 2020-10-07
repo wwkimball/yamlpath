@@ -8,6 +8,7 @@ from typing import Any, Dict, List, Set, Tuple
 import ruamel.yaml # type: ignore
 from ruamel.yaml.scalarstring import ScalarString
 from ruamel.yaml.comments import CommentedSeq, CommentedMap
+from ruamel.yaml import SafeConstructor
 
 from yamlpath.func import append_list_element, quote_every_string
 from yamlpath.wrappers import ConsolePrinter, NodeCoords
@@ -17,6 +18,7 @@ from yamlpath.merger.enums import (
     AoHMergeOpts,
     ArrayMergeOpts,
     HashMergeOpts,
+    OutputDocTypes,
 )
 from yamlpath.merger import MergerConfig
 from yamlpath import YAMLPath, Processor
@@ -43,6 +45,14 @@ class Merger:
         self.logger: ConsolePrinter = logger
         self.data: Any = lhs
         self.config: MergerConfig = config
+
+        # ryamel.yaml unfortunately tracks comments AFTER each YAML node.  As
+        # such, it is impossible to copy comments from RHS to LHS in any
+        # sensible way.  Trying leads to absurd merge results that are data-
+        # accurate but comment-insane.  This ruamel.yaml design decision forces
+        # me to simply delete all comments from all merge documents to produce
+        # a sensible result.
+        Merger.delete_all_comments(self.data)
 
     #pylint: disable=too-many-branches
     def _merge_dicts(
@@ -472,7 +482,7 @@ class Merger:
                 "A merge was not performed.  Ensure your target path matches"
                 " at least one node in the left document(s).", insert_at)
 
-    def configure_writer_for_dump(self, yaml_writer: Any) -> None:
+    def prepare_for_dump(self, yaml_writer: Any) -> None:
         """
         Prepare this merged document and its writer for final rendering.
 
@@ -480,26 +490,53 @@ class Merger:
         distinguish between YAML and JSON.  It will also force demarcation of
         every String key and value within the document when the output will be
         JSON.
-        """
-        # Check whether the document root is in flow or block format.
-        is_flow = False
-        if hasattr(self.data, "fa"):
-            is_flow = self.data.fa.flow_style()
-        else:
-            is_flow = True
 
-        # When it is flow, check for an Anchor.
-        # When there is an anchor, block format must be used.
+        Parameters:
+        1. yaml_writer (ruamel.yaml.YAML) The YAML document writer
+
+        Returns:  N/A
+        """
+        # Check whether the user is forcing an output format
+        doc_format = self.config.get_document_format()
+        if doc_format is OutputDocTypes.AUTO:
+            # Check whether the document root is in flow or block format.
+            is_flow = False
+            if hasattr(self.data, "fa"):
+                is_flow = self.data.fa.flow_style()
+            else:
+                is_flow = True
+
+            # # When it is flow, check for an Anchor.
+            # # When there is an anchor, block format must be used.
+            # if is_flow:
+            #     data_anchors: Dict[str, Any] = {}
+            #     Merger.scan_for_anchors(self.data, data_anchors)
+            #     is_flow = len(data_anchors) < 1
+        else:
+            is_flow = doc_format is OutputDocTypes.JSON
+
         if is_flow:
+            # JSON output; this requires the writer to not emit a YAML marker,
+            # all strings to be quoted, and all YAML Anchors to be flattened.
+
+            # Check for Anchors
             data_anchors: Dict[str, Any] = {}
             Merger.scan_for_anchors(self.data, data_anchors)
-            is_flow = len(data_anchors) < 1
+            if len(data_anchors) > 0:
+                # The only (published) means of flattening pre-existing Anchors
+                # is to reload the data with special settings.  This
+                # necessitates a YAML temp file which can then be read back as
+                # a flattened DOM.
+                tmpfile = "blah"
 
-        # Otherwise, flow requires the writer to not emit a YAML marker.
-        if is_flow:
             yaml_writer.explicit_start = False
+            yaml_writer.Constructor.flatten_mapping = (
+                SafeConstructor.flatten_mapping)
+            yaml_writer.allow_duplicate_keys = True
+            yaml_writer.representer.ignore_aliases = lambda x: True
             self.data = quote_every_string(self.data)
         else:
+            # When writing YAML, ensure the document start mark is emitted
             yaml_writer.explicit_start = True
 
     @classmethod
@@ -675,6 +712,9 @@ class Merger:
 
         Returns:  N/A
         """
+        if dom is None:
+            return
+
         if isinstance(dom, CommentedMap):
             for key, val in dom.items():
                 Merger.delete_all_comments(key)

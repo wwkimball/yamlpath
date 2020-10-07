@@ -988,12 +988,7 @@ from yamlpath.merger.exceptions import MergeException
 from yamlpath.merger import Merger, MergerConfig
 
 # Obtain or build the lhs_data and rhs_data objects using get_yaml_data or
-# equivalent.  Once loaded, all comments must be deleted lest the merged result
-# look quite odd; there is no sensible way to merge freetext comments or white-
-# space within text documents lacking a predictable, direct differential
-# relationship.
-Merger.delete_all_comments(lhs_data)
-Merger.delete_all_comments(rhs_data)
+# equivalent.
 
 # You'll still need to supply a logger and some arguments used by the merge
 # engine.  For purely default behavior, you could create args as a bare
@@ -1009,4 +1004,8 @@ except YAMLPathException as yex:
     log.critical(yex, 130)
 
 # At this point, merger.data is the merged result; do what you will with it.
+# When you are ready to dump (write) out the merged data, you must prepare the
+# document and your ruamel.yaml.YAML instance -- usually obtained from
+# func.get_yaml_editor() -- like this:
+merger.prepare_for_dump(my_yaml_editor)
 ```
