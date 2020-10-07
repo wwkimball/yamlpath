@@ -11,6 +11,7 @@ import argparse
 import json
 from os import access, R_OK
 from os.path import isfile, exists
+from pathlib import Path
 from typing import Any
 
 from yamlpath.merger.enums import (
@@ -243,14 +244,17 @@ def main():
 
     # Is the output JSON?
     document_format = OutputDocTypes.from_str(args.document_format)
-    output_is_json = document_format is OutputDocTypes.JSON
-    output_is_yaml = not output_is_json
+    output_file = args.output
+    if output_file:
+        output_is_json = Path(output_file).suffix.lower() == ".json"
+    document_is_json = document_format is OutputDocTypes.JSON or output_is_json
+    document_is_yaml = not document_is_json
 
     # The first input file is the prime
     fileiterator = iter(args.rhs_files)
     prime_yaml = get_yaml_editor(
-        explode_aliases=output_is_json,
-        preserve_quotes=output_is_yaml
+        explode_aliases=document_is_json,
+        preserve_quotes=document_is_yaml
     )
     prime_file = next(fileiterator)
     consumed_stdin = prime_file.strip() == '-'
@@ -278,7 +282,10 @@ def main():
     exit_state = 0
 
     # Merge additional input files into the prime
-    rhs_yaml = get_yaml_editor()
+    rhs_yaml = get_yaml_editor(
+        explode_aliases=document_is_json,
+        preserve_quotes=document_is_yaml
+    )
     for rhs_file in fileiterator:
         log.debug(
             "yaml_merge::main:  Processing next file, {}".format(rhs_file))
@@ -302,14 +309,14 @@ def main():
     # Output the final document
     if exit_state == 0:
         merger.prepare_for_dump(prime_yaml)
-        if args.output:
-            with open(args.output, 'w') as out_fhnd:
-                if output_is_json:
+        if output_file:
+            with open(output_file, 'w') as out_fhnd:
+                if document_is_json:
                     json.dump(merger.data, out_fhnd)
                 else:
                     prime_yaml.dump(merger.data, out_fhnd)
         else:
-            if output_is_json:
+            if document_is_json:
                 json.dump(merger.data, sys.stdout)
             else:
                 prime_yaml.dump(merger.data, sys.stdout)

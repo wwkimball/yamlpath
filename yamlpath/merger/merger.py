@@ -4,13 +4,19 @@ Implement YAML document Merger.
 Copyright 2020 William W. Kimball, Jr. MBA MSIS
 """
 from typing import Any, Dict, List, Set, Tuple
+import json
+from io import StringIO
 
 import ruamel.yaml # type: ignore
 from ruamel.yaml.scalarstring import ScalarString
 from ruamel.yaml.comments import CommentedSeq, CommentedMap
 from ruamel.yaml import SafeConstructor
 
-from yamlpath.func import append_list_element, quote_every_string
+from yamlpath.func import (
+    append_list_element,
+    get_yaml_editor,
+    quote_every_string,
+)
 from yamlpath.wrappers import ConsolePrinter, NodeCoords
 from yamlpath.merger.exceptions import MergeException
 from yamlpath.merger.enums import (
@@ -505,37 +511,23 @@ class Merger:
                 is_flow = self.data.fa.flow_style()
             else:
                 is_flow = True
-
-            # # When it is flow, check for an Anchor.
-            # # When there is an anchor, block format must be used.
-            # if is_flow:
-            #     data_anchors: Dict[str, Any] = {}
-            #     Merger.scan_for_anchors(self.data, data_anchors)
-            #     is_flow = len(data_anchors) < 1
         else:
             is_flow = doc_format is OutputDocTypes.JSON
 
         if is_flow:
-            # JSON output; this requires the writer to not emit a YAML marker,
-            # all strings to be quoted, and all YAML Anchors to be flattened.
+            # Dump the document as true JSON and reload it; this automatically
+            # exlodes all aliases.
+            xfer_buffer = StringIO()
+            json.dump(self.data, xfer_buffer)
+            xfer_buffer.seek(0)
+            self.data = yaml_writer.load(xfer_buffer)
 
-            # Check for Anchors
-            data_anchors: Dict[str, Any] = {}
-            Merger.scan_for_anchors(self.data, data_anchors)
-            if len(data_anchors) > 0:
-                # The only (published) means of flattening pre-existing Anchors
-                # is to reload the data with special settings.  This
-                # necessitates a YAML temp file which can then be read back as
-                # a flattened DOM.
-                tmpfile = "blah"
-
+            # Ensure the writer doesn't emit a YAML Start-of-Document marker
             yaml_writer.explicit_start = False
-            yaml_writer.Constructor.flatten_mapping = (
-                SafeConstructor.flatten_mapping)
-            yaml_writer.allow_duplicate_keys = True
-            yaml_writer.representer.ignore_aliases = lambda x: True
-            self.data = quote_every_string(self.data)
         else:
+            # Ensure block style output
+            Merger.set_flow_style(self.data, False)
+
             # When writing YAML, ensure the document start mark is emitted
             yaml_writer.explicit_start = True
 
