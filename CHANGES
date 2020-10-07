@@ -43,8 +43,9 @@ Enhancements:
 * Because any document to yaml-merge can be a multi-document, it no longer
   requires at least 2 YAML_FILEs be supplied on the command-line.  If users
   pass only a single file or stream, its content will merely be written out
-  without any merging into it.  This can be useful for trivially converting
-  YAML to JSON or JSON to YAML.
+  without any merging into it.  This can be useful for trivially converting any
+  file from YAML to JSON or JSON to YAML, like `yaml-merge -D json file.yaml`
+  or `yaml-merge -D yaml file.json`.
 
 Bug Fixes:
 * Collectors were breaking search nodes with Regular Expressions, making it
