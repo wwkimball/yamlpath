@@ -163,7 +163,6 @@ def validateargs(args, log):
     input_file_count = len(args.rhs_files)
     if (input_file_count == 0 and (
             sys.stdin.isatty()
-            or args.rhs_files[0].strip() == '-'
             or args.nostdin)
     ):
         has_errors = True
@@ -255,7 +254,7 @@ def main():
         explode_aliases=document_is_json,
         preserve_quotes=document_is_yaml
     )
-    prime_file = next(fileiterator)
+    prime_file = next(fileiterator, '-')
     consumed_stdin = prime_file.strip() == '-'
     got_prime_data = False
     merger = Merger(log, None, MergerConfig(log, args))
