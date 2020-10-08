@@ -520,3 +520,20 @@ some:
         with open(yaml_file, 'r') as fhnd:
             filedat = fhnd.read()
         assert filedat == result_content
+
+    def test_set_value_in_json_file(
+        self, script_runner, tmp_path_factory
+    ):
+        yaml_file = create_temp_yaml_file(tmp_path_factory, '{"key": "value"}')
+        result_content = '{"key": "changed"}'
+
+        result = script_runner.run(
+            self.command
+            , "--change=key"
+            , "--value=changed"
+            , yaml_file)
+        assert result.success, result.stderr
+
+        with open(yaml_file, 'r') as fhnd:
+            filedat = fhnd.read()
+        assert filedat == result_content

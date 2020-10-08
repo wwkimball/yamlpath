@@ -14,9 +14,11 @@ import tempfile
 import argparse
 import secrets
 import string
+import json
 from os import remove, access, R_OK
 from os.path import isfile, exists
 from shutil import copy2, copyfileobj
+
 
 from yamlpath.func import (
     clone_node,
@@ -181,6 +183,52 @@ def validateargs(args, log):
     if has_errors:
         sys.exit(1)
 
+def save_to_json_file(args, log, yaml_data):
+    """Save to a JSON file."""
+    log.verbose("Writing changed data as JSON to {}.".format(args.yaml_file))
+    with open(args.yaml_file, 'w') as out_fhnd:
+        json.dump(yaml_data, out_fhnd)
+
+def save_to_yaml_file(args, log, yaml_parser, yaml_data, backup_file):
+    """Save to a YAML file."""
+    log.verbose("Writing changed data as YAML to {}.".format(args.yaml_file))
+    with tempfile.TemporaryFile() as tmphnd:
+        with open(args.yaml_file, 'rb') as inhnd:
+            copyfileobj(inhnd, tmphnd)
+
+        with open(args.yaml_file, 'w') as yaml_dump:
+            try:
+                yaml_parser.dump(yaml_data, yaml_dump)
+            except AssertionError as ex:
+                yaml_dump.close()
+                tmphnd.seek(0)
+                with open(args.yaml_file, 'wb') as outhnd:
+                    copyfileobj(tmphnd, outhnd)
+
+                # No sense in preserving a backup file with no changes
+                if args.backup:
+                    remove(backup_file)
+
+                log.debug("Assertion error: {}".format(ex))
+                log.critical((
+                    "Indeterminate assertion error encountered while"
+                    + " attempting to write updated data to {}.  The original"
+                    + " file content was restored.").format(args.yaml_file), 3)
+
+def docroot_is_flow(yaml_data):
+    """Determine whether a document root is in flow (JSON) style."""
+    is_flow = False
+    if hasattr(yaml_data, "fa"):
+        is_flow = yaml_data.fa.flow_style()
+    return is_flow
+
+def save_to_file(args, log, yaml_parser, yaml_data, backup_file):
+    """Save as YAML or JSON."""
+    if docroot_is_flow(yaml_data):
+        save_to_json_file(args, log, yaml_data)
+    else:
+        save_to_yaml_file(args, log, yaml_parser, yaml_data, backup_file)
+
 # pylint: disable=locally-disabled,too-many-locals,too-many-branches,too-many-statements
 def main():
     """Main code."""
@@ -342,29 +390,7 @@ def main():
         copy2(args.yaml_file, backup_file)
 
     # Save the changed file
-    log.verbose("Writing changed data to {}.".format(args.yaml_file))
-    with tempfile.TemporaryFile() as tmphnd:
-        with open(args.yaml_file, 'rb') as inhnd:
-            copyfileobj(inhnd, tmphnd)
-
-        with open(args.yaml_file, 'w') as yaml_dump:
-            try:
-                yaml.dump(yaml_data, yaml_dump)
-            except AssertionError as ex:
-                yaml_dump.close()
-                tmphnd.seek(0)
-                with open(args.yaml_file, 'wb') as outhnd:
-                    copyfileobj(tmphnd, outhnd)
-
-                # No sense in preserving a backup file with no changes
-                if args.backup:
-                    remove(backup_file)
-
-                log.debug("Assertion error: {}".format(ex))
-                log.critical((
-                    "Indeterminate assertion error encountered while"
-                    + " attempting to write updated data to {}.  The original"
-                    + " file content was restored.").format(args.yaml_file), 3)
+    save_to_file(args, log, yaml, yaml_data, backup_file)
 
 if __name__ == "__main__":
     main()  # pragma: no cover

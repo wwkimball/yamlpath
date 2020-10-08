@@ -72,9 +72,9 @@ Bug Fixes:
 * Fixed the Known Issue which was logged at version 2.4.0; setting values which
   override aliased key-value pairs now correctly adds the new key-value pair to
   the DOM.
-* When the left-most document was JSON, yaml-merge would improperly write out
-  a YAML document start mark (---) and then a hybrid JSON/YAML result rather
-  than valid JSON.
+* When the left-most document was JSON, yaml-merge and yaml-set would both
+  improperly write out a YAML document start mark (---) and then a hybrid
+  JSON/YAML result rather than valid JSON.
 
 Non-Breaking API Changes:
 * The various protected _get_* methods of Processor were changed to reduce the
