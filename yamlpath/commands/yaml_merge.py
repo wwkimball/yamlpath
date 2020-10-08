@@ -149,7 +149,7 @@ def processcli():
             "-o|--output is not set)"))
 
     parser.add_argument(
-        "rhs_files", metavar="YAML_FILE", nargs="*",
+        "yaml_files", metavar="YAML_FILE", nargs="*",
         help=(
             "one or more YAML files to merge, order-significant;\n"
             "use - to read from STDIN"))
@@ -160,7 +160,7 @@ def validateargs(args, log):
     has_errors = False
 
     # There must be at least one input file or stream
-    input_file_count = len(args.rhs_files)
+    input_file_count = len(args.yaml_files)
     if (input_file_count == 0 and (
             sys.stdin.isatty()
             or args.nostdin)
@@ -171,7 +171,7 @@ def validateargs(args, log):
 
     # There can be only one -
     pseudofile_count = 0
-    for infile in args.rhs_files:
+    for infile in args.yaml_files:
         if infile.strip() == '-':
             pseudofile_count += 1
     if pseudofile_count > 1:
@@ -202,63 +202,10 @@ def validateargs(args, log):
     if has_errors:
         sys.exit(1)
 
-def main():
-    """Main code."""
-    def process_rhs(merger: Merger, rhs_yaml: Any, rhs_file: str):
-        # Except for - (STDIN), each YAML_FILE must actually be a file; because
-        # merge data is expected, this is a fatal failure.
-        if rhs_file != "-" and not isfile(rhs_file):
-            log.error("Not a file:  {}".format(rhs_file))
-            return 2
-
-        log.info("Processing {}..."
-                 .format("STDIN" if rhs_file == "-" else rhs_file))
-
-        # Try to open the file; failures are fatal
-        got_data = False
-        exit_state = 0
-        for rhs_data in get_yaml_multidoc_data(rhs_yaml, log, rhs_file):
-            try:
-                merger.merge_with(rhs_data)
-            except MergeException as mex:
-                log.error(mex)
-                exit_state = 4
-            except YAMLPathException as yex:
-                log.error(yex)
-                exit_state = 5
-            else:
-                got_data = True
-
-        if not got_data:
-            # An error message has already been logged
-            return 3
-
-        return exit_state
-
-    args = processcli()
-    log = ConsolePrinter(args)
-    validateargs(args, log)
-
-    # Is the output JSON?
-    document_format = OutputDocTypes.from_str(args.document_format)
-    output_file = args.output
-    output_is_json = False
-    if output_file:
-        output_is_json = Path(output_file).suffix.lower() == ".json"
-    document_is_json = document_format is OutputDocTypes.JSON or output_is_json
-    document_is_yaml = not document_is_json
-
-    # The first input file is the prime
-    fileiterator = iter(args.rhs_files)
-    prime_yaml = get_yaml_editor(
-        explode_aliases=document_is_json,
-        preserve_quotes=document_is_yaml
-    )
-    prime_file = next(fileiterator, '-')
-    consumed_stdin = prime_file.strip() == '-'
-    got_prime_data = False
-    merger = Merger(log, None, MergerConfig(log, args))
-    for prime_data in get_yaml_multidoc_data(prime_yaml, log, prime_file):
+def merge_multidoc(yaml_file, yaml_editor, log, merger):
+    """Merge all documents within a multi-document source."""
+    exit_state = 0
+    for prime_data in get_yaml_multidoc_data(yaml_editor, log, yaml_file):
         try:
             merger.merge_with(prime_data)
         except MergeException as mex:
@@ -268,16 +215,68 @@ def main():
             log.error(yex)
             exit_state = 7
         else:
-            got_prime_data = True
+            exit_state = 2
 
-    if not got_prime_data:
+    return exit_state
+
+def process_rhs(
+    merger: Merger, log: ConsolePrinter, rhs_yaml: Any, rhs_file: str
+):
+    """Merge RHS document(s) into the prime document."""
+    # Except for - (STDIN), each YAML_FILE must actually be a file; because
+    # merge data is expected, this is a fatal failure.
+    if rhs_file != "-" and not isfile(rhs_file):
+        log.error("Not a file:  {}".format(rhs_file))
+        return 2
+
+    log.info("Processing {}..."
+                .format("STDIN" if rhs_file == "-" else rhs_file))
+
+    # Try to open the file; failures are fatal
+    got_data = False
+    exit_state = merge_multidoc(rhs_file, rhs_yaml, log, merger)
+
+    if not got_data:
+        # An error message has already been logged
+        exit_state = 3
+
+    return exit_state
+
+def calc_output_document_type(args):
+    """Determine whether the output document will be JSON or YAML."""
+    document_format = OutputDocTypes.from_str(args.document_format)
+    output_file = args.output
+    output_is_json = False
+    if output_file:
+        output_is_json = Path(output_file).suffix.lower() == ".json"
+    if document_format is OutputDocTypes.JSON or output_is_json:
+        return OutputDocTypes.JSON
+    return OutputDocTypes.YAML
+
+def main():
+    """Main code."""
+    args = processcli()
+    log = ConsolePrinter(args)
+    validateargs(args, log)
+    merger = Merger(log, None, MergerConfig(log, args))
+
+    # The first input file is the prime
+    fileiterator = iter(args.yaml_files)
+    document_is_json = calc_output_document_type(args) is OutputDocTypes.JSON
+    document_is_yaml = not document_is_json
+    prime_yaml = get_yaml_editor(
+        explode_aliases=document_is_json,
+        preserve_quotes=document_is_yaml
+    )
+    prime_file = next(fileiterator, '-')
+    consumed_stdin = prime_file.strip() == '-'
+    exit_state = merge_multidoc(prime_file, prime_yaml, log, merger)
+
+    if exit_state != 0:
         # An error message has already been logged
         log.critical(
             "The first input file, {}, has nothing to merge into."
             .format(prime_file), 1)
-
-    # Merge additional documents from the prime data, if any
-    exit_state = 0
 
     # Merge additional input files into the prime
     rhs_yaml = get_yaml_editor(
@@ -287,7 +286,7 @@ def main():
     for rhs_file in fileiterator:
         log.debug(
             "yaml_merge::main:  Processing next file, {}".format(rhs_file))
-        proc_state = process_rhs(merger, rhs_yaml, rhs_file)
+        proc_state = process_rhs(merger, log, rhs_yaml, rhs_file)
 
         if proc_state != 0:
             exit_state = proc_state
@@ -302,13 +301,13 @@ def main():
         and not args.nostdin
         and not sys.stdin.isatty()
     ):
-        exit_state = process_rhs(merger, rhs_yaml, '-')
+        exit_state = process_rhs(merger, log, rhs_yaml, '-')
 
     # Output the final document
     if exit_state == 0:
         merger.prepare_for_dump(prime_yaml)
-        if output_file:
-            with open(output_file, 'w') as out_fhnd:
+        if args.output:
+            with open(args.output, 'w') as out_fhnd:
                 if document_is_json:
                     json.dump(merger.data, out_fhnd)
                 else:
