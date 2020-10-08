@@ -406,6 +406,9 @@ class Merger:
         if rhs is None:
             return
 
+        # Remove all comments (no sensible way to merge them)
+        Merger.delete_all_comments(rhs)
+
         # When LHS is None (empty document), just dump all of RHS into it,
         # honoring any --mergeat|-m location as best as possible.
         insert_at = self.config.get_insertion_point()
@@ -414,9 +417,6 @@ class Merger:
             if isinstance(rhs, (dict, list)):
                 # Only Scalar values need further processing
                 return
-
-        # Remove all comments (no sensible way to merge them)
-        Merger.delete_all_comments(rhs)
 
         # Resolve any anchor conflicts
         self._resolve_anchor_conflicts(rhs)
