@@ -18,6 +18,7 @@ import json
 from os import remove, access, R_OK
 from os.path import isfile, exists
 from shutil import copy2, copyfileobj
+from pathlib import Path
 
 
 from yamlpath.func import (
@@ -224,10 +225,18 @@ def docroot_is_flow(yaml_data):
 
 def save_to_file(args, log, yaml_parser, yaml_data, backup_file):
     """Save as YAML or JSON."""
+    write_yaml = True
     if docroot_is_flow(yaml_data):
-        save_to_json_file(args, log, yaml_data)
-    else:
+        write_yaml = False
+
+    # Allow a JSON file extension to override the inference
+    if write_yaml:
+        write_yaml = Path(args.yaml_file).suffix.lower() != ".json"
+
+    if write_yaml:
         save_to_yaml_file(args, log, yaml_parser, yaml_data, backup_file)
+    else:
+        save_to_json_file(args, log, yaml_data)
 
 # pylint: disable=locally-disabled,too-many-locals,too-many-branches,too-many-statements
 def main():

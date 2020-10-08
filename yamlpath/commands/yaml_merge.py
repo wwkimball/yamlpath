@@ -240,13 +240,18 @@ def process_rhs(
 def calc_output_document_type(args):
     """Determine whether the output document will be JSON or YAML."""
     document_format = OutputDocTypes.from_str(args.document_format)
-    output_file = args.output
-    output_is_json = False
-    if output_file:
-        output_is_json = Path(output_file).suffix.lower() == ".json"
-    if document_format is OutputDocTypes.JSON or output_is_json:
-        return OutputDocTypes.JSON
-    return OutputDocTypes.YAML
+
+    if document_format is OutputDocTypes.AUTO:
+        output_is_json = False
+        output_file = args.output
+        if output_file:
+            output_is_json = Path(output_file).suffix.lower() == ".json"
+
+        document_format = (OutputDocTypes.JSON
+                           if output_is_json
+                           else OutputDocTypes.YAML)
+
+    return document_format
 
 def main():
     """Main code."""

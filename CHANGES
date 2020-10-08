@@ -105,8 +105,10 @@ Non-Breaking API Changes:
   data = get_yaml_data(get_yaml_editor(), ConsoleLogger(), "file.yaml")
   if data is None:
     print("No data")
-  elif not data:
+  elif not data and isinstance(data, bool):
     print("Invalid document")
+  else:
+    print("Got a non-empty document")
   ```
 
 To reflect these changes:
