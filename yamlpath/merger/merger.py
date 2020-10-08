@@ -4,20 +4,26 @@ Implement YAML document Merger.
 Copyright 2020 William W. Kimball, Jr. MBA MSIS
 """
 from typing import Any, Dict, List, Set, Tuple
+import json
+from io import StringIO
 
 import ruamel.yaml # type: ignore
 from ruamel.yaml.scalarstring import ScalarString
 from ruamel.yaml.comments import CommentedSeq, CommentedMap
 
+from yamlpath.func import (
+    append_list_element,
+    build_next_node,
+)
 from yamlpath.wrappers import ConsolePrinter, NodeCoords
 from yamlpath.merger.exceptions import MergeException
 from yamlpath.merger.enums import (
     AnchorConflictResolutions,
     AoHMergeOpts,
     ArrayMergeOpts,
-    HashMergeOpts
+    HashMergeOpts,
+    OutputDocTypes,
 )
-from yamlpath.func import append_list_element
 from yamlpath.merger import MergerConfig
 from yamlpath import YAMLPath, Processor
 
@@ -43,6 +49,14 @@ class Merger:
         self.logger: ConsolePrinter = logger
         self.data: Any = lhs
         self.config: MergerConfig = config
+
+        # ryamel.yaml unfortunately tracks comments AFTER each YAML node.  As
+        # such, it is impossible to copy comments from RHS to LHS in any
+        # sensible way.  Trying leads to absurd merge results that are data-
+        # accurate but comment-insane.  This ruamel.yaml design decision forces
+        # me to simply delete all comments from all merge documents to produce
+        # a sensible result.
+        Merger.delete_all_comments(self.data)
 
     #pylint: disable=too-many-branches
     def _merge_dicts(
@@ -158,9 +172,7 @@ class Merger:
                 .format(ele, type(ele), path_next))
 
             if append_all or (ele not in lhs):
-                append_list_element(
-                    lhs, ele,
-                    ele.anchor.value if hasattr(ele, "anchor") else None)
+                lhs.append(ele)
         return lhs
 
     # pylint: disable=locally-disabled,too-many-branches
@@ -394,13 +406,14 @@ class Merger:
         if rhs is None:
             return
 
-        # When LHS is None (empty document), just dump all of RHS into it
-        if self.data is None:
-            self.data = rhs
-            return
-
-        lhs_proc = Processor(self.logger, self.data)
+        # When LHS is None (empty document), just dump all of RHS into it,
+        # honoring any --mergeat|-m location as best as possible.
         insert_at = self.config.get_insertion_point()
+        if self.data is None:
+            self.data = build_next_node(insert_at, 0, rhs)
+            if isinstance(rhs, (dict, list)):
+                # Only Scalar values need further processing
+                return
 
         # Remove all comments (no sensible way to merge them)
         Merger.delete_all_comments(rhs)
@@ -422,6 +435,7 @@ class Merger:
         # Loop through all insertion points and the elements in RHS
         merge_performed = False
         nodes: List[NodeCoords] = []
+        lhs_proc = Processor(self.logger, self.data)
         for node_coord in lhs_proc.get_nodes(
                 insert_at, default_value=default_val
         ):
@@ -471,6 +485,47 @@ class Merger:
             raise MergeException(
                 "A merge was not performed.  Ensure your target path matches"
                 " at least one node in the left document(s).", insert_at)
+
+    def prepare_for_dump(self, yaml_writer: Any) -> None:
+        """
+        Prepare this merged document and its writer for final rendering.
+
+        This coallesces the YAML writer's settings to, in particular,
+        distinguish between YAML and JSON.  It will also force demarcation of
+        every String key and value within the document when the output will be
+        JSON.
+
+        Parameters:
+        1. yaml_writer (ruamel.yaml.YAML) The YAML document writer
+
+        Returns:  N/A
+        """
+        # Check whether the user is forcing an output format
+        doc_format = self.config.get_document_format()
+        if doc_format is OutputDocTypes.AUTO:
+            # Check whether the document root is in flow or block format.
+            is_flow = True
+            if hasattr(self.data, "fa"):
+                is_flow = self.data.fa.flow_style()
+        else:
+            is_flow = doc_format is OutputDocTypes.JSON
+
+        if is_flow:
+            # Dump the document as true JSON and reload it; this automatically
+            # exlodes all aliases.
+            xfer_buffer = StringIO()
+            json.dump(self.data, xfer_buffer)
+            xfer_buffer.seek(0)
+            self.data = yaml_writer.load(xfer_buffer)
+
+            # Ensure the writer doesn't emit a YAML Start-of-Document marker
+            yaml_writer.explicit_start = False
+        else:
+            # Ensure block style output
+            Merger.set_flow_style(self.data, False)
+
+            # When writing YAML, ensure the document start mark is emitted
+            yaml_writer.explicit_start = True
 
     @classmethod
     def set_flow_style(cls, node: Any, is_flow: bool) -> None:
@@ -645,6 +700,9 @@ class Merger:
 
         Returns:  N/A
         """
+        if dom is None:
+            return
+
         if isinstance(dom, CommentedMap):
             for key, val in dom.items():
                 Merger.delete_all_comments(key)

@@ -6,7 +6,8 @@ from yamlpath.merger.enums import (
     AnchorConflictResolutions,
     AoHMergeOpts,
     ArrayMergeOpts,
-    HashMergeOpts
+    HashMergeOpts,
+    OutputDocTypes
 )
 from yamlpath.wrappers import NodeCoords
 from yamlpath.merger import MergerConfig
@@ -30,6 +31,14 @@ class Test_merger_MergerConfig():
     def test_get_insertion_point_cli(self, quiet_logger):
         mc = MergerConfig(quiet_logger, SimpleNamespace(mergeat="la.tee.dah"))
         assert mc.get_insertion_point() == YAMLPath("/la/tee/dah")
+
+
+    ###
+    # get_document_format
+    ###
+    def test_get_document_format(self, quiet_logger):
+        mc = MergerConfig(quiet_logger, SimpleNamespace())
+        assert mc.get_document_format() == OutputDocTypes.AUTO
 
 
     ###

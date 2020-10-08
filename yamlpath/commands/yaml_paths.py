@@ -37,7 +37,7 @@ from yamlpath.wrappers import ConsolePrinter
 from yamlpath.eyaml import EYAMLProcessor
 
 # Implied Constants
-MY_VERSION = "0.2.0"
+MY_VERSION = "0.2.1"
 
 def processcli():
     """Process command-line arguments."""
@@ -723,7 +723,7 @@ def main():
     for yaml_file in args.yaml_files:
         # Try to open the file
         yaml_data = get_yaml_data(yaml, log, yaml_file)
-        if yaml_data is None:
+        if not yaml_data and yaml_data is not None:
             # An error message has already been logged
             exit_state = 3
             continue

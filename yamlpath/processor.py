@@ -1,3 +1,4 @@
+#pylint: disable=too-many-lines
 """
 YAML Path processor based on ruamel.yaml.
 
@@ -178,10 +179,10 @@ class Processor:
                     node_coord.parent, node_coord.parentref, value,
                     value_format)
 
-    # pylint: disable=locally-disabled,too-many-branches,too-many-arguments
+    # pylint: disable=locally-disabled,too-many-branches
     def _get_nodes_by_path_segment(self, data: Any,
                                    yaml_path: YAMLPath, segment_index: int,
-                                   parent: Any = None, parentref: Any = None
+                                   **kwargs: Any
                                   ) -> Generator[Any, None, None]:
         """
         Get nodes identified by their YAML Path segment.
@@ -193,9 +194,13 @@ class Processor:
         1. data (ruamel.yaml data) The parsed YAML data to process
         2. yaml_path (yamlpath.Path) The YAML Path being processed
         3. segment_index (int) Segment index of the YAML Path to process
-        4. parent (ruamel.yaml node) The parent node from which this query
-           originates
-        5. parentref (Any) The Index or Key of data within parent
+
+        Keyword Arguments:
+        * parent (ruamel.yaml node) The parent node from which this query
+          originates
+        * parentref (Any) The Index or Key of data within parent
+        * traverse_lists (Boolean) Indicate whether KEY searches against lists
+          are permitted to automatically traverse into the list; Default=True
 
         Returns:  (Generator[Any, None, None]) Each node coordinate or list of
         node coordinates as they are matched.  You must check with isinstance()
@@ -213,12 +218,16 @@ class Processor:
         if not (segments and len(segments) > segment_index):
             return
 
+        parent = kwargs.pop("parent", None)
+        parentref = kwargs.pop("parentref", None)
+        traverse_lists = kwargs.pop("traverse_lists", True)
         (segment_type, stripped_attrs) = segments[segment_index]
+        (unesc_type, unesc_attrs) = yaml_path.unescaped[segment_index]
 
         node_coords: Any = None
         if segment_type == PathSegmentTypes.KEY:
             node_coords = self._get_nodes_by_key(
-                data, yaml_path, segment_index)
+                data, yaml_path, segment_index, traverse_lists=traverse_lists)
         elif segment_type == PathSegmentTypes.INDEX:
             node_coords = self._get_nodes_by_index(
                 data, yaml_path, segment_index)
@@ -230,14 +239,19 @@ class Processor:
                 and isinstance(stripped_attrs, SearchTerms)
         ):
             node_coords = self._get_nodes_by_search(
-                data, stripped_attrs, parent, parentref)
+                data, stripped_attrs, parent=parent, parentref=parentref,
+                traverse_lists=traverse_lists)
         elif (
-                segment_type == PathSegmentTypes.COLLECTOR
-                and isinstance(stripped_attrs, CollectorTerms)
+                unesc_type == PathSegmentTypes.COLLECTOR
+                and isinstance(unesc_attrs, CollectorTerms)
         ):
             node_coords = self._get_nodes_by_collector(
-                data, yaml_path, segment_index, stripped_attrs,
-                parent, parentref)
+                data, yaml_path, segment_index, unesc_attrs, parent=parent,
+                parentref=parentref)
+        elif segment_type == PathSegmentTypes.TRAVERSE:
+            node_coords = self._get_nodes_by_traversal(
+                data, yaml_path, segment_index, parent=parent,
+                parentref=parentref)
         else:
             raise NotImplementedError
 
@@ -245,7 +259,8 @@ class Processor:
             yield node_coord
 
     def _get_nodes_by_key(
-            self, data: Any, yaml_path: YAMLPath, segment_index: int
+            self, data: Any, yaml_path: YAMLPath, segment_index: int,
+            **kwargs: Any
     ) -> Generator[NodeCoords, None, None]:
         """
         Get nodes from a Hash by their unique key name.
@@ -258,11 +273,17 @@ class Processor:
         2. yaml_path (yamlpath.Path) The YAML Path being processed
         3. segment_index (int) Segment index of the YAML Path to process
 
+        Keyword Arguments:
+        * traverse_lists (Boolean) Indicate whether KEY searches against lists
+          are permitted to automatically traverse into the list; Default=True
+
         Returns:  (Generator[NodeCoords, None, None]) Each NodeCoords as they
         are matched
 
         Raises:  N/A
         """
+        traverse_lists = kwargs.pop("traverse_lists", True)
+
         (_, stripped_attrs) = yaml_path.escaped[segment_index]
         str_stripped = str(stripped_attrs)
 
@@ -289,10 +310,15 @@ class Processor:
                 if len(data) > idx:
                     yield NodeCoords(data[idx], data, idx)
             except ValueError:
-                # Pass-through search against possible Array-of-Hashes
+                # Pass-through search against possible Array-of-Hashes, if
+                # allowed.
+                if not traverse_lists:
+                    return
+
                 for eleidx, element in enumerate(data):
                     for node_coord in self._get_nodes_by_path_segment(
-                            element, yaml_path, segment_index, data, eleidx):
+                            element, yaml_path, segment_index, parent=data,
+                            parentref=eleidx, traverse_lists=traverse_lists):
                         yield node_coord
 
     # pylint: disable=locally-disabled,too-many-locals
@@ -406,7 +432,7 @@ class Processor:
                     yield NodeCoords(val, data, key)
 
     def _get_nodes_by_search(
-            self, data: Any, terms: SearchTerms, parent: Any, parentref: Any
+            self, data: Any, terms: SearchTerms, **kwargs: Any
     ) -> Generator[NodeCoords, None, None]:
         """
         Get nodes matching a search expression.
@@ -417,9 +443,13 @@ class Processor:
         Parameters:
         1. data (Any) The parsed YAML data to process
         2. terms (SearchTerms) The search terms
-        3. parent (ruamel.yaml node) The parent node from which this query
-           originates
-        4. parentref (Any) The Index or Key of data within parent
+
+        Keyword Arguments:
+        * parent (ruamel.yaml node) The parent node from which this query
+          originates
+        * parentref (Any) The Index or Key of data within parent
+        * traverse_lists (Boolean) Indicate whether searches against lists are
+          permitted to automatically traverse into the list; Default=True
 
         Returns:  (Generator[NodeCoords, None, None]) Each NodeCoords as they
         are matched
@@ -432,11 +462,14 @@ class Processor:
             .format(terms)
         )
 
+        parent = kwargs.pop("parent", None)
+        parentref = kwargs.pop("parentref", None)
+        traverse_lists = kwargs.pop("traverse_lists", True)
         invert = terms.inverted
         method = terms.method
         attr = terms.attribute
         term = terms.term
-        if isinstance(data, list):
+        if traverse_lists and isinstance(data, list):
             for lstidx, ele in enumerate(data):
                 if attr == '.':
                     matches = search_matches(method, term, ele)
@@ -466,10 +499,10 @@ class Processor:
             if (matches and not invert) or (invert and not matches):
                 yield NodeCoords(data, parent, parentref)
 
-    # pylint: disable=locally-disabled,too-many-arguments
+    # pylint: disable=locally-disabled
     def _get_nodes_by_collector(
             self, data: Any, yaml_path: YAMLPath, segment_index: int,
-            terms: CollectorTerms, parent: Any, parentref: Any
+            terms: CollectorTerms, **kwargs: Any
     ) -> Generator[List[NodeCoords], None, None]:
         """
         Generate List of nodes gathered via a Collector.
@@ -483,9 +516,11 @@ class Processor:
         2. yaml_path (Path) The YAML Path being processed
         3. segment_index (int) Segment index of the YAML Path to process
         4. terms (CollectorTerms) The collector terms
-        5. parent (ruamel.yaml node) The parent node from which this query
-           originates
-        6. parentref (Any) The Index or Key of data within parent
+
+        Keyword Arguments:
+        * parent (ruamel.yaml node) The parent node from which this query
+          originates
+        * parentref (Any) The Index or Key of data within parent
 
         Returns:  (Generator[List[NodeCoords], None, None]) Each list of
         NodeCoords as they are matched (the result is always a list)
@@ -496,9 +531,15 @@ class Processor:
             yield data
             return
 
+        parent = kwargs.pop("parent", None)
+        parentref = kwargs.pop("parentref", None)
         node_coords = []    # A list of NodeCoords
+        self.logger.debug(
+            "Processor::_get_nodes_by_collector:  Getting required nodes"
+            " matching search expression:  {}".format(terms.expression))
         for node_coord in self._get_required_nodes(
-                data, YAMLPath(terms.expression), 0, parent, parentref):
+                data, YAMLPath(terms.expression), 0, parent=parent,
+                parentref=parentref):
             node_coords.append(node_coord)
 
         # This may end up being a bad idea for some cases, but this method will
@@ -535,7 +576,8 @@ class Processor:
                 peek_path: YAMLPath = YAMLPath(peek_attrs.expression)
                 if peek_attrs.operation == CollectorOperators.ADDITION:
                     for node_coord in self._get_required_nodes(
-                            data, peek_path, 0, parent, parentref):
+                            data, peek_path, 0, parent=parent,
+                            parentref=parentref):
                         if (isinstance(node_coord, NodeCoords)
                                 and isinstance(node_coord.node, list)):
                             for coord_idx, coord in enumerate(node_coord.node):
@@ -548,7 +590,8 @@ class Processor:
                 elif peek_attrs.operation == CollectorOperators.SUBTRACTION:
                     rem_data = []
                     for node_coord in self._get_required_nodes(
-                            data, peek_path, 0, parent, parentref):
+                            data, peek_path, 0, parent=parent,
+                            parentref=parentref):
                         unwrapped_data = unwrap_node_coords(node_coord)
                         if isinstance(unwrapped_data, list):
                             for unwrapped_datum in unwrapped_data:
@@ -574,9 +617,128 @@ class Processor:
         if node_coords:
             yield node_coords
 
+    # pylint: disable=locally-disabled,too-many-branches
+    def _get_nodes_by_traversal(self, data: Any, yaml_path: YAMLPath,
+                                segment_index: int, **kwargs: Any
+                                ) -> Generator[Any, None, None]:
+        """
+        Deeply traverse the document tree, returning all or filtered nodes.
+
+        Parameters:
+        1. data (ruamel.yaml data) The parsed YAML data to process
+        2. yaml_path (yamlpath.Path) The YAML Path being processed
+        3. segment_index (int) Segment index of the YAML Path to process
+
+        Keyword Parameters:
+        * parent (ruamel.yaml node) The parent node from which this query
+          originates
+        * parentref (Any) The Index or Key of data within parent
+
+        Returns:  (Generator[Any, None, None]) Each node coordinate as they are
+        matched.
+        """
+        parent = kwargs.pop("parent", None)
+        parentref = kwargs.pop("parentref", None)
+
+        self.logger.debug(
+            "Processor::_get_nodes_by_traversal:  TRAVERSING the tree at {}."
+            .format(parentref))
+
+        if data is None:
+            self.logger.debug(
+                "Processor::_get_nodes_by_traversal:  Bailing on None data!")
+            return
+
+        # Is there a next segment?
+        segments = yaml_path.escaped
+        if segment_index + 1 == len(segments):
+            # This traversal is gathering every leaf node
+            if isinstance(data, dict):
+                for val in data.values():
+                    for node_coord in self._get_nodes_by_traversal(
+                        val, yaml_path, segment_index,
+                        parent=parent, parentref=parentref
+                    ):
+                        self.logger.debug(
+                            "Processor::_get_nodes_by_traversal:  Yielding"
+                            " unfiltered Hash value:")
+                        self.logger.debug(node_coord.node)
+                        yield node_coord
+            elif isinstance(data, list):
+                for ele in data:
+                    for node_coord in self._get_nodes_by_traversal(
+                        ele, yaml_path, segment_index,
+                        parent=parent, parentref=parentref
+                    ):
+                        self.logger.debug(
+                            "Processor::_get_nodes_by_traversal:  Yielding"
+                            " unfiltered Array value:")
+                        self.logger.debug(node_coord.node)
+                        yield node_coord
+            else:
+                self.logger.debug(
+                    "Processor::_get_nodes_by_traversal:  Yielding unfiltered"
+                    " Scalar value:")
+                self.logger.debug(data)
+                yield NodeCoords(data, parent, parentref)
+        else:
+            # There is a filter in the next segment; recurse data, comparing
+            # every child against the following segment until there are no more
+            # nodes.  For each match, resume normal path function against the
+            # matching node(s).
+
+            # Because the calling code will continue to process the remainder
+            # of the YAML Path, only the parent of the matched node(s) can be
+            # yielded.
+            self.logger.debug(
+                "Processor::_get_nodes_by_traversal:  Checking the DIRECT node"
+                " for a next-segment match at {}...".format(parentref))
+            for node_coord in self._get_nodes_by_path_segment(
+                data, yaml_path, segment_index + 1, parent=parent,
+                parentref=parentref, traverse_lists=False
+            ):
+                self.logger.debug(
+                    "Processor::_get_nodes_by_traversal:  Yielding"
+                    " filtered DIRECT node at {}:".format(parentref))
+                self.logger.debug(node_coord.node)
+                yield NodeCoords(data, parent, parentref)
+
+            # Then, recurse into each child to perform the same test.
+            if isinstance(data, dict):
+                for key, val in data.items():
+                    self.logger.debug(
+                        "Processor::_get_nodes_by_traversal:  Recursing into"
+                        " KEY {} at {} for next-segment matches..."
+                        .format(key, parentref))
+                    for node_coord in self._get_nodes_by_traversal(
+                        val, yaml_path, segment_index,
+                        parent=data, parentref=key
+                    ):
+                        self.logger.debug(
+                            "Processor::_get_nodes_by_traversal:  Yielding"
+                            " filtered indirect Hash value from KEY {} at {}:"
+                            .format(key, parentref))
+                        self.logger.debug(node_coord.node)
+                        yield node_coord
+            elif isinstance(data, list):
+                for idx, ele in enumerate(data):
+                    self.logger.debug(
+                        "Processor::_get_nodes_by_traversal:  Recursing into"
+                        " INDEX {} at {} for next-segment matches..."
+                        .format(idx, parentref))
+                    for node_coord in self._get_nodes_by_traversal(
+                        ele, yaml_path, segment_index,
+                        parent=data, parentref=idx
+                    ):
+                        self.logger.debug(
+                            "Processor::_get_nodes_by_traversal:  Yielding"
+                            " filtered indirect Array value from INDEX {} at"
+                            " {}:".format(idx, parentref))
+                        self.logger.debug(node_coord.node)
+                        yield node_coord
+
     def _get_required_nodes(self, data: Any, yaml_path: YAMLPath,
-                            depth: int = 0, parent: Any = None,
-                            parentref: Any = None
+                            depth: int = 0, **kwargs: Any
                             ) -> Generator[NodeCoords, None, None]:
         """
         Generate pre-existing NodeCoords from YAML data matching a YAML Path.
@@ -597,6 +759,8 @@ class Processor:
         if data is None:
             return
 
+        parent = kwargs.pop("parent", None)
+        parentref = kwargs.pop("parentref", None)
         segments = yaml_path.escaped
         if segments and len(segments) > depth:
             (segment_type, unstripped_attrs) = yaml_path.unescaped[depth]
@@ -611,13 +775,20 @@ class Processor:
             self.logger.debug("")
 
             for segment_node_coords in self._get_nodes_by_path_segment(
-                    data, yaml_path, depth, parent, parentref):
+                data, yaml_path, depth, parent=parent, parentref=parentref
+            ):
                 self.logger.debug(
                     ("Processor::_get_required_nodes:  "
                      + "Found node of type {} at <{}>{} in"
                      + " the data and recursing into it...")
-                    .format(type(segment_node_coords), segment_type,
-                            except_segment)
+                    .format(
+                        type(
+                            segment_node_coords.node
+                            if hasattr(segment_node_coords, "node")
+                            else segment_node_coords
+                        ),
+                        segment_type,
+                        except_segment)
                 )
                 self.logger.debug(segment_node_coords)
 
@@ -628,14 +799,22 @@ class Processor:
                     # cannot itself be parented to the real DOM, though each
                     # of its elements has a real parent.
                     for subnode_coord in self._get_required_nodes(
-                            segment_node_coords, yaml_path, depth + 1,
-                            None, None):
+                            segment_node_coords, yaml_path, depth + 1):
                         yield subnode_coord
                 else:
                     for subnode_coord in self._get_required_nodes(
                             segment_node_coords.node, yaml_path, depth + 1,
-                            segment_node_coords.parent,
-                            segment_node_coords.parentref):
+                            parent=segment_node_coords.parent,
+                            parentref=segment_node_coords.parentref):
+                        self.logger.debug(
+                            ("Processor::_get_required_nodes:  "
+                            + "Finally returning segment data of"
+                            + " type {} at parentref {}:")
+                            .format(type(subnode_coord.node),
+                                    subnode_coord.parentref)
+                        )
+                        self.logger.debug(subnode_coord.node)
+                        self.logger.debug("")
                         yield subnode_coord
         else:
             self.logger.debug(
@@ -649,10 +828,10 @@ class Processor:
 
             yield NodeCoords(data, parent, parentref)
 
-    # pylint: disable=locally-disabled,too-many-statements,too-many-arguments
+    # pylint: disable=locally-disabled,too-many-statements
     def _get_optional_nodes(
             self, data: Any, yaml_path: YAMLPath, value: Any = None,
-            depth: int = 0, parent: Any = None, parentref: Any = None
+            depth: int = 0, **kwargs: Any
     ) -> Generator[NodeCoords, None, None]:
         """
         Return zero or more pre-existing NodeCoords matching a YAML Path.
@@ -686,6 +865,8 @@ class Processor:
             )
             return
 
+        parent = kwargs.pop("parent", None)
+        parentref = kwargs.pop("parentref", None)
         segments = yaml_path.escaped
         # pylint: disable=locally-disabled,too-many-nested-blocks
         if segments and len(segments) > depth:
@@ -709,7 +890,7 @@ class Processor:
             # The next element may not exist; this method ensures that it does
             matched_nodes = 0
             for next_coord in self._get_nodes_by_path_segment(
-                    data, yaml_path, depth, parent, parentref
+                data, yaml_path, depth, parent=parent, parentref=parentref
             ):
                 matched_nodes += 1
                 self.logger.debug(
@@ -719,7 +900,8 @@ class Processor:
                 )
                 for node_coord in self._get_optional_nodes(
                         next_coord.node, yaml_path, value, depth + 1,
-                        next_coord.parent, next_coord.parentref
+                        parent=next_coord.parent,
+                        parentref=next_coord.parentref
                 ):
                     yield node_coord
 
@@ -749,7 +931,7 @@ class Processor:
                         )
                         for node_coord in self._get_optional_nodes(
                                 new_ele, yaml_path, value, depth + 1,
-                                data, len(data) - 1
+                                parent=data, parentref=len(data) - 1
                         ):
                             matched_nodes += 1
                             yield node_coord
@@ -778,7 +960,7 @@ class Processor:
                             append_list_element(data, next_node)
                         for node_coord in self._get_optional_nodes(
                                 data[newidx], yaml_path, value,
-                                depth + 1, data, newidx
+                                depth + 1, parent=data, parentref=newidx
                         ):
                             matched_nodes += 1
                             yield node_coord
@@ -806,7 +988,8 @@ class Processor:
                         )
                         for node_coord in self._get_optional_nodes(
                                 data[stripped_attrs], yaml_path, value,
-                                depth + 1, data, stripped_attrs
+                                depth + 1, parent=data,
+                                parentref=stripped_attrs
                         ):
                             matched_nodes += 1
                             yield node_coord
@@ -867,11 +1050,11 @@ class Processor:
         def recurse(data, parent, parentref, reference_node, replacement_node):
             if isinstance(data, dict):
                 for i, k in [
-                        (idx, key) for idx, key in
-                        enumerate(data.keys()) if key is reference_node
+                        (idx, key) for idx, key in enumerate(data.keys())
+                        if key is reference_node
                 ]:
                     data.insert(i, replacement_node, data.pop(k))
-                for k, val in data.non_merged_items():
+                for k, val in data.items():
                     if val is reference_node:
                         if (hasattr(val, "anchor") or
                                 (data is parent and k == parentref)):

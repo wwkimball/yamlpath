@@ -38,6 +38,7 @@ for other projects to readily employ YAML Paths.
       1. [Initialize ruamel.yaml and These Helpers](#initialize-ruamelyaml-and-these-helpers)
       2. [Searching for YAML Nodes](#searching-for-yaml-nodes)
       3. [Changing Values](#changing-values)
+      4. [Merging Documents](#merging-documents)
 
 ## Introduction
 
@@ -207,6 +208,14 @@ YAML Path understands these segment types:
   `/warriors[power_level>9000]`, `warriors.power_level[.>9000]`, and
   `/warriors/power_level[.>9000]` all yield only the power_level from *all*
   warriors with power_levels over 9,000 within the same array of warrior hashes.
+* Wildcard Searches: The `*` symbol can be used as shorthand for the `[]`
+  search operator against text keys and values: `/warriors/name/Go*`
+* Deep Traversals:  The `**` symbol pair deeply traverses the document:
+  * When it is the last or only segment of a YAML Path, it selects every leaf
+    node from the remainder of the document's tree: `/shows/**`
+  * When another segment follows, it matches every node within the remainder
+    of the document's tree for which the following (and subsequent) segments
+    match: `/shows/**/name/Star*`
 * Collectors:  Placing any portion of the YAML Path within parenthesis defines a
   virtual list collector, like `(YAML Path)`; concatenation and exclusion
   operators are supported -- `+` and `-`, respectively -- along with nesting,
@@ -335,9 +344,9 @@ when -b/--backup is specified).
 
 ```text
 usage: yaml-get [-h] [-V] -p YAML_PATH
-                [-t ['.', '/', 'auto', 'dot', 'fslash']] [-x EYAML]
+                [-t ['.', '/', 'auto', 'dot', 'fslash']] [-S] [-x EYAML]
                 [-r PRIVATEKEY] [-u PUBLICKEY] [-d | -v | -q]
-                YAML_FILE
+                [YAML_FILE]
 
 Retrieves one or more values from a YAML file at a specified YAML Path. Output
 is printed to STDOUT, one line per result. When a result is a complex data-
@@ -345,7 +354,8 @@ type (Array or Hash), a JSON dump is produced to represent it. EYAML can be
 employed to decrypt the values.
 
 positional arguments:
-  YAML_FILE             the YAML file to query
+  YAML_FILE             the YAML file to query; use - to read from STDIN or
+                        leave empty and send content via a non-TTY session
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -353,6 +363,8 @@ optional arguments:
   -t ['.', '/', 'auto', 'dot', 'fslash'], --pathsep ['.', '/', 'auto', 'dot', 'fslash']
                         indicate which YAML Path seperator to use when
                         rendering results; default=dot
+  -S, --nostdin         Do not implicitly read from STDIN, even when YAML_FILE
+                        is not set and the session is non-TTY
   -d, --debug           output debugging details
   -v, --verbose         increase output verbosity
   -q, --quiet           suppress all output except errors
@@ -376,13 +388,14 @@ EYAML options:
 For more information about YAML Paths, please visit
 https://github.com/wwkimball/yamlpath.
 ```
+
 * [yaml-merge](yamlpath/commands/yaml_merge.py)
 
 ```text
 usage: yaml-merge [-h] [-V] [-c CONFIG] [-a {stop,left,right,rename}]
                   [-A {all,left,right,unique}] [-H {deep,left,right}]
                   [-O {all,deep,left,right,unique}] [-m YAML_PATH] [-o OUTPUT]
-                  [-d | -v | -q]
+                  [-S] [-d | -v | -q]
                   YAML_FILE [YAML_FILE ...]
 
 Merges two or more YAML/Compatible files together.
@@ -422,6 +435,8 @@ optional arguments:
   -o OUTPUT, --output OUTPUT
                         Write the merged result to the indicated file (or
                         STDOUT when unset)
+  -S, --nostdin         Do not implicitly read from STDIN, even when there are
+                        no - pseudo-files in YAML_FILEs with a non-TTY session
   -d, --debug           output debugging details
   -v, --verbose         increase output verbosity
   -q, --quiet           suppress all output except errors (implied when
@@ -442,7 +457,12 @@ optional arguments:
 
             The left-to-right order of YAML_FILEs is significant.  Except
             when this behavior is deliberately altered by your options, data
-            from files on the right overrides data in files to their left.
+            from files on the right overrides data in files to their left.  At
+            least two YAML_FILEs are required.  Only one may be the -
+            pseudo-file.  When only one YAML_FILE is provided, it cannot be the
+            - pseudo-file and in this special-case - will be inferred as the
+            second YAML_FILE as long as you are running this program without a
+            TTY (unless you set --nostdin|-S).
             For more information about YAML Paths, please visit
             https://github.com/wwkimball/yamlpath.
 ```
@@ -624,6 +644,7 @@ exceptions, the most interesting library files include:
   or write data to YAML/Compatible sources.
 * [eyamlprocessor.py](yamlpath/eyaml/eyamlprocessor.py) -- Extends the
   Processor class to support EYAML data encryption and decryption.
+* [merger.py](merger/merger.py) -- The core document merging logic.
 
 ## Basic Usage
 
@@ -952,4 +973,40 @@ except YAMLPathException as ex:
     log.critical(ex, 119)
 except EYAMLCommandException as ex:
     log.critical(ex, 120)
+```
+
+#### Merging Documents
+
+A document merge naturally requires at least two documents.  At the code-level,
+this means two populated DOM objects (populated instances of `yaml_data` from
+above).  You do not need to use a `Processor` for merging.  In the least amount
+of code, a merge looks like:
+
+```python
+from yamlpath.exceptions import YAMLPathException
+from yamlpath.merger.exceptions import MergeException
+from yamlpath.merger import Merger, MergerConfig
+
+# Obtain or build the lhs_data and rhs_data objects using get_yaml_data or
+# equivalent.
+
+# You'll still need to supply a logger and some arguments used by the merge
+# engine.  For purely default behavior, you could create args as a bare
+# SimpleNamespace.  Initialize the new Merger instance with the LHS document.
+merger = Merger(log, lhs_data, MergerConfig(log, args))
+
+# Merge RHS into LHS
+try:
+    merger.merge_with(rhs_data)
+except MergeException as mex:
+    log.critical(mex, 129)
+except YAMLPathException as yex:
+    log.critical(yex, 130)
+
+# At this point, merger.data is the merged result; do what you will with it,
+# including merging more data into it.  When you are ready to dump (write)
+# out the merged data, you must prepare the document and your
+# ruamel.yaml.YAML instance -- usually obtained from func.get_yaml_editor()
+# -- like this:
+merger.prepare_for_dump(my_yaml_editor)
 ```

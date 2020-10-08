@@ -12,7 +12,8 @@ from yamlpath.merger.enums import (
     AnchorConflictResolutions,
     AoHMergeOpts,
     ArrayMergeOpts,
-    HashMergeOpts
+    HashMergeOpts,
+    OutputDocTypes,
 )
 from yamlpath import Processor, YAMLPath
 from yamlpath.wrappers import ConsolePrinter, NodeCoords
@@ -181,6 +182,12 @@ class MergerConfig:
         if hasattr(self.args, "mergeat"):
             return YAMLPath(self.args.mergeat)
         return YAMLPath("/")
+
+    def get_document_format(self) -> OutputDocTypes:
+        """Get the user-desired output format."""
+        if hasattr(self.args, "document_format"):
+            return OutputDocTypes.from_str(self.args.document_format)
+        return OutputDocTypes.AUTO
 
     def _prepare_user_rules(
         self, proc: Processor, merge_path: YAMLPath, section: str,
