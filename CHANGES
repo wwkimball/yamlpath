@@ -7,10 +7,10 @@ Enhancements:
   expands results from Collectors, effectively breaking them out from an Array-
   per-line to one-Scalar-per-line.  If you place this inside a Collector, the
   results will still be collected into an Array.
-* The * character now also serves as a wildcard character for key-names and
-  Array value comparisons, converting the segment to a Search.  For example, a
-  YAML Path like `abc.d*` becomes `abc[.^d]`, `abc.*f` becomes `abc[.$f]`, and
-  `abc.*e*` becomes `abc[.=~/^.*e.*$/], and so on.
+* The * character now also serves as a wildcard character for key-names, Hash
+  values, and Array value comparisons, converting the segment to a Search.  For
+  example, a YAML Path like `abc.d*` becomes `abc[.^d]`, `abc.*f` becomes
+  `abc[.$f]`, and `abc.*e*` becomes `abc[.=~/^.*e.*$/], and so on.
 * Added a new YAML Path Segment Type:  **
   This new type is a "Traversal" segment which causes YAML Path operations to
   deeply traverse the document from that point.  When there are no further
@@ -23,7 +23,8 @@ Enhancements:
   with --nostdin|-S.  This enables, for example, piping into these commands
   without being forced to specify the - pseudo-file as an argument to them.
 * The yaml-merge command now enables users to force the merged document to be
-  written out as YAML, JSON, or whatever type the first document is (AUTO).
+  written out as YAML, JSON via a new --document-format (-D) command-line
+  argument.  When unset, the format will be that of the first document (AUTO).
 * The yaml-merge command now accepts multi-document YAML files, created when
   the YAML standard-specified End-of-Document, Start-of-Document marker pair
   (...<EOL> followed by ---<EOL>) is present, like:
@@ -45,8 +46,25 @@ Enhancements:
   pass only a single file or stream that is not a multi-document file, its
   content will merely be written out without any merging into it.  This can be
   useful for trivially converting any file from YAML to JSON or JSON to YAML,
-  like `yaml-merge -D json file.yaml` or `yaml-merge -D yaml file.json`.
-* The `yaml-set` command-line tool can now write changes to empty files.
+  like `yaml-merge --document-format=json file.yaml` or
+  `yaml-merge --document-format=yaml file.json`.
+* The `yaml-set` command-line tool can now write changes to minimally-viable
+  files, enabling users to build up new data files from scratch.  The file must
+  exist and have some minimum structure, depending on document type.  For
+  example:
+  A minimally-viable YAML file:
+  ```yaml
+  ---
+  # The triple-dash is required.
+  ```
+  Two versions of a minimally-viable JSON file:
+  ```json
+  {}
+  ```
+  or:
+  ```json
+  []
+  ```
 
 Bug Fixes:
 * Collectors were breaking search nodes with Regular Expressions, making it

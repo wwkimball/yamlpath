@@ -212,7 +212,7 @@ def main():
     yaml_data = get_yaml_data(yaml, log, args.yaml_file)
     if yaml_data is None:
         yaml_data = build_next_node(change_path, 0, new_value)
-    elif not yaml_data:
+    elif not yaml_data and isinstance(yaml_data, bool):
         # An error message has already been logged
         sys.exit(1)
 
