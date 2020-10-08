@@ -486,7 +486,7 @@ class Merger:
                 "A merge was not performed.  Ensure your target path matches"
                 " at least one node in the left document(s).", insert_at)
 
-    def prepare_for_dump(self, yaml_writer: Any) -> None:
+    def prepare_for_dump(self, yaml_writer: Any) -> OutputDocTypes:
         """
         Prepare this merged document and its writer for final rendering.
 
@@ -498,7 +498,9 @@ class Merger:
         Parameters:
         1. yaml_writer (ruamel.yaml.YAML) The YAML document writer
 
-        Returns:  N/A
+        Returns:  (OutputDocTypes) One of:
+          * OutputDocTypes.JSON:  The document and yaml_writer are JSON format.
+          * OutputDocTypes.YAML:  The document and yaml_writer are YAML format.
         """
         # Check whether the user is forcing an output format
         doc_format = self.config.get_document_format()
@@ -526,6 +528,8 @@ class Merger:
 
             # When writing YAML, ensure the document start mark is emitted
             yaml_writer.explicit_start = True
+
+        return OutputDocTypes.JSON if is_flow else OutputDocTypes.YAML
 
     @classmethod
     def set_flow_style(cls, node: Any, is_flow: bool) -> None:

@@ -487,3 +487,56 @@ new_key: New value
         result = script_runner.run(self.command, badsyntax_yaml_file)
         assert not result.success, result.stderr
         assert "YAML syntax error" in result.stderr
+
+    def test_merge_yaml_output_json(self, script_runner, tmp_path, tmp_path_factory):
+        lhs_file = create_temp_yaml_file(tmp_path_factory, """---
+aliases:
+  - &some_lhs_string A string value
+
+lhs_anchored_hash: &some_lhs_hash
+  with: properties
+  of_its: own
+
+hash:
+  <<: *some_lhs_hash
+  uses_an_alias: *some_lhs_string
+  lhs_exclusive: LHS exclusive
+  merge_target: LHS original value
+...
+---
+aliases:
+  - &some_rhs_number 5280
+
+rhs_anchored_hash: &some_rhs_hash
+  having: its
+  very_own: properties
+
+hash:
+  <<: *some_rhs_hash
+  uses_an_alias: *some_rhs_number
+  rhs_exclusive: RHS exclusive
+  merge_target: RHS override value
+""")
+        merged_yaml_content = """{"hash": {"lhs_exclusive": "LHS exclusive", "merge_target": "LHS original value"}}"""
+
+        output_dir = tmp_path / "test_convert_yaml_to_json_file"
+        output_dir.mkdir()
+        output_file = output_dir / "output.yaml"
+
+        # DEBUG
+        # print("LHS File:  {}".format(lhs_file))
+        # print("Output File:  {}".format(output_file))
+        # print("Expected Output:")
+        # print(merged_yaml_content)
+
+        result = script_runner.run(
+            self.command
+            , "--nostdin"
+            , "--document-format=json"
+            , "--output={}".format(output_file)
+            , lhs_file)
+        assert result.success, result.stderr
+
+        with open(output_file, 'r') as fhnd:
+            filedat = fhnd.read()
+        assert merged_yaml_content == filedat
