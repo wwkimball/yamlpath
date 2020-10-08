@@ -171,6 +171,7 @@ def get_yaml_multidoc_data(
     # lengthy stack-dumps with specific, meaningful feedback.  Further, some
     # warnings are treated as errors by ruamel.yaml, so these are also
     # coallesced into cleaner feedback.
+    has_error = False
     try:
         with warnings.catch_warnings():
             warnings.filterwarnings("error")
@@ -190,22 +191,29 @@ def get_yaml_multidoc_data(
                         logger.debug(document)
                         yield document
     except KeyboardInterrupt:
+        has_error = True
         logger.error("Aborting data load due to keyboard interrupt!")
     except FileNotFoundError:
+        has_error = True
         logger.error("File not found:  {}".format(source))
     except ParserError as ex:
+        has_error = True
         logger.error("YAML parsing error {}:  {}"
                      .format(str(ex.problem_mark).lstrip(), ex.problem))
     except ComposerError as ex:
+        has_error = True
         logger.error("YAML composition error {}:  {}"
                     .format(str(ex.problem_mark).lstrip(), ex.problem))
     except ConstructorError as ex:
+        has_error = True
         logger.error("YAML construction error {}:  {}"
                      .format(str(ex.problem_mark).lstrip(), ex.problem))
     except ScannerError as ex:
+        has_error = True
         logger.error("YAML syntax error {}:  {}"
                      .format(str(ex.problem_mark).lstrip(), ex.problem))
     except DuplicateKeyError as dke:
+        has_error = True
         omits = [
             "while constructing", "To suppress this", "readthedocs",
             "future releases", "the new API",
@@ -226,11 +234,15 @@ def get_yaml_multidoc_data(
         logger.error("Duplicate Hash key detected:  {}"
                      .format(newmsg))
     except ReusedAnchorWarning as raw:
+        has_error = True
         logger.error("Duplicate YAML Anchor detected:  {}"
                      .format(
                          str(raw)
                          .replace("occurrence   ", "occurrence ")
                          .replace("\n", "\n   ")))
+
+    if has_error:
+        yield False
 
 def build_next_node(yaml_path: YAMLPath, depth: int,
                     value: Any = None) -> Any:
