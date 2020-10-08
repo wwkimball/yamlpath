@@ -10,12 +10,10 @@ from io import StringIO
 import ruamel.yaml # type: ignore
 from ruamel.yaml.scalarstring import ScalarString
 from ruamel.yaml.comments import CommentedSeq, CommentedMap
-from ruamel.yaml import SafeConstructor
 
 from yamlpath.func import (
     append_list_element,
-    get_yaml_editor,
-    quote_every_string,
+    build_next_node,
 )
 from yamlpath.wrappers import ConsolePrinter, NodeCoords
 from yamlpath.merger.exceptions import MergeException
@@ -410,13 +408,11 @@ class Merger:
         if rhs is None:
             return
 
-        # When LHS is None (empty document), just dump all of RHS into it
-        if self.data is None:
-            self.data = rhs
-            return
-
-        lhs_proc = Processor(self.logger, self.data)
+        # When LHS is None (empty document), just dump all of RHS into it,
+        # honoring any --mergeat|-m location as best as possible.
         insert_at = self.config.get_insertion_point()
+        if self.data is None:
+            self.data = build_next_node(insert_at, 0, rhs)
 
         # Remove all comments (no sensible way to merge them)
         Merger.delete_all_comments(rhs)
@@ -438,6 +434,7 @@ class Merger:
         # Loop through all insertion points and the elements in RHS
         merge_performed = False
         nodes: List[NodeCoords] = []
+        lhs_proc = Processor(self.logger, self.data)
         for node_coord in lhs_proc.get_nodes(
                 insert_at, default_value=default_val
         ):
