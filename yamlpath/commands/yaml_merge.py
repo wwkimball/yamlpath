@@ -206,14 +206,6 @@ def merge_multidoc(yaml_file, yaml_editor, log, merger):
     """Merge all documents within a multi-document source."""
     exit_state = 1
     for yaml_data in get_yaml_multidoc_data(yaml_editor, log, yaml_file):
-        log.debug(
-            "merge_multidoc:  Got data of type {}:".format(type(yaml_data)))
-        log.debug(yaml_data)
-        if not yaml_data and yaml_data is not None:
-            # An error has already been logged
-            exit_state = 1
-            break
-
         try:
             merger.merge_with(yaml_data)
         except MergeException as mex:
