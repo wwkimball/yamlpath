@@ -504,11 +504,9 @@ class Merger:
         doc_format = self.config.get_document_format()
         if doc_format is OutputDocTypes.AUTO:
             # Check whether the document root is in flow or block format.
-            is_flow = False
+            is_flow = True
             if hasattr(self.data, "fa"):
                 is_flow = self.data.fa.flow_style()
-            else:
-                is_flow = True
         else:
             is_flow = doc_format is OutputDocTypes.JSON
 

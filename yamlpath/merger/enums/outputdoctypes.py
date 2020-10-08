@@ -16,16 +16,16 @@ class OutputDocTypes(Enum):
     `AUTO`
         The output type is inferred from the first source document.
 
-    `YAML`
-        Force output to be YAML.
-
     `JSON`
         Force output to be JSON.
+
+    `YAML`
+        Force output to be YAML.
     """
 
     AUTO = auto()
-    YAML = auto()
     JSON = auto()
+    YAML = auto()
 
     @staticmethod
     def get_names() -> List[str]:
