@@ -172,9 +172,7 @@ class Merger:
                 .format(ele, type(ele), path_next))
 
             if append_all or (ele not in lhs):
-                append_list_element(
-                    lhs, ele,
-                    ele.anchor.value if hasattr(ele, "anchor") else None)
+                lhs.append(ele)
         return lhs
 
     # pylint: disable=locally-disabled,too-many-branches
@@ -413,6 +411,9 @@ class Merger:
         insert_at = self.config.get_insertion_point()
         if self.data is None:
             self.data = build_next_node(insert_at, 0, rhs)
+            if isinstance(rhs, (dict, list)):
+                # Only Scalar values need further processing
+                return
 
         # Remove all comments (no sensible way to merge them)
         Merger.delete_all_comments(rhs)

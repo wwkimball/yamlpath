@@ -204,19 +204,30 @@ def validateargs(args, log):
 
 def merge_multidoc(yaml_file, yaml_editor, log, merger):
     """Merge all documents within a multi-document source."""
-    exit_state = 0
-    for prime_data in get_yaml_multidoc_data(yaml_editor, log, yaml_file):
+    exit_state = 1
+    for yaml_data in get_yaml_multidoc_data(yaml_editor, log, yaml_file):
+        log.debug(
+            "merge_multidoc:  Got data of type {}:".format(type(yaml_data)))
+        log.debug(yaml_data)
+        if not yaml_data and yaml_data is not None:
+            # An error has already been logged
+            exit_state = 1
+            break
+
         try:
-            merger.merge_with(prime_data)
+            merger.merge_with(yaml_data)
         except MergeException as mex:
             log.error(mex)
             exit_state = 6
+            break
         except YAMLPathException as yex:
             log.error(yex)
             exit_state = 7
+            break
         else:
-            exit_state = 2
+            exit_state = 0
 
+    log.debug("merge_multidoc:  Reporting status, {}.".format(exit_state))
     return exit_state
 
 def process_rhs(
@@ -232,15 +243,7 @@ def process_rhs(
     log.info("Processing {}..."
                 .format("STDIN" if rhs_file == "-" else rhs_file))
 
-    # Try to open the file; failures are fatal
-    got_data = False
-    exit_state = merge_multidoc(rhs_file, rhs_yaml, log, merger)
-
-    if not got_data:
-        # An error message has already been logged
-        exit_state = 3
-
-    return exit_state
+    return merge_multidoc(rhs_file, rhs_yaml, log, merger)
 
 def calc_output_document_type(args):
     """Determine whether the output document will be JSON or YAML."""
@@ -274,9 +277,7 @@ def main():
 
     if exit_state != 0:
         # An error message has already been logged
-        log.critical(
-            "The first input file, {}, has nothing to merge into."
-            .format(prime_file), 1)
+        sys.exit(exit_state)
 
     # Merge additional input files into the prime
     rhs_yaml = get_yaml_editor(

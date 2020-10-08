@@ -8,14 +8,14 @@ class Test_commands_yaml_merge():
     command = "yaml-merge"
 
     def test_no_options(self, script_runner):
-        result = script_runner.run(self.command)
+        result = script_runner.run(self.command, "--nostdin")
         assert not result.success, result.stderr
-        assert "the following arguments are required: YAML_FILE" in result.stderr
+        assert "There must be at least one YAML_FILE" in result.stderr
 
     def test_missing_input_file_arg(self, script_runner):
         result = script_runner.run(self.command, "--nostdin", "no-file.yaml")
         assert not result.success, result.stderr
-        assert "There must be at least two YAML_FILEs" in result.stderr
+        assert "File not found" in result.stderr
 
     def test_missing_config_file(self, script_runner):
         result = script_runner.run(
@@ -46,7 +46,7 @@ key: value
             , "no-file.yaml"
             , "-")
         assert not result.success, result.stderr
-        assert "The first input file" in result.stderr
+        assert "File not found" in result.stderr
 
     def test_missing_rhs_input_file(self, script_runner, tmp_path_factory):
         lhs_file = create_temp_yaml_file(tmp_path_factory, """---

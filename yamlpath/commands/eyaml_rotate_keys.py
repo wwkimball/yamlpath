@@ -23,7 +23,7 @@ import yamlpath.patches
 from yamlpath.wrappers import ConsolePrinter
 
 # Implied Constants
-MY_VERSION = "1.0.3"
+MY_VERSION = "1.0.4"
 
 def processcli():
     """Process command-line arguments."""
@@ -126,7 +126,7 @@ def main():
 
         # Try to open the file
         yaml_data = get_yaml_data(yaml, log, yaml_file)
-        if yaml_data is None:
+        if not yaml_data and yaml_data is not None:
             # An error message has already been logged
             exit_state = 3
             continue

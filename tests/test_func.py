@@ -45,7 +45,7 @@ class Test_func():
         force_ruamel_load_keyboardinterrupt
     ):
         yp = get_yaml_editor()
-        assert None == get_yaml_data(yp, quiet_logger, "no-such.file")
+        assert False == get_yaml_data(yp, quiet_logger, "no-such.file")
         captured = capsys.readouterr()
         assert -1 < captured.err.find("File not found")
 
@@ -58,7 +58,7 @@ class Test_func():
         no: ''
         """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
-        assert None == get_yaml_data(yp, quiet_logger, yaml_file)
+        assert False == get_yaml_data(yp, quiet_logger, yaml_file)
         captured = capsys.readouterr()
         assert -1 < captured.err.find("keyboard interrupt")
 
@@ -71,7 +71,7 @@ class Test_func():
         key: value2
         """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
-        assert None == get_yaml_data(yp, quiet_logger, yaml_file)
+        assert False == get_yaml_data(yp, quiet_logger, yaml_file)
         captured = capsys.readouterr()
         assert -1 < captured.err.find("Duplicate Hash key detected")
 
@@ -85,7 +85,7 @@ class Test_func():
           - &anchor value2
         """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
-        assert None == get_yaml_data(yp, quiet_logger, yaml_file)
+        assert False == get_yaml_data(yp, quiet_logger, yaml_file)
         captured = capsys.readouterr()
         assert -1 < captured.err.find("Duplicate YAML Anchor detected")
 
@@ -98,7 +98,7 @@ class Test_func():
           <<:
         """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
-        assert None == get_yaml_data(yp, quiet_logger, yaml_file)
+        assert False == get_yaml_data(yp, quiet_logger, yaml_file)
         captured = capsys.readouterr()
         assert -1 < captured.err.find("YAML construction error")
 

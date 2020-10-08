@@ -92,9 +92,11 @@ Non-Breaking API Changes:
   ```
 
 To reflect these changes:
+* eyaml-rotate-keys is now version 1.0.4
 * yaml-get is now version 1.2.0
-* yaml-set is now version 1.1.0
 * yaml-merge is now version 0.1.0
+* yaml-paths is now version 0.2.1
+* yaml-set is now version 1.1.0
 
 2.4.3:
 Bug Fixes:

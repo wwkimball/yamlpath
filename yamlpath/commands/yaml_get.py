@@ -151,7 +151,7 @@ def main():
     yaml_data = get_yaml_data(
         yaml, log,
         args.yaml_file if args.yaml_file else "-")
-    if yaml_data is None:
+    if not yaml_data and yaml_data is not None:
         # An error message has already been logged
         sys.exit(1)
 
