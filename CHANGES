@@ -126,6 +126,8 @@ Non-Breaking API Changes:
   else:
     print("Got a non-empty document")
   ```
+* The ConsolePrinter's debug method now prints vastly more detail and allows
+  for customization of the output.  Read its documentation for details.
 
 To reflect these changes:
 * eyaml-rotate-keys is now version 1.0.4
