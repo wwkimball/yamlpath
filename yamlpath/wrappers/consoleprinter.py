@@ -148,10 +148,13 @@ class ConsolePrinter:
         1. message (str) The message to print
 
         Keyword Arguments:
-        * header
-        * footer
-        * prefix
-        * data
+        * data (Any) Data to recursively add to the DEBUG message
+        * header (str) Line printed before the body of the DEBUG message
+        * footer (str) Line printed after the body of the DEBUG message
+        * prefix (str) String prefixed to every DEBUG line comprising the
+          entirety of the DEBUG message, including any optional data
+        * data_header (str) Line printed before the optional data, if any
+        * data_footer (str) Line printed after the optional data, if any
 
         Returns:  N/A
 
@@ -192,10 +195,12 @@ class ConsolePrinter:
 
     @classmethod
     def _debug_prefix_lines(cls, line: str) -> str:
+        """Helper for debug."""
         return "DEBUG:  {}".format(str(line).replace("\n", "\nDEBUG:  "))
 
     @classmethod
     def _debug_get_anchor(cls, data: Any) -> str:
+        """Helper for debug."""
         return ("&{}".format(data.anchor.value)
                 if hasattr(data, "anchor") and data.anchor.value is not None
                 else "")
@@ -219,6 +224,7 @@ class ConsolePrinter:
 
     @classmethod
     def _debug_scalar(cls, data: Any, **kwargs) -> str:
+        """Helper for debug."""
         prefix = kwargs.pop("prefix", "")
         print_anchor = kwargs.pop("print_anchor", True)
         print_type = kwargs.pop("print_type", False)
@@ -248,6 +254,20 @@ class ConsolePrinter:
                     ele, prefix=ele_prefix, print_type=True)
 
     @classmethod
+    def _debug_get_kv_anchors(cls, key: Any, value: Any) -> str:
+        """Helper for debug."""
+        key_anchor = ConsolePrinter._debug_get_anchor(key)
+        val_anchor = ConsolePrinter._debug_get_anchor(value)
+        display_anchor = ""
+        if key_anchor and val_anchor:
+            display_anchor = "({},{})".format(key_anchor, val_anchor)
+        elif key_anchor:
+            display_anchor = "({},_)".format(key_anchor)
+        elif val_anchor:
+            display_anchor = "(_,{})".format(val_anchor)
+        return display_anchor
+
+    @classmethod
     def _debug_dict(cls, data: Dict, **kwargs) -> Generator[str, None, None]:
         """Helper for debug."""
         prefix = kwargs.pop("prefix", "")
@@ -266,16 +286,7 @@ class ConsolePrinter:
             display_key = (str(key)
                            if key in local_keys
                            else "<<:{}:>>".format(key))
-            key_anchor = ConsolePrinter._debug_get_anchor(key)
-            val_anchor = ConsolePrinter._debug_get_anchor(val)
-            display_anchor = ""
-            if key_anchor and val_anchor:
-                display_anchor = "({},{})".format(key_anchor, val_anchor)
-            elif key_anchor:
-                display_anchor = "({},_)".format(key_anchor)
-            elif val_anchor:
-                display_anchor = "(_,{})".format(val_anchor)
-
+            display_anchor = ConsolePrinter._debug_get_kv_anchors(key, val)
             kv_prefix = "{}[{}]{}".format(prefix, display_key, display_anchor)
 
             if isinstance(val, dict):
