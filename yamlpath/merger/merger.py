@@ -58,6 +58,23 @@ class Merger:
         # a sensible result.
         Merger.delete_all_comments(self.data)
 
+    def _delete_mergeref_keys(self, data: CommentedMap) -> Set[Any]:
+        """Delete all YAML merge reference keys from a CommentedMap."""
+        concrete_keys = []
+        for local_key, _ in data.non_merged_items():
+            concrete_keys.append(local_key)
+
+        reference_keys = set(data.keys()).difference(concrete_keys)
+        for key in reference_keys:
+            self.logger.debug(
+                "Deleting key from LHS:",
+                data=key, prefix="Merger::_delete_mergeref_keys:  ",
+                header="!" * 50
+            )
+            del data[key]
+
+        return reference_keys
+
     #pylint: disable=too-many-branches
     def _merge_dicts(
         self, lhs: CommentedMap, rhs: CommentedMap, path: YAMLPath
@@ -92,6 +109,11 @@ class Merger:
             "Merging FROM dict with keys: {}:".format(", ".join(rhs.keys())),
             data=rhs, prefix="Merger::_merge_dicts:  ",
             footer="====================")
+
+        # Delete all internal YAML merge reference keys lest any later
+        # .insert() operation on LHS inexplicably convert them from reference
+        # to concrete keys.  This seems like a bug in ruamel.yaml...
+        self._delete_mergeref_keys(lhs)
 
         # Assume deep merge until a node's merge rule indicates otherwise
         buffer: List[Tuple[Any, Any]] = []
@@ -179,7 +201,7 @@ class Merger:
         for b_key, b_val in buffer:
             self.logger.debug(
                 "Merger::_merge_dicts:  Appending key, {}, from buffer at"
-                " path, {}.".format(b_key, path), header="APPEND" * 15)
+                " path, {}.".format(b_key, path), header="APPEND " * 15)
             lhs[b_key] = b_val
 
         self.logger.debug(
