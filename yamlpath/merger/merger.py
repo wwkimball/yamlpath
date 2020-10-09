@@ -85,11 +85,11 @@ class Merger:
                 "Impossible to add Hash data to non-Hash destination.", path)
 
         self.logger.debug(
-            "Merging INTO dict with keys {}:".format(", ".join(lhs.keys())),
+            "Merging INTO dict with keys: {}:".format(", ".join(lhs.keys())),
             data=lhs, prefix="Merger::_merge_dicts:  ",
             header="--------------------")
         self.logger.debug(
-            "Merging FROM with keys {}:".format(", ".join(rhs.keys())),
+            "Merging FROM dict with keys: {}:".format(", ".join(rhs.keys())),
             data=rhs, prefix="Merger::_merge_dicts:  ",
             footer="====================")
 
@@ -106,7 +106,16 @@ class Merger:
                         " buffer to position, {}, at path, {}."
                         .format(b_key, buffer_pos, path_next),
                         header="INSERT " * 15)
+                    self.logger.debug(
+                        "Before INSERT, the LHS document was:",
+                        data=lhs, prefix="Merger::_merge_dicts:  ")
+                    self.logger.debug(
+                        "... and before INSERT, the incoming value will be:",
+                        data=b_val, prefix="Merger::_merge_dicts:  ")
                     lhs.insert(buffer_pos, b_key, b_val)
+                    self.logger.debug(
+                        "After INSERT, the LHS document became:",
+                        data=lhs, prefix="Merger::_merge_dicts:  ")
                     buffer_pos += 1
                 buffer = []
 
@@ -132,7 +141,15 @@ class Merger:
 
                 if isinstance(val, CommentedMap):
                     self._merge_dicts(lhs[key], val, path_next)
+                    self.logger.debug(
+                        "Document BEFORE calling combine_merge_anchors:",
+                        data=lhs, prefix="Merger::_merge_dicts:  ",
+                        header="+------------------+")
                     Merger.combine_merge_anchors(lhs[key], val)
+                    self.logger.debug(
+                        "Document AFTER calling combine_merge_anchors:",
+                        data=lhs, prefix="Merger::_merge_dicts:  ",
+                        footer="+==================+")
                 elif isinstance(val, CommentedSeq):
                     self._merge_lists(
                         lhs[key], val, path_next, parent=rhs, parentref=key)
@@ -140,7 +157,16 @@ class Merger:
                     self.logger.debug(
                         "Merger::_merge_dicts:  Updating key, {}, at path,"
                         " {}.".format(key, path_next), header="UPDATE " * 15)
+                    self.logger.debug(
+                        "Before UPDATE, the LHS document was:",
+                        data=lhs, prefix="Merger::_merge_dicts:  ")
+                    self.logger.debug(
+                        "... and before UPDATE, the incoming value will be:",
+                        data=val, prefix="Merger::_merge_dicts:  ")
                     lhs[key] = val
+                    self.logger.debug(
+                        "After UPDATE, the LHS document became:",
+                        data=lhs, prefix="Merger::_merge_dicts:  ")
             else:
                 # LHS lacks the RHS key.  Buffer this key-value pair in order
                 # to insert it ahead of whatever key(s) follow this one in RHS
@@ -155,6 +181,10 @@ class Merger:
                 "Merger::_merge_dicts:  Appending key, {}, from buffer at"
                 " path, {}.".format(b_key, path), header="APPEND" * 15)
             lhs[b_key] = b_val
+
+        self.logger.debug(
+            "Completed merge result for path, {}:".format(path),
+            data=lhs, prefix="Merger::_merge_dicts:  ")
 
     def _merge_simple_lists(
         self, lhs: CommentedSeq, rhs: CommentedSeq, path: YAMLPath,
@@ -515,6 +545,10 @@ class Merger:
                     lhs_proc.set_value(insert_at, rhs)
                     merge_performed = True
 
+        self.logger.debug(
+            "Completed merge operation, resulting in document:",
+            prefix="Merger::merge_with:  ", data=self.data)
+
         if not merge_performed:
             raise MergeException(
                 "A merge was not performed.  Ensure your target path matches"
@@ -671,17 +705,8 @@ class Merger:
     @classmethod
     def combine_merge_anchors(cls, lhs: CommentedMap, rhs: CommentedMap):
         """Merge YAML merge keys."""
-        if len(rhs.merge) < 1:
-            return
-
-        next_merge_index = -1
-        for mele in lhs.merge:
-            if mele[0] > next_merge_index:
-                next_merge_index = mele[0]
-
         for mele in rhs.merge:
-            next_merge_index += 1
-            lhs.merge.append((next_merge_index, mele[1]))
+            lhs.add_yaml_merge([mele])
 
     @classmethod
     def replace_anchor(
