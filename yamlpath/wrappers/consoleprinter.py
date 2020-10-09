@@ -14,7 +14,10 @@ Requires an object on init which has the following properties:
 Copyright 2018, 2019, 2020 William W. Kimball, Jr. MBA MSIS
 """
 import sys
-from typing import Any, Dict, Generator, List
+from typing import Any, Dict, Generator, List, Union
+
+from ruamel.yaml.comments import CommentedMap
+
 
 class ConsolePrinter:
     """
@@ -268,14 +271,14 @@ class ConsolePrinter:
         return display_anchor
 
     @classmethod
-    def _debug_dict(cls, data: Dict, **kwargs) -> Generator[str, None, None]:
+    def _debug_dict(
+        cls, data: Union[Dict, CommentedMap], **kwargs
+    ) -> Generator[str, None, None]:
         """Helper for debug."""
         prefix = kwargs.pop("prefix", "")
 
         local_keys = []
-        if (hasattr(data, "non_merged_items")
-            and callable(data.non_merged_items)
-        ):
+        if isinstance(data, CommentedMap):
             for local_key, _ in data.non_merged_items():
                 local_keys.append(local_key)
         else:
