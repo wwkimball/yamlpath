@@ -147,6 +147,7 @@ def validateargs(args, log):
     # * At least one of --value, --file, --stdin, or --random must be set
     if not (
             args.value
+            or args.value == ""
             or args.file
             or args.stdin
             or args.random
@@ -248,7 +249,7 @@ def main():
     backup_file = args.yaml_file + ".bak"
 
     # Obtain the replacement value
-    if args.value:
+    if args.value or args.value == "":
         new_value = args.value
     elif args.stdin:
         new_value = ''.join(sys.stdin.readlines())
