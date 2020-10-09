@@ -65,6 +65,13 @@ Enhancements:
   ```json
   []
   ```
+* The `yaml-set` command-line tool now accepts empty-String values.
+* The `yaml-merge` command-line tool now permits overwriting one of its input
+  files as long as `--overwrite` is used instead of `--output`; these are
+  mutually-exclusive options.  To help users protect against accidental change,
+  a new `--backup` flag will cause the to-be-overwritten file to be renamed
+  with a ".bak" file-name extension.  A pre-existing backup file with the same
+  name will be unceremoniously replaced.
 
 Bug Fixes:
 * Collectors were breaking search nodes with Regular Expressions, making it
@@ -75,6 +82,9 @@ Bug Fixes:
 * When the left-most document was JSON, yaml-merge and yaml-set would both
   improperly write out a YAML document start mark (---) and then a hybrid
   JSON/YAML result rather than valid JSON.
+* The yaml-merge command would "explode" LHS Anchored Hashes wherever they were
+  aliased when the RHS document modified the same Hash into which the alias was
+  used.
 
 Non-Breaking API Changes:
 * The various protected _get_* methods of Processor were changed to reduce the
