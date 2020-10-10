@@ -6,6 +6,7 @@ Copyright 2020 William W. Kimball, Jr. MBA MSIS
 from typing import Any, Dict, List, Set, Tuple
 import json
 from io import StringIO
+from pathlib import Path
 
 import ruamel.yaml # type: ignore
 from ruamel.yaml.scalarstring import ScalarString
@@ -586,7 +587,9 @@ class Merger:
                 "A merge was not performed.  Ensure your target path matches"
                 " at least one node in the left document(s).", insert_at)
 
-    def prepare_for_dump(self, yaml_writer: Any) -> OutputDocTypes:
+    def prepare_for_dump(
+        self, yaml_writer: Any, output_file: str = ""
+    ) -> OutputDocTypes:
         """
         Prepare this merged document and its writer for final rendering.
 
@@ -605,10 +608,16 @@ class Merger:
         # Check whether the user is forcing an output format
         doc_format = self.config.get_document_format()
         if doc_format is OutputDocTypes.AUTO:
-            # Check whether the document root is in flow or block format.
-            is_flow = True
-            if hasattr(self.data, "fa"):
-                is_flow = self.data.fa.flow_style()
+            # Identify by file-extension, if it indicates a known type
+            file_extension = (Path(output_file).suffix.lower()
+                              if output_file else "")
+            if file_extension in [".json", ".yaml", ".yml"]:
+                is_flow = file_extension == ".json"
+            else:
+                # Check whether the document root is in flow or block format
+                is_flow = True
+                if hasattr(self.data, "fa"):
+                    is_flow = self.data.fa.flow_style()
         else:
             is_flow = doc_format is OutputDocTypes.JSON
 

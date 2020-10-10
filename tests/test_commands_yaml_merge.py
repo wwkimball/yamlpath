@@ -238,6 +238,7 @@ hash:
             self.command
             , "--nostdin"
             , "--output={}".format(output_file)
+            , "--document-format=json"
             , lhs_file
             , rhs_file)
         assert result.success, result.stderr
@@ -533,6 +534,81 @@ hash:
             , "--document-format=json"
             , "--output={}".format(output_file)
             , lhs_file)
+        assert result.success, result.stderr
+
+        with open(output_file, 'r') as fhnd:
+            filedat = fhnd.read()
+        assert merged_yaml_content == filedat
+
+    def test_merge_happy_multi_single_yaml_files_to_file(self, script_runner, tmp_path, tmp_path_factory):
+        lhs_file = create_temp_yaml_file(tmp_path_factory, """---
+aliases:
+  - &some_lhs_string A string value
+
+lhs_anchored_hash: &some_lhs_hash
+  with: properties
+  of_its: own
+
+hash:
+  <<: *some_lhs_hash
+  uses_an_alias: *some_lhs_string
+  lhs_exclusive: LHS exclusive
+  merge_target: LHS original value
+...
+---
+hash:
+  of_its: very own
+""")
+        rhs_file = create_temp_yaml_file(tmp_path_factory, """---
+aliases:
+  - &some_rhs_number 5280
+
+rhs_anchored_hash: &some_rhs_hash
+  having: its
+  very_own: properties
+
+hash:
+  <<: *some_rhs_hash
+  uses_an_alias: *some_rhs_number
+  rhs_exclusive: RHS exclusive
+  merge_target: RHS override value
+""")
+        merged_yaml_content = """---
+aliases:
+  - &some_lhs_string A string value
+  - &some_rhs_number 5280
+lhs_anchored_hash: &some_lhs_hash
+  with: properties
+  of_its: own
+rhs_anchored_hash: &some_rhs_hash
+  having: its
+  very_own: properties
+hash:
+  <<: [*some_lhs_hash, *some_rhs_hash]
+  uses_an_alias: *some_rhs_number
+  lhs_exclusive: LHS exclusive
+  rhs_exclusive: RHS exclusive
+  merge_target: RHS override value
+  of_its: very own
+"""
+
+        output_dir = tmp_path / "test_merge_happy_multi_single_yaml_files_to_file"
+        output_dir.mkdir()
+        output_file = output_dir / "output.yaml"
+
+        # DEBUG
+        # print("LHS File:  {}".format(lhs_file))
+        # print("RHS File:  {}".format(rhs_file))
+        # print("Output File:  {}".format(output_file))
+        # print("Expected Output:")
+        # print(merged_yaml_content)
+
+        result = script_runner.run(
+            self.command
+            , "--nostdin"
+            , "--output={}".format(output_file)
+            , lhs_file
+            , rhs_file)
         assert result.success, result.stderr
 
         with open(output_file, 'r') as fhnd:

@@ -11,7 +11,6 @@ import argparse
 import json
 from os import access, R_OK
 from os.path import isfile, exists
-from pathlib import Path
 from typing import Any
 
 from yamlpath.merger.enums import (
@@ -241,22 +240,6 @@ def process_yaml_file(
 
     return merge_multidoc(rhs_file, rhs_yaml, log, merger)
 
-def calc_output_document_type(args):
-    """Determine whether the output document will be JSON or YAML."""
-    document_format = OutputDocTypes.from_str(args.document_format)
-
-    if document_format is OutputDocTypes.AUTO:
-        output_is_json = False
-        output_file = args.output
-        if output_file:
-            output_is_json = Path(output_file).suffix.lower() == ".json"
-
-        document_format = (OutputDocTypes.JSON
-                           if output_is_json
-                           else OutputDocTypes.YAML)
-
-    return document_format
-
 def main():
     """Main code."""
     args = processcli()
@@ -290,8 +273,9 @@ def main():
 
     # Output the final document
     if exit_state == 0:
-        output_document_type = merger.prepare_for_dump(yaml_editor)
-        document_is_json = output_document_type is OutputDocTypes.JSON
+        document_is_json = (
+            merger.prepare_for_dump(yaml_editor, args.output)
+            is OutputDocTypes.JSON)
         if args.output:
             with open(args.output, 'w') as out_fhnd:
                 if document_is_json:
