@@ -208,6 +208,11 @@ def validateargs(args, log):
         if exists(args.output):
             has_errors = True
             log.error("Output file already exists:  {}".format(args.output))
+    elif args.overwrite:
+        if exists(args.overwrite):
+            log.warning(
+                "Output file exists and will be overwritten:  {}"
+                .format(args.overwrite))
     else:
         # When dumping the document to STDOUT, mute all non-errors
         args.quiet = True
