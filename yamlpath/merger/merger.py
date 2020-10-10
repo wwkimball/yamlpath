@@ -168,7 +168,7 @@ class Merger:
                     continue
 
                 if isinstance(val, CommentedMap):
-                    self._merge_dicts(lhs[key], val, path_next)
+                    lhs[key] = self._merge_dicts(lhs[key], val, path_next)
                     self.logger.debug(
                         "Document BEFORE calling combine_merge_anchors:",
                         data=lhs, prefix="Merger::_merge_dicts:  ",
@@ -179,7 +179,7 @@ class Merger:
                         data=lhs, prefix="Merger::_merge_dicts:  ",
                         footer="+==================+")
                 elif isinstance(val, CommentedSeq):
-                    self._merge_lists(
+                    lhs[key] = self._merge_lists(
                         lhs[key], val, path_next, parent=rhs, parentref=key)
                 else:
                     self.logger.debug(
@@ -215,6 +215,8 @@ class Merger:
         self.logger.debug(
             "Completed merge result for path, {}:".format(path),
             data=lhs, prefix="Merger::_merge_dicts:  ")
+
+        return lhs
 
     def _merge_simple_lists(
         self, lhs: CommentedSeq, rhs: CommentedSeq, path: YAMLPath,
