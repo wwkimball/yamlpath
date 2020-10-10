@@ -152,7 +152,8 @@ class Test_func():
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
         docs_yielded = 0
         for doc in get_yaml_multidoc_data(yp, quiet_logger, yaml_file):
-            docs_yielded += 1
+            if not doc and not isinstance(doc, bool):
+                docs_yielded += 1
         assert docs_yielded == 0
         captured = capsys.readouterr()
         assert -1 < captured.err.find("keyboard interrupt")
@@ -164,7 +165,8 @@ class Test_func():
         yp = get_yaml_editor()
         docs_yielded = 0
         for doc in get_yaml_multidoc_data(yp, quiet_logger, "no-such.file"):
-            docs_yielded += 1
+            if not doc and not isinstance(doc, bool):
+                docs_yielded += 1
         assert docs_yielded == 0
         captured = capsys.readouterr()
         assert -1 < captured.err.find("File not found")
@@ -176,7 +178,8 @@ class Test_func():
         yp = get_yaml_editor()
         docs_yielded = 0
         for doc in get_yaml_multidoc_data(yp, quiet_logger, imparsible_yaml_file):
-            docs_yielded += 1
+            if not doc and not isinstance(doc, bool):
+                docs_yielded += 1
         assert docs_yielded == 0
         captured = capsys.readouterr()
         assert -1 < captured.err.find("YAML parsing error")
@@ -188,7 +191,8 @@ class Test_func():
         yp = get_yaml_editor()
         docs_yielded = 0
         for doc in get_yaml_multidoc_data(yp, quiet_logger, badcmp_yaml_file):
-            docs_yielded += 1
+            if not doc and not isinstance(doc, bool):
+                docs_yielded += 1
         assert docs_yielded == 0
         captured = capsys.readouterr()
         assert -1 < captured.err.find("YAML composition error")
@@ -204,7 +208,8 @@ class Test_func():
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
         docs_yielded = 0
         for doc in get_yaml_multidoc_data(yp, quiet_logger, yaml_file):
-            docs_yielded += 1
+            if not doc and not isinstance(doc, bool):
+                docs_yielded += 1
         assert docs_yielded == 0
         captured = capsys.readouterr()
         assert -1 < captured.err.find("YAML construction error")
@@ -215,7 +220,8 @@ class Test_func():
         yp = get_yaml_editor()
         docs_yielded = 0
         for doc in get_yaml_multidoc_data(yp, quiet_logger, badsyntax_yaml_file):
-            docs_yielded += 1
+            if not doc and not isinstance(doc, bool):
+                docs_yielded += 1
         assert docs_yielded == 0
         captured = capsys.readouterr()
         assert -1 < captured.err.find("YAML syntax error")
@@ -231,7 +237,8 @@ class Test_func():
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
         docs_yielded = 0
         for doc in get_yaml_multidoc_data(yp, quiet_logger, yaml_file):
-            docs_yielded += 1
+            if not doc and not isinstance(doc, bool):
+                docs_yielded += 1
         assert docs_yielded == 0
         captured = capsys.readouterr()
         assert -1 < captured.err.find("Duplicate Hash key detected")
@@ -248,7 +255,8 @@ class Test_func():
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
         docs_yielded = 0
         for doc in get_yaml_multidoc_data(yp, quiet_logger, yaml_file):
-            docs_yielded += 1
+            if not doc and not isinstance(doc, bool):
+                docs_yielded += 1
         assert docs_yielded == 0
         captured = capsys.readouterr()
         assert -1 < captured.err.find("Duplicate YAML Anchor detected")
