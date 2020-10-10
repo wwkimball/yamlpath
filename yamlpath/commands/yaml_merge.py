@@ -261,6 +261,32 @@ def process_yaml_file(
 
     return merge_multidoc(rhs_file, rhs_yaml, log, merger)
 
+def write_output_document(args, log, merger, yaml_editor):
+    """Save a backup of the overwrite file, if requested."""
+    if args.backup:
+        backup_file = args.overwrite + ".bak"
+        log.verbose(
+            "Saving a backup of {} to {}."
+            .format(args.overwrite, backup_file))
+        if exists(backup_file):
+            remove(backup_file)
+        copy2(args.overwrite, backup_file)
+
+    document_is_json = (
+        merger.prepare_for_dump(yaml_editor, args.output)
+        is OutputDocTypes.JSON)
+    if args.output:
+        with open(args.output, 'w') as out_fhnd:
+            if document_is_json:
+                json.dump(merger.data, out_fhnd)
+            else:
+                yaml_editor.dump(merger.data, out_fhnd)
+    else:
+        if document_is_json:
+            json.dump(merger.data, sys.stdout)
+        else:
+            yaml_editor.dump(merger.data, sys.stdout)
+
 def main():
     """Main code."""
     args = processcli()
@@ -296,32 +322,9 @@ def main():
     ):
         exit_state = process_yaml_file(merger, log, yaml_editor, '-')
 
-    # Save a backup of the overwrite file, if requested
-    if args.backup:
-        backup_file = args.overwrite + ".bak"
-        log.verbose(
-            "Saving a backup of {} to {}."
-            .format(args.overwrite, backup_file))
-        if exists(backup_file):
-            remove(backup_file)
-        copy2(args.overwrite, backup_file)
-
     # Output the final document
     if exit_state == 0:
-        document_is_json = (
-            merger.prepare_for_dump(yaml_editor, args.output)
-            is OutputDocTypes.JSON)
-        if args.output:
-            with open(args.output, 'w') as out_fhnd:
-                if document_is_json:
-                    json.dump(merger.data, out_fhnd)
-                else:
-                    yaml_editor.dump(merger.data, out_fhnd)
-        else:
-            if document_is_json:
-                json.dump(merger.data, sys.stdout)
-            else:
-                yaml_editor.dump(merger.data, sys.stdout)
+        write_output_document(args, log, merger, yaml_editor)
 
     sys.exit(exit_state)
 
