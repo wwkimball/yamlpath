@@ -32,6 +32,11 @@ class Test_yaml_set():
         assert not result.success, result.stderr
         assert "Impossible to save the old value to the same YAML Path as the new value!" in result.stderr
 
+    def test_insufficient_randomness(self, script_runner):
+        result = script_runner.run(self.command, "--change='/test'", "--random=1", "--random-from=A", "no-such-file")
+        assert not result.success, result.stderr
+        assert "The pool of random CHARS must have at least 2 characters" in result.stderr
+
     def test_bad_privatekey(self, script_runner):
         result = script_runner.run(self.command, "--change='/test'", "--random=1", "--privatekey=no-such-file", "no-such-file")
         assert not result.success, result.stderr

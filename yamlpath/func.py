@@ -178,17 +178,15 @@ def get_yaml_multidoc_data(
             if source == "-":
                 for document in parser.load_all(stdin.read()):
                     logger.debug(
-                        "get_yaml_multidoc_data: Yielding document from {}:"
-                        .format(source))
-                    logger.debug(document)
+                        "Yielding document from {}:".format(source),
+                        prefix="get_yaml_multidoc_data: ", data=document)
                     yield document
             else:
                 with open(source, 'r') as fhnd:
                     for document in parser.load_all(fhnd):
                         logger.debug(
-                            "get_yaml_multidoc_data: Yielding document from"
-                            " {}:".format(source))
-                        logger.debug(document)
+                            "Yielding document from {}:".format(source),
+                            prefix="get_yaml_multidoc_data: ", data=document)
                         yield document
     except KeyboardInterrupt:
         has_error = True

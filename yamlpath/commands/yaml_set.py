@@ -110,6 +110,16 @@ def processcli():
         help="indicate which YAML Path seperator to use when rendering\
               results; default=dot")
 
+    parser.add_argument(
+        "-M", "--random-from",
+        metavar="CHARS",
+        default=(string.ascii_uppercase +
+            string.ascii_lowercase +
+            string.digits),
+        help="characters from which to build a value for --random; default="
+             "all upper- and lower-case letters and all digits"
+    )
+
     eyaml_group = parser.add_argument_group(
         "EYAML options", "Left unset, the EYAML keys will default to your\
          system or user defaults.  You do not need to supply a private key\
@@ -147,6 +157,7 @@ def validateargs(args, log):
     # * At least one of --value, --file, --stdin, or --random must be set
     if not (
             args.value
+            or args.value == ""
             or args.file
             or args.stdin
             or args.random
@@ -180,6 +191,11 @@ def validateargs(args, log):
         has_errors = True
         log.error(
             "EYAML public key is not a readable file:  " + args.publickey)
+
+    # * When set, --random-from must have at least one character
+    if len(args.random_from) < 2:
+        has_errors = True
+        log.error("The pool of random CHARS must have at least 2 characters.")
 
     if has_errors:
         sys.exit(1)
@@ -248,7 +264,7 @@ def main():
     backup_file = args.yaml_file + ".bak"
 
     # Obtain the replacement value
-    if args.value:
+    if args.value or args.value == "":
         new_value = args.value
     elif args.stdin:
         new_value = ''.join(sys.stdin.readlines())
@@ -257,9 +273,7 @@ def main():
             new_value = fhnd.read().rstrip()
     elif args.random is not None:
         new_value = ''.join(
-            secrets.choice(
-                string.ascii_uppercase + string.ascii_lowercase + string.digits
-            ) for _ in range(args.random)
+            secrets.choice(args.random_from) for _ in range(args.random)
         )
 
     # Prep the YAML parser

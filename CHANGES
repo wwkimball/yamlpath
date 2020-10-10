@@ -72,6 +72,12 @@ Enhancements:
   a new `--backup` flag will cause the to-be-overwritten file to be renamed
   with a ".bak" file-name extension.  A pre-existing backup file with the same
   name will be unceremoniously replaced.
+* The `yaml-set` command-line tool now accepts an arbitrary set of characters
+  from which to derive `--random` values via a new `--random-from` argument.
+  This is especially useful when you need to limit or expand the characters
+  used and when you wish to favor some characters more than others (simply
+  repeat the favored characters more than other characters in the argument
+  value but do so under caution because doing so reduces randomness).
 
 Bug Fixes:
 * Collectors were breaking search nodes with Regular Expressions, making it
@@ -120,6 +126,8 @@ Non-Breaking API Changes:
   else:
     print("Got a non-empty document")
   ```
+* The ConsolePrinter's debug method now prints vastly more detail and allows
+  for customization of the output.  Read its documentation for details.
 
 To reflect these changes:
 * eyaml-rotate-keys is now version 1.0.4
