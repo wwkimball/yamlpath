@@ -58,8 +58,15 @@ class Merger:
         # a sensible result.
         Merger.delete_all_comments(self.data)
 
-    def _delete_mergeref_keys(self, data: CommentedMap) -> Set[Any]:
-        """Delete all YAML merge reference keys from a CommentedMap."""
+    def _delete_mergeref_keys(self, data: CommentedMap) -> None:
+        """
+        Delete all YAML merge reference keys from a CommentedMap.
+
+        This is necessary when using the insert() method of a CommentedMap
+        because doing so converts all YAML merge references (key-value pairs
+        merged into a YAML Hash via the `<<:` operator) to concrete key-value
+        pairs of the affected Hash.  This method pairs with _refresh_mergerefs.
+        """
         concrete_keys = []
         for local_key, _ in data.non_merged_items():
             concrete_keys.append(local_key)
@@ -72,8 +79,6 @@ class Merger:
                 header="!" * 50
             )
             del data[key]
-
-        return reference_keys
 
     #pylint: disable=too-many-branches
     def _merge_dicts(
@@ -113,6 +118,7 @@ class Merger:
         # Delete all internal YAML merge reference keys lest any later
         # .insert() operation on LHS inexplicably convert them from reference
         # to concrete keys.  This seems like a bug in ruamel.yaml...
+        preserve_mergerefs = lhs.merge
         self._delete_mergeref_keys(lhs)
 
         # Assume deep merge until a node's merge rule indicates otherwise
@@ -203,6 +209,8 @@ class Merger:
                 "Merger::_merge_dicts:  Appending key, {}, from buffer at"
                 " path, {}.".format(b_key, path), header="APPEND " * 15)
             lhs[b_key] = b_val
+
+        self._refresh_mergerefs(lhs, preserve_mergerefs)
 
         self.logger.debug(
             "Completed merge result for path, {}:".format(path),
@@ -802,3 +810,28 @@ class Merger:
             delattr(dom, attr)
         except AttributeError:
             pass
+
+    @classmethod
+    def _refresh_mergerefs(
+        cls, data: CommentedMap, refs: List[Tuple[int, Any]]
+    ) -> None:
+        """
+        Re-apply YAML merge operator references to a YAML Hash.
+
+        This is necessary whenever a new key-value pair is added to a
+        CommentedMap via its insert() method because insert() inexplicably
+        converts all merge references to concrete key-value pairs, breaking the
+        references.  This method pairs with _delete_mergeref_keys.
+
+        Parameters;
+        1. data (CommentedMap) The YAML Hash to refresh.
+        2. refs (List[Tuple[int, Any]]) The original merge references to
+           re-apply.
+
+        Returns:  N/A
+        """
+        for ref in refs:
+            for old_index, old_ref in data.merge:
+                if ref == old_ref:
+                    data.merge.pop(old_index)
+                    data.merge.append([old_index, ref])
