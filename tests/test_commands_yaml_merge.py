@@ -26,6 +26,11 @@ class Test_commands_yaml_merge():
         assert not result.success, result.stderr
         assert "INI style configuration file is not readable" in result.stderr
 
+    def test_nothing_to_backup(self, script_runner):
+        result = script_runner.run(self.command, "--nostdin", "--backup")
+        assert not result.success, result.stderr
+        assert "applies only to OVERWRITE file" in result.stderr
+
     def test_output_file_exists(self, script_runner, tmp_path_factory):
         merged_yaml = create_temp_yaml_file(tmp_path_factory, """---
 key: value
@@ -614,3 +619,50 @@ hash:
         with open(output_file, 'r') as fhnd:
             filedat = fhnd.read()
         assert merged_yaml_content == filedat
+
+    def test_backup_file(self, script_runner, tmp_path_factory):
+        import os
+
+        content = """---
+        key: value
+        """
+        yaml_file = create_temp_yaml_file(tmp_path_factory, content)
+        backup_file = yaml_file + ".bak"
+        result = script_runner.run(
+            self.command,
+            "--nostdin",
+            "--overwrite={}".format(yaml_file),
+            "--backup",
+            yaml_file
+        )
+        assert result.success, result.stderr
+        assert os.path.isfile(backup_file)
+
+        with open(backup_file, 'r') as fhnd:
+            filedat = fhnd.read()
+        assert filedat == content
+
+    def test_replace_backup_file(self, script_runner, tmp_path_factory):
+        import os
+
+        content = """---
+        key: value
+        """
+        yaml_file = create_temp_yaml_file(tmp_path_factory, content)
+        backup_file = yaml_file + ".bak"
+        with open(backup_file, 'w') as fhnd:
+            fhnd.write(content + "\nkey2: value2")
+
+        result = script_runner.run(
+            self.command,
+            "--nostdin",
+            "--overwrite={}".format(yaml_file),
+            "--backup",
+            yaml_file
+        )
+        assert result.success, result.stderr
+        assert os.path.isfile(backup_file)
+
+        with open(backup_file, 'r') as fhnd:
+            filedat = fhnd.read()
+        assert filedat == content

@@ -9,8 +9,9 @@ Copyright 2020 William W. Kimball, Jr. MBA MSIS
 import sys
 import argparse
 import json
-from os import access, R_OK
+from os import access, R_OK, remove
 from os.path import isfile, exists
+from shutil import copy2
 from typing import Any
 
 from yamlpath.merger.enums import (
@@ -51,12 +52,13 @@ def processcli():
 
             The left-to-right order of YAML_FILEs is significant.  Except
             when this behavior is deliberately altered by your options, data
-            from files on the right overrides data in files to their left.  At
-            least two YAML_FILEs are required.  Only one may be the -
-            pseudo-file.  When only one YAML_FILE is provided, it cannot be the
-            - pseudo-file and in this special-case - will be inferred as the
-            second YAML_FILE as long as you are running this program without a
-            TTY (unless you set --nostdin|-S).
+            from files on the right overrides data in files to their left.
+            Only one input file may be the - pseudo-file (read from STDIN).
+            When no YAML_FILEs are provided, - will be inferred as long as you
+            are running this program without a TTY (unless you set
+            --nostdin|-S).  Any file, including input from STDIN, may be a
+            multi-document YAML or JSON file.
+
             For more information about YAML Paths, please visit
             https://github.com/wwkimball/yamlpath."""
     )
@@ -112,11 +114,23 @@ def processcli():
             "YAML Path indicating where in left YAML_FILE the right\n"
             "YAML_FILE content is to be merged; default=/"))
 
-    parser.add_argument(
+    output_doc_group = parser.add_mutually_exclusive_group()
+    output_doc_group.add_argument(
         "-o", "--output",
         help=(
-            "Write the merged result to the indicated file (or\n"
-            "STDOUT when unset)"))
+            "Write the merged result to the indicated nonexistent\n"
+            "file"))
+    output_doc_group.add_argument(
+        "-w", "--overwrite",
+        help=(
+            "Write the merged result to the indicated file; will\n"
+            "replace the file when it already exists"))
+
+    parser.add_argument(
+        "-b", "--backup", action="store_true",
+        help=(
+            "save a backup OVERWRITE file with an extra .bak\n"
+            "file-extension; applies only to OVERWRITE"))
 
     parser.add_argument(
         "-D", "--document-format",
@@ -125,8 +139,10 @@ def processcli():
         default="auto",
         help=(
             "Force the merged result to be presented in one of the\n"
-            "supported formats or let it automatically match the type\n"
-            "of the first document; default=auto"))
+            "supported formats or let it automatically match the\n"
+            "known file-name extension of OUTPUT|OVERWRITE (when\n"
+            "provided), or match the type of the first document;\n"
+            "default=auto"))
 
     parser.add_argument(
         "-S", "--nostdin", action="store_true",
@@ -198,6 +214,11 @@ def validateargs(args, log):
         args.verbose = False
         args.debug = False
 
+    # When set, backup applies only to OVERWRITE
+    if args.backup and not args.overwrite:
+        has_errors = True
+        log.error("The --backup|-b option applies only to OVERWRITE files.")
+
     if has_errors:
         sys.exit(1)
 
@@ -240,11 +261,41 @@ def process_yaml_file(
 
     return merge_multidoc(rhs_file, rhs_yaml, log, merger)
 
+def write_output_document(args, log, merger, yaml_editor):
+    """Save a backup of the overwrite file, if requested."""
+    if args.backup:
+        backup_file = args.overwrite + ".bak"
+        log.verbose(
+            "Saving a backup of {} to {}."
+            .format(args.overwrite, backup_file))
+        if exists(backup_file):
+            remove(backup_file)
+        copy2(args.overwrite, backup_file)
+
+    document_is_json = (
+        merger.prepare_for_dump(yaml_editor, args.output)
+        is OutputDocTypes.JSON)
+    if args.output:
+        with open(args.output, 'w') as out_fhnd:
+            if document_is_json:
+                json.dump(merger.data, out_fhnd)
+            else:
+                yaml_editor.dump(merger.data, out_fhnd)
+    else:
+        if document_is_json:
+            json.dump(merger.data, sys.stdout)
+        else:
+            yaml_editor.dump(merger.data, sys.stdout)
+
 def main():
     """Main code."""
     args = processcli()
     log = ConsolePrinter(args)
     validateargs(args, log)
+
+    # For the remainder of processing, overwrite overwrites output
+    if args.overwrite:
+        args.output = args.overwrite
 
     # Merge all input files
     merger = Merger(log, None, MergerConfig(log, args))
@@ -273,20 +324,7 @@ def main():
 
     # Output the final document
     if exit_state == 0:
-        document_is_json = (
-            merger.prepare_for_dump(yaml_editor, args.output)
-            is OutputDocTypes.JSON)
-        if args.output:
-            with open(args.output, 'w') as out_fhnd:
-                if document_is_json:
-                    json.dump(merger.data, out_fhnd)
-                else:
-                    yaml_editor.dump(merger.data, out_fhnd)
-        else:
-            if document_is_json:
-                json.dump(merger.data, sys.stdout)
-            else:
-                yaml_editor.dump(merger.data, sys.stdout)
+        write_output_document(args, log, merger, yaml_editor)
 
     sys.exit(exit_state)
 

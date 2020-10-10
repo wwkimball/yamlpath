@@ -23,8 +23,10 @@ Enhancements:
   with --nostdin|-S.  This enables, for example, piping into these commands
   without being forced to specify the - pseudo-file as an argument to them.
 * The yaml-merge command now enables users to force the merged document to be
-  written out as YAML, JSON via a new --document-format (-D) command-line
-  argument.  When unset, the format will be that of the first document (AUTO).
+  written out as YAML or JSON via a new --document-format (-D) command-line
+  argument.  When unset, the format will be based on the file-name extension of
+  the --output file when provided, or (last-resort) that of the first document
+  (AUTO).
 * The yaml-merge command now accepts multi-document YAML files, created when
   the YAML standard-specified End-of-Document, Start-of-Document marker pair
   (...<EOL> followed by ---<EOL>) is present, like:
