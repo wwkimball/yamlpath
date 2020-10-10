@@ -45,6 +45,9 @@ class Test_func():
     def test_get_yaml_editor(self):
         assert get_yaml_editor()
 
+    def test_get_json_editor(self):
+        assert get_yaml_editor(explode_aliases=True)
+
 
     ###
     # get_yaml_data
