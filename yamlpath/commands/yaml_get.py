@@ -29,11 +29,11 @@ MY_VERSION = "1.2.0"
 def processcli():
     """Process command-line arguments."""
     parser = argparse.ArgumentParser(
-        description="Retrieves one or more values from a YAML file at a\
-            specified YAML Path.  Output is printed to STDOUT, one line per\
-            result.  When a result is a complex data-type (Array or Hash), a\
-            JSON dump is produced to represent it.  EYAML can be employed to\
-            decrypt the values.",
+        description="Retrieves one or more values from a YAML/JSON/Compatible\
+            file at a specified YAML Path.  Output is printed to STDOUT, one\
+            line per result.  When a result is a complex data-type (Array or\
+            Hash), a JSON dump is produced to represent it.  EYAML can be\
+            employed to decrypt the values.",
         epilog="For more information about YAML Paths, please visit\
             https://github.com/wwkimball/yamlpath."
     )

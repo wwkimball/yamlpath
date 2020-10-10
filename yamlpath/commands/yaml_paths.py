@@ -44,7 +44,7 @@ def processcli():
     search_ops = ", ".join(PathSearchMethods.get_operators()) + ", or !"
     parser = argparse.ArgumentParser(
         description="Returns zero or more YAML Paths indicating where in given\
-            YAML/Compatible data one or more search expressions match.\
+            YAML/JSON/Compatible data one or more search expressions match.\
             Values, keys, and/or anchors can be searched.  EYAML can be\
             employed to search encrypted values.",
         epilog="A search or exception EXPRESSION takes the form of a YAML Path\

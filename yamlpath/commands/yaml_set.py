@@ -44,12 +44,13 @@ MY_VERSION = "1.1.0"
 def processcli():
     """Process command-line arguments."""
     parser = argparse.ArgumentParser(
-        description="Changes one or more values in a YAML file at a specified\
-            YAML Path.  Matched values can be checked before they are replaced\
-            to mitigate accidental change. When matching singular results, the\
-            value can be archived to another key before it is replaced.\
-            Further, EYAML can be employed to encrypt the new values and/or\
-            decrypt an old value before checking them.",
+        description="Changes one or more Scalar values in a\
+            YAML/JSON/Compatible file at a specified YAML Path.  Matched\
+            values can be checked before they are replaced to mitigate\
+            accidental change.  When matching singular results, the value can\
+            be archived to another key before it is replaced.  Further, EYAML\
+            can be employed to encrypt the new values and/or decrypt an old\
+            value before checking it.",
         epilog="When no changes are made, no backup is created, even when\
             -b/--backup is specified.  For more information about YAML Paths,\
             please visit https://github.com/wwkimball/yamlpath."

@@ -35,7 +35,7 @@ def processcli():
     """Process command-line arguments."""
     parser = argparse.ArgumentParser(
         formatter_class=argparse.RawTextHelpFormatter,
-        description="Merges two or more YAML/Compatible files together.",
+        description="Merges two or more YAML/JSON/Compatible files together.",
         epilog="""
             The CONFIG file is an INI file with up to three sections:
             [defaults] Sets equivalents of -a|--anchors, -A|--arrays,
