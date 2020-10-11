@@ -91,8 +91,7 @@ def processcli():
     parser.add_argument(
         "yaml_file", metavar="YAML_FILE",
         nargs="?",
-        help="the YAML file to query; use - to read from STDIN or leave empty"
-             " and send content via a non-TTY session")
+        help="the YAML file to query; omit or use - to read from STDIN")
 
     return parser.parse_args()
 

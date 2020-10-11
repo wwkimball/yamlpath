@@ -167,7 +167,7 @@ def processcli():
         "yaml_files", metavar="YAML_FILE", nargs="*",
         help=(
             "one or more YAML files to merge, order-significant;\n"
-            "use - to read from STDIN"))
+            "omit or use - to read from STDIN"))
     return parser.parse_args()
 
 def validateargs(args, log):
@@ -182,7 +182,7 @@ def validateargs(args, log):
     ):
         has_errors = True
         log.error(
-            "There must be at least one YAML_FILE.")
+            "There must be at least one YAML_FILE or STDIN document.")
 
     # There can be only one -
     pseudofile_count = 0
