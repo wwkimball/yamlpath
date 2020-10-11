@@ -353,6 +353,7 @@ def main():
 
     # Check for a waiting STDIN document
     if (not consumed_stdin
+        and not args.yaml_file
         and not args.nostdin
         and not sys.stdin.isatty()
     ):
