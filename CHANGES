@@ -10,7 +10,7 @@ Enhancements:
 * The * character now also serves as a wildcard character for key-names, Hash
   values, and Array value comparisons, converting the segment to a Search.  For
   example, a YAML Path like `abc.d*` becomes `abc[.^d]`, `abc.*f` becomes
-  `abc[.$f]`, and `abc.*e*` becomes `abc[.=~/^.*e.*$/], and so on.
+  `abc[.$f]`, and `abc.*e*` becomes `abc[.=~/^.*e.*$/]`, and so on.
 * Added a new YAML Path Segment Type:  **
   This new type is a "Traversal" segment which causes YAML Path operations to
   deeply traverse the document from that point.  When there are no further
@@ -50,10 +50,10 @@ Enhancements:
   useful for trivially converting any file from YAML to JSON or JSON to YAML,
   like `yaml-merge --document-format=json file.yaml` or
   `yaml-merge --document-format=yaml file.json`.
-* The `yaml-set` command-line tool can now write changes to minimally-viable
-  files, enabling users to build up new data files from scratch.  The file must
-  exist and have some minimum structure, depending on document type.  For
-  example:
+* The `yaml-set` command-line tool can now write changes to empty or minimally-
+  viable files, enabling users to build up new data files from scratch.  The
+  file must already exist, even if completely empty.  A non-empty, minimally-
+  viable file depends on document type.  For example:
   A minimally-viable YAML file:
   ```yaml
   ---
@@ -67,6 +67,10 @@ Enhancements:
   ```json
   []
   ```
+  However, minimally-viable structure is necessary only for files with unusual
+  file-name extensions.  When the file-name extension is one of yaml, yml, or
+  json (case-insensitive), the file can be completely empty and still result in
+  a YAML or JSON data structure.
 * The `yaml-set` command-line tool now accepts empty-String values.
 * The `yaml-merge` command-line tool now permits overwriting one of its input
   files as long as `--overwrite` is used instead of `--output`; these are
