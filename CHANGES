@@ -84,6 +84,9 @@ Enhancements:
   used and when you wish to favor some characters more than others (simply
   repeat the favored characters more than other characters in the argument
   value but do so under caution because doing so reduces randomness).
+* The `yaml-set` command-line tool now accepts documents from STDIN, causing it
+  to write the resulting changes to STDOUT.  This enables `yaml-set` to operate
+  as a stream editor, like `yaml-get` and `yaml-merge`.
 
 Bug Fixes:
 * Collectors were breaking search nodes with Regular Expressions, making it
@@ -140,7 +143,7 @@ To reflect these changes:
 * yaml-get is now version 1.2.0
 * yaml-merge is now version 0.1.0
 * yaml-paths is now version 0.2.1
-* yaml-set is now version 1.1.0
+* yaml-set is now version 2.0.0
 
 2.4.3:
 Bug Fixes:
