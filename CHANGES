@@ -89,13 +89,12 @@ Enhancements:
   as a stream editor, like `yaml-get` and `yaml-merge`.
 * The `yaml-paths` command-line tool now accepts documents from STDIN.  It also
   now accepts multi-document YAML and JSON as file or STDIN input.  Because it
-  is impossible to determine whether a file or stream is contains
-  multi-document data without reading through the entire file more than once,
-  output now always displays the file-name (or STDIN) and -- new -- the
-  document-index in which matches were found.  As before, users can turn off
-  file-name display by setting --nofile|-F.  In previous, single-document
-  versions, the file-name display was automatically muted when there was only
-  one YAML_FILE to process.
+  is impossible to determine whether a file or stream contains multi-document
+  data without reading through the entire file more than once, output now always
+  displays the file-name (or STDIN) and -- new -- the document-index in which
+  matches were found.  As before, users can turn off file-name display by
+  setting --nofile|-F.  In previous, single-document versions, the file-name
+  display was automatically muted when there was only one YAML_FILE to process.
 
 Bug Fixes:
 * Collectors were breaking search nodes with Regular Expressions, making it
