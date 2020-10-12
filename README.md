@@ -348,14 +348,14 @@ usage: yaml-get [-h] [-V] -p YAML_PATH
                 [-r PRIVATEKEY] [-u PUBLICKEY] [-d | -v | -q]
                 [YAML_FILE]
 
-Retrieves one or more values from a YAML file at a specified YAML Path. Output
-is printed to STDOUT, one line per result. When a result is a complex data-
-type (Array or Hash), a JSON dump is produced to represent it. EYAML can be
-employed to decrypt the values.
+Retrieves one or more values from a YAML/JSON/Compatible file at a specified
+YAML Path. Output is printed to STDOUT, one line per result. When a result is
+a complex data-type (Array or Hash), a JSON dump is produced to represent it.
+EYAML can be employed to decrypt the values.
 
 positional arguments:
-  YAML_FILE             the YAML file to query; use - to read from STDIN or
-                        leave empty and send content via a non-TTY session
+  YAML_FILE             the YAML file to query; omit or use - to read from
+                        STDIN
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -394,15 +394,16 @@ https://github.com/wwkimball/yamlpath.
 ```text
 usage: yaml-merge [-h] [-V] [-c CONFIG] [-a {stop,left,right,rename}]
                   [-A {all,left,right,unique}] [-H {deep,left,right}]
-                  [-O {all,deep,left,right,unique}] [-m YAML_PATH] [-o OUTPUT]
-                  [-S] [-d | -v | -q]
-                  YAML_FILE [YAML_FILE ...]
+                  [-O {all,deep,left,right,unique}] [-m YAML_PATH]
+                  [-o OUTPUT | -w OVERWRITE] [-b] [-D {auto,json,yaml}] [-S]
+                  [-d | -v | -q]
+                  [YAML_FILE [YAML_FILE ...]]
 
-Merges two or more YAML/Compatible files together.
+Merges two or more YAML/JSON/Compatible files together.
 
 positional arguments:
   YAML_FILE             one or more YAML files to merge, order-significant;
-                        use - to read from STDIN
+                        omit or use - to read from STDIN
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -433,8 +434,19 @@ optional arguments:
                         YAML Path indicating where in left YAML_FILE the right
                         YAML_FILE content is to be merged; default=/
   -o OUTPUT, --output OUTPUT
-                        Write the merged result to the indicated file (or
-                        STDOUT when unset)
+                        Write the merged result to the indicated nonexistent
+                        file
+  -w OVERWRITE, --overwrite OVERWRITE
+                        Write the merged result to the indicated file; will
+                        replace the file when it already exists
+  -b, --backup          save a backup OVERWRITE file with an extra .bak
+                        file-extension; applies only to OVERWRITE
+  -D {auto,json,yaml}, --document-format {auto,json,yaml}
+                        Force the merged result to be presented in one of the
+                        supported formats or let it automatically match the
+                        known file-name extension of OUTPUT|OVERWRITE (when
+                        provided), or match the type of the first document;
+                        default=auto
   -S, --nostdin         Do not implicitly read from STDIN, even when there are
                         no - pseudo-files in YAML_FILEs with a non-TTY session
   -d, --debug           output debugging details
@@ -457,12 +469,13 @@ optional arguments:
 
             The left-to-right order of YAML_FILEs is significant.  Except
             when this behavior is deliberately altered by your options, data
-            from files on the right overrides data in files to their left.  At
-            least two YAML_FILEs are required.  Only one may be the -
-            pseudo-file.  When only one YAML_FILE is provided, it cannot be the
-            - pseudo-file and in this special-case - will be inferred as the
-            second YAML_FILE as long as you are running this program without a
-            TTY (unless you set --nostdin|-S).
+            from files on the right overrides data in files to their left.
+            Only one input file may be the - pseudo-file (read from STDIN).
+            When no YAML_FILEs are provided, - will be inferred as long as you
+            are running this program without a TTY (unless you set
+            --nostdin|-S).  Any file, including input from STDIN, may be a
+            multi-document YAML or JSON file.
+
             For more information about YAML Paths, please visit
             https://github.com/wwkimball/yamlpath.
 ```
@@ -470,18 +483,19 @@ optional arguments:
 * [yaml-paths](yamlpath/commands/yaml_paths.py)
 
 ```text
-usage: yaml-paths [-h] [-V] -s EXPRESSION [-c EXPRESSION] [-d | -v | -q] [-m]
-                  [-L] [-F] [-X] [-P] [-t ['.', '/', 'auto', 'dot', 'fslash']]
-                  [-i | -k | -K] [-a] [-A | -Y | -y | -l] [-e] [-x EYAML]
-                  [-r PRIVATEKEY] [-u PUBLICKEY]
-                  YAML_FILE [YAML_FILE ...]
+usage: yaml-paths [-h] [-V] -s EXPRESSION [-c EXPRESSION] [-m] [-L] [-F] [-X]
+                  [-P] [-t ['.', '/', 'auto', 'dot', 'fslash']] [-i | -k | -K]
+                  [-a] [-A | -Y | -y | -l] [-e] [-x EYAML] [-r PRIVATEKEY]
+                  [-u PUBLICKEY] [-S] [-d | -v | -q]
+                  [YAML_FILE [YAML_FILE ...]]
 
-Returns zero or more YAML Paths indicating where in given YAML/Compatible data
-one or more search expressions match. Values, keys, and/or anchors can be
+Returns zero or more YAML Paths indicating where in given YAML/JSON/Compatible
+data one or more search expressions match. Values, keys, and/or anchors can be
 searched. EYAML can be employed to search encrypted values.
 
 positional arguments:
-  YAML_FILE             one or more YAML files to search
+  YAML_FILE             one or more YAML files to search; omit or use - to
+                        read from STDIN
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -489,9 +503,6 @@ optional arguments:
   -c EXPRESSION, --except EXPRESSION
                         except results matching this search expression; can be
                         set more than once
-  -d, --debug           output debugging details
-  -v, --verbose         increase output verbosity
-  -q, --quiet           suppress all non-result output except errors
   -m, --expand          expand matching parent nodes to list all permissible
                         child leaf nodes (see "reference handling options" for
                         restrictions)
@@ -499,6 +510,11 @@ optional arguments:
                         indicate which YAML Path seperator to use when
                         rendering results; default=dot
   -a, --refnames        also search the names of &anchor and *alias references
+  -S, --nostdin         Do not implicitly read from STDIN, even when there are
+                        no - pseudo-files in YAML_FILEs with a non-TTY session
+  -d, --debug           output debugging details
+  -v, --verbose         increase output verbosity
+  -q, --quiet           suppress all non-result output except errors
 
 required settings:
   -s EXPRESSION, --search EXPRESSION
@@ -567,18 +583,19 @@ https://github.com/wwkimball/yamlpath.
 usage: yaml-set [-h] [-V] -g YAML_PATH [-a VALUE | -f FILE | -i | -R LENGTH]
                 [-F {bare,boolean,default,dquote,float,folded,int,literal,squote}]
                 [-c CHECK] [-s YAML_PATH] [-m] [-b]
-                [-t ['.', '/', 'auto', 'dot', 'fslash']] [-e] [-x EYAML]
-                [-r PRIVATEKEY] [-u PUBLICKEY] [-d | -v | -q]
-                YAML_FILE
+                [-t ['.', '/', 'auto', 'dot', 'fslash']] [-M CHARS] [-e]
+                [-x EYAML] [-r PRIVATEKEY] [-u PUBLICKEY] [-S] [-d | -v | -q]
+                [YAML_FILE]
 
-Changes one or more values in a YAML file at a specified YAML Path. Matched
-values can be checked before they are replaced to mitigate accidental change.
-When matching singular results, the value can be archived to another key
-before it is replaced. Further, EYAML can be employed to encrypt the new
-values and/or decrypt an old value before checking them.
+Changes one or more Scalar values in a YAML/JSON/Compatible document at a
+specified YAML Path. Matched values can be checked before they are replaced to
+mitigate accidental change. When matching singular results, the value can be
+archived to another key before it is replaced. Further, EYAML can be employed
+to encrypt the new values and/or decrypt an old value before checking it.
 
 positional arguments:
-  YAML_FILE             the YAML file to update
+  YAML_FILE             the YAML file to update; omit or use - to read from
+                        STDIN
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -597,6 +614,12 @@ optional arguments:
   -t ['.', '/', 'auto', 'dot', 'fslash'], --pathsep ['.', '/', 'auto', 'dot', 'fslash']
                         indicate which YAML Path seperator to use when
                         rendering results; default=dot
+  -M CHARS, --random-from CHARS
+                        characters from which to build a value for --random;
+                        default=all upper- and lower-case letters and all
+                        digits
+  -S, --nostdin         Do not implicitly read from STDIN, even when there is
+                        no YAML_FILE with a non-TTY session
   -d, --debug           output debugging details
   -v, --verbose         increase output verbosity
   -q, --quiet           suppress all output except errors
