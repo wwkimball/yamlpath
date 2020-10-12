@@ -941,3 +941,51 @@ class Test_yaml_paths():
             "/sample_scalar: value",
             '/sample_hash: {"sub": ["list", "elements"]}',
         ]) + "\n" == result.stdout
+
+    def test_input_from_stdin_explicit(self, script_runner):
+        import subprocess
+
+        stdin = """---
+key: value
+"""
+        stdout = """key
+"""
+
+        result = subprocess.run(
+            [self.command
+            , "--nofile"
+            , "--search", "^value"
+            , "-"]
+            , stdout=subprocess.PIPE
+            , input=stdin
+            , universal_newlines=True
+        )
+
+        assert 0 == result.returncode, result.stderr
+        assert stdout == result.stdout
+
+    def test_input_from_stdin_implicit(self, script_runner):
+        import subprocess
+
+        stdin = """---
+key: value
+"""
+        stdout = """key
+"""
+
+        result = subprocess.run(
+            [self.command
+            , "--nofile"
+            , "--search", "^value"]
+            , stdout=subprocess.PIPE
+            , input=stdin
+            , universal_newlines=True
+        )
+
+        assert 0 == result.returncode, result.stderr
+        assert stdout == result.stdout
+
+    def test_too_many_stdins(self, script_runner):
+        result = script_runner.run(self.command, "--search", "=nothing", "-", "-")
+        assert not result.success, result.stderr
+        assert "Only one YAML_FILE may be the - pseudo-file" in result.stderr
