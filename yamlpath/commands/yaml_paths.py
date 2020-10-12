@@ -19,7 +19,7 @@ from ruamel.yaml.comments import CommentedSeq, CommentedMap
 from yamlpath.func import (
     create_searchterms_from_pathattributes,
     escape_path_section,
-    get_yaml_data,
+    get_yaml_multidoc_data,
     get_yaml_editor,
     search_matches,
     search_anchor,
@@ -37,7 +37,7 @@ from yamlpath.wrappers import ConsolePrinter
 from yamlpath.eyaml import EYAMLProcessor
 
 # Implied Constants
-MY_VERSION = "0.2.1"
+MY_VERSION = "1.0.0"
 
 def processcli():
     """Process command-line arguments."""
@@ -67,20 +67,6 @@ def processcli():
         metavar="EXPRESSION", action="append", dest="except_expression",
         help="except results matching this search expression; can be set more\
             than once")
-
-    noise_group = parser.add_mutually_exclusive_group()
-    noise_group.add_argument(
-        "-d", "--debug",
-        action="store_true",
-        help="output debugging details")
-    noise_group.add_argument(
-        "-v", "--verbose",
-        action="store_true",
-        help="increase output verbosity")
-    noise_group.add_argument(
-        "-q", "--quiet",
-        action="store_true",
-        help="suppress all non-result output except errors")
 
     parser.add_argument(
         "-m", "--expand",
@@ -193,8 +179,29 @@ def processcli():
     eyaml_group.add_argument("-r", "--privatekey", help="EYAML private key")
     eyaml_group.add_argument("-u", "--publickey", help="EYAML public key")
 
-    parser.add_argument("yaml_files", metavar="YAML_FILE", nargs="+",
-                        help="one or more YAML files to search")
+    parser.add_argument(
+        "-S", "--nostdin", action="store_true",
+        help=(
+            "Do not implicitly read from STDIN, even when there are\n"
+            "no - pseudo-files in YAML_FILEs with a non-TTY session"))
+
+    noise_group = parser.add_mutually_exclusive_group()
+    noise_group.add_argument(
+        "-d", "--debug",
+        action="store_true",
+        help="output debugging details")
+    noise_group.add_argument(
+        "-v", "--verbose",
+        action="store_true",
+        help="increase output verbosity")
+    noise_group.add_argument(
+        "-q", "--quiet",
+        action="store_true",
+        help="suppress all non-result output except errors")
+
+    parser.add_argument("yaml_files", metavar="YAML_FILE", nargs="*",
+                        help="one or more YAML files to search; omit or use -"
+                        " to read from STDIN")
 
     parser.set_defaults(include_aliases=IncludeAliases.INCLUDE_KEY_ALIASES)
 
@@ -204,7 +211,25 @@ def validateargs(args, log):
     """Validate command-line arguments."""
     has_errors = False
 
-    # Enforce sanity
+    # There must be at least one input file or stream
+    input_file_count = len(args.yaml_files)
+    if (input_file_count == 0 and (
+            sys.stdin.isatty()
+            or args.nostdin)
+    ):
+        has_errors = True
+        log.error(
+            "There must be at least one YAML_FILE or STDIN document.")
+
+    # There can be only one -
+    pseudofile_count = 0
+    for infile in args.yaml_files:
+        if infile.strip() == '-':
+            pseudofile_count += 1
+    if pseudofile_count > 1:
+        has_errors = True
+        log.error("Only one YAML_FILE may be the - pseudo-file.")
+
     # * When set, --privatekey must be a readable file
     if args.privatekey and not (
             isfile(args.privatekey) and access(args.privatekey, R_OK)
@@ -642,12 +667,13 @@ def get_search_term(logger: ConsolePrinter,
 
     return exterm
 
-def print_results(args: Any, processor: EYAMLProcessor, yaml_file: str,
-                  yaml_paths: List[Tuple[str, YAMLPath]]) -> None:
+def print_results(
+    args: Any, processor: EYAMLProcessor, yaml_file: str,
+    yaml_paths: List[Tuple[str, YAMLPath]], document_index: int
+) -> None:
     """Dump search results to STDOUT with optional and dynamic formatting."""
-    in_file_count = len(args.yaml_files)
     in_expressions = len(args.search)
-    print_file_path = in_file_count > 1 and not args.nofile
+    print_file_path = not args.nofile
     print_expression = in_expressions > 1 and not args.noexpression
     print_yaml_path = not args.noyamlpath
     print_value = args.values
@@ -662,7 +688,10 @@ def print_results(args: Any, processor: EYAMLProcessor, yaml_file: str,
         resline = ""
 
         if print_file_path:
-            resline += "{}".format(yaml_file)
+            display_file_name = ("STDIN"
+                                 if yaml_file.strip() == "-"
+                                 else yaml_file)
+            resline += "{}/{}".format(display_file_name, document_index)
 
         if print_expression:
             resline += "[{}]".format(expression)
@@ -684,6 +713,86 @@ def print_results(args: Any, processor: EYAMLProcessor, yaml_file: str,
                 break
 
         print(resline)
+
+def process_yaml_file(
+    args, yaml, log, yaml_file, processor, search_values, search_keys,
+    include_key_aliases, include_value_aliases, file_tally = 0
+):
+    """Process a (potentially multi-doc) YAML file."""
+    # Try to open the file
+    exit_state = 0
+    subdoc_index = -1
+
+    # pylint: disable=too-many-nested-blocks
+    for yaml_data in get_yaml_multidoc_data(yaml, log, yaml_file):
+        file_tally += 1
+        subdoc_index += 1
+        if not yaml_data and isinstance(yaml_data, bool):
+            # An error message has already been logged
+            exit_state = 3
+            continue
+
+        # Process all searches
+        processor.data = yaml_data
+        yaml_paths = []
+        for expression in args.search:
+            exterm = get_search_term(log, expression)
+            log.debug(("yaml_paths::process_yaml_file:"
+                    + "converting search expression '{}' into '{}'"
+                    ).format(expression, exterm))
+            if exterm is None:
+                exit_state = 1
+                continue
+
+            for result in search_for_paths(
+                    log, processor, yaml_data, exterm, args.pathsep,
+                    search_values=search_values, search_keys=search_keys,
+                    search_anchors=args.refnames,
+                    include_key_aliases=include_key_aliases,
+                    include_value_aliases=include_value_aliases,
+                    decrypt_eyaml=args.decrypt,
+                    expand_children=args.expand):
+                # Record only unique results
+                add_entry = True
+                for entry in yaml_paths:
+                    if str(result) == str(entry[1]):
+                        add_entry = False
+                        break
+                if add_entry:
+                    yaml_paths.append((expression, result))
+
+        if not yaml_paths:
+            # Nothing further to do when there are no results
+            continue
+
+        if args.except_expression:
+            for expression in args.except_expression:
+                exterm = get_search_term(log, expression)
+                log.debug(("yaml_paths::process_yaml_file:"
+                        + "converted except expression '{}' into '{}'"
+                        ).format(expression, exterm))
+                if exterm is None:
+                    exit_state = 1
+                    continue
+
+                for result in search_for_paths(
+                        log, processor, yaml_data, exterm, args.pathsep,
+                        search_values=search_values,
+                        search_keys=search_keys,
+                        search_anchors=args.refnames,
+                        include_key_aliases=include_key_aliases,
+                        include_value_aliases=include_value_aliases,
+                        decrypt_eyaml=args.decrypt,
+                        expand_children=args.expand):
+                    for entry in yaml_paths:
+                        if str(result) == str(entry[1]):
+                            yaml_paths.remove(entry)
+                            break  # Entries are already unique
+
+        print_results(
+            args, processor, yaml_file, yaml_paths, subdoc_index)
+
+    return exit_state
 
 def main():
     """Main code."""
@@ -718,72 +827,38 @@ def main():
 
     # Process the input file(s)
     exit_state = 0
+    file_tally = -1
+    consumed_stdin = False
 
     # pylint: disable=too-many-nested-blocks
     for yaml_file in args.yaml_files:
-        # Try to open the file
-        yaml_data = get_yaml_data(yaml, log, yaml_file)
-        if not yaml_data and yaml_data is not None:
-            # An error message has already been logged
-            exit_state = 3
-            continue
+        file_tally += 1
+        if yaml_file.strip() == "-":
+            consumed_stdin = True
 
-        # Process all searches
-        processor.data = yaml_data
-        yaml_paths = []
-        for expression in args.search:
-            exterm = get_search_term(log, expression)
-            log.debug(("yaml_paths::main:"
-                       + "converting search expression '{}' into '{}'"
-                       ).format(expression, exterm))
-            if exterm is None:
-                exit_state = 1
-                continue
+        log.debug(
+            "yaml_merge::main:  Processing file, {}".format(
+                "STDIN" if yaml_file.strip() == "-" else yaml_file))
 
-            for result in search_for_paths(
-                    log, processor, yaml_data, exterm, args.pathsep,
-                    search_values=search_values, search_keys=search_keys,
-                    search_anchors=args.refnames,
-                    include_key_aliases=include_key_aliases,
-                    include_value_aliases=include_value_aliases,
-                    decrypt_eyaml=args.decrypt, expand_children=args.expand):
-                # Record only unique results
-                add_entry = True
-                for entry in yaml_paths:
-                    if str(result) == str(entry[1]):
-                        add_entry = False
-                        break
-                if add_entry:
-                    yaml_paths.append((expression, result))
+        proc_state = process_yaml_file(
+            args, yaml, log, yaml_file, processor, search_values, search_keys,
+            include_key_aliases, include_value_aliases, file_tally
+        )
 
-        if not yaml_paths:
-            # Nothing further to do when there are no results
-            continue
+        if proc_state != 0:
+            exit_state = proc_state
 
-        if args.except_expression:
-            for expression in args.except_expression:
-                exterm = get_search_term(log, expression)
-                log.debug(("yaml_paths::main:"
-                           + "converted except expression '{}' into '{}'"
-                           ).format(expression, exterm))
-                if exterm is None:
-                    exit_state = 1
-                    continue
-
-                for result in search_for_paths(
-                        log, processor, yaml_data, exterm, args.pathsep,
-                        search_values=search_values, search_keys=search_keys,
-                        search_anchors=args.refnames,
-                        include_key_aliases=include_key_aliases,
-                        include_value_aliases=include_value_aliases,
-                        decrypt_eyaml=args.decrypt,
-                        expand_children=args.expand):
-                    for entry in yaml_paths:
-                        if str(result) == str(entry[1]):
-                            yaml_paths.remove(entry)
-                            break  # Entries are already unique
-
-        print_results(args, processor, yaml_file, yaml_paths)
+    # Check for a waiting STDIN document
+    if (exit_state == 0
+        and not consumed_stdin
+        and not args.nostdin
+        and not sys.stdin.isatty()
+    ):
+        file_tally += 1
+        exit_state = process_yaml_file(
+            args, yaml, log, "-", processor, search_values, search_keys,
+            include_key_aliases, include_value_aliases, file_tally
+        )
 
     sys.exit(exit_state)
 

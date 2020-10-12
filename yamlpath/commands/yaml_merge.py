@@ -267,7 +267,8 @@ def process_yaml_file(
         return 2
 
     log.info(
-        "Processing {}...".format("STDIN" if rhs_file == "-" else rhs_file))
+        "Processing {}...".format(
+            "STDIN" if rhs_file.strip() == "-" else rhs_file))
 
     return merge_multidoc(rhs_file, rhs_yaml, log, merger)
 
@@ -313,16 +314,17 @@ def main():
     exit_state = 0
     consumed_stdin = False
     for yaml_file in args.yaml_files:
+        if yaml_file.strip() == '-':
+            consumed_stdin = True
+
         log.debug(
-            "yaml_merge::main:  Processing file, {}".format(yaml_file))
+            "yaml_merge::main:  Processing file, {}".format(
+                "STDIN" if yaml_file.strip() == "-" else yaml_file))
         proc_state = process_yaml_file(merger, log, yaml_editor, yaml_file)
 
         if proc_state != 0:
             exit_state = proc_state
             break
-
-        if yaml_file.strip() == '-':
-            consumed_stdin = True
 
     # Check for a waiting STDIN document
     if (exit_state == 0
