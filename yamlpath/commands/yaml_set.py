@@ -159,12 +159,13 @@ def processcli():
 def validateargs(args, log):
     """Validate command-line arguments."""
     has_errors = False
+    in_file = args.yaml_file if args.yaml_file else ""
+    in_stream_mode = in_file.strip() == "-" or (
+        not in_file and not args.nostdin and not sys.stdin.isatty()
+    )
 
-    # There must be at least one input file or stream
-    if (not args.yaml_file and (
-        sys.stdin.isatty()
-        or args.nostdin)
-    ):
+    # When there is no YAML_FILE and no STDIN, there is nothing to read
+    if not (in_file or in_stream_mode):
         has_errors = True
         log.error("There must be a YAML_FILE or STDIN document.")
 
@@ -183,14 +184,14 @@ def validateargs(args, log):
             + " --stdin, or --random")
 
     # * --stdin cannot be used with -, explicit or implied
-    if args.stdin and (not args.yaml_file or args.yaml_file.strip() == "-"):
+    if args.stdin and in_stream_mode:
         has_errors = True
         log.error(
             "Impossible to read both document and replacement value from"
             " STDIN!")
 
     # * --backup has no meaning when reading the YAML file from STDIN
-    if args.backup and (not args.yaml_file or args.yaml_file.strip() == "-"):
+    if args.backup and in_stream_mode:
         has_errors = True
         log.error(
             "The --backup|-b option applies only when reading from a file, not"
@@ -225,6 +226,14 @@ def validateargs(args, log):
     if len(args.random_from) < 2:
         has_errors = True
         log.error("The pool of random CHARS must have at least 2 characters.")
+
+    # When dumping the document to STDOUT, mute all non-errors
+    force_verbose = args.verbose
+    force_debug = args.debug
+    if in_stream_mode and not (force_verbose or force_debug):
+        args.quiet = True
+        args.verbose = False
+        args.debug = False
 
     if has_errors:
         sys.exit(1)

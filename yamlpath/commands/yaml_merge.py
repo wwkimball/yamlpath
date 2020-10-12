@@ -170,6 +170,7 @@ def processcli():
             "omit or use - to read from STDIN"))
     return parser.parse_args()
 
+# pylint: disable=too-many-branches
 def validateargs(args, log):
     """Validate command-line arguments."""
     has_errors = False
@@ -214,10 +215,14 @@ def validateargs(args, log):
                 "Output file exists and will be overwritten:  {}"
                 .format(args.overwrite))
     else:
-        # When dumping the document to STDOUT, mute all non-errors
-        args.quiet = True
-        args.verbose = False
-        args.debug = False
+        # When dumping the document to STDOUT, mute all non-errors except when
+        # forced.
+        force_verbose = args.verbose
+        force_debug = args.debug
+        if not (force_verbose or force_debug):
+            args.quiet = True
+            args.verbose = False
+            args.debug = False
 
     # When set, backup applies only to OVERWRITE
     if args.backup and not args.overwrite:
