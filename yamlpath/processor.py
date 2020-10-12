@@ -175,7 +175,7 @@ class Processor:
                     node_coord.parent, node_coord.parentref, value,
                     value_format)
 
-    # pylint: disable=locally-disabled,too-many-branches
+    # pylint: disable=locally-disabled,too-many-branches,too-many-locals
     def _get_nodes_by_path_segment(self, data: Any,
                                    yaml_path: YAMLPath, segment_index: int,
                                    **kwargs: Any
@@ -219,6 +219,16 @@ class Processor:
         traverse_lists = kwargs.pop("traverse_lists", True)
         (segment_type, stripped_attrs) = segments[segment_index]
         (unesc_type, unesc_attrs) = yaml_path.unescaped[segment_index]
+
+        # Disallow traversal recursion (because it creates a denial-of-service)
+        if segment_index > 0 and segment_type == PathSegmentTypes.TRAVERSE:
+            (prior_segment_type, _) = segments[segment_index - 1]
+            if prior_segment_type == PathSegmentTypes.TRAVERSE:
+                raise YAMLPathException(
+                    "Repeating traversals are not allowed because they cause"
+                    " recursion which leads to excessive CPU and RAM"
+                    " consumption while yielding no additional useful data",
+                    str(yaml_path), "**")
 
         node_coords: Any = None
         if segment_type == PathSegmentTypes.KEY:
