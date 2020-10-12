@@ -720,7 +720,7 @@ def process_yaml_file(
 ):
     """Process a (potentially multi-doc) YAML file."""
     # Try to open the file
-    exit_state = 2
+    exit_state = 0
     subdoc_index = -1
 
     # pylint: disable=too-many-nested-blocks
