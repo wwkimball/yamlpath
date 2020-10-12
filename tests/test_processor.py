@@ -179,6 +179,16 @@ lots_of_names:
             nodes = list(processor.get_nodes(yamlpath, mustexist=mustexist))
         assert -1 < str(ex.value).find("does not match any nodes")
 
+    def test_illegal_traversal_recursion(self, quiet_logger):
+        yamldata = """---
+        any: data
+        """
+        yaml = YAML()
+        processor = Processor(quiet_logger, yaml.load(yamldata))
+        with pytest.raises(YAMLPathException) as ex:
+            nodes = list(processor.get_nodes("**.**"))
+        assert -1 < str(ex.value).find("Repeating traversals are not allowed")
+
     def test_set_value_in_empty_data(self, capsys, quiet_logger):
         import sys
         yamldata = ""
