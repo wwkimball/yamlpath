@@ -14,6 +14,7 @@ from os.path import isfile, exists
 from shutil import copy2
 from typing import Any
 
+from yamlpath.common import YAMLPATH_VERSION
 from yamlpath.merger.enums import (
     AnchorConflictResolutions,
     AoHMergeOpts,
@@ -27,9 +28,6 @@ from yamlpath.merger import Merger, MergerConfig
 from yamlpath.exceptions import YAMLPathException
 
 from yamlpath.wrappers import ConsolePrinter
-
-# Implied Constants
-MY_VERSION = "0.1.0"
 
 def processcli():
     """Process command-line arguments."""
@@ -63,7 +61,7 @@ def processcli():
             https://github.com/wwkimball/yamlpath."""
     )
     parser.add_argument("-V", "--version", action="version",
-                        version="%(prog)s " + MY_VERSION)
+                        version="%(prog)s " + YAMLPATH_VERSION)
 
     parser.add_argument(
         "-c", "--config", help=(

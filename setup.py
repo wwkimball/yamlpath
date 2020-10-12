@@ -1,11 +1,13 @@
 import setuptools
 
+from yamlpath.common import YAMLPATH_VERSION
+
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
     name="yamlpath",
-    version="2.4.3",
+    version=YAMLPATH_VERSION,
     description="Read and change YAML/Compatible data using powerful, intuitive, command-line friendly syntax",
     long_description=long_description,
     long_description_content_type="text/markdown",

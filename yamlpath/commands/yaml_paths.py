@@ -16,6 +16,7 @@ from typing import Any, Generator, List, Optional, Tuple
 
 from ruamel.yaml.comments import CommentedSeq, CommentedMap
 
+from yamlpath.common import YAMLPATH_VERSION
 from yamlpath.func import (
     create_searchterms_from_pathattributes,
     escape_path_section,
@@ -36,9 +37,6 @@ from yamlpath import YAMLPath
 from yamlpath.wrappers import ConsolePrinter
 from yamlpath.eyaml import EYAMLProcessor
 
-# Implied Constants
-MY_VERSION = "1.0.0"
-
 def processcli():
     """Process command-line arguments."""
     search_ops = ", ".join(PathSearchMethods.get_operators()) + ", or !"
@@ -53,7 +51,7 @@ def processcli():
             visit https://github.com/wwkimball/yamlpath.".format(search_ops)
     )
     parser.add_argument("-V", "--version", action="version",
-                        version="%(prog)s " + MY_VERSION)
+                        version="%(prog)s " + YAMLPATH_VERSION)
 
     required_group = parser.add_argument_group("required settings")
     required_group.add_argument(
