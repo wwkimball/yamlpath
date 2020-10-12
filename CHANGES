@@ -17,7 +17,7 @@ Enhancements:
   segments in the YAML Path, every leaf node (Scalar value) is matched.  When
   the YAML Path has at least one further segment, it (and all further segments)
   must match subsequent nodes (anywhere deeper than that point in the document)
-  or none are matched. Results can be collected.
+  or none are matched.  Results can be collected.
 * The yaml-merge and yaml-get command-line tools now treat the - pseudo-file as
   implicit when NOT specified AND the session is non-TTY.  This can be blocked
   with --nostdin|-S.  This enables, for example, piping into these commands
@@ -84,6 +84,9 @@ Enhancements:
   used and when you wish to favor some characters more than others (simply
   repeat the favored characters more than other characters in the argument
   value but do so under caution because doing so reduces randomness).
+* The `yaml-set` command-line tool now accepts documents from STDIN, causing it
+  to write the resulting changes to STDOUT.  This enables `yaml-set` to operate
+  as a stream editor, like `yaml-get` and `yaml-merge`.
 
 Bug Fixes:
 * Collectors were breaking search nodes with Regular Expressions, making it
@@ -140,7 +143,7 @@ To reflect these changes:
 * yaml-get is now version 1.2.0
 * yaml-merge is now version 0.1.0
 * yaml-paths is now version 0.2.1
-* yaml-set is now version 1.1.0
+* yaml-set is now version 2.0.0
 
 2.4.3:
 Bug Fixes:

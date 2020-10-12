@@ -91,18 +91,20 @@ def processcli():
     parser.add_argument(
         "yaml_file", metavar="YAML_FILE",
         nargs="?",
-        help="the YAML file to query; use - to read from STDIN or leave empty"
-             " and send content via a non-TTY session")
+        help="the YAML file to query; omit or use - to read from STDIN")
 
     return parser.parse_args()
 
 def validateargs(args, log):
     """Validate command-line arguments."""
     has_errors = False
+    in_file = args.yaml_file if args.yaml_file else ""
+    in_stream_mode = in_file.strip() == "-" or (
+        not in_file and not args.nostdin and not sys.stdin.isatty()
+    )
 
-    # Enforce sanity
     # When there is no YAML_FILE and no STDIN, there is nothing to read
-    if not args.yaml_file and (sys.stdin.isatty() or args.nostdin):
+    if not (in_file or in_stream_mode):
         has_errors = True
         log.error("YAML_FILE must be set or be read from STDIN.")
 
@@ -133,6 +135,14 @@ def validateargs(args, log):
     ):
         has_errors = True
         log.error("Both private and public EYAML keys must be set.")
+
+    # When dumping the document to STDOUT, mute all non-errors
+    force_verbose = args.verbose
+    force_debug = args.debug
+    if in_stream_mode and not (force_verbose or force_debug):
+        args.quiet = True
+        args.verbose = False
+        args.debug = False
 
     if has_errors:
         sys.exit(1)

@@ -167,9 +167,10 @@ def processcli():
         "yaml_files", metavar="YAML_FILE", nargs="*",
         help=(
             "one or more YAML files to merge, order-significant;\n"
-            "use - to read from STDIN"))
+            "omit or use - to read from STDIN"))
     return parser.parse_args()
 
+# pylint: disable=too-many-branches
 def validateargs(args, log):
     """Validate command-line arguments."""
     has_errors = False
@@ -182,7 +183,7 @@ def validateargs(args, log):
     ):
         has_errors = True
         log.error(
-            "There must be at least one YAML_FILE.")
+            "There must be at least one YAML_FILE or STDIN document.")
 
     # There can be only one -
     pseudofile_count = 0
@@ -214,10 +215,14 @@ def validateargs(args, log):
                 "Output file exists and will be overwritten:  {}"
                 .format(args.overwrite))
     else:
-        # When dumping the document to STDOUT, mute all non-errors
-        args.quiet = True
-        args.verbose = False
-        args.debug = False
+        # When dumping the document to STDOUT, mute all non-errors except when
+        # forced.
+        force_verbose = args.verbose
+        force_debug = args.debug
+        if not (force_verbose or force_debug):
+            args.quiet = True
+            args.verbose = False
+            args.debug = False
 
     # When set, backup applies only to OVERWRITE
     if args.backup and not args.overwrite:

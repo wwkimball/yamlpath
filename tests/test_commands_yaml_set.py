@@ -10,12 +10,12 @@ class Test_yaml_set():
     def test_no_options(self, script_runner):
         result = script_runner.run(self.command)
         assert not result.success, result.stderr
-        assert "the following arguments are required: -g/--change, YAML_FILE" in result.stderr
+        assert "the following arguments are required: -g/--change" in result.stderr
 
     def test_no_input_file(self, script_runner):
-        result = script_runner.run(self.command, "--change='/test'")
+        result = script_runner.run(self.command, "--nostdin", "--change='/test'")
         assert not result.success, result.stderr
-        assert "the following arguments are required: YAML_FILE" in result.stderr
+        assert "There must be a YAML_FILE or STDIN document" in result.stderr
 
     def test_no_input_param(self, script_runner):
         result = script_runner.run(self.command, "--change='/test'", "no-such-file")
@@ -46,6 +46,16 @@ class Test_yaml_set():
         result = script_runner.run(self.command, "--change='/test'", "--random=1", "--publickey=no-such-file", "no-such-file")
         assert not result.success, result.stderr
         assert "EYAML public key is not a readable file" in result.stderr
+
+    def test_no_dual_stdin(self, script_runner):
+        result = script_runner.run(self.command, "--change='/test'", "--stdin", "-")
+        assert not result.success, result.stderr
+        assert "Impossible to read both document and replacement value from STDIN" in result.stderr
+
+    def test_no_backup_stdin(self, script_runner):
+        result = script_runner.run(self.command, "--change='/test'", "--backup", "-")
+        assert not result.success, result.stderr
+        assert "applies only when reading from a file" in result.stderr
 
     def test_input_by_value(self, script_runner, tmp_path_factory):
         import re
@@ -542,3 +552,76 @@ some:
         with open(yaml_file, 'r') as fhnd:
             filedat = fhnd.read()
         assert filedat == result_content
+
+    def test_stdin_to_stdout_yaml(self, script_runner):
+        import subprocess
+
+        stdin_content = """---
+hash:
+  sub_hash:
+    key1: value 1.1
+    key2: value 2.1
+  another_sub_hash:
+    key1: value 1.2
+    key2: value 2.2
+array:
+  - element 1
+  - element 2
+"""
+
+        stdout_content = """---
+hash:
+  sub_hash:
+    key1: CHANGE EVERYTHING!
+    key2: CHANGE EVERYTHING!
+  another_sub_hash:
+    key1: CHANGE EVERYTHING!
+    key2: CHANGE EVERYTHING!
+array:
+  - CHANGE EVERYTHING!
+  - CHANGE EVERYTHING!
+"""
+
+        result = subprocess.run(
+            [self.command
+            , "--change=**"
+            , "--value=CHANGE EVERYTHING!"
+            , "-"]
+            , stdout=subprocess.PIPE
+            , input=stdin_content
+            , universal_newlines=True
+        )
+
+        # DEBUG
+        # print("Expected:")
+        # print(merged_yaml_content)
+        # print("Got:")
+        # print(result.stdout)
+
+        assert 0 == result.returncode, result.stderr
+        assert stdout_content == result.stdout
+
+    def test_stdin_to_stdout_json(self, script_runner):
+        import subprocess
+
+        stdin_content = """{"hash": {"sub_hash": {"key1": "value 1.1", "key2": "value 2.1"}, "another_sub_hash": {"key1": "value 1.2", "key2": "value 2.2"}}, "array": ["element 1", "element 2"]}"""
+
+        stdout_content = """{"hash": {"sub_hash": {"key1": "CHANGE EVERYTHING!", "key2": "CHANGE EVERYTHING!"}, "another_sub_hash": {"key1": "CHANGE EVERYTHING!", "key2": "CHANGE EVERYTHING!"}}, "array": ["CHANGE EVERYTHING!", "CHANGE EVERYTHING!"]}"""
+
+        result = subprocess.run(
+            [self.command
+            , "--change=**"
+            , "--value=CHANGE EVERYTHING!"]
+            , stdout=subprocess.PIPE
+            , input=stdin_content
+            , universal_newlines=True
+        )
+
+        # DEBUG
+        # print("Expected:")
+        # print(merged_yaml_content)
+        # print("Got:")
+        # print(result.stdout)
+
+        assert 0 == result.returncode, result.stderr
+        assert stdout_content == result.stdout

@@ -646,10 +646,10 @@ class Processor:
         if segment_index + 1 == len(segments):
             # This traversal is gathering every leaf node
             if isinstance(data, dict):
-                for val in data.values():
+                for key, val in data.items():
                     for node_coord in self._get_nodes_by_traversal(
                         val, yaml_path, segment_index,
-                        parent=parent, parentref=parentref
+                        parent=data, parentref=key
                     ):
                         self.logger.debug(
                             "Yielding unfiltered Hash value:",
@@ -657,10 +657,10 @@ class Processor:
                             data=node_coord.node)
                         yield node_coord
             elif isinstance(data, list):
-                for ele in data:
+                for idx, ele in enumerate(data):
                     for node_coord in self._get_nodes_by_traversal(
                         ele, yaml_path, segment_index,
-                        parent=parent, parentref=parentref
+                        parent=data, parentref=idx
                     ):
                         self.logger.debug(
                             "Yielding unfiltered Array value:",
