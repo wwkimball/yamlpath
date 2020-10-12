@@ -14,6 +14,7 @@ import json
 from os import access, R_OK
 from os.path import isfile
 
+from yamlpath.common import YAMLPATH_VERSION
 from yamlpath.func import get_yaml_data, get_yaml_editor, unwrap_node_coords
 from yamlpath import YAMLPath
 from yamlpath.exceptions import YAMLPathException
@@ -22,9 +23,6 @@ from yamlpath.enums import PathSeperators
 from yamlpath.eyaml import EYAMLProcessor
 
 from yamlpath.wrappers import ConsolePrinter
-
-# Implied Constants
-MY_VERSION = "1.2.0"
 
 def processcli():
     """Process command-line arguments."""
@@ -38,7 +36,7 @@ def processcli():
             https://github.com/wwkimball/yamlpath."
     )
     parser.add_argument("-V", "--version", action="version",
-                        version="%(prog)s " + MY_VERSION)
+                        version="%(prog)s " + YAMLPATH_VERSION)
 
     required_group = parser.add_argument_group("required settings")
     required_group.add_argument(

@@ -21,6 +21,7 @@ from shutil import copy2, copyfileobj
 from pathlib import Path
 
 
+from yamlpath.common import YAMLPATH_VERSION
 from yamlpath.func import (
     clone_node,
     build_next_node,
@@ -38,9 +39,6 @@ from yamlpath.eyaml import EYAMLProcessor
 import yamlpath.patches
 from yamlpath.wrappers import ConsolePrinter
 
-# Implied Constants
-MY_VERSION = "2.0.0"
-
 def processcli():
     """Process command-line arguments."""
     parser = argparse.ArgumentParser(
@@ -56,7 +54,7 @@ def processcli():
             please visit https://github.com/wwkimball/yamlpath."
     )
     parser.add_argument("-V", "--version", action="version",
-                        version="%(prog)s " + MY_VERSION)
+                        version="%(prog)s " + YAMLPATH_VERSION)
 
     required_group = parser.add_argument_group("required settings")
     required_group.add_argument(
