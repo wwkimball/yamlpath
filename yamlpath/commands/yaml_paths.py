@@ -669,12 +669,11 @@ def get_search_term(logger: ConsolePrinter,
 
 def print_results(
     args: Any, processor: EYAMLProcessor, yaml_file: str,
-    yaml_paths: List[Tuple[str, YAMLPath]], document_tally: int = 0,
-    document_index: int = -1
+    yaml_paths: List[Tuple[str, YAMLPath]], document_index: int
 ) -> None:
     """Dump search results to STDOUT with optional and dynamic formatting."""
     in_expressions = len(args.search)
-    print_file_path = document_tally > 1 and not args.nofile
+    print_file_path = not args.nofile
     print_expression = in_expressions > 1 and not args.noexpression
     print_yaml_path = not args.noyamlpath
     print_value = args.values
@@ -692,9 +691,7 @@ def print_results(
             display_file_name = ("STDIN"
                                  if yaml_file.strip() == "-"
                                  else yaml_file)
-            resline += ("{}".format(display_file_name)
-                        if document_index < 0
-                        else "{}/{}".format(display_file_name, document_index))
+            resline += "{}/{}".format(display_file_name, document_index)
 
         if print_expression:
             resline += "[{}]".format(expression)
@@ -793,7 +790,7 @@ def process_yaml_file(
                             break  # Entries are already unique
 
         print_results(
-            args, processor, yaml_file, yaml_paths, file_tally, subdoc_index)
+            args, processor, yaml_file, yaml_paths, subdoc_index)
 
     return exit_state
 
