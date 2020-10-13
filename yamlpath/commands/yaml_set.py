@@ -482,7 +482,11 @@ def main():
         except EYAMLCommandException as ex:
             log.critical(ex, 2)
     else:
-        processor.set_value(change_path, new_value, value_format=args.format)
+        try:
+            processor.set_value(
+                change_path, new_value, value_format=args.format)
+        except YAMLPathException as ex:
+            log.critical(ex, 1)
 
     # Write out the result
     write_output_document(args, log, yaml, yaml_data)

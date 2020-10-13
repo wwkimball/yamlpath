@@ -150,8 +150,15 @@ class Processor:
                     self.data, yaml_path
             ):
                 found_nodes += 1
-                self._update_node(
-                    req_node.parent, req_node.parentref, value, value_format)
+                try:
+                    self._update_node(
+                        req_node.parent, req_node.parentref, value,
+                        value_format)
+                except ValueError as vex:
+                    raise YAMLPathException(
+                        "Impossible to write {} as {}.  The error was:  {}"
+                        .format(value, value_format, str(vex))
+                        , yaml_path) from vex
 
             if found_nodes < 1:
                 raise YAMLPathException(
@@ -171,9 +178,15 @@ class Processor:
                      + " setting its value to {}<{}>.")
                     .format(node_coord, value, value_format)
                 )
-                self._update_node(
-                    node_coord.parent, node_coord.parentref, value,
-                    value_format)
+                try:
+                    self._update_node(
+                        node_coord.parent, node_coord.parentref, value,
+                        value_format)
+                except ValueError as vex:
+                    raise YAMLPathException(
+                        "Impossible to write '{}' as {}.  The error was:  {}"
+                        .format(value, value_format, str(vex))
+                        , yaml_path) from vex
 
     # pylint: disable=locally-disabled,too-many-branches,too-many-locals
     def _get_nodes_by_path_segment(self, data: Any,

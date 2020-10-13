@@ -108,6 +108,12 @@ Bug Fixes:
 * The yaml-merge command would "explode" LHS Anchored Hashes wherever they were
   aliased when the RHS document modified the same Hash into which the alias was
   used.
+* Setting a Python-style Boolean value via `yaml-set` (True or False) without
+  setting --format=boolean would cause an error because ruamel.yaml was
+  expecting an integer, instead.  It is no longer necessary to set --format in
+  this case.  However, --format=boolean can still be useful to convert more
+  "Boolean like" values into true|false, like on, off, yes, no, true, false,
+  True, False, 1, 0.
 
 Non-Breaking API Changes:
 * The various protected _get_* methods of Processor were changed to reduce the
