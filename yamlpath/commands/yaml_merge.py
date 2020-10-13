@@ -8,30 +8,32 @@ Copyright 2020 William W. Kimball, Jr. MBA MSIS
 """
 import sys
 import argparse
-from os import access, R_OK
+import json
+from os import access, R_OK, remove
 from os.path import isfile, exists
+from shutil import copy2
+from typing import Any
 
+from yamlpath.common import YAMLPATH_VERSION
 from yamlpath.merger.enums import (
     AnchorConflictResolutions,
     AoHMergeOpts,
     ArrayMergeOpts,
-    HashMergeOpts
+    HashMergeOpts,
+    OutputDocTypes,
 )
-from yamlpath.func import get_yaml_data, get_yaml_editor
+from yamlpath.func import get_yaml_multidoc_data, get_yaml_editor
 from yamlpath.merger.exceptions import MergeException
 from yamlpath.merger import Merger, MergerConfig
 from yamlpath.exceptions import YAMLPathException
 
 from yamlpath.wrappers import ConsolePrinter
 
-# Implied Constants
-MY_VERSION = "0.0.4"
-
 def processcli():
     """Process command-line arguments."""
     parser = argparse.ArgumentParser(
         formatter_class=argparse.RawTextHelpFormatter,
-        description="Merges two or more YAML/Compatible files together.",
+        description="Merges two or more YAML/JSON/Compatible files together.",
         epilog="""
             The CONFIG file is an INI file with up to three sections:
             [defaults] Sets equivalents of -a|--anchors, -A|--arrays,
@@ -49,11 +51,17 @@ def processcli():
             The left-to-right order of YAML_FILEs is significant.  Except
             when this behavior is deliberately altered by your options, data
             from files on the right overrides data in files to their left.
+            Only one input file may be the - pseudo-file (read from STDIN).
+            When no YAML_FILEs are provided, - will be inferred as long as you
+            are running this program without a TTY (unless you set
+            --nostdin|-S).  Any file, including input from STDIN, may be a
+            multi-document YAML or JSON file.
+
             For more information about YAML Paths, please visit
             https://github.com/wwkimball/yamlpath."""
     )
     parser.add_argument("-V", "--version", action="version",
-                        version="%(prog)s " + MY_VERSION)
+                        version="%(prog)s " + YAMLPATH_VERSION)
 
     parser.add_argument(
         "-c", "--config", help=(
@@ -104,11 +112,41 @@ def processcli():
             "YAML Path indicating where in left YAML_FILE the right\n"
             "YAML_FILE content is to be merged; default=/"))
 
-    parser.add_argument(
+    output_doc_group = parser.add_mutually_exclusive_group()
+    output_doc_group.add_argument(
         "-o", "--output",
         help=(
-            "Write the merged result to the indicated file (or\n"
-            "STDOUT when unset)"))
+            "Write the merged result to the indicated nonexistent\n"
+            "file"))
+    output_doc_group.add_argument(
+        "-w", "--overwrite",
+        help=(
+            "Write the merged result to the indicated file; will\n"
+            "replace the file when it already exists"))
+
+    parser.add_argument(
+        "-b", "--backup", action="store_true",
+        help=(
+            "save a backup OVERWRITE file with an extra .bak\n"
+            "file-extension; applies only to OVERWRITE"))
+
+    parser.add_argument(
+        "-D", "--document-format",
+        choices=[l.lower() for l in OutputDocTypes.get_names()],
+        type=str.lower,
+        default="auto",
+        help=(
+            "Force the merged result to be presented in one of the\n"
+            "supported formats or let it automatically match the\n"
+            "known file-name extension of OUTPUT|OVERWRITE (when\n"
+            "provided), or match the type of the first document;\n"
+            "default=auto"))
+
+    parser.add_argument(
+        "-S", "--nostdin", action="store_true",
+        help=(
+            "Do not implicitly read from STDIN, even when there are\n"
+            "no - pseudo-files in YAML_FILEs with a non-TTY session"))
 
     noise_group = parser.add_mutually_exclusive_group()
     noise_group.add_argument(
@@ -124,20 +162,35 @@ def processcli():
             "-o|--output is not set)"))
 
     parser.add_argument(
-        "rhs_files", metavar="YAML_FILE", nargs="+",
+        "yaml_files", metavar="YAML_FILE", nargs="*",
         help=(
             "one or more YAML files to merge, order-significant;\n"
-            "use - to read from STDIN"))
+            "omit or use - to read from STDIN"))
     return parser.parse_args()
 
+# pylint: disable=too-many-branches
 def validateargs(args, log):
     """Validate command-line arguments."""
     has_errors = False
 
-    # There must be at least two input files
-    if len(args.rhs_files) < 2:
+    # There must be at least one input file or stream
+    input_file_count = len(args.yaml_files)
+    if (input_file_count == 0 and (
+            sys.stdin.isatty()
+            or args.nostdin)
+    ):
         has_errors = True
-        log.error("There must be at least two YAML_FILEs.")
+        log.error(
+            "There must be at least one YAML_FILE or STDIN document.")
+
+    # There can be only one -
+    pseudofile_count = 0
+    for infile in args.yaml_files:
+        if infile.strip() == '-':
+            pseudofile_count += 1
+    if pseudofile_count > 1:
+        has_errors = True
+        log.error("Only one YAML_FILE may be the - pseudo-file.")
 
     # When set, the configuration file must be a readable file
     if args.config and not (
@@ -154,14 +207,94 @@ def validateargs(args, log):
         if exists(args.output):
             has_errors = True
             log.error("Output file already exists:  {}".format(args.output))
+    elif args.overwrite:
+        if exists(args.overwrite):
+            log.warning(
+                "Output file exists and will be overwritten:  {}"
+                .format(args.overwrite))
     else:
-        # When dumping the document to STDOUT, mute all non-errors
-        args.quiet = True
-        args.verbose = False
-        args.debug = False
+        # When dumping the document to STDOUT, mute all non-errors except when
+        # forced.
+        force_verbose = args.verbose
+        force_debug = args.debug
+        if not (force_verbose or force_debug):
+            args.quiet = True
+            args.verbose = False
+            args.debug = False
+
+    # When set, backup applies only to OVERWRITE
+    if args.backup and not args.overwrite:
+        has_errors = True
+        log.error("The --backup|-b option applies only to OVERWRITE files.")
 
     if has_errors:
         sys.exit(1)
+
+def merge_multidoc(yaml_file, yaml_editor, log, merger):
+    """Merge all documents within a multi-document source."""
+    exit_state = 1
+    for yaml_data in get_yaml_multidoc_data(yaml_editor, log, yaml_file):
+        if not yaml_data and isinstance(yaml_data, bool):
+            # An error message has already been logged
+            exit_state = 3
+            break
+        try:
+            merger.merge_with(yaml_data)
+        except MergeException as mex:
+            log.error(mex)
+            exit_state = 6
+            break
+        except YAMLPathException as yex:
+            log.error(yex)
+            exit_state = 7
+            break
+        else:
+            exit_state = 0
+
+    log.debug("merge_multidoc:  Reporting status, {}.".format(exit_state))
+    return exit_state
+
+def process_yaml_file(
+    merger: Merger, log: ConsolePrinter, rhs_yaml: Any, rhs_file: str
+):
+    """Merge RHS document(s) into the prime document."""
+    # Except for - (STDIN), each YAML_FILE must actually be a file; because
+    # merge data is expected, this is a fatal failure.
+    if rhs_file != "-" and not isfile(rhs_file):
+        log.error("Not a file:  {}".format(rhs_file))
+        return 2
+
+    log.info(
+        "Processing {}...".format(
+            "STDIN" if rhs_file.strip() == "-" else rhs_file))
+
+    return merge_multidoc(rhs_file, rhs_yaml, log, merger)
+
+def write_output_document(args, log, merger, yaml_editor):
+    """Save a backup of the overwrite file, if requested."""
+    if args.backup:
+        backup_file = args.overwrite + ".bak"
+        log.verbose(
+            "Saving a backup of {} to {}."
+            .format(args.overwrite, backup_file))
+        if exists(backup_file):
+            remove(backup_file)
+        copy2(args.overwrite, backup_file)
+
+    document_is_json = (
+        merger.prepare_for_dump(yaml_editor, args.output)
+        is OutputDocTypes.JSON)
+    if args.output:
+        with open(args.output, 'w') as out_fhnd:
+            if document_is_json:
+                json.dump(merger.data, out_fhnd)
+            else:
+                yaml_editor.dump(merger.data, out_fhnd)
+    else:
+        if document_is_json:
+            json.dump(merger.data, sys.stdout)
+        else:
+            yaml_editor.dump(merger.data, sys.stdout)
 
 def main():
     """Main code."""
@@ -169,65 +302,39 @@ def main():
     log = ConsolePrinter(args)
     validateargs(args, log)
 
-    # The first input file is the prime
-    fileiterator = iter(args.rhs_files)
-    prime_yaml = get_yaml_editor()
-    prime_file = next(fileiterator)
-    prime_data = get_yaml_data(prime_yaml, log, prime_file)
-    if prime_data is None:
-        # An error message has already been logged
-        log.critical(
-            "The first input file, {}, has nothing to merge into."
-            .format(prime_file), 1)
+    # For the remainder of processing, overwrite overwrites output
+    if args.overwrite:
+        args.output = args.overwrite
 
-    merger = Merger(log, prime_data, MergerConfig(log, args))
-
-    # ryamel.yaml unfortunately tracks comments AFTER each YAML key/value.  As
-    # such, it is impossible to copy comments from RHS to LHS in any sensible
-    # way.  This leads to absurd merge results that are data-accurate but
-    # comment-insane.  This ruamel.yaml design decision forces me to simply
-    # delete all comments from all merge documents to produce a sensible
-    # result.
-    Merger.delete_all_comments(prime_data)
-
-    # Merge additional input files into the prime
+    # Merge all input files
+    merger = Merger(log, None, MergerConfig(log, args))
+    yaml_editor = get_yaml_editor()
     exit_state = 0
-    rhs_yaml = get_yaml_editor()
-    for rhs_file in fileiterator:
-        # Except for - (STDIN), each YAML_FILE must actually be a file; because
-        # merge data is expected, this is a fatal failure.
-        if rhs_file != "-" and not isfile(rhs_file):
-            log.error("Not a file:  {}".format(rhs_file))
-            exit_state = 2
+    consumed_stdin = False
+    for yaml_file in args.yaml_files:
+        if yaml_file.strip() == '-':
+            consumed_stdin = True
+
+        log.debug(
+            "yaml_merge::main:  Processing file, {}".format(
+                "STDIN" if yaml_file.strip() == "-" else yaml_file))
+        proc_state = process_yaml_file(merger, log, yaml_editor, yaml_file)
+
+        if proc_state != 0:
+            exit_state = proc_state
             break
 
-        log.info("Processing {}..."
-                 .format("STDIN" if rhs_file == "-" else rhs_file))
-
-        # Try to open the file; failures are fatal
-        rhs_data = get_yaml_data(rhs_yaml, log, rhs_file)
-        if rhs_data is None:
-            # An error message has already been logged
-            exit_state = 3
-            break
-
-        # Merge the new RHS into the prime LHS
-        try:
-            merger.merge_with(rhs_data)
-        except MergeException as mex:
-            log.error(mex)
-            exit_state = 4
-        except YAMLPathException as yex:
-            log.error(yex)
-            exit_state = 5
+    # Check for a waiting STDIN document
+    if (exit_state == 0
+        and not consumed_stdin
+        and not args.nostdin
+        and not sys.stdin.isatty()
+    ):
+        exit_state = process_yaml_file(merger, log, yaml_editor, '-')
 
     # Output the final document
     if exit_state == 0:
-        if args.output:
-            with open(args.output, 'w') as yaml_dump:
-                prime_yaml.dump(merger.data, yaml_dump)
-        else:
-            prime_yaml.dump(merger.data, sys.stdout)
+        write_output_document(args, log, merger, yaml_editor)
 
     sys.exit(exit_state)
 

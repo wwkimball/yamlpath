@@ -12,7 +12,8 @@ from yamlpath.merger.enums import (
     AnchorConflictResolutions,
     AoHMergeOpts,
     ArrayMergeOpts,
-    HashMergeOpts
+    HashMergeOpts,
+    OutputDocTypes,
 )
 from yamlpath import Processor, YAMLPath
 from yamlpath.wrappers import ConsolePrinter, NodeCoords
@@ -182,6 +183,12 @@ class MergerConfig:
             return YAMLPath(self.args.mergeat)
         return YAMLPath("/")
 
+    def get_document_format(self) -> OutputDocTypes:
+        """Get the user-desired output format."""
+        if hasattr(self.args, "document_format"):
+            return OutputDocTypes.from_str(self.args.document_format)
+        return OutputDocTypes.AUTO
+
     def _prepare_user_rules(
         self, proc: Processor, merge_path: YAMLPath, section: str,
         collector: dict
@@ -228,9 +235,10 @@ class MergerConfig:
             try:
                 for node_coord in proc.get_nodes(yaml_path, mustexist=True):
                     self.log.debug(
-                        "MergerConfig::_prepare_user_rules:  Node will"
-                        " have merging rule, {}:".format(rule_value))
-                    self.log.debug(node_coord.node)
+                        "Node will have merging rule, {}:"
+                        .format(rule_value),
+                        prefix="MergerConfig::_prepare_user_rules:  ",
+                        data=node_coord.node)
                     collector[node_coord] = rule_value
 
             except YAMLPathException:
@@ -238,15 +246,15 @@ class MergerConfig:
                                 .format(section, yaml_path))
 
         self.log.debug(
-            "MergerConfig::_prepare_user_rules:  Matched rules to nodes:")
+            "Matched rules to nodes:",
+            prefix="MergerConfig::_prepare_user_rules:  ")
         for node_coord, merge_rule in collector.items():
-            self.log.debug("... RULE:  {}".format(merge_rule))
-            self.log.debug("... NODE:")
-            self.log.debug(node_coord.node)
-            self.log.debug("... PARENT:")
-            self.log.debug(node_coord.parent)
-            self.log.debug("... REF:")
-            self.log.debug(node_coord.parentref)
+            self.log.debug(
+                "... RULE:  {}".format(merge_rule),
+                prefix="MergerConfig::_prepare_user_rules:  ")
+            self.log.debug(
+                "... NODE:", data=node_coord,
+                prefix="MergerConfig::_prepare_user_rules:  ")
 
     def _load_config(self) -> None:
         """Load the external configuration file."""
@@ -293,13 +301,12 @@ class MergerConfig:
 
         Returns: (str) The requested configuration.
         """
-        self.log.debug("MergerConfig::_get_rule_for:  Seeking rule for node:")
-        self.log.debug("... NODE:")
-        self.log.debug(node_coord.node)
-        self.log.debug("... PARENT:")
-        self.log.debug(node_coord.parent)
-        self.log.debug("... REF:")
-        self.log.debug(node_coord.parentref)
+        self.log.debug(
+            "Seeking rule for node:", prefix="MergerConfig::_get_rule_for:  ",
+            header=" ")
+        self.log.debug(
+            "... NODE:", prefix="MergerConfig::_get_rule_for:  ",
+            data=node_coord)
         return self._get_config_for(node_coord, self.rules)
 
     def _get_key_for(self, node_coord: NodeCoords) -> str:

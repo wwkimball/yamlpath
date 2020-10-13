@@ -1,3 +1,160 @@
+3.0.0:
+Enhancements:
+* Added a new YAML Path Segment Type:  *
+  This is identical to a Search segment where the search term is `[.!=""]`.
+  This translates to "match every Hash key for which its name is not empty and
+  every Array element which is not empty".  This operator also vertically
+  expands results from Collectors, effectively breaking them out from an Array-
+  per-line to one-Scalar-per-line.  If you place this inside a Collector, the
+  results will still be collected into an Array.
+* The * character now also serves as a wildcard character for key-names, Hash
+  values, and Array value comparisons, converting the segment to a Search.  For
+  example, a YAML Path like `abc.d*` becomes `abc[.^d]`, `abc.*f` becomes
+  `abc[.$f]`, and `abc.*e*` becomes `abc[.=~/^.*e.*$/]`, and so on.
+* Added a new YAML Path Segment Type:  **
+  This new type is a "Traversal" segment which causes YAML Path operations to
+  deeply traverse the document from that point.  When there are no further
+  segments in the YAML Path, every leaf node (Scalar value) is matched.  When
+  the YAML Path has at least one further segment, it (and all further segments)
+  must match subsequent nodes (anywhere deeper than that point in the document)
+  or none are matched.  Results can be collected.
+* The yaml-merge and yaml-get command-line tools now treat the - pseudo-file as
+  implicit when NOT specified AND the session is non-TTY.  This can be blocked
+  with --nostdin|-S.  This enables, for example, piping into these commands
+  without being forced to specify the - pseudo-file as an argument to them.
+* The yaml-merge command now enables users to force the merged document to be
+  written out as YAML or JSON via a new --document-format (-D) command-line
+  argument.  When unset, the format will be based on the file-name extension of
+  the --output file when provided, or (last-resort) that of the first document
+  (AUTO).
+* The yaml-merge command now accepts multi-document YAML files, created when
+  the YAML standard-specified End-of-Document, Start-of-Document marker pair
+  (...<EOL> followed by ---<EOL>) is present, like:
+  ```yaml
+  ---
+  document: 1
+  ...
+  ---
+  document: 2
+  ```
+* The yaml-merge command now accepts multi-document JSON files, created when
+  there are multiple root-level entities, like:
+  ```json
+  {"document": 1}
+  {"document": 2}
+  ```
+* Because any document to yaml-merge can be a multi-document, it no longer
+  requires at least 2 YAML_FILEs be supplied on the command-line.  If users
+  pass only a single file or stream that is not a multi-document file, its
+  content will merely be written out without any merging into it.  This can be
+  useful for trivially converting any file from YAML to JSON or JSON to YAML,
+  like `yaml-merge --document-format=json file.yaml` or
+  `yaml-merge --document-format=yaml file.json`.
+* The `yaml-set` command-line tool can now write changes to empty or minimally-
+  viable files, enabling users to build up new data files from scratch.  The
+  file must already exist, even if completely empty.  A non-empty, minimally-
+  viable file depends on document type.  For example:
+  A minimally-viable YAML file:
+  ```yaml
+  ---
+  # The triple-dash is required.
+  ```
+  Two versions of a minimally-viable JSON file:
+  ```json
+  {}
+  ```
+  or:
+  ```json
+  []
+  ```
+  However, minimally-viable structure is necessary only for files with unusual
+  file-name extensions.  When the file-name extension is one of yaml, yml, or
+  json (case-insensitive), the file can be completely empty and still result in
+  a YAML or JSON data structure.
+* The `yaml-set` command-line tool now accepts empty-String values.
+* The `yaml-merge` command-line tool now permits overwriting one of its input
+  files as long as `--overwrite` is used instead of `--output`; these are
+  mutually-exclusive options.  To help users protect against accidental change,
+  a new `--backup` flag will cause the to-be-overwritten file to be renamed
+  with a ".bak" file-name extension.  A pre-existing backup file with the same
+  name will be unceremoniously replaced.
+* The `yaml-set` command-line tool now accepts an arbitrary set of characters
+  from which to derive `--random` values via a new `--random-from` argument.
+  This is especially useful when you need to limit or expand the characters
+  used and when you wish to favor some characters more than others (simply
+  repeat the favored characters more than other characters in the argument
+  value but do so under caution because doing so reduces randomness).
+* The `yaml-set` command-line tool now accepts documents from STDIN, causing it
+  to write the resulting changes to STDOUT.  This enables `yaml-set` to operate
+  as a stream editor, like `yaml-get` and `yaml-merge`.
+* The `yaml-paths` command-line tool now accepts documents from STDIN.  It also
+  now accepts multi-document YAML and JSON as file or STDIN input.  Because it
+  is impossible to determine whether a file or stream contains multi-document
+  data without reading through the entire file more than once, output now always
+  displays the file-name (or STDIN) and -- new -- the document-index in which
+  matches were found.  As before, users can turn off file-name display by
+  setting --nofile|-F.  In previous, single-document versions, the file-name
+  display was automatically muted when there was only one YAML_FILE to process.
+
+Bug Fixes:
+* Collectors were breaking search nodes with Regular Expressions, making it
+  impossible for collected searches to return expected matches.
+* Fixed the Known Issue which was logged at version 2.4.0; setting values which
+  override aliased key-value pairs now correctly adds the new key-value pair to
+  the DOM.
+* When the left-most document was JSON, yaml-merge and yaml-set would both
+  improperly write out a YAML document start mark (---) and then a hybrid
+  JSON/YAML result rather than valid JSON.
+* The yaml-merge command would "explode" LHS Anchored Hashes wherever they were
+  aliased when the RHS document modified the same Hash into which the alias was
+  used.
+* Setting a Python-style Boolean value via `yaml-set` (True or False) without
+  setting --format=boolean would cause an error because ruamel.yaml was
+  expecting an integer, instead.  It is no longer necessary to set --format in
+  this case.  However, --format=boolean can still be useful to convert more
+  "Boolean like" values into true|false, like on, off, yes, no, true, false,
+  True, False, 1, 0.
+
+Non-Breaking API Changes:
+* The various protected _get_* methods of Processor were changed to reduce the
+  number of positional parameters while also allowing for new special-use
+  parameters for future changes.  The formerly optional positional `parent` and
+  `parentref` parameters are now optional keyword arguments by the same names.
+  Because these were all protected methods and the affected parameters were
+  optional anyway, this is not deemed a breaking change; no one should have
+  been directly calling them.
+* The get_yaml_editor function now supports several keyword arguments which
+  provide for some customization of the returned ruamel.yaml.YAML instance.
+  See its documentation for details.  This is a non-breaking change as the
+  defaults for each new keyword argument set the behavior identical to what it
+  was before this change.
+* The get_yaml_data function now returns False rather than None when there is
+  an issue attempting to load data.  This is because an empty-but-viable
+  document correctly returns None but there is no valid YAML or JSON document
+  which can be comprised only of a Scalar Boolean.  This is a non-breaking
+  change because None and False are equivalent for code like:
+  ```python
+  data = get_yaml_data(get_yaml_editor(), ConsoleLogger(), "file.yaml")
+  if not data:
+    print("No data")
+  ```
+  However, you can now differentiate between "No data" and "Invalid document"
+  like so:
+  ```python
+  data = get_yaml_data(get_yaml_editor(), ConsoleLogger(), "file.yaml")
+  if data is None:
+    print("No data")
+  elif not data and isinstance(data, bool):
+    print("Invalid document")
+  else:
+    print("Got a non-empty document")
+  ```
+* The ConsolePrinter's debug method now prints vastly more detail and allows
+  for customization of the output.  Read its documentation for details.
+
+From this release forward, the version reported by all command-line tools is
+synchronized with the version of the overall yamlpath installation.
+
 2.4.3:
 Bug Fixes:
 * Array-of-Hashes were not being detected for the purpose of applying merge

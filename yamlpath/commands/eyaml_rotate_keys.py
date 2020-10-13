@@ -14,6 +14,7 @@ from os.path import isfile, exists
 
 from ruamel.yaml.scalarstring import FoldedScalarString
 
+from yamlpath.common import YAMLPATH_VERSION
 from yamlpath.func import get_yaml_data, get_yaml_editor
 from yamlpath.eyaml.exceptions import EYAMLCommandException
 from yamlpath.eyaml import EYAMLProcessor
@@ -21,9 +22,6 @@ from yamlpath.eyaml import EYAMLProcessor
 # pylint: disable=locally-disabled,unused-import
 import yamlpath.patches
 from yamlpath.wrappers import ConsolePrinter
-
-# Implied Constants
-MY_VERSION = "1.0.3"
 
 def processcli():
     """Process command-line arguments."""
@@ -35,7 +33,7 @@ def processcli():
         + " backed up, even when -b/--backup is specified)."
     )
     parser.add_argument("-V", "--version", action="version",
-                        version="%(prog)s " + MY_VERSION)
+                        version="%(prog)s " + YAMLPATH_VERSION)
 
     noise_group = parser.add_mutually_exclusive_group()
     noise_group.add_argument("-d", "--debug", action="store_true",
@@ -126,7 +124,7 @@ def main():
 
         # Try to open the file
         yaml_data = get_yaml_data(yaml, log, yaml_file)
-        if yaml_data is None:
+        if not yaml_data and yaml_data is not None:
             # An error message has already been logged
             exit_state = 3
             continue

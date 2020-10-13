@@ -8,7 +8,7 @@ import ast
 import re
 from sys import maxsize, stdin
 from distutils.util import strtobool
-from typing import Any, List, Optional
+from typing import Any, Generator, List, Optional
 
 from ruamel.yaml import YAML
 from ruamel.yaml.parser import ParserError
@@ -39,23 +39,42 @@ from yamlpath.types import PathAttributes
 from yamlpath.path import SearchTerms
 from yamlpath import YAMLPath
 
-def get_yaml_editor() -> Any:
+def get_yaml_editor(**kwargs: Any) -> Any:
     """
     Build and return a generic YAML editor based on ruamel.yaml.
 
     Parameters:  N/A
 
+    Keyword Arguments:
+    * explicit_start (bool) True = ensure the YAML Start-of-Document marker
+      (---<EOL>) is written in the output; False = remove it; default=True
+    * explode_aliases (bool) True = convert all aliases (*name) and YAML merge
+      operators (<<: *name) to their referenced content, removing the aliases
+      and merge operators; False = maintain the references; default=False
+    * preserve_quotes (bool) True = retain any and all quoting of keys and
+      values including whatever demarcation symbol was used (" versus ');
+      False = only quote values when necessary, removing unnecessary
+      demarcation; default=True
+
     Returns (Any) The ready-for-use YAML editor.
 
     Raises:  N/A
     """
+    explicit_start = kwargs.pop("explicit_start", True)
+    explode_aliases = kwargs.pop("explode_aliases", False)
+    preserve_quotes = kwargs.pop("preserve_quotes", True)
+
     # The ruamel.yaml class appears to be missing some typing data, so these
     # valid assignments cannot be type-checked.
     yaml = YAML()
     yaml.indent(mapping=2, sequence=4, offset=2)
-    yaml.explicit_start = True      # type: ignore
-    yaml.preserve_quotes = True     # type: ignore
-    yaml.width = maxsize            # type: ignore
+    yaml.explicit_start = explicit_start       # type: ignore
+    yaml.preserve_quotes = preserve_quotes     # type: ignore
+    yaml.width = maxsize                       # type: ignore
+
+    if explode_aliases:
+        yaml.default_flow_style = False
+
     return yaml
 
 # pylint: disable=locally-disabled,too-many-branches,too-many-statements
@@ -82,26 +101,26 @@ def get_yaml_data(parser: Any, logger: ConsolePrinter, source: str) -> Any:
                     yaml_data = parser.load(fhnd)
     except KeyboardInterrupt:
         logger.error("Aborting data load due to keyboard interrupt!")
-        yaml_data = None
+        yaml_data = False
     except FileNotFoundError:
         logger.error("File not found:  {}".format(source))
-        yaml_data = None
+        yaml_data = False
     except ParserError as ex:
         logger.error("YAML parsing error {}:  {}"
                      .format(str(ex.problem_mark).lstrip(), ex.problem))
-        yaml_data = None
+        yaml_data = False
     except ComposerError as ex:
         logger.error("YAML composition error {}:  {}"
                      .format(str(ex.problem_mark).lstrip(), ex.problem))
-        yaml_data = None
+        yaml_data = False
     except ConstructorError as ex:
         logger.error("YAML construction error {}:  {}"
                      .format(str(ex.problem_mark).lstrip(), ex.problem))
-        yaml_data = None
+        yaml_data = False
     except ScannerError as ex:
         logger.error("YAML syntax error {}:  {}"
                      .format(str(ex.problem_mark).lstrip(), ex.problem))
-        yaml_data = None
+        yaml_data = False
     except DuplicateKeyError as dke:
         omits = [
             "while constructing", "To suppress this", "readthedocs",
@@ -122,16 +141,106 @@ def get_yaml_data(parser: Any, logger: ConsolePrinter, source: str) -> Any:
                 newmsg += "\n   " + line
         logger.error("Duplicate Hash key detected:  {}"
                      .format(newmsg))
-        yaml_data = None
+        yaml_data = False
     except ReusedAnchorWarning as raw:
         logger.error("Duplicate YAML Anchor detected:  {}"
                      .format(
                          str(raw)
                          .replace("occurrence   ", "occurrence ")
                          .replace("\n", "\n   ")))
-        yaml_data = None
+        yaml_data = False
 
     return yaml_data
+
+# pylint: disable=locally-disabled,too-many-branches,too-many-statements,too-many-locals
+def get_yaml_multidoc_data(
+    parser: Any, logger: ConsolePrinter, source: str
+) -> Generator[Any, None, None]:
+    """
+    Parse YAML/Compatible multi-docs and yield the ruamel.yaml object results.
+
+    All known issues are caught and distinctively logged.  Nothing is generated
+    when there is an error.
+
+    Parameters:
+    1. parser (ruamel.yaml.YAML) The YAML data parser
+    2. logger (ConsolePrinter) The logging facility
+    3. source (str) The source file to load; can be - for reading from STDIN
+    """
+    # This code traps errors and warnings from ruamel.yaml, substituting
+    # lengthy stack-dumps with specific, meaningful feedback.  Further, some
+    # warnings are treated as errors by ruamel.yaml, so these are also
+    # coallesced into cleaner feedback.
+    has_error = False
+    try:
+        with warnings.catch_warnings():
+            warnings.filterwarnings("error")
+            if source == "-":
+                for document in parser.load_all(stdin.read()):
+                    logger.debug(
+                        "Yielding document from {}:".format(source),
+                        prefix="get_yaml_multidoc_data: ", data=document)
+                    yield document
+            else:
+                with open(source, 'r') as fhnd:
+                    for document in parser.load_all(fhnd):
+                        logger.debug(
+                            "Yielding document from {}:".format(source),
+                            prefix="get_yaml_multidoc_data: ", data=document)
+                        yield document
+    except KeyboardInterrupt:
+        has_error = True
+        logger.error("Aborting data load due to keyboard interrupt!")
+    except FileNotFoundError:
+        has_error = True
+        logger.error("File not found:  {}".format(source))
+    except ParserError as ex:
+        has_error = True
+        logger.error("YAML parsing error {}:  {}"
+                     .format(str(ex.problem_mark).lstrip(), ex.problem))
+    except ComposerError as ex:
+        has_error = True
+        logger.error("YAML composition error {}:  {}"
+                    .format(str(ex.problem_mark).lstrip(), ex.problem))
+    except ConstructorError as ex:
+        has_error = True
+        logger.error("YAML construction error {}:  {}"
+                     .format(str(ex.problem_mark).lstrip(), ex.problem))
+    except ScannerError as ex:
+        has_error = True
+        logger.error("YAML syntax error {}:  {}"
+                     .format(str(ex.problem_mark).lstrip(), ex.problem))
+    except DuplicateKeyError as dke:
+        has_error = True
+        omits = [
+            "while constructing", "To suppress this", "readthedocs",
+            "future releases", "the new API",
+        ]
+        message = str(dke).split("\n")
+        newmsg = ""
+        for line in message:
+            line = line.strip()
+            if not line:
+                continue
+            write_line = True
+            for omit in omits:
+                if omit in line:
+                    write_line = False
+                    break
+            if write_line:
+                newmsg += "\n   " + line
+        logger.error("Duplicate Hash key detected:  {}"
+                     .format(newmsg))
+    except ReusedAnchorWarning as raw:
+        has_error = True
+        logger.error("Duplicate YAML Anchor detected:  {}"
+                     .format(
+                         str(raw)
+                         .replace("occurrence   ", "occurrence ")
+                         .replace("\n", "\n   ")))
+
+    if has_error:
+        yield False
 
 def build_next_node(yaml_path: YAMLPath, depth: int,
                     value: Any = None) -> Any:
@@ -235,7 +344,7 @@ def wrap_type(value: Any) -> Any:
     elif typ is float:
         wrapped_value = make_float_node(ast_value)
     elif typ is bool:
-        wrapped_value = ScalarBoolean(value)
+        wrapped_value = ScalarBoolean(bool(value))
 
     return wrapped_value
 

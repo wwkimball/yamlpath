@@ -8,14 +8,14 @@ class Test_yaml_get():
     command = "yaml-get"
 
     def test_no_options(self, script_runner):
-        result = script_runner.run(self.command)
+        result = script_runner.run(self.command, "--nostdin")
         assert not result.success, result.stderr
-        assert "the following arguments are required: -p/--query, YAML_FILE" in result.stderr
+        assert "the following arguments are required: -p/--query" in result.stderr
 
     def test_no_input_file(self, script_runner):
-        result = script_runner.run(self.command, "--query='/test'")
+        result = script_runner.run(self.command, "--nostdin", "--query='/test'")
         assert not result.success, result.stderr
-        assert "the following arguments are required: YAML_FILE" in result.stderr
+        assert "YAML_FILE must be set or be read from STDIN" in result.stderr
 
     def test_bad_input_file(self, script_runner):
         result = script_runner.run(self.command, "--query='/test'", "no-such-file")
@@ -109,3 +109,26 @@ class Test_yaml_get():
         result = script_runner.run(self.command, "--query=aliases", yaml_file)
         assert result.success, result.stderr
         assert '["Plain scalar string"]' in result.stdout
+
+    def test_query_doc_from_stdin(
+        self, script_runner, tmp_path_factory
+    ):
+        import subprocess
+
+        yaml_file = """---
+hash:
+  lhs_exclusive: LHS exclusive
+  merge_target: LHS original value
+"""
+
+        result = subprocess.run(
+            [self.command
+            , "--query=/hash/lhs_exclusive"
+            , "-"]
+            , stdout=subprocess.PIPE
+            , input=yaml_file
+            , universal_newlines=True
+        )
+
+        assert 0 == result.returncode, result.stderr
+        assert "LHS exclusive\n" == result.stdout

@@ -8,14 +8,14 @@ class Test_yaml_paths():
     command = "yaml-paths"
 
     def test_no_options(self, script_runner):
-        result = script_runner.run(self.command)
+        result = script_runner.run(self.command, "--nostdin")
         assert not result.success, result.stderr
-        assert "the following arguments are required: -s/--search, YAML_FILE" in result.stderr
+        assert "the following arguments are required: -s/--search" in result.stderr
 
     def test_no_input_file(self, script_runner):
-        result = script_runner.run(self.command, "--search=%abc")
+        result = script_runner.run(self.command, "--nostdin", "--search=%abc")
         assert not result.success, result.stderr
-        assert "the following arguments are required: YAML_FILE" in result.stderr
+        assert "There must be at least one YAML_FILE or STDIN document" in result.stderr
 
     def test_bad_input_file(self, script_runner):
         result = script_runner.run(self.command, "--search=%abc", "no-such-file")
@@ -80,7 +80,9 @@ class Test_yaml_paths():
         """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
         result = script_runner.run(
-            self.command, "--pathsep=/", "--search", "^element", yaml_file
+            self.command,
+            "--nostdin", "--nofile",
+            "--pathsep=/", "--search", "^element", yaml_file
         )
         assert result.success, result.stderr
         assert "\n".join([
@@ -97,7 +99,9 @@ class Test_yaml_paths():
         """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
         result = script_runner.run(
-            self.command, "--pathsep=/", "--search", "^element", yaml_file
+            self.command,
+            "--nostdin", "--nofile",
+            "--pathsep=/", "--search", "^element", yaml_file
         )
         assert result.success, result.stderr
         assert "\n".join([
@@ -115,6 +119,7 @@ class Test_yaml_paths():
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
         result = script_runner.run(
             self.command,
+            "--nostdin", "--nofile",
             "--pathsep=/", "--refnames",
             "--search", "^anchor",
             yaml_file
@@ -132,7 +137,9 @@ class Test_yaml_paths():
         """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
         result = script_runner.run(
-            self.command, "--pathsep=/", "--search", "=subvalue", yaml_file
+            self.command,
+            "--nostdin", "--nofile",
+            "--pathsep=/", "--search", "=subvalue", yaml_file
         )
         assert result.success, result.stderr
         assert "\n".join([
@@ -146,7 +153,9 @@ class Test_yaml_paths():
         """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
         result = script_runner.run(
-            self.command, "--pathsep=/", "--search", "=value", yaml_file
+            self.command,
+            "--nostdin", "--nofile",
+            "--pathsep=/", "--search", "=value", yaml_file
         )
         assert result.success, result.stderr
         assert "\n".join([
@@ -162,7 +171,9 @@ class Test_yaml_paths():
         """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
         result = script_runner.run(
-            self.command, "--pathsep=/", "--search", "$alue", yaml_file
+            self.command,
+            "--nostdin", "--nofile",
+            "--pathsep=/", "--search", "$alue", yaml_file
         )
         assert result.success, result.stderr
         assert "\n".join([
@@ -179,7 +190,9 @@ class Test_yaml_paths():
         """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
         result = script_runner.run(
-            self.command, "--pathsep=/", "--keynames", "--refnames",
+            self.command,
+            "--nostdin", "--nofile",
+            "--pathsep=/", "--keynames", "--refnames",
             "--search", "^anchored", yaml_file
         )
         assert result.success, result.stderr
@@ -195,7 +208,9 @@ class Test_yaml_paths():
         """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
         result = script_runner.run(
-            self.command, "--pathsep=/", "--refnames",
+            self.command,
+            "--nostdin", "--nofile",
+            "--pathsep=/", "--refnames",
             "--search", "^anchored", yaml_file
         )
         assert result.success, result.stderr
@@ -214,7 +229,9 @@ class Test_yaml_paths():
         """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
         result = script_runner.run(
-            self.command, "--pathsep=/", "--allowaliases",
+            self.command,
+            "--nostdin", "--nofile",
+            "--pathsep=/", "--allowaliases",
             "--search", "^element", yaml_file
         )
         assert result.success, result.stderr
@@ -232,6 +249,7 @@ class Test_yaml_paths():
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
         result = script_runner.run(
             self.command,
+            "--nostdin", "--nofile",
             "--pathsep=/", "--refnames", "--keynames",
             "--search", "=anchored",
             yaml_file
@@ -258,7 +276,9 @@ class Test_yaml_paths():
         """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
         result = script_runner.run(
-            self.command, "--pathsep=/", "--onlykeynames",
+            self.command,
+            "--nostdin", "--nofile",
+            "--pathsep=/", "--onlykeynames",
             "--search", "=aliasOne", yaml_file
         )
         assert result.success, result.stderr
@@ -284,7 +304,9 @@ class Test_yaml_paths():
         """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
         result = script_runner.run(
-            self.command, "--pathsep=/",
+            self.command,
+            "--nostdin", "--nofile",
+            "--pathsep=/",
             "--refnames", "--keynames",
             "--anchorsonly",
             "--search", "=recursiveAnchorKey", yaml_file
@@ -311,7 +333,9 @@ class Test_yaml_paths():
         """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
         result = script_runner.run(
-            self.command, "--pathsep=/", "--refnames", "--keynames",
+            self.command,
+            "--nostdin", "--nofile",
+            "--pathsep=/", "--refnames", "--keynames",
             "--allowaliases", "--search", "=recursiveAnchorKey", yaml_file
         )
         assert result.success, result.stderr
@@ -366,6 +390,7 @@ class Test_yaml_paths():
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
         result = script_runner.run(
             self.command,
+            "--nostdin", "--nofile",
             "--pathsep=/", "--keynames",
             "--search", "^value",
             "--search", "=bravo",
@@ -391,14 +416,15 @@ class Test_yaml_paths():
         yaml_file2 = create_temp_yaml_file(tmp_path_factory, content2)
         result = script_runner.run(
             self.command,
+            "--nostdin",
             "--pathsep=/", "--keynames",
             "--search", "^value",
             yaml_file1, yaml_file2
         )
         assert result.success, result.stderr
         assert "\n".join([
-            "{}: /[0]/value".format(yaml_file1),
-            "{}: /[0]/value".format(yaml_file2),
+            "{}/0: /[0]/value".format(yaml_file1),
+            "{}/0: /[0]/value".format(yaml_file2),
         ]) + "\n" == result.stdout
 
     def test_multi_file_multi_expression_search(self, script_runner, tmp_path_factory):
@@ -417,6 +443,7 @@ class Test_yaml_paths():
         yaml_file2 = create_temp_yaml_file(tmp_path_factory, content2)
         result = script_runner.run(
             self.command,
+            "--nostdin",
             "--pathsep=/", "--keynames",
             "--search", "^value",
             "--search", "=bravo",
@@ -424,9 +451,9 @@ class Test_yaml_paths():
         )
         assert result.success, result.stderr
         assert "\n".join([
-            "{}[^value]: /[0]/value".format(yaml_file1),
-            "{}[^value]: /[0]/value".format(yaml_file2),
-            "{}[=bravo]: /[0]/nest[1]".format(yaml_file2)
+            "{}/0[^value]: /[0]/value".format(yaml_file1),
+            "{}/0[^value]: /[0]/value".format(yaml_file2),
+            "{}/0[=bravo]: /[0]/nest[1]".format(yaml_file2)
         ]) + "\n" == result.stdout
 
     def test_multi_file_multi_expression_pathonly_search(self, script_runner, tmp_path_factory):
@@ -445,6 +472,7 @@ class Test_yaml_paths():
         yaml_file2 = create_temp_yaml_file(tmp_path_factory, content2)
         result = script_runner.run(
             self.command,
+            "--nostdin",
             "--pathsep=/", "--keynames", "--noexpression",
             "--search", "^value",
             "--search", "=bravo",
@@ -452,9 +480,9 @@ class Test_yaml_paths():
         )
         assert result.success, result.stderr
         assert "\n".join([
-            "{}: /[0]/value".format(yaml_file1),
-            "{}: /[0]/value".format(yaml_file2),
-            "{}: /[0]/nest[1]".format(yaml_file2)
+            "{}/0: /[0]/value".format(yaml_file1),
+            "{}/0: /[0]/value".format(yaml_file2),
+            "{}/0: /[0]/nest[1]".format(yaml_file2)
         ]) + "\n" == result.stdout
 
     def test_result_exclusions(self, script_runner, tmp_path_factory):
@@ -482,6 +510,7 @@ class Test_yaml_paths():
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
         result = script_runner.run(
             self.command,
+            "--nostdin", "--nofile",
             "--pathsep=/", "--onlykeynames",
             "--search", "%pass",
             "--except", "%passthrough",
@@ -551,6 +580,7 @@ class Test_yaml_paths():
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
         result = script_runner.run(
             self.command,
+            "--nostdin", "--nofile",
             "--pathsep=/",
             "--search", "%what",
             "--decrypt",
@@ -571,6 +601,7 @@ class Test_yaml_paths():
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
         result = script_runner.run(
             self.command,
+            "--nostdin", "--nofile",
             "--pathsep=/", "--keynames", "--noexpression",
             "--search", "=key",
             "--search", "=value",
@@ -594,6 +625,7 @@ class Test_yaml_paths():
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
         result = script_runner.run(
             self.command,
+            "--nostdin", "--nofile",
             "--pathsep=/",
             "--expand", "--keynames",
             "--search", "^parent",
@@ -730,6 +762,7 @@ class Test_yaml_paths():
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
         result = script_runner.run(
             self.command,
+            "--nostdin", "--nofile",
             "--pathsep=/",
             "--expand", "--keynames",
             aliasmode,
@@ -750,6 +783,7 @@ class Test_yaml_paths():
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
         result = script_runner.run(
             self.command,
+            "--nostdin", "--nofile",
             "--pathsep=/",
             "--expand", "--keynames",
             "--refnames", "--allowkeyaliases",
@@ -770,6 +804,7 @@ class Test_yaml_paths():
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
         result = script_runner.run(
             self.command,
+            "--nostdin", "--nofile",
             "--pathsep=/",
             "--expand",
             "--refnames",
@@ -791,6 +826,7 @@ class Test_yaml_paths():
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
         result = script_runner.run(
             self.command,
+            "--nostdin", "--nofile",
             "--pathsep=/",
             "--expand", "--refnames",
             "--search", "=list",
@@ -894,6 +930,7 @@ class Test_yaml_paths():
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
         result = script_runner.run(
             self.command,
+            "--nostdin", "--nofile",
             "--pathsep=/",
             "--keynames", "--values",
             "--search", "^sample",
@@ -904,3 +941,51 @@ class Test_yaml_paths():
             "/sample_scalar: value",
             '/sample_hash: {"sub": ["list", "elements"]}',
         ]) + "\n" == result.stdout
+
+    def test_input_from_stdin_explicit(self, script_runner):
+        import subprocess
+
+        stdin = """---
+key: value
+"""
+        stdout = """key
+"""
+
+        result = subprocess.run(
+            [self.command
+            , "--nofile"
+            , "--search", "^value"
+            , "-"]
+            , stdout=subprocess.PIPE
+            , input=stdin
+            , universal_newlines=True
+        )
+
+        assert 0 == result.returncode, result.stderr
+        assert stdout == result.stdout
+
+    def test_input_from_stdin_implicit(self, script_runner):
+        import subprocess
+
+        stdin = """---
+key: value
+"""
+        stdout = """key
+"""
+
+        result = subprocess.run(
+            [self.command
+            , "--nofile"
+            , "--search", "^value"]
+            , stdout=subprocess.PIPE
+            , input=stdin
+            , universal_newlines=True
+        )
+
+        assert 0 == result.returncode, result.stderr
+        assert stdout == result.stdout
+
+    def test_too_many_stdins(self, script_runner):
+        result = script_runner.run(self.command, "--search", "=nothing", "-", "-")
+        assert not result.success, result.stderr
+        assert "Only one YAML_FILE may be the - pseudo-file" in result.stderr

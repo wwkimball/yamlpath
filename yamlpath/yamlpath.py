@@ -415,7 +415,8 @@ class YAMLPath:
                     # been identified as a special type, assume it is a KEY.
                     if segment_type is None:
                         segment_type = PathSegmentTypes.KEY
-                    path_segments.append((segment_type, segment_id))
+                    path_segments.append(self._expand_splats(
+                        yaml_path, segment_id, segment_type))
                     segment_id = ""
 
                 demarc_stack.append(char)
@@ -597,7 +598,8 @@ class YAMLPath:
                     # type, assume it is a KEY.
                     if segment_type is None:
                         segment_type = PathSegmentTypes.KEY
-                    path_segments.append((segment_type, segment_id))
+                    path_segments.append(self._expand_splats(
+                        yaml_path, segment_id, segment_type))
                     segment_id = ""
 
                 segment_type = None
@@ -634,9 +636,87 @@ class YAMLPath:
             # type, assume it is a KEY.
             if segment_type is None:
                 segment_type = PathSegmentTypes.KEY
-            path_segments.append((segment_type, segment_id))
+            path_segments.append(self._expand_splats(
+                yaml_path, segment_id, segment_type))
 
         return path_segments
+
+    @classmethod
+    def _expand_splats(
+        cls, yaml_path: str, segment_id: str,
+        segment_type: Optional[PathSegmentTypes] = None
+    ) -> tuple:
+        """
+        Replace segment IDs with search operators when * is present.
+
+        Parameters:
+        1. yaml_path (str) The full YAML Path being processed.
+        2. segment_id (str) The segment identifier to parse.
+        3. segment_type (Optional[PathSegmentTypes]) Pending predetermined type
+           of the segment under evaluation.
+
+        Returns:  (tuple) Coallesced YAML Path segment.
+        """
+        coal_type = segment_type
+        coal_value: Union[str, SearchTerms, None] = segment_id
+
+        if '*' in segment_id:
+            splat_count = segment_id.count("*")
+            splat_pos = segment_id.index("*")
+            segment_len = len(segment_id)
+            if splat_count == 1:
+                if segment_len == 1:
+                    # /*/ -> [.!='']
+                    coal_type = PathSegmentTypes.SEARCH
+                    coal_value = SearchTerms(
+                        True, PathSearchMethods.EQUALS, ".", "")
+                elif splat_pos == 0:
+                    # /*text/ -> [.$text]
+                    coal_type = PathSegmentTypes.SEARCH
+                    coal_value = SearchTerms(
+                        False, PathSearchMethods.ENDS_WITH, ".",
+                        segment_id[1:])
+                elif splat_pos == segment_len - 1:
+                    # /text*/ -> [.^text]
+                    coal_type = PathSegmentTypes.SEARCH
+                    coal_value = SearchTerms(
+                        False, PathSearchMethods.STARTS_WITH, ".",
+                        segment_id[0:splat_pos])
+                else:
+                    # /te*xt/ -> [.=~/^te.*xt$/]
+                    coal_type = PathSegmentTypes.SEARCH
+                    coal_value = SearchTerms(
+                        False, PathSearchMethods.REGEX, ".",
+                        "^{}.*{}$".format(
+                            segment_id[0:splat_pos],
+                            segment_id[splat_pos + 1:]))
+            elif splat_count == 2 and segment_len == 2:
+                # Traversal operator
+                coal_type = PathSegmentTypes.TRAVERSE
+                coal_value = None
+            elif splat_count > 1:
+                # Multi-wildcard search
+                search_term = "^"
+                was_splat = False
+                for char in segment_id:
+                    if char == "*":
+                        if was_splat:
+                            raise YAMLPathException(
+                                "The ** traversal operator has no meaning when"
+                                " combined with other characters", yaml_path,
+                                segment_id)
+                        was_splat = True
+                        search_term += ".*"
+                    else:
+                        was_splat = False
+                        search_term += char
+                search_term += "$"
+
+                coal_type = PathSegmentTypes.SEARCH
+                coal_value = SearchTerms(
+                    False, PathSearchMethods.REGEX, ".", search_term)
+
+        return (coal_type, coal_value)
 
     @classmethod
     def _stringify_yamlpath_segments(
@@ -680,6 +760,10 @@ class YAMLPath:
                 ppath += str(segment_attrs)
             elif segment_type == PathSegmentTypes.COLLECTOR:
                 ppath += str(segment_attrs)
+            elif segment_type == PathSegmentTypes.TRAVERSE:
+                if add_sep:
+                    ppath += pathsep
+                ppath += "**"
 
             add_sep = True
 

@@ -20,6 +20,7 @@ from yamlpath.func import (
     escape_path_section,
     get_yaml_data,
     get_yaml_editor,
+    get_yaml_multidoc_data,
     make_new_node,
     wrap_type,
 )
@@ -35,20 +36,22 @@ def force_ruamel_load_keyboardinterrupt(monkeypatch):
         raise KeyboardInterrupt
 
     monkeypatch.setattr(break_class, "load", fake_load)
+    monkeypatch.setattr(break_class, "load_all", fake_load)
 
 class Test_func():
+    ###
+    # get_yaml_editor
+    ###
     def test_get_yaml_editor(self):
         assert get_yaml_editor()
 
-    def test_get_yaml_data_filenotfound_error(
-        self, capsys, quiet_logger,
-        force_ruamel_load_keyboardinterrupt
-    ):
-        yp = get_yaml_editor()
-        assert None == get_yaml_data(yp, quiet_logger, "no-such.file")
-        captured = capsys.readouterr()
-        assert -1 < captured.err.find("File not found")
+    def test_get_json_editor(self):
+        assert get_yaml_editor(explode_aliases=True)
 
+
+    ###
+    # get_yaml_data
+    ###
     def test_get_yaml_data_keyboardinterrupt_error(
         self, capsys, quiet_logger, tmp_path_factory,
         force_ruamel_load_keyboardinterrupt
@@ -58,9 +61,57 @@ class Test_func():
         no: ''
         """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
-        assert None == get_yaml_data(yp, quiet_logger, yaml_file)
+        assert False == get_yaml_data(yp, quiet_logger, yaml_file)
         captured = capsys.readouterr()
         assert -1 < captured.err.find("keyboard interrupt")
+
+    def test_get_yaml_data_filenotfound_error(
+        self, capsys, quiet_logger,
+        force_ruamel_load_keyboardinterrupt
+    ):
+        yp = get_yaml_editor()
+        assert False == get_yaml_data(yp, quiet_logger, "no-such.file")
+        captured = capsys.readouterr()
+        assert -1 < captured.err.find("File not found")
+
+    def test_get_yaml_data_parser_error(
+        self, capsys, quiet_logger,
+        imparsible_yaml_file
+    ):
+        yp = get_yaml_editor()
+        assert False == get_yaml_data(yp, quiet_logger, imparsible_yaml_file)
+        captured = capsys.readouterr()
+        assert -1 < captured.err.find("YAML parsing error")
+
+    def test_get_yaml_data_composition_error(
+        self, capsys, quiet_logger,
+        badcmp_yaml_file
+    ):
+        yp = get_yaml_editor()
+        assert False == get_yaml_data(yp, quiet_logger, badcmp_yaml_file)
+        captured = capsys.readouterr()
+        assert -1 < captured.err.find("YAML composition error")
+
+    def test_get_yaml_data_construction_error(
+        self, capsys, quiet_logger, tmp_path_factory
+    ):
+        yp = get_yaml_editor()
+        content = """---
+        missing:
+          <<:
+        """
+        yaml_file = create_temp_yaml_file(tmp_path_factory, content)
+        assert False == get_yaml_data(yp, quiet_logger, yaml_file)
+        captured = capsys.readouterr()
+        assert -1 < captured.err.find("YAML construction error")
+
+    def test_get_yaml_data_syntax_error(
+        self, capsys, quiet_logger, tmp_path_factory, badsyntax_yaml_file
+    ):
+        yp = get_yaml_editor()
+        assert False == get_yaml_data(yp, quiet_logger, badsyntax_yaml_file)
+        captured = capsys.readouterr()
+        assert -1 < captured.err.find("YAML syntax error")
 
     def test_get_yaml_data_duplicatekey_error(
         self, capsys, quiet_logger, tmp_path_factory
@@ -71,7 +122,7 @@ class Test_func():
         key: value2
         """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
-        assert None == get_yaml_data(yp, quiet_logger, yaml_file)
+        assert False == get_yaml_data(yp, quiet_logger, yaml_file)
         captured = capsys.readouterr()
         assert -1 < captured.err.find("Duplicate Hash key detected")
 
@@ -85,11 +136,71 @@ class Test_func():
           - &anchor value2
         """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
-        assert None == get_yaml_data(yp, quiet_logger, yaml_file)
+        assert False == get_yaml_data(yp, quiet_logger, yaml_file)
         captured = capsys.readouterr()
         assert -1 < captured.err.find("Duplicate YAML Anchor detected")
 
-    def test_get_yaml_data_construction_error(
+
+    ###
+    # get_yaml_multidoc_data
+    ###
+    def test_get_yaml_multidoc_data_keyboardinterrupt_error(
+        self, capsys, quiet_logger, tmp_path_factory,
+        force_ruamel_load_keyboardinterrupt
+    ):
+        yp = get_yaml_editor()
+        content = """---
+        no: ''
+        """
+        yaml_file = create_temp_yaml_file(tmp_path_factory, content)
+        docs_yielded = 0
+        for doc in get_yaml_multidoc_data(yp, quiet_logger, yaml_file):
+            if not doc and not isinstance(doc, bool):
+                docs_yielded += 1
+        assert docs_yielded == 0
+        captured = capsys.readouterr()
+        assert -1 < captured.err.find("keyboard interrupt")
+
+    def test_get_yaml_multidoc_data_filenotfound_error(
+        self, capsys, quiet_logger,
+        force_ruamel_load_keyboardinterrupt
+    ):
+        yp = get_yaml_editor()
+        docs_yielded = 0
+        for doc in get_yaml_multidoc_data(yp, quiet_logger, "no-such.file"):
+            if not doc and not isinstance(doc, bool):
+                docs_yielded += 1
+        assert docs_yielded == 0
+        captured = capsys.readouterr()
+        assert -1 < captured.err.find("File not found")
+
+    def test_get_yaml_multidoc_data_parser_error(
+        self, capsys, quiet_logger,
+        imparsible_yaml_file
+    ):
+        yp = get_yaml_editor()
+        docs_yielded = 0
+        for doc in get_yaml_multidoc_data(yp, quiet_logger, imparsible_yaml_file):
+            if not doc and not isinstance(doc, bool):
+                docs_yielded += 1
+        assert docs_yielded == 0
+        captured = capsys.readouterr()
+        assert -1 < captured.err.find("YAML parsing error")
+
+    def test_get_yaml_multidoc_data_composition_error(
+        self, capsys, quiet_logger,
+        badcmp_yaml_file
+    ):
+        yp = get_yaml_editor()
+        docs_yielded = 0
+        for doc in get_yaml_multidoc_data(yp, quiet_logger, badcmp_yaml_file):
+            if not doc and not isinstance(doc, bool):
+                docs_yielded += 1
+        assert docs_yielded == 0
+        captured = capsys.readouterr()
+        assert -1 < captured.err.find("YAML composition error")
+
+    def test_get_yaml_multidoc_data_construction_error(
         self, capsys, quiet_logger, tmp_path_factory
     ):
         yp = get_yaml_editor()
@@ -98,15 +209,74 @@ class Test_func():
           <<:
         """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
-        assert None == get_yaml_data(yp, quiet_logger, yaml_file)
+        docs_yielded = 0
+        for doc in get_yaml_multidoc_data(yp, quiet_logger, yaml_file):
+            if not doc and not isinstance(doc, bool):
+                docs_yielded += 1
+        assert docs_yielded == 0
         captured = capsys.readouterr()
         assert -1 < captured.err.find("YAML construction error")
 
+    def test_get_yaml_multidoc_data_syntax_error(
+        self, capsys, quiet_logger, tmp_path_factory, badsyntax_yaml_file
+    ):
+        yp = get_yaml_editor()
+        docs_yielded = 0
+        for doc in get_yaml_multidoc_data(yp, quiet_logger, badsyntax_yaml_file):
+            if not doc and not isinstance(doc, bool):
+                docs_yielded += 1
+        assert docs_yielded == 0
+        captured = capsys.readouterr()
+        assert -1 < captured.err.find("YAML syntax error")
+
+    def test_get_yaml_multidoc_data_duplicatekey_error(
+        self, capsys, quiet_logger, tmp_path_factory
+    ):
+        yp = get_yaml_editor()
+        content = """---
+        key: value1
+        key: value2
+        """
+        yaml_file = create_temp_yaml_file(tmp_path_factory, content)
+        docs_yielded = 0
+        for doc in get_yaml_multidoc_data(yp, quiet_logger, yaml_file):
+            if not doc and not isinstance(doc, bool):
+                docs_yielded += 1
+        assert docs_yielded == 0
+        captured = capsys.readouterr()
+        assert -1 < captured.err.find("Duplicate Hash key detected")
+
+    def test_get_yaml_multidoc_data_duplicateanchor_error(
+        self, capsys, quiet_logger, tmp_path_factory
+    ):
+        yp = get_yaml_editor()
+        content = """---
+        aliases:
+          - &anchor value1
+          - &anchor value2
+        """
+        yaml_file = create_temp_yaml_file(tmp_path_factory, content)
+        docs_yielded = 0
+        for doc in get_yaml_multidoc_data(yp, quiet_logger, yaml_file):
+            if not doc and not isinstance(doc, bool):
+                docs_yielded += 1
+        assert docs_yielded == 0
+        captured = capsys.readouterr()
+        assert -1 < captured.err.find("Duplicate YAML Anchor detected")
+
+
+    ###
+    # append_list_element
+    ###
     def test_anchorless_list_element_error(self):
         with pytest.raises(ValueError) as ex:
             append_list_element({}, YAMLPath("foo"), "bar")
         assert -1 < str(ex.value).find("Impossible to add an Anchor")
 
+
+    ###
+    # wrap_type
+    ###
     @pytest.mark.parametrize("value,checktype", [
         ([], CommentedSeq),
         ({}, CommentedMap),
@@ -119,6 +289,10 @@ class Test_func():
     def test_wrap_type(self, value, checktype):
         assert isinstance(wrap_type(value), checktype)
 
+
+    ###
+    # clone_node
+    ###
     def test_clone_node(self):
         test_val = "test"
         assert test_val == clone_node(test_val)
@@ -126,6 +300,10 @@ class Test_func():
         anchor_val = PlainScalarString(test_val, anchor="anchor")
         assert anchor_val == clone_node(anchor_val)
 
+
+    ###
+    # make_new_node
+    ###
     @pytest.mark.parametrize("source,value,check,vformat", [
         ("", " ", " ", YAMLValueFormats.BARE),
         ("", '" "', '" "', YAMLValueFormats.DQUOTE),
@@ -151,10 +329,18 @@ class Test_func():
             value == make_new_node(source, value, vformat)
         assert -1 < str(ex.value).find(estr)
 
+
+    ###
+    # escape_path_section
+    ###
     def test_escape_path_section(self):
         from yamlpath.enums.pathseperators import PathSeperators
         assert r"a\\b\.c\(\)\[\]\^\$\%\ \'\"" == escape_path_section("a\\b.c()[]^$% '\"", PathSeperators.DOT)
 
+
+    ###
+    # create_searchterms_from_pathattributes
+    ###
     def test_create_searchterms_from_pathattributes(self):
         st = SearchTerms(False, PathSearchMethods.EQUALS, ".", "key")
         assert str(st) == str(create_searchterms_from_pathattributes(st))

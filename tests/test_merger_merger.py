@@ -586,11 +586,11 @@ array:
             lhs_yaml.dump(merger.data, yaml_dump)
 
         # DEBUG:
-        # with open(output_file, 'r') as output_fnd, open(merged_yaml, 'r') as merged_fnd:
-        #     print("Expected:")
-        #     print(merged_fnd.read())
-        #     print("Got:")
-        #     print(output_fnd.read())
+        with open(output_file, 'r') as output_fnd, open(merged_yaml, 'r') as merged_fnd:
+            print("Expected:")
+            print(merged_fnd.read())
+            print("Got:")
+            print(output_fnd.read())
 
         assert (
             (os.path.getsize(output_file) == os.path.getsize(merged_yaml))

@@ -3,3 +3,4 @@ from .anchorconflictresolutions import AnchorConflictResolutions
 from .aohmergeopts import AoHMergeOpts
 from .arraymergeopts import ArrayMergeOpts
 from .hashmergeopts import HashMergeOpts
+from .outputdoctypes import OutputDocTypes

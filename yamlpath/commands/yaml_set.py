@@ -14,11 +14,20 @@ import tempfile
 import argparse
 import secrets
 import string
+import json
 from os import remove, access, R_OK
 from os.path import isfile, exists
 from shutil import copy2, copyfileobj
+from pathlib import Path
 
-from yamlpath.func import clone_node, get_yaml_data, get_yaml_editor
+
+from yamlpath.common import YAMLPATH_VERSION
+from yamlpath.func import (
+    clone_node,
+    build_next_node,
+    get_yaml_data,
+    get_yaml_editor
+)
 from yamlpath import YAMLPath
 from yamlpath.exceptions import YAMLPathException
 from yamlpath.enums import YAMLValueFormats, PathSeperators
@@ -30,24 +39,22 @@ from yamlpath.eyaml import EYAMLProcessor
 import yamlpath.patches
 from yamlpath.wrappers import ConsolePrinter
 
-# Implied Constants
-MY_VERSION = "1.0.8"
-
 def processcli():
     """Process command-line arguments."""
     parser = argparse.ArgumentParser(
-        description="Changes one or more values in a YAML file at a specified\
-            YAML Path.  Matched values can be checked before they are replaced\
-            to mitigate accidental change. When matching singular results, the\
-            value can be archived to another key before it is replaced.\
-            Further, EYAML can be employed to encrypt the new values and/or\
-            decrypt an old value before checking them.",
+        description="Changes one or more Scalar values in a\
+            YAML/JSON/Compatible document at a specified YAML Path.  Matched\
+            values can be checked before they are replaced to mitigate\
+            accidental change.  When matching singular results, the value can\
+            be archived to another key before it is replaced.  Further, EYAML\
+            can be employed to encrypt the new values and/or decrypt an old\
+            value before checking it.",
         epilog="When no changes are made, no backup is created, even when\
             -b/--backup is specified.  For more information about YAML Paths,\
             please visit https://github.com/wwkimball/yamlpath."
     )
     parser.add_argument("-V", "--version", action="version",
-                        version="%(prog)s " + MY_VERSION)
+                        version="%(prog)s " + YAMLPATH_VERSION)
 
     required_group = parser.add_argument_group("required settings")
     required_group.add_argument(
@@ -102,6 +109,16 @@ def processcli():
         help="indicate which YAML Path seperator to use when rendering\
               results; default=dot")
 
+    parser.add_argument(
+        "-M", "--random-from",
+        metavar="CHARS",
+        default=(string.ascii_uppercase +
+            string.ascii_lowercase +
+            string.digits),
+        help="characters from which to build a value for --random; default="
+             "all upper- and lower-case letters and all digits"
+    )
+
     eyaml_group = parser.add_argument_group(
         "EYAML options", "Left unset, the EYAML keys will default to your\
          system or user defaults.  You do not need to supply a private key\
@@ -115,6 +132,12 @@ def processcli():
     eyaml_group.add_argument("-r", "--privatekey", help="EYAML private key")
     eyaml_group.add_argument("-u", "--publickey", help="EYAML public key")
 
+    parser.add_argument(
+        "-S", "--nostdin", action="store_true",
+        help=(
+            "Do not implicitly read from STDIN, even when there is no"
+            " YAML_FILE with a non-TTY session"))
+
     noise_group = parser.add_mutually_exclusive_group()
     noise_group.add_argument(
         "-d", "--debug", action="store_true",
@@ -127,18 +150,28 @@ def processcli():
         help="suppress all output except errors")
 
     parser.add_argument(
-        "yaml_file", metavar="YAML_FILE",
-        help="the YAML file to update")
+        "yaml_file", metavar="YAML_FILE", nargs="?",
+        help="the YAML file to update; omit or use - to read from STDIN")
     return parser.parse_args()
 
 def validateargs(args, log):
     """Validate command-line arguments."""
     has_errors = False
+    in_file = args.yaml_file if args.yaml_file else ""
+    in_stream_mode = in_file.strip() == "-" or (
+        not in_file and not args.nostdin and not sys.stdin.isatty()
+    )
+
+    # When there is no YAML_FILE and no STDIN, there is nothing to read
+    if not (in_file or in_stream_mode):
+        has_errors = True
+        log.error("There must be a YAML_FILE or STDIN document.")
 
     # Enforce sanity
     # * At least one of --value, --file, --stdin, or --random must be set
     if not (
             args.value
+            or args.value == ""
             or args.file
             or args.stdin
             or args.random
@@ -147,6 +180,20 @@ def validateargs(args, log):
         log.error(
             "Exactly one of the following must be set:  --value, --file,"
             + " --stdin, or --random")
+
+    # * --stdin cannot be used with -, explicit or implied
+    if args.stdin and in_stream_mode:
+        has_errors = True
+        log.error(
+            "Impossible to read both document and replacement value from"
+            " STDIN!")
+
+    # * --backup has no meaning when reading the YAML file from STDIN
+    if args.backup and in_stream_mode:
+        has_errors = True
+        log.error(
+            "The --backup|-b option applies only when reading from a file, not"
+            " STDIN.")
 
     # * When set, --saveto cannot be identical to --change
     if args.saveto and args.saveto == args.change:
@@ -173,8 +220,112 @@ def validateargs(args, log):
         log.error(
             "EYAML public key is not a readable file:  " + args.publickey)
 
+    # * When set, --random-from must have at least one character
+    if len(args.random_from) < 2:
+        has_errors = True
+        log.error("The pool of random CHARS must have at least 2 characters.")
+
+    # When dumping the document to STDOUT, mute all non-errors
+    force_verbose = args.verbose
+    force_debug = args.debug
+    if in_stream_mode and not (force_verbose or force_debug):
+        args.quiet = True
+        args.verbose = False
+        args.debug = False
+
     if has_errors:
         sys.exit(1)
+
+def save_to_json_file(args, log, yaml_data):
+    """Save to a JSON file."""
+    log.verbose("Writing changed data as JSON to {}.".format(args.yaml_file))
+    with open(args.yaml_file, 'w') as out_fhnd:
+        json.dump(yaml_data, out_fhnd)
+
+def save_to_yaml_file(args, log, yaml_parser, yaml_data, backup_file):
+    """Save to a YAML file."""
+    log.verbose("Writing changed data as YAML to {}.".format(args.yaml_file))
+    with tempfile.TemporaryFile() as tmphnd:
+        with open(args.yaml_file, 'rb') as inhnd:
+            copyfileobj(inhnd, tmphnd)
+
+        with open(args.yaml_file, 'w') as yaml_dump:
+            try:
+                yaml_parser.dump(yaml_data, yaml_dump)
+            except AssertionError as ex:
+                yaml_dump.close()
+                tmphnd.seek(0)
+                with open(args.yaml_file, 'wb') as outhnd:
+                    copyfileobj(tmphnd, outhnd)
+
+                # No sense in preserving a backup file with no changes
+                if args.backup:
+                    remove(backup_file)
+
+                log.debug(
+                    "yaml_set::save_to_yaml_file:  Assertion error: {}"
+                    .format(ex))
+                log.critical((
+                    "Indeterminate assertion error encountered while"
+                    + " attempting to write updated data to {}.  The original"
+                    + " file content was restored.").format(args.yaml_file), 3)
+
+def docroot_is_flow(yaml_data):
+    """Determine whether a document root is in flow (JSON) style."""
+    is_flow = False
+    if hasattr(yaml_data, "fa"):
+        is_flow = yaml_data.fa.flow_style()
+    return is_flow
+
+def write_document_as_yaml(output_file_name, yaml_data):
+    """Determine whether to write out YAML (or JSON)."""
+    write_yaml = True
+    if docroot_is_flow(yaml_data):
+        write_yaml = False
+
+    # Allow a JSON file extension to override the inference
+    if write_yaml:
+        write_yaml = Path(output_file_name).suffix.lower() != ".json"
+
+    return write_yaml
+
+def save_to_file(args, log, yaml_parser, yaml_data, backup_file):
+    """Save as YAML or JSON."""
+    if write_document_as_yaml(args.yaml_file, yaml_data):
+        save_to_yaml_file(args, log, yaml_parser, yaml_data, backup_file)
+    else:
+        save_to_json_file(args, log, yaml_data)
+
+def write_output_document(args, log, yaml, yaml_data):
+    """Write the updated document to file or STDOUT."""
+    # Save a backup of the original file, if requested
+    backup_file = args.yaml_file + ".bak"
+    if args.backup:
+        log.verbose(
+            "Saving a backup of {} to {}."
+            .format(args.yaml_file, backup_file))
+        if exists(backup_file):
+            remove(backup_file)
+        copy2(args.yaml_file, backup_file)
+
+    # Save the changed file
+    if args.yaml_file.strip() == "-":
+        if write_document_as_yaml(args.yaml_file, yaml_data):
+            yaml.dump(yaml_data, sys.stdout)
+        else:
+            json.dump(yaml_data, sys.stdout)
+    else:
+        save_to_file(args, log, yaml, yaml_data, backup_file)
+
+def _try_load_input_file(args, log, yaml, change_path, new_value):
+    """Attempt to load the input data file or abend on error."""
+    yaml_data = get_yaml_data(yaml, log, args.yaml_file)
+    if yaml_data is None:
+        yaml_data = build_next_node(change_path, 0, new_value)
+    elif not yaml_data and isinstance(yaml_data, bool):
+        # An error message has already been logged
+        sys.exit(1)
+    return yaml_data
 
 # pylint: disable=locally-disabled,too-many-locals,too-many-branches,too-many-statements
 def main():
@@ -183,31 +334,42 @@ def main():
     log = ConsolePrinter(args)
     validateargs(args, log)
     change_path = YAMLPath(args.change, pathsep=args.pathsep)
-    backup_file = args.yaml_file + ".bak"
+    must_exist=args.mustexist or args.saveto
 
     # Obtain the replacement value
-    if args.value:
+    consumed_stdin = False
+    if args.value or args.value == "":
         new_value = args.value
     elif args.stdin:
         new_value = ''.join(sys.stdin.readlines())
+        consumed_stdin = True
     elif args.file:
         with open(args.file, 'r') as fhnd:
             new_value = fhnd.read().rstrip()
     elif args.random is not None:
         new_value = ''.join(
-            secrets.choice(
-                string.ascii_uppercase + string.ascii_lowercase + string.digits
-            ) for _ in range(args.random)
+            secrets.choice(args.random_from) for _ in range(args.random)
         )
 
     # Prep the YAML parser
     yaml = get_yaml_editor()
 
     # Attempt to open the YAML file; check for parsing errors
-    yaml_data = get_yaml_data(yaml, log, args.yaml_file)
-    if yaml_data is None:
-        # An error message has already been logged
-        sys.exit(1)
+    if args.yaml_file:
+        yaml_data = _try_load_input_file(
+            args, log, yaml, change_path, new_value)
+        if args.yaml_file.strip() == '-':
+            consumed_stdin = True
+
+    # Check for a waiting STDIN document
+    if (not consumed_stdin
+        and not args.yaml_file
+        and not args.nostdin
+        and not sys.stdin.isatty()
+    ):
+        args.yaml_file = "-"
+        yaml_data = _try_load_input_file(
+            args, log, yaml, change_path, new_value)
 
     # Load the present value at the specified YAML Path
     change_node_coordinates = []
@@ -217,9 +379,11 @@ def main():
         publickey=args.publickey, privatekey=args.privatekey)
     try:
         for node_coordinate in processor.get_nodes(
-                change_path, mustexist=(args.mustexist or args.saveto),
+                change_path, mustexist=must_exist,
                 default_value=("" if new_value else " ")):
-            log.debug('Got "{}" from {}.'.format(node_coordinate, change_path))
+            log.debug(
+                "Got node from {}:".format(change_path),
+                data=node_coordinate, prefix="yaml_set::main:  ")
             change_node_coordinates.append(node_coordinate)
     except YAMLPathException as ex:
         log.critical(ex, 1)
@@ -232,8 +396,9 @@ def main():
         old_format = YAMLValueFormats.from_node(
             change_node_coordinates[0].node)
 
-    log.debug("Collected nodes:")
-    log.debug(change_node_coordinates)
+    log.debug(
+        "Collected nodes:", data=change_node_coordinates,
+        prefix="yaml_set::main:  ")
 
     # Check the value(s), if desired
     if args.check:
@@ -316,48 +481,19 @@ def main():
 
         try:
             processor.set_eyaml_value(
-                change_path, new_value
-                , output=output_type
-                , mustexist=False
-            )
+                change_path, new_value, output=output_type, mustexist=False)
         except EYAMLCommandException as ex:
             log.critical(ex, 2)
     else:
-        processor.set_value(change_path, new_value, value_format=args.format)
+        try:
+            processor.set_value(
+                change_path, new_value, value_format=args.format,
+                mustexist=must_exist)
+        except YAMLPathException as ex:
+            log.critical(ex, 1)
 
-    # Save a backup of the original file, if requested
-    if args.backup:
-        log.verbose(
-            "Saving a backup of {} to {}."
-            .format(args.yaml_file, backup_file))
-        if exists(backup_file):
-            remove(backup_file)
-        copy2(args.yaml_file, backup_file)
-
-    # Save the changed file
-    log.verbose("Writing changed data to {}.".format(args.yaml_file))
-    with tempfile.TemporaryFile() as tmphnd:
-        with open(args.yaml_file, 'rb') as inhnd:
-            copyfileobj(inhnd, tmphnd)
-
-        with open(args.yaml_file, 'w') as yaml_dump:
-            try:
-                yaml.dump(yaml_data, yaml_dump)
-            except AssertionError as ex:
-                yaml_dump.close()
-                tmphnd.seek(0)
-                with open(args.yaml_file, 'wb') as outhnd:
-                    copyfileobj(tmphnd, outhnd)
-
-                # No sense in preserving a backup file with no changes
-                if args.backup:
-                    remove(backup_file)
-
-                log.debug("Assertion error: {}".format(ex))
-                log.critical((
-                    "Indeterminate assertion error encountered while"
-                    + " attempting to write updated data to {}.  The original"
-                    + " file content was restored.").format(args.yaml_file), 3)
+    # Write out the result
+    write_output_document(args, log, yaml, yaml_data)
 
 if __name__ == "__main__":
     main()  # pragma: no cover

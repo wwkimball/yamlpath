@@ -28,6 +28,8 @@ class Test_Processor():
             matches += 1
         for node in processor._get_required_nodes(None, yamlpath):
             matches += 1
+        for node in processor._get_nodes_by_traversal(None, yamlpath, 0):
+            matches += 1
         assert matches == 0
 
     @pytest.mark.parametrize("yamlpath,results,mustexist,default", [
@@ -62,37 +64,67 @@ class Test_Processor():
         ("((&arrayOfHashes.step)[1])[0]", [2], True, None),
         ("does.not.previously.exist[7]", ["Huzzah!"], False, "Huzzah!"),
         ("/number_keys/1", ["one"], True, None),
+        ("**.[.^Hey]", ["Hey, Number Two!"], True, None),
+        ("/**/Hey*", ["Hey, Number Two!"], True, None),
+        ("lots_of_names.**.name", ["Name 1-1", "Name 2-1", "Name 3-1", "Name 4-1", "Name 4-2", "Name 4-3", "Name 4-4"], True, None),
+        ("/array_of_hashes/**", [1, "one", 2, "two"], True, None),
     ])
     def test_get_nodes(self, quiet_logger, yamlpath, results, mustexist, default):
         yamldata = """---
-        aliases:
-          - &aliasAnchorOne Anchored Scalar Value
-          - &aliasAnchorTwo Hey, Number Two!
-        array_of_hashes: &arrayOfHashes
-          - step: 1
-            name: one
-          - step: 2
-            name: two
-        rollback_hashes:
-          on_condition:
-            failure:
-              - step: 3
-                name: three
-              - step: 4
-                name: four
-        disabled_steps:
-          - 2
-          - 3
-        squads:
-          alpha: 1.1
-          bravo: 2.2
-          charlie: 3.3
-          delta: 4.4
-        number_keys:
-          1: one
-          2: two
-          3: three
-        """
+aliases:
+  - &aliasAnchorOne Anchored Scalar Value
+  - &aliasAnchorTwo Hey, Number Two!
+array_of_hashes: &arrayOfHashes
+  - step: 1
+    name: one
+  - step: 2
+    name: two
+rollback_hashes:
+  on_condition:
+    failure:
+      - step: 3
+        name: three
+      - step: 4
+        name: four
+disabled_steps:
+  - 2
+  - 3
+squads:
+  alpha: 1.1
+  bravo: 2.2
+  charlie: 3.3
+  delta: 4.4
+number_keys:
+  1: one
+  2: two
+  3: three
+
+# For traversal tests:
+name: Name 0-0
+lots_of_names:
+  name: Name 1-1
+  tier1:
+    name: Name 2-1
+    tier2:
+      name: Name 3-1
+      list_of_named_objects:
+        - name: Name 4-1
+          tag: Tag 4-1
+          other: Other 4-1
+          dude: Dude 4-1
+        - tag: Tag 4-2
+          name: Name 4-2
+          dude: Dude 4-2
+          other: Other 4-2
+        - other: Other 4-3
+          dude: Dude 4-3
+          tag: Tag 4-3
+          name: Name 4-3
+        - dude: Dude 4-4
+          tag: Tag 4-4
+          name: Name 4-4
+          other: Other 4-4
+"""
         yaml = YAML()
         processor = Processor(quiet_logger, yaml.load(yamldata))
         matchidx = 0
@@ -126,6 +158,7 @@ class Test_Processor():
         ("/floats/[.<4.F]", True),
         ("/floats/[.>=4.F]", True),
         ("/floats/[.<=4.F]", True),
+        ("abc.**", True),
     ])
     def test_get_impossible_nodes_error(self, quiet_logger, yamlpath, mustexist):
         yamldata = """---
@@ -145,6 +178,16 @@ class Test_Processor():
         with pytest.raises(YAMLPathException) as ex:
             nodes = list(processor.get_nodes(yamlpath, mustexist=mustexist))
         assert -1 < str(ex.value).find("does not match any nodes")
+
+    def test_illegal_traversal_recursion(self, quiet_logger):
+        yamldata = """---
+        any: data
+        """
+        yaml = YAML()
+        processor = Processor(quiet_logger, yaml.load(yamldata))
+        with pytest.raises(YAMLPathException) as ex:
+            nodes = list(processor.get_nodes("**.**"))
+        assert -1 < str(ex.value).find("Repeating traversals are not allowed")
 
     def test_set_value_in_empty_data(self, capsys, quiet_logger):
         import sys
@@ -307,9 +350,7 @@ class Test_Processor():
         with pytest.raises(NotImplementedError):
             nodes = list(processor._get_nodes_by_search(
                 data,
-                SearchTerms(True, PathSearchMethods.DNF, ".", "top_scalar"),
-                None,
-                None
+                SearchTerms(True, PathSearchMethods.DNF, ".", "top_scalar")
             ))
 
     def test_adjoined_collectors_error(self, quiet_logger):
@@ -603,3 +644,5 @@ class Test_Processor():
             assert unwrap_node_coords(node) == results[matchidx]
             matchidx += 1
         assert len(results) == matchidx
+
+    # TODO: test_collectors_expanded_via_star
