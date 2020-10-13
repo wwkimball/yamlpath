@@ -273,10 +273,9 @@ def yield_children(logger: ConsolePrinter, data: Any,
     include_value_aliases: bool = kwargs.pop("include_value_aliases", False)
     search_anchors: bool = kwargs.pop("search_anchors", False)
     logger.debug(
-        ("yaml_paths::yield_children:  "
-         + "dumping all children in data of type, {}:")
-        .format(type(data)))
-    logger.debug(data)
+        "Dumping all children in data of type, {}:"
+        .format(type(data)), data=data,
+        prefix="yaml_paths::yield_children:  ")
 
     exclude_alias_matchers = [AnchorMatches.UNSEARCHABLE_ALIAS,
                               AnchorMatches.ALIAS_EXCLUDED]
@@ -445,11 +444,9 @@ def search_for_paths(logger: ConsolePrinter, processor: EYAMLProcessor,
 
             if isinstance(ele, (CommentedSeq, CommentedMap)):
                 logger.debug(
-                    "yaml_paths::search_for_paths<list>:"
-                    + "recursing into complex data:"
-                )
-                logger.debug(ele)
-                logger.debug(">>>> >>>> >>>> >>>> >>>> >>>> >>>>")
+                    "Recursing into complex data:", data=ele,
+                    prefix="yaml_paths::search_for_paths<list>:  ",
+                    footer=">>>> >>>> >>>> >>>> >>>> >>>> >>>>")
                 for subpath in search_for_paths(
                         logger, processor, ele, terms, pathsep, tmp_path,
                         seen_anchors, search_values=search_values,
@@ -460,11 +457,10 @@ def search_for_paths(logger: ConsolePrinter, processor: EYAMLProcessor,
                         expand_children=expand_children
                 ):
                     logger.debug(
-                        ("yaml_paths::search_for_paths<list>:"
-                         + "yielding RECURSED match, {}."
-                        ).format(subpath)
+                        "Yielding RECURSED match, {}.".format(subpath),
+                        prefix="yaml_paths::search_for_paths<list>:  ",
+                        footer="<<<< <<<< <<<< <<<< <<<< <<<< <<<<"
                     )
-                    logger.debug("<<<< <<<< <<<< <<<< <<<< <<<< <<<<")
                     yield subpath
             elif search_values:
                 if (anchor_matched is AnchorMatches.UNSEARCHABLE_ALIAS
@@ -588,11 +584,10 @@ def search_for_paths(logger: ConsolePrinter, processor: EYAMLProcessor,
 
             if isinstance(val, (CommentedSeq, CommentedMap)):
                 logger.debug(
-                    "yaml_paths::search_for_paths<dict>:"
-                    + "recursing into complex data:"
+                    "Recursing into complex data:", data=val,
+                    prefix="yaml_paths::search_for_paths<dict>:  ",
+                    footer=">>>> >>>> >>>> >>>> >>>> >>>> >>>>"
                 )
-                logger.debug(val)
-                logger.debug(">>>> >>>> >>>> >>>> >>>> >>>> >>>>")
                 for subpath in search_for_paths(
                         logger, processor, val, terms, pathsep, tmp_path,
                         seen_anchors, search_values=search_values,
@@ -603,11 +598,10 @@ def search_for_paths(logger: ConsolePrinter, processor: EYAMLProcessor,
                         expand_children=expand_children
                 ):
                     logger.debug(
-                        ("yaml_paths::search_for_paths<dict>:"
-                         + "yielding RECURSED match, {}."
-                        ).format(subpath)
+                        "Yielding RECURSED match, {}.".format(subpath),
+                        prefix="yaml_paths::search_for_paths<dict>:  ",
+                        footer="<<<< <<<< <<<< <<<< <<<< <<<< <<<<"
                     )
-                    logger.debug("<<<< <<<< <<<< <<<< <<<< <<<< <<<<")
                     yield subpath
             elif search_values:
                 if (val_anchor_matched is AnchorMatches.UNSEARCHABLE_ALIAS

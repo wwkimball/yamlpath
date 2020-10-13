@@ -85,7 +85,7 @@ class Processor:
                 matched_nodes += 1
                 self.logger.debug(
                     "Relaying required node:",
-                    prefix="Processor::get_nodes:  ", data=node_coords.node)
+                    prefix="Processor::get_nodes:  ", data=node_coords)
                 yield node_coords
 
             if matched_nodes < 1:
@@ -99,7 +99,7 @@ class Processor:
             ):
                 self.logger.debug(
                     "Relaying optional node:",
-                    prefix="Processor::get_nodes:  ", data=opt_node.node)
+                    prefix="Processor::get_nodes:  ", data=opt_node)
                 yield opt_node
 
     def set_value(self, yaml_path: Union[YAMLPath, str],
@@ -174,10 +174,13 @@ class Processor:
                     self.data, yaml_path, value
             ):
                 self.logger.debug(
-                    ("Processor::set_value:  Matched optional node coord, {};"
-                     + " setting its value to {}<{}>.")
-                    .format(node_coord, value, value_format)
-                )
+                    "Matched optional node coordinate:"
+                    , data=node_coord
+                    , prefix="Processor::set_value:  ")
+                self.logger.debug(
+                    "Setting its value with format {} to:".format(value_format)
+                    , data=value
+                    , prefix="Processor::set_value:  ")
                 try:
                     self._update_node(
                         node_coord.parent, node_coord.parentref, value,
@@ -473,9 +476,9 @@ class Processor:
         Raises:  N/A
         """
         self.logger.debug(
-            ("Processor::_get_nodes_by_search:  Seeking SEARCH nodes matching"
-             + " {}.")
-            .format(terms))
+            "Seeking SEARCH nodes matching {} in data:".format(terms),
+            data=data,
+            prefix="Processor::_get_nodes_by_search:  ")
 
         parent = kwargs.pop("parent", None)
         parentref = kwargs.pop("parentref", None)
@@ -484,7 +487,10 @@ class Processor:
         method = terms.method
         attr = terms.attribute
         term = terms.term
-        if traverse_lists and isinstance(data, list):
+        if isinstance(data, list):
+            if not traverse_lists:
+                return
+
             for lstidx, ele in enumerate(data):
                 if attr == '.':
                     matches = search_matches(method, term, ele)
@@ -492,6 +498,10 @@ class Processor:
                     matches = search_matches(method, term, ele[attr])
 
                 if (matches and not invert) or (invert and not matches):
+                    self.logger.debug(
+                        "Yielding list match at index {}:".format(lstidx),
+                        data=ele,
+                        prefix="Processor::_get_nodes_by_search:  ")
                     yield NodeCoords(ele, data, lstidx)
 
         elif isinstance(data, dict):
@@ -500,18 +510,31 @@ class Processor:
                 for key, val in data.items():
                     matches = search_matches(method, term, key)
                     if (matches and not invert) or (invert and not matches):
+                        self.logger.debug(
+                            "Yielding dictionary key name match against '{}':"
+                            .format(key),
+                            data=val,
+                            prefix="Processor::_get_nodes_by_search:  ")
                         yield NodeCoords(val, data, key)
 
             elif attr in data:
                 value = data[attr]
                 matches = search_matches(method, term, value)
                 if (matches and not invert) or (invert and not matches):
+                    self.logger.debug(
+                        "Yielding dictionary attribute match against '{}':"
+                        .format(attr),
+                        data=value,
+                        prefix="Processor::_get_nodes_by_search:  ")
                     yield NodeCoords(value, data, attr)
 
         else:
             # Check the passed data itself for a match
             matches = search_matches(method, term, data)
             if (matches and not invert) or (invert and not matches):
+                self.logger.debug(
+                    "Yielding the queried data itself because it matches.",
+                    prefix="Processor::_get_nodes_by_search:  ")
                 yield NodeCoords(data, parent, parentref)
 
     # pylint: disable=locally-disabled
@@ -656,7 +679,7 @@ class Processor:
         parentref = kwargs.pop("parentref", None)
 
         self.logger.debug(
-            "TRAVERSING the tree at:",
+            "TRAVERSING the tree at parentref:",
             prefix="Processor::_get_nodes_by_traversal:  ", data=parentref)
 
         if data is None:
@@ -677,7 +700,7 @@ class Processor:
                         self.logger.debug(
                             "Yielding unfiltered Hash value:",
                             prefix="Processor::_get_nodes_by_traversal:  ",
-                            data=node_coord.node)
+                            data=node_coord)
                         yield node_coord
             elif isinstance(data, list):
                 for idx, ele in enumerate(data):
@@ -688,7 +711,7 @@ class Processor:
                         self.logger.debug(
                             "Yielding unfiltered Array value:",
                             prefix="Processor::_get_nodes_by_traversal:  ",
-                            data=node_coord.node)
+                            data=node_coord)
                         yield node_coord
             else:
                 self.logger.debug(
@@ -712,9 +735,10 @@ class Processor:
                 parentref=parentref, traverse_lists=False
             ):
                 self.logger.debug(
-                    "Yielding filtered DIRECT node at {}:".format(parentref),
+                    "Yielding filtered DIRECT node at parentref {} of coord:"
+                    .format(parentref),
                     prefix="Processor::_get_nodes_by_traversal:  ",
-                    data=node_coord.node)
+                    data=node_coord)
                 yield NodeCoords(data, parent, parentref)
 
             # Then, recurse into each child to perform the same test.
@@ -722,15 +746,15 @@ class Processor:
                 for key, val in data.items():
                     self.logger.debug(
                         "Processor::_get_nodes_by_traversal:  Recursing into"
-                        " KEY {} at {} for next-segment matches..."
+                        " KEY '{}' at ref '{}' for next-segment matches..."
                         .format(key, parentref))
                     for node_coord in self._get_nodes_by_traversal(
                         val, yaml_path, segment_index,
                         parent=data, parentref=key
                     ):
                         self.logger.debug(
-                            "Yielding filtered indirect Hash value from KEY {}"
-                            " at {}:".format(key, parentref),
+                            "Yielding filtered indirect Hash value from KEY"
+                            " '{}' at ref '{}':".format(key, parentref),
                             prefix="Processor::_get_nodes_by_traversal:  ",
                             data=node_coord.node)
                         yield node_coord
@@ -738,7 +762,7 @@ class Processor:
                 for idx, ele in enumerate(data):
                     self.logger.debug(
                         "Processor::_get_nodes_by_traversal:  Recursing into"
-                        " INDEX {} at {} for next-segment matches..."
+                        " INDEX '{}' at ref '{}' for next-segment matches..."
                         .format(idx, parentref))
                     for node_coord in self._get_nodes_by_traversal(
                         ele, yaml_path, segment_index,
@@ -748,7 +772,7 @@ class Processor:
                             "Yielding filtered indirect Array value from INDEX"
                             " {} at {}:".format(idx, parentref),
                             prefix="Processor::_get_nodes_by_traversal:  ",
-                            data=node_coord.node)
+                            data=node_coord)
                         yield node_coord
 
     def _get_required_nodes(self, data: Any, yaml_path: YAMLPath,
@@ -820,7 +844,7 @@ class Processor:
                             .format(type(subnode_coord.node),
                                     subnode_coord.parentref),
                             prefix="Processor::_get_required_nodes:  ",
-                            data=subnode_coord.node, footer=" ")
+                            data=subnode_coord, footer=" ")
                         yield subnode_coord
         else:
             self.logger.debug(

@@ -18,6 +18,8 @@ from typing import Any, Dict, Generator, List, Union
 
 from ruamel.yaml.comments import CommentedMap
 
+from yamlpath.wrappers.nodecoords import NodeCoords
+
 
 class ConsolePrinter:
     """
@@ -222,6 +224,11 @@ class ConsolePrinter:
                 data, prefix=prefix, **kwargs
             ):
                 yield line
+        elif isinstance(data, NodeCoords):
+            for line in ConsolePrinter._debug_node_coord(
+                data, prefix=prefix, **kwargs
+            ):
+                yield line
         else:
             yield ConsolePrinter._debug_scalar(data, prefix=prefix, **kwargs)
 
@@ -239,6 +246,29 @@ class ConsolePrinter:
 
         return ConsolePrinter._debug_prefix_lines(
             "{}{}{}".format(prefix, data, (type(data) if print_type else "")))
+
+    @classmethod
+    def _debug_node_coord(
+        cls, data: NodeCoords, **kwargs
+    ) -> Generator[str, None, None]:
+        """Helper method for debug."""
+        prefix = kwargs.pop("prefix", "")
+        node_prefix = "{}(node)".format(prefix)
+        parent_prefix = "{}(parent)".format(prefix)
+        parentref_prefix = "{}(parentref)".format(prefix)
+
+        for line in ConsolePrinter._debug_dump(data.node, prefix=node_prefix):
+            yield line
+
+        for line in ConsolePrinter._debug_dump(
+            data.parent, prefix=parent_prefix
+        ):
+            yield line
+
+        for line in ConsolePrinter._debug_dump(
+            data.parentref, prefix=parentref_prefix
+        ):
+            yield line
 
     @classmethod
     def _debug_list(cls, data: List, **kwargs) -> Generator[str, None, None]:

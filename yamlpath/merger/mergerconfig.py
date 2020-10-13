@@ -253,14 +253,8 @@ class MergerConfig:
                 "... RULE:  {}".format(merge_rule),
                 prefix="MergerConfig::_prepare_user_rules:  ")
             self.log.debug(
-                "... NODE:", prefix="MergerConfig::_prepare_user_rules:  ",
-                data=node_coord.node)
-            self.log.debug(
-                "... PARENT:", prefix="MergerConfig::_prepare_user_rules:  ",
-                data=node_coord.parent)
-            self.log.debug(
-                "... REF:", prefix="MergerConfig::_prepare_user_rules:  ",
-                data=node_coord.parentref)
+                "... NODE:", data=node_coord,
+                prefix="MergerConfig::_prepare_user_rules:  ")
 
     def _load_config(self) -> None:
         """Load the external configuration file."""
@@ -312,13 +306,7 @@ class MergerConfig:
             header=" ")
         self.log.debug(
             "... NODE:", prefix="MergerConfig::_get_rule_for:  ",
-            data=node_coord.node)
-        self.log.debug(
-            "... PARENT:", prefix="MergerConfig::_get_rule_for:  ",
-            data=node_coord.parent)
-        self.log.debug(
-            "... REF:", prefix="MergerConfig::_get_rule_for:  ",
-            data=node_coord.parentref, footer=" ")
+            data=node_coord)
         return self._get_config_for(node_coord, self.rules)
 
     def _get_key_for(self, node_coord: NodeCoords) -> str:
