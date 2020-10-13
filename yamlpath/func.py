@@ -344,7 +344,7 @@ def wrap_type(value: Any) -> Any:
     elif typ is float:
         wrapped_value = make_float_node(ast_value)
     elif typ is bool:
-        wrapped_value = ScalarBoolean(value)
+        wrapped_value = ScalarBoolean(bool(value))
 
     return wrapped_value
 

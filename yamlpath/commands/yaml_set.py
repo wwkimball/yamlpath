@@ -332,6 +332,7 @@ def main():
     log = ConsolePrinter(args)
     validateargs(args, log)
     change_path = YAMLPath(args.change, pathsep=args.pathsep)
+    must_exist=args.mustexist or args.saveto
 
     # Obtain the replacement value
     consumed_stdin = False
@@ -376,7 +377,7 @@ def main():
         publickey=args.publickey, privatekey=args.privatekey)
     try:
         for node_coordinate in processor.get_nodes(
-                change_path, mustexist=(args.mustexist or args.saveto),
+                change_path, mustexist=must_exist,
                 default_value=("" if new_value else " ")):
             log.debug('Got "{}" from {}.'.format(node_coordinate, change_path))
             change_node_coordinates.append(node_coordinate)
@@ -475,14 +476,16 @@ def main():
 
         try:
             processor.set_eyaml_value(
-                change_path, new_value
-                , output=output_type
-                , mustexist=False
-            )
+                change_path, new_value, output=output_type, mustexist=False)
         except EYAMLCommandException as ex:
             log.critical(ex, 2)
     else:
-        processor.set_value(change_path, new_value, value_format=args.format)
+        try:
+            processor.set_value(
+                change_path, new_value, value_format=args.format,
+                mustexist=must_exist)
+        except YAMLPathException as ex:
+            log.critical(ex, 1)
 
     # Write out the result
     write_output_document(args, log, yaml, yaml_data)
