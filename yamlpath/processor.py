@@ -723,7 +723,6 @@ class Processor:
             # every child against the following segment until there are no more
             # nodes.  For each match, resume normal path function against the
             # matching node(s).
-            direct_yielded = False
 
             # Because the calling code will continue to process the remainder
             # of the YAML Path, only the parent of the matched node(s) can be
@@ -741,11 +740,6 @@ class Processor:
                     prefix="Processor::_get_nodes_by_traversal:  ",
                     data=node_coord)
                 yield NodeCoords(data, parent, parentref)
-                direct_yielded = True
-
-            # Do not traverse into parents which already match
-            if direct_yielded:
-                return
 
             # Then, recurse into each child to perform the same test.
             if isinstance(data, dict):
