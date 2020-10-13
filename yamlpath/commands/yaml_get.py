@@ -170,7 +170,9 @@ def main():
         publickey=args.publickey, privatekey=args.privatekey)
     try:
         for node in processor.get_eyaml_values(yaml_path, mustexist=True):
-            log.debug("Got {} from {}.".format(repr(node), yaml_path))
+            log.debug(
+                "Got node from {}:".format(yaml_path), data=node,
+                prefix="yaml_get::main:  ")
             discovered_nodes.append(unwrap_node_coords(node))
     except YAMLPathException as ex:
         log.critical(ex, 1)

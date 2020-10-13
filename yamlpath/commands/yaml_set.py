@@ -262,7 +262,9 @@ def save_to_yaml_file(args, log, yaml_parser, yaml_data, backup_file):
                 if args.backup:
                     remove(backup_file)
 
-                log.debug("Assertion error: {}".format(ex))
+                log.debug(
+                    "yaml_set::save_to_yaml_file:  Assertion error: {}"
+                    .format(ex))
                 log.critical((
                     "Indeterminate assertion error encountered while"
                     + " attempting to write updated data to {}.  The original"
@@ -379,7 +381,9 @@ def main():
         for node_coordinate in processor.get_nodes(
                 change_path, mustexist=must_exist,
                 default_value=("" if new_value else " ")):
-            log.debug('Got "{}" from {}.'.format(node_coordinate, change_path))
+            log.debug(
+                "Got node from {}:".format(change_path),
+                data=node_coordinate, prefix="yaml_set::main:  ")
             change_node_coordinates.append(node_coordinate)
     except YAMLPathException as ex:
         log.critical(ex, 1)
@@ -392,8 +396,9 @@ def main():
         old_format = YAMLValueFormats.from_node(
             change_node_coordinates[0].node)
 
-    log.debug("Collected nodes:")
-    log.debug(change_node_coordinates)
+    log.debug(
+        "Collected nodes:", data=change_node_coordinates,
+        prefix="yaml_set::main:  ")
 
     # Check the value(s), if desired
     if args.check:
