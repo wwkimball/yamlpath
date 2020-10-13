@@ -53,9 +53,30 @@ class Test_yaml_set():
         assert "Impossible to read both document and replacement value from STDIN" in result.stderr
 
     def test_no_backup_stdin(self, script_runner):
-        result = script_runner.run(self.command, "--change='/test'", "--backup", "-")
+        result = script_runner.run(
+            self.command, "--change='/test'", "--backup", "-")
         assert not result.success, result.stderr
         assert "applies only when reading from a file" in result.stderr
+
+    def test_bad_data_type_optional(self, script_runner, tmp_path_factory):
+        yaml_file = create_temp_yaml_file(tmp_path_factory, """---
+boolean: false
+""")
+        result = script_runner.run(
+            self.command, "--change=/boolean", "--value=NOT_BOOLEAN",
+            "--format=boolean", yaml_file)
+        assert not result.success, result.stderr
+        assert "Impossible to write 'NOT_BOOLEAN' as boolean." in result.stderr
+
+    def test_bad_data_type_mandatory(self, script_runner, tmp_path_factory):
+        yaml_file = create_temp_yaml_file(tmp_path_factory, """---
+boolean: false
+""")
+        result = script_runner.run(
+            self.command, "--change=/boolean", "--value=NOT_BOOLEAN",
+            "--format=boolean", "--mustexist", yaml_file)
+        assert not result.success, result.stderr
+        assert "Impossible to write 'NOT_BOOLEAN' as boolean." in result.stderr
 
     def test_input_by_value(self, script_runner, tmp_path_factory):
         import re
@@ -64,7 +85,8 @@ class Test_yaml_set():
         key: value
         """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
-        result = script_runner.run(self.command, "--change=/key", "--value=abc", yaml_file)
+        result = script_runner.run(
+            self.command, "--change=/key", "--value=abc", yaml_file)
         assert result.success, result.stderr
 
         with open(yaml_file, 'r') as fhnd:

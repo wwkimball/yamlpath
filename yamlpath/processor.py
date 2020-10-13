@@ -156,9 +156,9 @@ class Processor:
                         value_format)
                 except ValueError as vex:
                     raise YAMLPathException(
-                        "Impossible to write {} as {}.  The error was:  {}"
+                        "Impossible to write '{}' as {}.  The error was:  {}"
                         .format(value, value_format, str(vex))
-                        , yaml_path) from vex
+                        , str(yaml_path)) from vex
 
             if found_nodes < 1:
                 raise YAMLPathException(
@@ -186,7 +186,7 @@ class Processor:
                     raise YAMLPathException(
                         "Impossible to write '{}' as {}.  The error was:  {}"
                         .format(value, value_format, str(vex))
-                        , yaml_path) from vex
+                        , str(yaml_path)) from vex
 
     # pylint: disable=locally-disabled,too-many-branches,too-many-locals
     def _get_nodes_by_path_segment(self, data: Any,
