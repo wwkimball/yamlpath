@@ -61,7 +61,8 @@ class Test_func():
         no: ''
         """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
-        assert False == get_yaml_data(yp, quiet_logger, yaml_file)
+        (yaml_data, doc_loaded) = get_yaml_data(yp, quiet_logger, yaml_file)
+        assert doc_loaded == False
         captured = capsys.readouterr()
         assert -1 < captured.err.find("keyboard interrupt")
 
@@ -70,7 +71,8 @@ class Test_func():
         force_ruamel_load_keyboardinterrupt
     ):
         yp = get_yaml_editor()
-        assert False == get_yaml_data(yp, quiet_logger, "no-such.file")
+        (yaml_data, doc_loaded) = get_yaml_data(yp, quiet_logger, "no-such.file")
+        assert doc_loaded == False
         captured = capsys.readouterr()
         assert -1 < captured.err.find("File not found")
 
@@ -79,7 +81,8 @@ class Test_func():
         imparsible_yaml_file
     ):
         yp = get_yaml_editor()
-        assert False == get_yaml_data(yp, quiet_logger, imparsible_yaml_file)
+        (yaml_data, doc_loaded) = get_yaml_data(yp, quiet_logger, imparsible_yaml_file)
+        assert doc_loaded == False
         captured = capsys.readouterr()
         assert -1 < captured.err.find("YAML parsing error")
 
@@ -88,7 +91,8 @@ class Test_func():
         badcmp_yaml_file
     ):
         yp = get_yaml_editor()
-        assert False == get_yaml_data(yp, quiet_logger, badcmp_yaml_file)
+        (yaml_data, doc_loaded) = get_yaml_data(yp, quiet_logger, badcmp_yaml_file)
+        assert doc_loaded == False
         captured = capsys.readouterr()
         assert -1 < captured.err.find("YAML composition error")
 
@@ -101,7 +105,8 @@ class Test_func():
           <<:
         """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
-        assert False == get_yaml_data(yp, quiet_logger, yaml_file)
+        (yaml_data, doc_loaded) = get_yaml_data(yp, quiet_logger, yaml_file)
+        assert doc_loaded == False
         captured = capsys.readouterr()
         assert -1 < captured.err.find("YAML construction error")
 
@@ -109,7 +114,8 @@ class Test_func():
         self, capsys, quiet_logger, tmp_path_factory, badsyntax_yaml_file
     ):
         yp = get_yaml_editor()
-        assert False == get_yaml_data(yp, quiet_logger, badsyntax_yaml_file)
+        (yaml_data, doc_loaded) = get_yaml_data(yp, quiet_logger, badsyntax_yaml_file)
+        assert doc_loaded == False
         captured = capsys.readouterr()
         assert -1 < captured.err.find("YAML syntax error")
 
@@ -122,7 +128,8 @@ class Test_func():
         key: value2
         """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
-        assert False == get_yaml_data(yp, quiet_logger, yaml_file)
+        (yaml_data, doc_loaded) = get_yaml_data(yp, quiet_logger, yaml_file)
+        assert doc_loaded == False
         captured = capsys.readouterr()
         assert -1 < captured.err.find("Duplicate Hash key detected")
 
@@ -136,7 +143,8 @@ class Test_func():
           - &anchor value2
         """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
-        assert False == get_yaml_data(yp, quiet_logger, yaml_file)
+        (yaml_data, doc_loaded) = get_yaml_data(yp, quiet_logger, yaml_file)
+        assert doc_loaded == False
         captured = capsys.readouterr()
         assert -1 < captured.err.find("Duplicate YAML Anchor detected")
 

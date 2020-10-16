@@ -77,9 +77,10 @@ hash:
 
         result = script_runner.run(
             self.command
+            , "--nostdin"
             , lhs_file
             , rhs_file)
-        assert not result.success, result.stderr
+        assert result.success, result.stderr
 
     def test_merge_two_happy_files_to_stdout(
         self, script_runner, tmp_path, tmp_path_factory
