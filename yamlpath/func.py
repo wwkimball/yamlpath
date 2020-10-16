@@ -179,11 +179,17 @@ def get_yaml_multidoc_data(
         with warnings.catch_warnings():
             warnings.filterwarnings("error")
             if source == "-":
+                doc_yielded = False
                 for document in parser.load_all(stdin.read()):
+                    doc_yielded = True
                     logger.debug(
                         "Yielding document from {}:".format(source),
                         prefix="get_yaml_multidoc_data: ", data=document)
                     yield (document, True)
+
+                # The user sent a deliberately empty document via STDIN
+                if not doc_yielded:
+                    yield ("", True)
             else:
                 with open(source, 'r') as fhnd:
                     for document in parser.load_all(fhnd):
