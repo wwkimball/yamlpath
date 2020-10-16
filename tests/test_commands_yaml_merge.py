@@ -666,3 +666,145 @@ hash:
         with open(backup_file, 'r') as fhnd:
             filedat = fhnd.read()
         assert filedat == content
+
+    def test_append_scalar_to_array(
+        self, script_runner, tmp_path_factory
+    ):
+        import subprocess
+
+        lhs_file = create_temp_yaml_file(tmp_path_factory, """---
+an_array:
+  - Element 0
+  - Element 1
+  - Element 2
+""")
+        rhs_content = "New Element"
+        merged_yaml_content = """---
+an_array:
+  - Element 0
+  - Element 1
+  - Element 2
+  - New Element
+"""
+
+        result = subprocess.run(
+            [self.command
+            , "--mergeat=/an_array"
+            , lhs_file]
+            , stdout=subprocess.PIPE
+            , input=rhs_content
+            , universal_newlines=True
+        )
+
+        # DEBUG
+        # print("Expected:")
+        # print(merged_yaml_content)
+        # print("Got:")
+        # print(result.stdout)
+
+        assert 0 == result.returncode, result.stderr
+        assert merged_yaml_content == result.stdout
+
+    def test_set_scalar_in_array(
+        self, script_runner, tmp_path_factory
+    ):
+        import subprocess
+
+        lhs_file = create_temp_yaml_file(tmp_path_factory, """---
+an_array:
+  - Element 0
+  - Element 1
+  - Element 2
+""")
+        rhs_content = "New Element"
+        merged_yaml_content = """---
+an_array:
+  - Element 0
+  - New Element
+  - Element 2
+"""
+
+        result = subprocess.run(
+            [self.command
+            , "--mergeat=/an_array[1]"
+            , lhs_file]
+            , stdout=subprocess.PIPE
+            , input=rhs_content
+            , universal_newlines=True
+        )
+
+        # DEBUG
+        # print("Expected:")
+        # print(merged_yaml_content)
+        # print("Got:")
+        # print(result.stdout)
+
+        assert 0 == result.returncode, result.stderr
+        assert merged_yaml_content == result.stdout
+
+    def test_append_scalar_to_hash(
+        self, script_runner, tmp_path_factory
+    ):
+        import subprocess
+
+        lhs_file = create_temp_yaml_file(tmp_path_factory, """---
+a_hash:
+  key: value
+""")
+        rhs_content = "New Value"
+        merged_yaml_content = """---
+a_hash:
+  key: value
+  new_key: New Value
+"""
+
+        result = subprocess.run(
+            [self.command
+            , "--mergeat=/a_hash/new_key"
+            , lhs_file]
+            , stdout=subprocess.PIPE
+            , input=rhs_content
+            , universal_newlines=True
+        )
+
+        # DEBUG
+        # print("Expected:")
+        # print(merged_yaml_content)
+        # print("Got:")
+        # print(result.stdout)
+
+        assert 0 == result.returncode, result.stderr
+        assert merged_yaml_content == result.stdout
+
+    def test_set_scalar_in_hash(
+        self, script_runner, tmp_path_factory
+    ):
+        import subprocess
+
+        lhs_file = create_temp_yaml_file(tmp_path_factory, """---
+a_hash:
+  key: value
+""")
+        rhs_content = "New Value"
+        merged_yaml_content = """---
+a_hash:
+  key: New Value
+"""
+
+        result = subprocess.run(
+            [self.command
+            , "--mergeat=/a_hash/key"
+            , lhs_file]
+            , stdout=subprocess.PIPE
+            , input=rhs_content
+            , universal_newlines=True
+        )
+
+        # DEBUG
+        # print("Expected:")
+        # print(merged_yaml_content)
+        # print("Got:")
+        # print(result.stdout)
+
+        assert 0 == result.returncode, result.stderr
+        assert merged_yaml_content == result.stdout
