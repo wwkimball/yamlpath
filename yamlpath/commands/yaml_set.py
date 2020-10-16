@@ -319,12 +319,12 @@ def write_output_document(args, log, yaml, yaml_data):
 
 def _try_load_input_file(args, log, yaml, change_path, new_value):
     """Attempt to load the input data file or abend on error."""
-    yaml_data = get_yaml_data(yaml, log, args.yaml_file)
-    if yaml_data is None:
-        yaml_data = build_next_node(change_path, 0, new_value)
-    elif not yaml_data and isinstance(yaml_data, bool):
+    (yaml_data, doc_loaded) = get_yaml_data(yaml, log, args.yaml_file)
+    if not doc_loaded:
         # An error message has already been logged
         sys.exit(1)
+    elif yaml_data is None:
+        yaml_data = build_next_node(change_path, 0, new_value)
     return yaml_data
 
 # pylint: disable=locally-disabled,too-many-locals,too-many-branches,too-many-statements

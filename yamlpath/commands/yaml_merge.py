@@ -232,9 +232,11 @@ def validateargs(args, log):
 
 def merge_multidoc(yaml_file, yaml_editor, log, merger, merger_primed):
     """Merge all documents within a multi-document source."""
-    exit_state = 1
-    for yaml_data in get_yaml_multidoc_data(yaml_editor, log, yaml_file):
-        if not yaml_data and isinstance(yaml_data, bool):
+    exit_state = 0
+    for (yaml_data, doc_loaded) in get_yaml_multidoc_data(
+        yaml_editor, log, yaml_file
+    ):
+        if not doc_loaded:
             # An error message has already been logged
             exit_state = 3
             break
@@ -252,8 +254,6 @@ def merge_multidoc(yaml_file, yaml_editor, log, merger, merger_primed):
             log.error(yex)
             exit_state = 7
             break
-        else:
-            exit_state = 0
 
     log.debug("yaml_merge::merge_multidoc:  Reporting status, {}."
               .format(exit_state))

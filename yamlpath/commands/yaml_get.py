@@ -156,10 +156,10 @@ def main():
     yaml = get_yaml_editor()
 
     # Attempt to open the YAML file; check for parsing errors
-    yaml_data = get_yaml_data(
+    (yaml_data, doc_loaded) = get_yaml_data(
         yaml, log,
         args.yaml_file if args.yaml_file else "-")
-    if not yaml_data and yaml_data is not None:
+    if not doc_loaded:
         # An error message has already been logged
         sys.exit(1)
 
