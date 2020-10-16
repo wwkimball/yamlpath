@@ -230,7 +230,7 @@ def validateargs(args, log):
     if has_errors:
         sys.exit(1)
 
-def merge_multidoc(yaml_file, yaml_editor, log, merger):
+def merge_multidoc(yaml_file, yaml_editor, log, merger, merger_primed):
     """Merge all documents within a multi-document source."""
     exit_state = 1
     for yaml_data in get_yaml_multidoc_data(yaml_editor, log, yaml_file):
@@ -239,7 +239,11 @@ def merge_multidoc(yaml_file, yaml_editor, log, merger):
             exit_state = 3
             break
         try:
-            merger.merge_with(yaml_data)
+            if merger_primed:
+                merger.merge_with(yaml_data)
+            else:
+                merger.data = yaml_data
+                merger_primed = True
         except MergeException as mex:
             log.error(mex)
             exit_state = 6
@@ -251,11 +255,13 @@ def merge_multidoc(yaml_file, yaml_editor, log, merger):
         else:
             exit_state = 0
 
-    log.debug("merge_multidoc:  Reporting status, {}.".format(exit_state))
+    log.debug("yaml_merge::merge_multidoc:  Reporting status, {}."
+              .format(exit_state))
     return exit_state
 
 def process_yaml_file(
-    merger: Merger, log: ConsolePrinter, rhs_yaml: Any, rhs_file: str
+    merger: Merger, log: ConsolePrinter, rhs_yaml: Any, rhs_file: str,
+    merger_primed: bool
 ):
     """Merge RHS document(s) into the prime document."""
     # Except for - (STDIN), each YAML_FILE must actually be a file; because
@@ -268,7 +274,7 @@ def process_yaml_file(
         "Processing {}...".format(
             "STDIN" if rhs_file.strip() == "-" else rhs_file))
 
-    return merge_multidoc(rhs_file, rhs_yaml, log, merger)
+    return merge_multidoc(rhs_file, rhs_yaml, log, merger, merger_primed)
 
 def write_output_document(args, log, merger, yaml_editor):
     """Save a backup of the overwrite file, if requested."""
@@ -311,6 +317,7 @@ def main():
     yaml_editor = get_yaml_editor()
     exit_state = 0
     consumed_stdin = False
+    merger_primed = False
     for yaml_file in args.yaml_files:
         if yaml_file.strip() == '-':
             consumed_stdin = True
@@ -318,9 +325,12 @@ def main():
         log.debug(
             "yaml_merge::main:  Processing file, {}".format(
                 "STDIN" if yaml_file.strip() == "-" else yaml_file))
-        proc_state = process_yaml_file(merger, log, yaml_editor, yaml_file)
+        proc_state = process_yaml_file(
+            merger, log, yaml_editor, yaml_file, merger_primed)
 
-        if proc_state != 0:
+        if proc_state == 0:
+            merger_primed = True
+        else:
             exit_state = proc_state
             break
 
@@ -330,7 +340,8 @@ def main():
         and not args.nostdin
         and not sys.stdin.isatty()
     ):
-        exit_state = process_yaml_file(merger, log, yaml_editor, '-')
+        exit_state = process_yaml_file(
+            merger, log, yaml_editor, '-', merger_primed)
 
     # Output the final document
     if exit_state == 0:
