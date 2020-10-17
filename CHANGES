@@ -1,4 +1,8 @@
 3.0.1:
+Enhancements:
+* yaml-set can now delete nodes when using --delete rather than other input
+  arguments.
+
 Bug Fixes:
 * The yaml-merge command-line tool wasn't allowing Scalar values supplied via
   STDIN -- with no structure, just bare Scalar values -- to be appended to
