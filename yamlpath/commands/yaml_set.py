@@ -473,23 +473,34 @@ def main():
             log.critical(ex, 1)
 
     # Set the requested value
-    log.verbose("Setting the new value for {}.".format(change_path))
+    log.verbose("Applying changes to {}.".format(change_path))
     if args.delete:
         # Destroy the collected nodes (from their parents) in the reverse order
-        # they were discovered.  This is necessary lest Arrays elements be
+        # they were discovered.  This is necessary lest Array elements be
         # improperly handled, leading to unwanted data loss.
         for delete_nc in reversed(change_node_coordinates):
-            #node = delete_nc.node
             parent = delete_nc.parent
             parentref = delete_nc.parentref
+            log.debug(
+                "Deleting node:",
+                prefix="yaml_set::main:  ",
+                data_header="!" * 80,
+                footer="!" * 80,
+                data=delete_nc)
 
+            # Ensure the reference exists before attempting to delete it
             if isinstance(parent, dict):
-                del parent[parentref]
+                if parentref in parent:
+                    del parent[parentref]
             elif isinstance(parent, list):
-                del parent[parentref]
+                if len(parent) > parentref:
+                    del parent[parentref]
             else:
-                # What is this node?
-                raise NotImplementedError
+                # Edge-case:  Attempt to delete from a document which is
+                # entirely one Scalar value.
+                log.critical(
+                    "Cannot delete from a document with no discernible"
+                    " structure.", 1)
     elif args.eyamlcrypt:
         # If the user hasn't specified a format, use the same format as the
         # value being replaced, if known.
