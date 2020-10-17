@@ -24,7 +24,10 @@ EOF
 	echo "...upgrading pip"
 	python -m pip install --upgrade pip >/dev/null
 	echo "...reinstalling ruamel.yaml (because pip upgrades break it)"
-	pip install --force-reinstall ruamel.yaml==0.15.96 >/dev/null
+	#pip install --force-reinstall ruamel.yaml==0.15.96 >/dev/null
+	pip install --force-reinstall ruamel.yaml >/dev/null
+	echo "...upgrading ruamel.yaml"
+	pip install --upgrade ruamel.yaml
 	echo "...upgrading testing tools"
 	pip install --upgrade mypy pytest pytest-cov pytest-console-scripts \
 		pylint coveralls pep257 >/dev/null
