@@ -84,8 +84,18 @@ def get_yaml_data(
     """
     Parse YAML/Compatible data and return the ruamel.yaml object result.
 
-    All known issues are caught and distinctively logged.  Returns None when
-    the data could not be loaded.
+    All known issues are caught and distinctively logged.
+
+    Parameters:
+    1. parser (ruamel.yaml.YAML) The YAML data parser
+    2. logger (ConsolePrinter) The logging facility
+    3. source (str) The source file to load; can be - for reading from STDIN
+
+    Returns:  Tuple[Any, bool] A tuple containing the document and its
+    success/fail state.  The first field is the parsed document; will be None
+    for empty documents and for documents which could not be read.  The second
+    field will be True when there were no errors during parsing and False,
+    otherwise.
     """
     yaml_data = None
     data_available = True
@@ -160,15 +170,20 @@ def get_yaml_multidoc_data(
     parser: Any, logger: ConsolePrinter, source: str
 ) -> Generator[Tuple[Any, bool], None, None]:
     """
-    Parse YAML/Compatible multi-docs and yield the ruamel.yaml object results.
+    Parse YAML/Compatible multi-docs and yield each ruamel.yaml object result.
 
-    All known issues are caught and distinctively logged.  Nothing is generated
-    when there is an error.
+    All known issues are caught and distinctively logged.
 
     Parameters:
     1. parser (ruamel.yaml.YAML) The YAML data parser
     2. logger (ConsolePrinter) The logging facility
     3. source (str) The source file to load; can be - for reading from STDIN
+
+    Returns:  Generator[Tuple[Any, bool], None, None] A tuple for each document
+    as it is parsed.  The first field is the parsed document; will be None for
+    empty documents and for documents which could not be read.  The second
+    field will be True when there were no errors during parsing and False,
+    otherwise.
     """
     # This code traps errors and warnings from ruamel.yaml, substituting
     # lengthy stack-dumps with specific, meaningful feedback.  Further, some
