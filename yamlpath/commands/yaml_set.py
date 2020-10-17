@@ -37,7 +37,7 @@ from yamlpath.eyaml import EYAMLProcessor
 
 # pylint: disable=locally-disabled,unused-import
 import yamlpath.patches
-from yamlpath.wrappers import ConsolePrinter
+from yamlpath.wrappers import ConsolePrinter, NodeCoords
 
 def processcli():
     """Process command-line arguments."""
@@ -171,8 +171,7 @@ def validateargs(args, log):
         has_errors = True
         log.error("There must be a YAML_FILE or STDIN document.")
 
-    # Enforce sanity
-    # * At least one of --value, --file, --stdin, or --random must be set
+    # At least one of --value, --file, --stdin, or --random must be set
     if not (
             args.value
             or args.value == ""
@@ -186,28 +185,28 @@ def validateargs(args, log):
             "Exactly one of the following must be set:  --value, --file,"
             + " --stdin, or --random")
 
-    # * --stdin cannot be used with -, explicit or implied
+    # --stdin cannot be used with -, explicit or implied
     if args.stdin and in_stream_mode:
         has_errors = True
         log.error(
             "Impossible to read both document and replacement value from"
             " STDIN!")
 
-    # * --backup has no meaning when reading the YAML file from STDIN
+    # --backup has no meaning when reading the YAML file from STDIN
     if args.backup and in_stream_mode:
         has_errors = True
         log.error(
             "The --backup|-b option applies only when reading from a file, not"
             " STDIN.")
 
-    # * When set, --saveto cannot be identical to --change
+    # When set, --saveto cannot be identical to --change
     if args.saveto and args.saveto == args.change:
         has_errors = True
         log.error(
             "Impossible to save the old value to the same YAML Path as the new"
             + " value!")
 
-    # * When set, --privatekey must be a readable file
+    # When set, --privatekey must be a readable file
     if args.privatekey and not (
             isfile(args.privatekey)
             and access(args.privatekey, R_OK)
@@ -216,7 +215,7 @@ def validateargs(args, log):
         log.error(
             "EYAML private key is not a readable file:  " + args.privatekey)
 
-    # * When set, --publickey must be a readable file
+    # When set, --publickey must be a readable file
     if args.publickey and not (
             isfile(args.publickey)
             and access(args.publickey, R_OK)
@@ -225,10 +224,14 @@ def validateargs(args, log):
         log.error(
             "EYAML public key is not a readable file:  " + args.publickey)
 
-    # * When set, --random-from must have at least two characters
+    # When set, --random-from must have at least two characters
     if len(args.random_from) < 2:
         has_errors = True
         log.error("The pool of random CHARS must have at least 2 characters.")
+
+    # When using --delete, --mustexist must also be set
+    if args.delete:
+        args.mustexist = True
 
     # When dumping the document to STDOUT, mute all non-errors
     force_verbose = args.verbose
@@ -331,6 +334,39 @@ def _try_load_input_file(args, log, yaml, change_path, new_value):
     elif yaml_data is None:
         yaml_data = build_next_node(change_path, 0, new_value)
     return yaml_data
+
+def _delete_nodes(log, delete_nodes) -> None:
+    """Recursively delete specified nodes."""
+    for delete_nc in reversed(delete_nodes):
+        node = delete_nc.node
+        parent = delete_nc.parent
+        parentref = delete_nc.parentref
+        log.debug(
+            "Deleting node:",
+            prefix="yaml_set::delete_nodes:  ",
+            data_header="!" * 80,
+            footer="!" * 80,
+            data=delete_nc)
+
+        # Ensure the reference exists before attempting to delete it
+        if isinstance(node, list) and isinstance(node[0], NodeCoords):
+            _delete_nodes(log, node)
+        elif isinstance(node, NodeCoords):
+            _delete_nodes(log, [node])
+        elif isinstance(parent, dict):
+            if parentref in parent:
+                del parent[parentref]
+        elif isinstance(parent, list):
+            if len(parent) > parentref:
+                del parent[parentref]
+        else:
+            # Edge-case:  Attempt to delete from a document which is
+            # entirely one Scalar value OR user is deleting the entire
+            # document.
+            log.critical(
+                "Cowardly refusing to delete the entire document!  Ensure"
+                " the source document is YAML, JSON, or compatible and"
+                " --change|-g is non-empty and not the document root.", 1)
 
 # pylint: disable=locally-disabled,too-many-locals,too-many-branches,too-many-statements
 def main():
@@ -478,29 +514,7 @@ def main():
         # Destroy the collected nodes (from their parents) in the reverse order
         # they were discovered.  This is necessary lest Array elements be
         # improperly handled, leading to unwanted data loss.
-        for delete_nc in reversed(change_node_coordinates):
-            parent = delete_nc.parent
-            parentref = delete_nc.parentref
-            log.debug(
-                "Deleting node:",
-                prefix="yaml_set::main:  ",
-                data_header="!" * 80,
-                footer="!" * 80,
-                data=delete_nc)
-
-            # Ensure the reference exists before attempting to delete it
-            if isinstance(parent, dict):
-                if parentref in parent:
-                    del parent[parentref]
-            elif isinstance(parent, list):
-                if len(parent) > parentref:
-                    del parent[parentref]
-            else:
-                # Edge-case:  Attempt to delete from a document which is
-                # entirely one Scalar value.
-                log.critical(
-                    "Cannot delete from a document with no discernible"
-                    " structure.", 1)
+        _delete_nodes(log, change_node_coordinates)
     elif args.eyamlcrypt:
         # If the user hasn't specified a format, use the same format as the
         # value being replaced, if known.
