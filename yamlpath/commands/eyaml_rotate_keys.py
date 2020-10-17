@@ -123,8 +123,8 @@ def main():
             log.info("Processing {}...".format(yaml_file))
 
         # Try to open the file
-        yaml_data = get_yaml_data(yaml, log, yaml_file)
-        if not yaml_data and yaml_data is not None:
+        (yaml_data, doc_loaded) = get_yaml_data(yaml, log, yaml_file)
+        if not doc_loaded:
             # An error message has already been logged
             exit_state = 3
             continue

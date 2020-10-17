@@ -8,7 +8,7 @@ import ast
 import re
 from sys import maxsize, stdin
 from distutils.util import strtobool
-from typing import Any, Generator, List, Optional
+from typing import Any, Generator, List, Optional, Tuple
 
 from ruamel.yaml import YAML
 from ruamel.yaml.parser import ParserError
@@ -78,14 +78,27 @@ def get_yaml_editor(**kwargs: Any) -> Any:
     return yaml
 
 # pylint: disable=locally-disabled,too-many-branches,too-many-statements
-def get_yaml_data(parser: Any, logger: ConsolePrinter, source: str) -> Any:
+def get_yaml_data(
+    parser: Any, logger: ConsolePrinter, source: str
+) -> Tuple[Any, bool]:
     """
     Parse YAML/Compatible data and return the ruamel.yaml object result.
 
-    All known issues are caught and distinctively logged.  Returns None when
-    the data could not be loaded.
+    All known issues are caught and distinctively logged.
+
+    Parameters:
+    1. parser (ruamel.yaml.YAML) The YAML data parser
+    2. logger (ConsolePrinter) The logging facility
+    3. source (str) The source file to load; can be - for reading from STDIN
+
+    Returns:  Tuple[Any, bool] A tuple containing the document and its
+    success/fail state.  The first field is the parsed document; will be None
+    for empty documents and for documents which could not be read.  The second
+    field will be True when there were no errors during parsing and False,
+    otherwise.
     """
     yaml_data = None
+    data_available = True
 
     # This code traps errors and warnings from ruamel.yaml, substituting
     # lengthy stack-dumps with specific, meaningful feedback.  Further, some
@@ -101,26 +114,26 @@ def get_yaml_data(parser: Any, logger: ConsolePrinter, source: str) -> Any:
                     yaml_data = parser.load(fhnd)
     except KeyboardInterrupt:
         logger.error("Aborting data load due to keyboard interrupt!")
-        yaml_data = False
+        data_available = False
     except FileNotFoundError:
         logger.error("File not found:  {}".format(source))
-        yaml_data = False
+        data_available = False
     except ParserError as ex:
         logger.error("YAML parsing error {}:  {}"
                      .format(str(ex.problem_mark).lstrip(), ex.problem))
-        yaml_data = False
+        data_available = False
     except ComposerError as ex:
         logger.error("YAML composition error {}:  {}"
                      .format(str(ex.problem_mark).lstrip(), ex.problem))
-        yaml_data = False
+        data_available = False
     except ConstructorError as ex:
         logger.error("YAML construction error {}:  {}"
                      .format(str(ex.problem_mark).lstrip(), ex.problem))
-        yaml_data = False
+        data_available = False
     except ScannerError as ex:
         logger.error("YAML syntax error {}:  {}"
                      .format(str(ex.problem_mark).lstrip(), ex.problem))
-        yaml_data = False
+        data_available = False
     except DuplicateKeyError as dke:
         omits = [
             "while constructing", "To suppress this", "readthedocs",
@@ -141,31 +154,36 @@ def get_yaml_data(parser: Any, logger: ConsolePrinter, source: str) -> Any:
                 newmsg += "\n   " + line
         logger.error("Duplicate Hash key detected:  {}"
                      .format(newmsg))
-        yaml_data = False
+        data_available = False
     except ReusedAnchorWarning as raw:
         logger.error("Duplicate YAML Anchor detected:  {}"
                      .format(
                          str(raw)
                          .replace("occurrence   ", "occurrence ")
                          .replace("\n", "\n   ")))
-        yaml_data = False
+        data_available = False
 
-    return yaml_data
+    return (yaml_data, data_available)
 
 # pylint: disable=locally-disabled,too-many-branches,too-many-statements,too-many-locals
 def get_yaml_multidoc_data(
     parser: Any, logger: ConsolePrinter, source: str
-) -> Generator[Any, None, None]:
+) -> Generator[Tuple[Any, bool], None, None]:
     """
-    Parse YAML/Compatible multi-docs and yield the ruamel.yaml object results.
+    Parse YAML/Compatible multi-docs and yield each ruamel.yaml object result.
 
-    All known issues are caught and distinctively logged.  Nothing is generated
-    when there is an error.
+    All known issues are caught and distinctively logged.
 
     Parameters:
     1. parser (ruamel.yaml.YAML) The YAML data parser
     2. logger (ConsolePrinter) The logging facility
     3. source (str) The source file to load; can be - for reading from STDIN
+
+    Returns:  Generator[Tuple[Any, bool], None, None] A tuple for each document
+    as it is parsed.  The first field is the parsed document; will be None for
+    empty documents and for documents which could not be read.  The second
+    field will be True when there were no errors during parsing and False,
+    otherwise.
     """
     # This code traps errors and warnings from ruamel.yaml, substituting
     # lengthy stack-dumps with specific, meaningful feedback.  Further, some
@@ -176,18 +194,24 @@ def get_yaml_multidoc_data(
         with warnings.catch_warnings():
             warnings.filterwarnings("error")
             if source == "-":
+                doc_yielded = False
                 for document in parser.load_all(stdin.read()):
+                    doc_yielded = True
                     logger.debug(
                         "Yielding document from {}:".format(source),
                         prefix="get_yaml_multidoc_data: ", data=document)
-                    yield document
+                    yield (document, True)
+
+                # The user sent a deliberately empty document via STDIN
+                if not doc_yielded:
+                    yield ("", True)
             else:
                 with open(source, 'r') as fhnd:
                     for document in parser.load_all(fhnd):
                         logger.debug(
                             "Yielding document from {}:".format(source),
                             prefix="get_yaml_multidoc_data: ", data=document)
-                        yield document
+                        yield (document, True)
     except KeyboardInterrupt:
         has_error = True
         logger.error("Aborting data load due to keyboard interrupt!")
@@ -240,7 +264,7 @@ def get_yaml_multidoc_data(
                          .replace("\n", "\n   ")))
 
     if has_error:
-        yield False
+        yield (None, False)
 
 def build_next_node(yaml_path: YAMLPath, depth: int,
                     value: Any = None) -> Any:

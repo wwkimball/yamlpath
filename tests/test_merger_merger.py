@@ -32,8 +32,8 @@ key: value
 
         lhs_yaml = get_yaml_editor()
         rhs_yaml = get_yaml_editor()
-        lhs_data = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
-        rhs_data = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
+        (lhs_data, lhs_loaded) = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
+        (rhs_data, rhs_loaded) = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
 
         args = SimpleNamespace()
         mc = MergerConfig(quiet_logger, args)
@@ -73,8 +73,8 @@ key: value
 
         lhs_yaml = get_yaml_editor()
         rhs_yaml = get_yaml_editor()
-        lhs_data = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
-        rhs_data = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
+        (lhs_data, lhs_loaded) = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
+        (rhs_data, rhs_loaded) = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
 
         args = SimpleNamespace()
         mc = MergerConfig(quiet_logger, args)
@@ -122,8 +122,8 @@ hash:
 
         lhs_yaml = get_yaml_editor()
         rhs_yaml = get_yaml_editor()
-        lhs_data = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
-        rhs_data = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
+        (lhs_data, lhs_loaded) = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
+        (rhs_data, rhs_loaded) = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
 
         args = SimpleNamespace()
         mc = MergerConfig(quiet_logger, args)
@@ -170,8 +170,8 @@ hash:
 
         lhs_yaml = get_yaml_editor()
         rhs_yaml = get_yaml_editor()
-        lhs_data = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
-        rhs_data = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
+        (lhs_data, lhs_loaded) = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
+        (rhs_data, rhs_loaded) = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
 
         args = SimpleNamespace(hashes="left")
         mc = MergerConfig(quiet_logger, args)
@@ -218,8 +218,8 @@ hash:
 
         lhs_yaml = get_yaml_editor()
         rhs_yaml = get_yaml_editor()
-        lhs_data = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
-        rhs_data = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
+        (lhs_data, lhs_loaded) = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
+        (rhs_data, rhs_loaded) = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
 
         args = SimpleNamespace(hashes="right")
         mc = MergerConfig(quiet_logger, args)
@@ -295,8 +295,8 @@ hash:
 
         lhs_yaml = get_yaml_editor()
         rhs_yaml = get_yaml_editor()
-        lhs_data = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
-        rhs_data = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
+        (lhs_data, lhs_loaded) = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
+        (rhs_data, rhs_loaded) = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
 
         args = SimpleNamespace(hashes="deep")
         mc = MergerConfig(quiet_logger, args)
@@ -342,8 +342,8 @@ hash:
 
         lhs_yaml = get_yaml_editor()
         rhs_yaml = get_yaml_editor()
-        lhs_data = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
-        rhs_data = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
+        (lhs_data, lhs_loaded) = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
+        (rhs_data, rhs_loaded) = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
 
         args = SimpleNamespace()
         mc = MergerConfig(quiet_logger, args)
@@ -393,8 +393,8 @@ array:
 
         lhs_yaml = get_yaml_editor()
         rhs_yaml = get_yaml_editor()
-        lhs_data = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
-        rhs_data = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
+        (lhs_data, lhs_loaded) = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
+        (rhs_data, rhs_loaded) = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
 
         args = SimpleNamespace()
         mc = MergerConfig(quiet_logger, args)
@@ -436,8 +436,8 @@ array:
 
         lhs_yaml = get_yaml_editor()
         rhs_yaml = get_yaml_editor()
-        lhs_data = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
-        rhs_data = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
+        (lhs_data, lhs_loaded) = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
+        (rhs_data, rhs_loaded) = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
 
         args = SimpleNamespace()
         mc = MergerConfig(quiet_logger, args)
@@ -478,8 +478,8 @@ array: [1, 2]
 
         lhs_yaml = get_yaml_editor()
         rhs_yaml = get_yaml_editor()
-        lhs_data = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
-        rhs_data = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
+        (lhs_data, lhs_loaded) = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
+        (rhs_data, rhs_loaded) = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
 
         args = SimpleNamespace()
         mc = MergerConfig(quiet_logger, args)
@@ -526,8 +526,8 @@ array:
 
         lhs_yaml = get_yaml_editor()
         rhs_yaml = get_yaml_editor()
-        lhs_data = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
-        rhs_data = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
+        (lhs_data, lhs_loaded) = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
+        (rhs_data, rhs_loaded) = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
 
         args = SimpleNamespace(arrays="left")
         mc = MergerConfig(quiet_logger, args)
@@ -574,8 +574,8 @@ array:
 
         lhs_yaml = get_yaml_editor()
         rhs_yaml = get_yaml_editor()
-        lhs_data = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
-        rhs_data = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
+        (lhs_data, lhs_loaded) = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
+        (rhs_data, rhs_loaded) = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
 
         args = SimpleNamespace(arrays="right")
         mc = MergerConfig(quiet_logger, args)
@@ -623,8 +623,8 @@ array:
 
         lhs_yaml = get_yaml_editor()
         rhs_yaml = get_yaml_editor()
-        lhs_data = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
-        rhs_data = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
+        (lhs_data, lhs_loaded) = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
+        (rhs_data, rhs_loaded) = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
 
         args = SimpleNamespace(arrays="unique")
         mc = MergerConfig(quiet_logger, args)
@@ -697,8 +697,8 @@ array_of_hashes:
 
         lhs_yaml = get_yaml_editor()
         rhs_yaml = get_yaml_editor()
-        lhs_data = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
-        rhs_data = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
+        (lhs_data, lhs_loaded) = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
+        (rhs_data, rhs_loaded) = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
 
         args = SimpleNamespace()
         mc = MergerConfig(quiet_logger, args)
@@ -750,8 +750,8 @@ array_of_hashes:
 
         lhs_yaml = get_yaml_editor()
         rhs_yaml = get_yaml_editor()
-        lhs_data = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
-        rhs_data = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
+        (lhs_data, lhs_loaded) = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
+        (rhs_data, rhs_loaded) = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
 
         args = SimpleNamespace(aoh="deep")
         mc = MergerConfig(quiet_logger, args)
@@ -816,8 +816,8 @@ array_of_hashes:
 
         lhs_yaml = get_yaml_editor()
         rhs_yaml = get_yaml_editor()
-        lhs_data = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
-        rhs_data = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
+        (lhs_data, lhs_loaded) = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
+        (rhs_data, rhs_loaded) = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
 
         args = SimpleNamespace(aoh="left")
         mc = MergerConfig(quiet_logger, args)
@@ -882,8 +882,8 @@ array_of_hashes:
 
         lhs_yaml = get_yaml_editor()
         rhs_yaml = get_yaml_editor()
-        lhs_data = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
-        rhs_data = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
+        (lhs_data, lhs_loaded) = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
+        (rhs_data, rhs_loaded) = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
 
         args = SimpleNamespace(aoh="right")
         mc = MergerConfig(quiet_logger, args)
@@ -946,8 +946,8 @@ array_of_hashes:
 
         lhs_yaml = get_yaml_editor()
         rhs_yaml = get_yaml_editor()
-        lhs_data = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
-        rhs_data = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
+        (lhs_data, lhs_loaded) = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
+        (rhs_data, rhs_loaded) = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
 
         args = SimpleNamespace(aoh="unique")
         mc = MergerConfig(quiet_logger, args)
@@ -1017,8 +1017,8 @@ array_of_hashes:
 
         lhs_yaml = get_yaml_editor()
         rhs_yaml = get_yaml_editor()
-        lhs_data = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
-        rhs_data = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
+        (lhs_data, lhs_loaded) = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
+        (rhs_data, rhs_loaded) = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
 
         args = SimpleNamespace(aoh="deep")
         mc = MergerConfig(quiet_logger, args)
@@ -1077,8 +1077,8 @@ array_of_hashes:
 
         lhs_yaml = get_yaml_editor()
         rhs_yaml = get_yaml_editor()
-        lhs_data = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
-        rhs_data = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
+        (lhs_data, lhs_loaded) = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
+        (rhs_data, rhs_loaded) = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
 
         args = SimpleNamespace(aoh="deep")
         mc = MergerConfig(quiet_logger, args)
@@ -1127,8 +1127,8 @@ array_of_hashes:
 
         lhs_yaml = get_yaml_editor()
         rhs_yaml = get_yaml_editor()
-        lhs_data = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
-        rhs_data = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
+        (lhs_data, lhs_loaded) = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
+        (rhs_data, rhs_loaded) = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
 
         args = SimpleNamespace(aoh="deep")
         mc = MergerConfig(quiet_logger, args)
@@ -1173,8 +1173,8 @@ merge_key: *shared_anchor
 
         lhs_yaml = get_yaml_editor()
         rhs_yaml = get_yaml_editor()
-        lhs_data = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
-        rhs_data = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
+        (lhs_data, lhs_loaded) = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
+        (rhs_data, rhs_loaded) = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
 
         args = SimpleNamespace()
         mc = MergerConfig(quiet_logger, args)
@@ -1212,8 +1212,8 @@ merge_key: *shared_anchor
 
         lhs_yaml = get_yaml_editor()
         rhs_yaml = get_yaml_editor()
-        lhs_data = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
-        rhs_data = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
+        (lhs_data, lhs_loaded) = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
+        (rhs_data, rhs_loaded) = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
 
         args = SimpleNamespace()
         mc = MergerConfig(quiet_logger, args)
@@ -1276,8 +1276,8 @@ records:
 
         lhs_yaml = get_yaml_editor()
         rhs_yaml = get_yaml_editor()
-        lhs_data = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
-        rhs_data = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
+        (lhs_data, lhs_loaded) = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
+        (rhs_data, rhs_loaded) = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
 
         args = SimpleNamespace()
         mc = MergerConfig(quiet_logger, args)
@@ -1325,8 +1325,8 @@ merge_key: *shared_anchor
 
         lhs_yaml = get_yaml_editor()
         rhs_yaml = get_yaml_editor()
-        lhs_data = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
-        rhs_data = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
+        (lhs_data, lhs_loaded) = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
+        (rhs_data, rhs_loaded) = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
 
         args = SimpleNamespace(anchors="left")
         mc = MergerConfig(quiet_logger, args)
@@ -1374,8 +1374,8 @@ merge_key: *shared_anchor
 
         lhs_yaml = get_yaml_editor()
         rhs_yaml = get_yaml_editor()
-        lhs_data = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
-        rhs_data = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
+        (lhs_data, lhs_loaded) = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
+        (rhs_data, rhs_loaded) = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
 
         args = SimpleNamespace(anchors="right")
         mc = MergerConfig(quiet_logger, args)
@@ -1427,8 +1427,8 @@ merge_key: *shared_anchor_1
 
         lhs_yaml = get_yaml_editor()
         rhs_yaml = get_yaml_editor()
-        lhs_data = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
-        rhs_data = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
+        (lhs_data, lhs_loaded) = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
+        (rhs_data, rhs_loaded) = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
 
         args = SimpleNamespace(anchors="rename")
         mc = MergerConfig(quiet_logger, args)
@@ -1491,8 +1491,8 @@ merge_into:
 
         lhs_yaml = get_yaml_editor()
         rhs_yaml = get_yaml_editor()
-        lhs_data = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
-        rhs_data = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
+        (lhs_data, lhs_loaded) = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
+        (rhs_data, rhs_loaded) = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
 
         args = SimpleNamespace(mergeat="/merge_into")
         mc = MergerConfig(quiet_logger, args)
@@ -1531,8 +1531,8 @@ merge:
 
         lhs_yaml = get_yaml_editor()
         rhs_yaml = get_yaml_editor()
-        lhs_data = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
-        rhs_data = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
+        (lhs_data, lhs_loaded) = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
+        (rhs_data, rhs_loaded) = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
 
         args = SimpleNamespace()
         mc = MergerConfig(quiet_logger, args)
@@ -1560,8 +1560,8 @@ merge:
 
         lhs_yaml = get_yaml_editor()
         rhs_yaml = get_yaml_editor()
-        lhs_data = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
-        rhs_data = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
+        (lhs_data, lhs_loaded) = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
+        (rhs_data, rhs_loaded) = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
 
         args = SimpleNamespace()
         mc = MergerConfig(quiet_logger, args)
@@ -1590,8 +1590,8 @@ merge:
 
         lhs_yaml = get_yaml_editor()
         rhs_yaml = get_yaml_editor()
-        lhs_data = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
-        rhs_data = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
+        (lhs_data, lhs_loaded) = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
+        (rhs_data, rhs_loaded) = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
 
         args = SimpleNamespace()
         mc = MergerConfig(quiet_logger, args)
@@ -1624,8 +1624,8 @@ array:
 
         lhs_yaml = get_yaml_editor()
         rhs_yaml = get_yaml_editor()
-        lhs_data = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
-        rhs_data = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
+        (lhs_data, lhs_loaded) = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
+        (rhs_data, rhs_loaded) = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
 
         args = SimpleNamespace(mergeat="/array")
         mc = MergerConfig(quiet_logger, args)
@@ -1666,8 +1666,8 @@ hash:
 
         lhs_yaml = get_yaml_editor()
         rhs_yaml = get_yaml_editor()
-        lhs_data = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
-        rhs_data = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
+        (lhs_data, lhs_loaded) = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
+        (rhs_data, rhs_loaded) = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
 
         args = SimpleNamespace(mergeat="/hash/subkey")
         mc = MergerConfig(quiet_logger, args)
@@ -1699,8 +1699,8 @@ key: value
 
         lhs_yaml = get_yaml_editor()
         rhs_yaml = get_yaml_editor()
-        lhs_data = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
-        rhs_data = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
+        (lhs_data, lhs_loaded) = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
+        (rhs_data, rhs_loaded) = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
 
         args = SimpleNamespace()
         mc = MergerConfig(quiet_logger, args)
@@ -1723,8 +1723,8 @@ subkey: another value
 
         lhs_yaml = get_yaml_editor()
         rhs_yaml = get_yaml_editor()
-        lhs_data = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
-        rhs_data = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
+        (lhs_data, lhs_loaded) = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
+        (rhs_data, rhs_loaded) = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
 
         args = SimpleNamespace(mergeat="/key[.=nonexistent]")
         mc = MergerConfig(quiet_logger, args)
@@ -1752,8 +1752,8 @@ array: [1, 2, key: val]
 
         lhs_yaml = get_yaml_editor()
         rhs_yaml = get_yaml_editor()
-        lhs_data = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
-        rhs_data = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
+        (lhs_data, lhs_loaded) = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
+        (rhs_data, rhs_loaded) = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
 
         args = SimpleNamespace(mergeat="/array")
         mc = MergerConfig(quiet_logger, args)
@@ -1809,8 +1809,8 @@ merged_hash:
 
         lhs_yaml = get_yaml_editor()
         rhs_yaml = get_yaml_editor()
-        lhs_data = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
-        rhs_data = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
+        (lhs_data, lhs_loaded) = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
+        (rhs_data, rhs_loaded) = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
 
         args = SimpleNamespace()
         mc = MergerConfig(quiet_logger, args)
@@ -1863,8 +1863,8 @@ aliases:
 
         lhs_yaml = get_yaml_editor()
         rhs_yaml = get_yaml_editor()
-        lhs_data = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
-        rhs_data = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
+        (lhs_data, lhs_loaded) = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
+        (rhs_data, rhs_loaded) = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
 
         args = SimpleNamespace(anchors="rename")
         mc = MergerConfig(quiet_logger, args)
@@ -1915,8 +1915,8 @@ aliases:
 
         lhs_yaml = get_yaml_editor()
         rhs_yaml = get_yaml_editor()
-        lhs_data = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
-        rhs_data = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
+        (lhs_data, lhs_loaded) = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
+        (rhs_data, rhs_loaded) = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
 
         args = SimpleNamespace(anchors="left")
         mc = MergerConfig(quiet_logger, args)
@@ -1984,8 +1984,8 @@ hash:
 
         lhs_yaml = get_yaml_editor()
         rhs_yaml = get_yaml_editor()
-        lhs_data = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
-        rhs_data = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
+        (lhs_data, lhs_loaded) = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
+        (rhs_data, rhs_loaded) = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
 
         args = SimpleNamespace(anchors="rename")
         mc = MergerConfig(quiet_logger, args)
@@ -2054,8 +2054,8 @@ records:
 
         lhs_yaml = get_yaml_editor()
         rhs_yaml = get_yaml_editor()
-        lhs_data = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
-        rhs_data = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
+        (lhs_data, lhs_loaded) = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
+        (rhs_data, rhs_loaded) = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
 
         args = SimpleNamespace(anchors="rename")
         mc = MergerConfig(quiet_logger, args)
@@ -2104,8 +2104,8 @@ implicit:
 
         lhs_yaml = get_yaml_editor()
         rhs_yaml = get_yaml_editor()
-        lhs_data = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
-        rhs_data = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
+        (lhs_data, lhs_loaded) = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
+        (rhs_data, rhs_loaded) = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
 
         args = SimpleNamespace(mergeat="/implicit/structure/to")
         mc = MergerConfig(quiet_logger, args)
@@ -2154,8 +2154,8 @@ implicit:
 
         lhs_yaml = get_yaml_editor()
         rhs_yaml = get_yaml_editor()
-        lhs_data = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
-        rhs_data = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
+        (lhs_data, lhs_loaded) = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
+        (rhs_data, rhs_loaded) = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
 
         args = SimpleNamespace(hashes="left", mergeat="/implicit/structure/to")
         mc = MergerConfig(quiet_logger, args)
@@ -2204,8 +2204,8 @@ implicit:
 
         lhs_yaml = get_yaml_editor()
         rhs_yaml = get_yaml_editor()
-        lhs_data = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
-        rhs_data = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
+        (lhs_data, lhs_loaded) = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
+        (rhs_data, rhs_loaded) = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
 
         args = SimpleNamespace(hashes="right", mergeat="/implicit/structure/to")
         mc = MergerConfig(quiet_logger, args)
@@ -2337,8 +2337,8 @@ force_right: true
 
         lhs_yaml = get_yaml_editor()
         rhs_yaml = get_yaml_editor()
-        lhs_data = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
-        rhs_data = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
+        (lhs_data, lhs_loaded) = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
+        (rhs_data, rhs_loaded) = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
 
         args = SimpleNamespace(config=config_file)
         mc = MergerConfig(quiet_logger, args)
@@ -2477,9 +2477,9 @@ rhs_exclusive:
         lhs_yaml = get_yaml_editor()
         rhs1_yaml = get_yaml_editor()
         rhs2_yaml = get_yaml_editor()
-        lhs_data = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
-        rhs1_data = get_yaml_data(rhs1_yaml, quiet_logger, rhs1_yaml_file)
-        rhs2_data = get_yaml_data(rhs2_yaml, quiet_logger, rhs2_yaml_file)
+        (lhs_data, lhs_loaded) = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
+        (rhs1_data, rhs1_loaded) = get_yaml_data(rhs1_yaml, quiet_logger, rhs1_yaml_file)
+        (rhs2_data, rhs2_loaded) = get_yaml_data(rhs2_yaml, quiet_logger, rhs2_yaml_file)
 
         args = SimpleNamespace(config=config_file)
         mc = MergerConfig(quiet_logger, args)

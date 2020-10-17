@@ -179,7 +179,7 @@ class Test_merger_MergerConfig():
             prop: LHS value AoH 2
         """)
         lhs_yaml = get_yaml_editor()
-        lhs_data = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
+        (lhs_data, lhs_loaded) = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
 
         mc = MergerConfig(quiet_logger, SimpleNamespace(
             config=config_file
@@ -283,7 +283,7 @@ class Test_merger_MergerConfig():
             prop: LHS value AoH 2
         """)
         lhs_yaml = get_yaml_editor()
-        lhs_data = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
+        (lhs_data, lhs_loaded) = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
 
         mc = MergerConfig(quiet_logger, SimpleNamespace(
             config=config_file
@@ -391,7 +391,7 @@ class Test_merger_MergerConfig():
             prop: LHS value AoH 2
         """)
         lhs_yaml = get_yaml_editor()
-        lhs_data = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
+        (lhs_data, lhs_loaded) = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
 
         mc = MergerConfig(quiet_logger, SimpleNamespace(
             config=config_file
@@ -427,7 +427,7 @@ class Test_merger_MergerConfig():
             prop: LHS value AoH 2
         """)
         lhs_yaml = get_yaml_editor()
-        lhs_data = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
+        (lhs_data, lhs_loaded) = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
 
         mc = MergerConfig(quiet_logger, SimpleNamespace())
         mc.prepare(lhs_data)
@@ -462,7 +462,7 @@ class Test_merger_MergerConfig():
             prop: LHS value AoH 2
         """)
         lhs_yaml = get_yaml_editor()
-        lhs_data = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
+        (lhs_data, lhs_loaded) = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
 
         mc = MergerConfig(quiet_logger, SimpleNamespace(config=config_file))
         mc.prepare(lhs_data)
@@ -499,7 +499,7 @@ class Test_merger_MergerConfig():
             prop: LHS value AoH 2
         """)
         lhs_yaml = get_yaml_editor()
-        lhs_data = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
+        (lhs_data, lhs_loaded) = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
 
         mc = MergerConfig(quiet_logger, SimpleNamespace(config=config_file))
         mc.prepare(lhs_data)
