@@ -364,9 +364,9 @@ def _delete_nodes(log, delete_nodes) -> None:
             # entirely one Scalar value OR user is deleting the entire
             # document.
             log.critical(
-                "Cowardly refusing to delete the entire document!  Ensure"
-                " the source document is YAML, JSON, or compatible and"
-                " --change|-g is non-empty and not the document root.", 1)
+                "Refusing to delete the entire document!  Ensure the source"
+                " document is YAML, JSON, or compatible and --change|-g is"
+                " non-empty and not the document root.", 1)
 
 # pylint: disable=locally-disabled,too-many-locals,too-many-branches,too-many-statements
 def main():
