@@ -8,7 +8,10 @@ with open("README.md", "r") as fh:
 setuptools.setup(
     name="yamlpath",
     version=YAMLPATH_VERSION,
-    description="Read and change YAML/Compatible data using powerful, intuitive, command-line friendly syntax",
+    description=(
+        "Command-line get/set/merge/scan/convert processors for"
+        + " YAML/JSON/Compatible data using powerful, intuitive, command-line"
+        + " friendly syntax"),
     long_description=long_description,
     long_description_content_type="text/markdown",
     classifiers=[
@@ -24,7 +27,7 @@ setuptools.setup(
     author="William W. Kimball, Jr., MBA, MSIS",
     author_email="github-yamlpath@kimballstuff.com",
     license="ISC",
-    keywords="yaml eyaml yaml-path",
+    keywords="yaml eyaml json yaml-path",
     packages=setuptools.find_packages(),
     entry_points={
         "console_scripts": [
