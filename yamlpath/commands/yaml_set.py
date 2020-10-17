@@ -80,6 +80,10 @@ def processcli():
         type=int,
         metavar="LENGTH",
         help="randomly generate a replacement value of a set length")
+    input_group.add_argument(
+        "-D", "--delete",
+        action="store_true",
+        help="delete rather than change target node(s)")
 
     parser.add_argument(
         "-F", "--format",
@@ -175,6 +179,7 @@ def validateargs(args, log):
             or args.file
             or args.stdin
             or args.random
+            or args.delete
     ):
         has_errors = True
         log.error(
@@ -220,7 +225,7 @@ def validateargs(args, log):
         log.error(
             "EYAML public key is not a readable file:  " + args.publickey)
 
-    # * When set, --random-from must have at least one character
+    # * When set, --random-from must have at least two characters
     if len(args.random_from) < 2:
         has_errors = True
         log.error("The pool of random CHARS must have at least 2 characters.")
@@ -338,6 +343,7 @@ def main():
 
     # Obtain the replacement value
     consumed_stdin = False
+    new_value = None
     if args.value or args.value == "":
         new_value = args.value
     elif args.stdin:
@@ -468,7 +474,23 @@ def main():
 
     # Set the requested value
     log.verbose("Setting the new value for {}.".format(change_path))
-    if args.eyamlcrypt:
+    if args.delete:
+        # Destroy the collected nodes (from their parents) in the reverse order
+        # they were discovered.  This is necessary lest Arrays elements be
+        # improperly handled, leading to unwanted data loss.
+        for delete_nc in reversed(change_node_coordinates):
+            #node = delete_nc.node
+            parent = delete_nc.parent
+            parentref = delete_nc.parentref
+
+            if isinstance(parent, dict):
+                del parent[parentref]
+            elif isinstance(parent, list):
+                del parent[parentref]
+            else:
+                # What is this node?
+                raise NotImplementedError
+    elif args.eyamlcrypt:
         # If the user hasn't specified a format, use the same format as the
         # value being replaced, if known.
         format_type = YAMLValueFormats.from_str(args.format)
