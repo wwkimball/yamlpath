@@ -15,9 +15,11 @@ def processcli():
     """Process command-line arguments."""
     parser = argparse.ArgumentParser(
         description="Validate YAML, JSON, and compatible files.",
-        epilog="The exit-state will report 0 when there are no issues, 1 when"
+        epilog="Except when suppressing all report output with --quiet|-q,"
+            " validation issues are printed to STDOUT (not STDERR).  Further,"
+            " the exit-state will report 0 when there are no issues, 1 when"
             " there is an issue with the supplied command-line arguments, or 2"
-            " when there are any validation issues."
+            " when validation has failed for any document."
     )
     parser.add_argument("-V", "--version", action="version",
                         version="%(prog)s " + YAMLPATH_VERSION)
@@ -36,15 +38,16 @@ def processcli():
     noise_group.add_argument(
         "-v", "--verbose",
         action="store_true",
-        help="increase output verbosity")
+        help="increase output verbosity (show valid documents)")
     noise_group.add_argument(
         "-q", "--quiet",
         action="store_true",
-        help="suppress all output except errors")
+        help="suppress all output except system errors")
 
     parser.add_argument("yaml_files", metavar="YAML_FILE", nargs="*",
-                        help="one or more YAML files to search; omit or use -"
-                        " to read from STDIN")
+                        help="one or more single- or multi-document"
+                        " YAML/JSON/compatible files to validate; omit or use"
+                        " - to read from STDIN")
 
     return parser.parse_args()
 
