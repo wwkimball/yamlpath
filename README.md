@@ -30,10 +30,11 @@ for other projects to readily employ YAML Paths.
 7. [Basic Usage](#basic-usage)
    1. [Basic Usage:  Command-Line Tools](#basic-usage--command-line-tools)
       1. [Rotate Your EYAML Keys](#rotate-your-eyaml-keys)
-      2. [Get a YAML Value](#get-a-yaml-value)
+      2. [Get a YAML/JSON/Compatible Value](#get-a-yamljsoncompatible-value)
       3. [Search For YAML Paths](#search-for-yaml-paths)
-      4. [Change a YAML Value](#change-a-yaml-value)
-      5. [Merge YAML/Compatible Files](#merge-yamlcompatible-files)
+      4. [Change a YAML/JSON/Compatible Value](#change-a-yamljsoncompatible-value)
+      5. [Merge YAML/JSON/Compatible Files](#merge-yamljsoncompatible-files)
+      6. [Validate YAML/JSON/Compatible Documents](#validate-yamljsoncompatible-documents)
    2. [Basic Usage:  Libraries](#basic-usage--libraries)
       1. [Initialize ruamel.yaml and These Helpers](#initialize-ruamelyaml-and-these-helpers)
       2. [Searching for YAML Nodes](#searching-for-yaml-nodes)
@@ -51,14 +52,15 @@ like [JSON](https://www.json.org/).  Both dot-notation (inspired by
 supported.  The [libraries](#libraries) (modules) and several [command-line tool
 implementations](#command-line-tools) are provided.  With these, you can build
 YAML Path support right into your own application or easily use its capabilities
-right away from the command-line to retrieve or update YAML/Compatible data.
+right away from the command-line to retrieve, update, merge, validate, and scan
+YAML/JSON/Compatible data.
 
 This implementation of YAML Path is a *query language* in addition to a *node
 descriptor*.  With it, you can describe or select a single precise node or
-search for any number of nodes that match some criteria.  Keys, values, and
-elements can all be searched at any number of levels within the data structure
-using the same query.  Collectors can also be used to gather and further select
-from otherwise disparate parts of the source data.
+search for any number of nodes that match some criteria.  Keys, values,
+elements, anchors, and aliases can all be searched at any number of levels
+within the data structure using the same query.  Collectors can also be used to
+gather and further select from otherwise disparate parts of the source data.
 
 The [project Wiki](https://github.com/wwkimball/yamlpath/wiki) provides a
 deeper dive into these concepts.
@@ -222,7 +224,7 @@ YAML Path understands these segment types:
   like `(...)-((...)+(...))`
 * Complex combinations:
   `some::deep.hierarchy[with!=""].'any.valid'[.=~/(yaml|json)/][data%structure].or.complexity[4].2`
-  or `/some::deep/hierarchy[with!=""]/any.valid[.=~/(yaml|json)/][data%structure]/or/complexity[4]/2`
+  or `/some::deep/hierarchy[with!=""]/any*.*valid[.=~/(yaml|json)/][data%structure]/or/compl*xity[4]/2/**`
 
 This implementation of YAML Path encourages creativity.  Use whichever notation
 and segment types that make the most sense to you in each application.
@@ -657,6 +659,32 @@ specified. For more information about YAML Paths, please visit
 https://github.com/wwkimball/yamlpath.
 ```
 
+* [yaml-validate](yamlpath/commands/yaml_validate.py)
+
+```text
+usage: yaml-validate [-h] [-V] [-S] [-d | -v | -q] [YAML_FILE [YAML_FILE ...]]
+
+Validate YAML, JSON, and compatible files.
+
+positional arguments:
+  YAML_FILE      one or more single- or multi-document YAML/JSON/compatible
+                 files to validate; omit or use - to read from STDIN
+
+optional arguments:
+  -h, --help     show this help message and exit
+  -V, --version  show program's version number and exit
+  -S, --nostdin  Do not implicitly read from STDIN, even when there are no -
+                 pseudo-files in YAML_FILEs with a non-TTY session
+  -d, --debug    output debugging details
+  -v, --verbose  increase output verbosity (show valid documents)
+  -q, --quiet    suppress all output except system errors
+
+Except when suppressing all report output with --quiet|-q, validation issues
+are printed to STDOUT (not STDERR). Further, the exit-state will report 0 when
+there are no issues, 1 when there is an issue with the supplied command-line
+arguments, or 2 when validation has failed for any document.
+```
+
 ### Libraries
 
 While there are several supporting library files like enumerations, types, and
@@ -716,7 +744,7 @@ fail to decrypt your data!**  This is *not* a problem with YAML Path.
 hiera-eyaml certificate compatibility is well outside the purview of YAML Path
 and its tools.
 
-#### Get a YAML Value
+#### Get a YAML/JSON/Compatible Value
 
 At its simplest:
 
@@ -756,7 +784,7 @@ yaml-paths \
   /some/directory/*.yaml
 ```
 
-#### Change a YAML Value
+#### Change a YAML/JSON/Compatible Value
 
 For a no-frills change to a YAML file with deeply nested Hash structures:
 
@@ -838,7 +866,7 @@ for one of `--stdin`, `--file`, or even `--random LENGTH` (use Python's
 strongest random value generator if you don't need to specify the replacement
 value in advance).
 
-#### Merge YAML/Compatible Files
+#### Merge YAML/JSON/Compatible Files
 
 At its simplest, the `yaml-merge` command accepts two or more input files and
 merges them together from left-to-right, writing the result to STDOUT:
@@ -891,6 +919,25 @@ including the ability to specify complex rules on a YAML Path basis via a
 configuration file.  Review the command's `--help` or the
 [related Wiki](https://github.com/wwkimball/yamlpath/wiki/yaml-merge) for
 more detail.
+
+#### Validate YAML/JSON/Compatible Documents
+
+Validating the structure of YAML, JSON, and compatible files is as simple as
+running:
+
+```shell
+yaml-validate /path/to/any/files.yaml /path/to/more/files.json
+```
+
+In this default configuration, the command will output no report when all input
+documents are valid.  It will also report an exit-state of zero (0).  Should
+there be any validation errors, each will be printed to the screen and the
+exit-state will be 2.  An exit-state of 1 means your command-line arguments
+were incorrect and an appropritae user error message will be displayed.
+
+When there are validation issues, the offending file-name(s) and sub-document
+index(es) (zero-based) will be displayed along with a detailed validation error
+message.
 
 ### Basic Usage:  Libraries
 
