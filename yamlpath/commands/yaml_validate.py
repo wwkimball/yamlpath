@@ -10,6 +10,27 @@ from yamlpath.common import YAMLPATH_VERSION
 from yamlpath.wrappers import ConsolePrinter
 from yamlpath.func import get_yaml_editor, get_yaml_multidoc_data
 
+class LogErrorCap:
+    """Capture only ERROR messages as a fake ConsolePrinter."""
+
+    def __init__(self):
+        """Initialize this class instance."""
+        self.lines = []
+    def info(self, message):
+        """Discard INFO messages."""
+    def verbose(self, message):
+        """Discard verbose INFO messages."""
+    def warning(self, message):
+        """Discard WARNING messages."""
+    # pylint: disable=unused-argument
+    def error(self, message, *args):
+        """Capture ERROR messages."""
+        self.lines.append(message)
+    # pylint: disable=unused-argument
+    def critical(self, message, *args):
+        """Discard critical ERROR messages."""
+    def debug(self, message, **kwargs):
+        """Discard DEBUG messages."""
 
 def processcli():
     """Process command-line arguments."""
@@ -79,27 +100,6 @@ def validateargs(args, log):
 
 def process_file(log, yaml, yaml_file):
     """Process a (potentially multi-doc) YAML file."""
-    class LogErrorCap:
-        """Capture only ERROR messages as a fake ConsolePrinter."""
-        def __init__(self):
-            self.lines = []
-        def info(self, message):
-            """Discard INFO messages."""
-        def verbose(self, message):
-            """Discard verbose INFO messages."""
-        def warning(self, message):
-            """Discard WARNING messages."""
-        # pylint: disable=unused-argument
-        def error(self, message, *args):
-            """Capture ERROR messages."""
-            self.lines.append(message)
-        # pylint: disable=unused-argument
-        def critical(self, message, *args):
-            """Capture critical ERROR messages."""
-            self.lines.append(message)
-        def debug(self, message, **kwargs):
-            """Discard DEBUG messages."""
-
     logcap = LogErrorCap()
     subdoc_index = 0
     exit_state = 0
