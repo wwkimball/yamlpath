@@ -582,7 +582,8 @@ https://github.com/wwkimball/yamlpath.
 * [yaml-set](yamlpath/commands/yaml_set.py)
 
 ```text
-usage: yaml-set [-h] [-V] -g YAML_PATH [-a VALUE | -f FILE | -i | -R LENGTH]
+usage: yaml-set [-h] [-V] -g YAML_PATH
+                [-a VALUE | -f FILE | -i | -R LENGTH | -D]
                 [-F {bare,boolean,default,dquote,float,folded,int,literal,squote}]
                 [-c CHECK] [-s YAML_PATH] [-m] [-b]
                 [-t ['.', '/', 'auto', 'dot', 'fslash']] [-M CHARS] [-e]
@@ -640,6 +641,7 @@ input options:
                         data)
   -R LENGTH, --random LENGTH
                         randomly generate a replacement value of a set length
+  -D, --delete          delete rather than change target node(s)
 
 EYAML options:
   Left unset, the EYAML keys will default to your system or user defaults.
