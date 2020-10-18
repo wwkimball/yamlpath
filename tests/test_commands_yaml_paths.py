@@ -851,7 +851,7 @@ class Test_yaml_paths():
         """
         processor = get_yaml_editor()
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
-        yaml_data = get_yaml_data(processor, quiet_logger, yaml_file)
+        (yaml_data, doc_loaded) = get_yaml_data(processor, quiet_logger, yaml_file)
         seen_anchors = []
         assertions = ["/&value", "/[1]"]
         results = []
@@ -885,7 +885,7 @@ class Test_yaml_paths():
         """
         processor = get_yaml_editor()
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
-        yaml_data = get_yaml_data(processor, quiet_logger, yaml_file)
+        (yaml_data, doc_loaded) = get_yaml_data(processor, quiet_logger, yaml_file)
         seen_anchors = []
         results = []
         for assertion, path in zip_longest(assertions, yield_children(

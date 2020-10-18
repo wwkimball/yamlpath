@@ -283,8 +283,10 @@ class ConsolePrinter:
                 for line in ConsolePrinter._debug_list(ele, prefix=ele_prefix):
                     yield line
             else:
-                yield ConsolePrinter._debug_scalar(
-                    ele, prefix=ele_prefix, print_type=True)
+                for line in ConsolePrinter._debug_dump(
+                    ele, prefix=ele_prefix, print_type=True
+                ):
+                    yield line
 
     @classmethod
     def _debug_get_kv_anchors(cls, key: Any, value: Any) -> str:

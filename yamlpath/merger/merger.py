@@ -59,6 +59,17 @@ class Merger:
         # a sensible result.
         Merger.delete_all_comments(self.data)
 
+    @property
+    def data(self) -> Any:
+        """Document data being merged into (accessor)."""
+        return self._data
+
+    @data.setter
+    def data(self, value: Any) -> None:
+        """Document data being merged into (mutator)."""
+        Merger.delete_all_comments(value)
+        self._data = value
+
     def _delete_mergeref_keys(self, data: CommentedMap) -> None:
         """
         Delete all YAML merge reference keys from a CommentedMap.

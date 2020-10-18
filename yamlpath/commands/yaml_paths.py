@@ -716,10 +716,12 @@ def process_yaml_file(
     subdoc_index = -1
 
     # pylint: disable=too-many-nested-blocks
-    for yaml_data in get_yaml_multidoc_data(yaml, log, yaml_file):
+    for (yaml_data, doc_loaded) in get_yaml_multidoc_data(
+        yaml, log, yaml_file
+    ):
         file_tally += 1
         subdoc_index += 1
-        if not yaml_data and isinstance(yaml_data, bool):
+        if not doc_loaded:
             # An error message has already been logged
             exit_state = 3
             continue
@@ -822,7 +824,6 @@ def main():
     file_tally = -1
     consumed_stdin = False
 
-    # pylint: disable=too-many-nested-blocks
     for yaml_file in args.yaml_files:
         file_tally += 1
         if yaml_file.strip() == "-":

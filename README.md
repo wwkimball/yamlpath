@@ -942,8 +942,8 @@ yaml = get_yaml_editor()
 
 # At this point, you'd load or parse your YAML file, stream, or string.  When
 # loading from file, I typically follow this pattern:
-yaml_data = get_yaml_data(yaml, log, yaml_file)
-if yaml_data is None:
+(yaml_data, doc_loaded) = get_yaml_data(yaml, log, yaml_file)
+if not doc_loaded:
     # There was an issue loading the file; an error message has already been
     # printed.
     exit(1)

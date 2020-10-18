@@ -1,3 +1,33 @@
+3.1.0:
+Enhancements:
+* yaml-set can now delete nodes when using --delete rather than other input
+  arguments.
+* A new command-line tool has been created, yaml-validate, which validates
+  YAML/JSON/compatible single- and multi-documents (files or STDIN).
+
+Bug Fixes:
+* The yaml-merge command-line tool wasn't allowing Scalar values supplied via
+  STDIN -- with no structure, just bare Scalar values -- to be appended to
+  exising Array data structures; rather, it was wholly overwriting the
+  destination, deleting all pre-exisiting elements.
+* The yaml-merge command-line tool wasn't accepting empty-strings as STDIN
+  documents; it was reporting a document-read error, instead.  This turns out
+  to be useful when you want to use yaml-merge instead of yaml-set to
+  deliberately write an empty-string value at some --mergeat location within
+  the LHS document.
+* The yaml-merge command would not accept any variation of "false" as a Scalar
+  value input; it was instead reporting a document-read error.  This turns out
+  to be useful when using yaml-merge as if it were yaml-set to write a false
+  Boolean value to the LHS document at some --mergeat location.
+
+API Changes:
+* The func.get_yaml_data and func.get_yaml_multidoc_data functions now
+  return/yield tuples.  The first field is the desired yaml_data (can be None
+  for empty documents) and the second field is a Boolean which indicates True
+  when the document loaded with no errors or False when an error occurred.
+  This is necessary in order to accept a bare "false" Scalar value as a
+  STDIN-supplied document.
+
 3.0.0:
 Enhancements:
 * Added a new YAML Path Segment Type:  *

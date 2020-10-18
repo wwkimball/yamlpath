@@ -647,3 +647,300 @@ array:
 
         assert 0 == result.returncode, result.stderr
         assert stdout_content == result.stdout
+
+    def test_delete_key(self, script_runner, tmp_path_factory):
+        yamlin = """---
+array:
+  - 0
+  - 1
+  - 2
+  - 3
+
+array_of_arrays:
+  - - 0.0
+    - 0.1
+    - 0.2
+  - - 1.0
+    - 1.1
+    - 1.2
+  - - 2.0
+    - 2.1
+    - 2.2
+  - - 3.0
+    - 3.1
+    - 3.2
+
+array_of_hashes:
+  - id: 0
+    name: zero
+  - id: 1
+    name: one
+  - id: 2
+    name: two
+  - id: 3
+    name: three
+"""
+        yamlout = """---
+array_of_arrays:
+  -   - 0.0
+      - 0.1
+      - 0.2
+  -   - 1.0
+      - 1.1
+      - 1.2
+  -   - 2.0
+      - 2.1
+      - 2.2
+  -   - 3.0
+      - 3.1
+      - 3.2
+
+array_of_hashes:
+  - id: 0
+    name: zero
+  - id: 1
+    name: one
+  - id: 2
+    name: two
+  - id: 3
+    name: three
+"""
+        yaml_file = create_temp_yaml_file(tmp_path_factory, yamlin)
+        result = script_runner.run(
+            self.command,
+            "--change=/array",
+            "--delete",
+            yaml_file
+        )
+        assert result.success, result.stderr
+
+        with open(yaml_file, 'r') as fhnd:
+            filedat = fhnd.read()
+        assert filedat == yamlout
+
+    def test_delete_from_collectors(self, script_runner, tmp_path_factory):
+        yamlin = """---
+array:
+  - 0
+  - 1
+  - 2
+  - 3
+
+array_of_arrays:
+  - - 0.0
+    - 0.1
+    - 0.2
+  - - 1.0
+    - 1.1
+    - 1.2
+  - - 2.0
+    - 2.1
+    - 2.2
+  - - 3.0
+    - 3.1
+    - 3.2
+
+array_of_hashes:
+  - id: 0
+    name: zero
+  - id: 1
+    name: one
+  - id: 2
+    name: two
+  - id: 3
+    name: three
+"""
+        yamlout = """---
+array:
+  - 1
+  - 2
+  - 3
+
+array_of_arrays:
+  -   - 0.0
+      - 0.1
+      - 0.2
+  - []
+  -   - 2.0
+      - 2.1
+      - 2.2
+  -   - 3.0
+      - 3.1
+      - 3.2
+
+array_of_hashes:
+  - id: 0
+    name: zero
+  - id: 1
+    name: one
+  - id: 3
+    name: three
+"""
+        yaml_file = create_temp_yaml_file(tmp_path_factory, yamlin)
+        result = script_runner.run(
+            self.command,
+            "--change=(/array[0])+(/array_of_arrays[1])+(/array_of_hashes[2])",
+            "--delete",
+            yaml_file
+        )
+        assert result.success, result.stderr
+
+        with open(yaml_file, 'r') as fhnd:
+            filedat = fhnd.read()
+        assert filedat == yamlout
+
+    def test_delete_from_nested_collectors(self, script_runner, tmp_path_factory):
+        yamlin = """---
+array:
+  - 0
+  - 1
+  - 2
+  - 3
+
+array_of_arrays:
+  - - 0.0
+    - 0.1
+    - 0.2
+  - - 1.0
+    - 1.1
+    - 1.2
+  - - 2.0
+    - 2.1
+    - 2.2
+  - - 3.0
+    - 3.1
+    - 3.2
+
+array_of_hashes:
+  - id: 0
+    name: zero
+  - id: 1
+    name: one
+  - id: 2
+    name: two
+  - id: 3
+    name: three
+"""
+        yamlout = """---
+array:
+  - 1
+  - 2
+  - 3
+
+array_of_arrays:
+  -   - 0.0
+      - 0.1
+      - 0.2
+  - []
+  -   - 2.0
+      - 2.1
+      - 2.2
+  -   - 3.0
+      - 3.1
+      - 3.2
+
+array_of_hashes:
+  - id: 0
+    name: zero
+  - id: 1
+    name: one
+  - id: 3
+    name: three
+"""
+        yaml_file = create_temp_yaml_file(tmp_path_factory, yamlin)
+        result = script_runner.run(
+            self.command,
+            "--change=((/array[0])+(/array_of_arrays[1])+(/array_of_hashes[2]))",
+            "--delete",
+            yaml_file
+        )
+        assert result.success, result.stderr
+
+        with open(yaml_file, 'r') as fhnd:
+            filedat = fhnd.read()
+        assert filedat == yamlout
+
+    def test_delete_from_too_too_nested_collectors(self, script_runner, tmp_path_factory):
+        yamlin = """---
+array:
+  - 0
+  - 1
+  - 2
+  - 3
+
+array_of_arrays:
+  - - 0.0
+    - 0.1
+    - 0.2
+  - - 1.0
+    - 1.1
+    - 1.2
+  - - 2.0
+    - 2.1
+    - 2.2
+  - - 3.0
+    - 3.1
+    - 3.2
+
+array_of_hashes:
+  - id: 0
+    name: zero
+  - id: 1
+    name: one
+  - id: 2
+    name: two
+  - id: 3
+    name: three
+"""
+        yamlout = """---
+array:
+  - 1
+  - 2
+  - 3
+
+array_of_arrays:
+  -   - 0.0
+      - 0.1
+      - 0.2
+  - []
+  -   - 2.0
+      - 2.1
+      - 2.2
+  -   - 3.0
+      - 3.1
+      - 3.2
+
+array_of_hashes:
+  - id: 0
+    name: zero
+  - id: 1
+    name: one
+  - id: 3
+    name: three
+"""
+        yaml_file = create_temp_yaml_file(tmp_path_factory, yamlin)
+        result = script_runner.run(
+            self.command,
+            "--change=(((/array[0])+(/array_of_arrays[1])+(/array_of_hashes[2])))",
+            "--delete",
+            yaml_file
+        )
+        assert result.success, result.stderr
+
+        with open(yaml_file, 'r') as fhnd:
+            filedat = fhnd.read()
+        assert filedat == yamlout
+
+    def test_refuse_delete_document(self, script_runner, tmp_path_factory):
+        content = """---
+key: value
+"""
+        yaml_file = create_temp_yaml_file(tmp_path_factory, content)
+        result = script_runner.run(
+            self.command,
+            "--change=/",
+            "--delete",
+            yaml_file
+        )
+        assert not result.success, result.stderr
+        assert "Refusing to delete" in result.stderr
