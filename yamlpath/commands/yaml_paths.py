@@ -824,7 +824,6 @@ def main():
     file_tally = -1
     consumed_stdin = False
 
-    # pylint: disable=too-many-nested-blocks
     for yaml_file in args.yaml_files:
         file_tally += 1
         if yaml_file.strip() == "-":
