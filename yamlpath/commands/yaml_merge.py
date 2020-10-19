@@ -22,7 +22,11 @@ from yamlpath.merger.enums import (
     HashMergeOpts,
     OutputDocTypes,
 )
-from yamlpath.func import get_yaml_multidoc_data, get_yaml_editor
+from yamlpath.func import (
+    get_yaml_multidoc_data,
+    get_yaml_editor,
+    stringify_dates,
+)
 from yamlpath.merger.exceptions import MergeException
 from yamlpath.merger import Merger, MergerConfig
 from yamlpath.exceptions import YAMLPathException
@@ -294,12 +298,12 @@ def write_output_document(args, log, merger, yaml_editor):
     if args.output:
         with open(args.output, 'w') as out_fhnd:
             if document_is_json:
-                json.dump(merger.data, out_fhnd)
+                json.dump(stringify_dates(merger.data), out_fhnd)
             else:
                 yaml_editor.dump(merger.data, out_fhnd)
     else:
         if document_is_json:
-            json.dump(merger.data, sys.stdout)
+            json.dump(stringify_dates(merger.data), sys.stdout)
         else:
             yaml_editor.dump(merger.data, sys.stdout)
 

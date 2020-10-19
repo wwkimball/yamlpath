@@ -15,6 +15,7 @@ from ruamel.yaml.comments import CommentedSeq, CommentedMap
 from yamlpath.func import (
     append_list_element,
     build_next_node,
+    stringify_dates,
 )
 from yamlpath.wrappers import ConsolePrinter, NodeCoords
 from yamlpath.merger.exceptions import MergeException
@@ -633,7 +634,7 @@ class Merger:
             # Dump the document as true JSON and reload it; this automatically
             # exlodes all aliases.
             xfer_buffer = StringIO()
-            json.dump(self.data, xfer_buffer)
+            json.dump(stringify_dates(self.data), xfer_buffer)
             xfer_buffer.seek(0)
             self.data = yaml_writer.load(xfer_buffer)
 
