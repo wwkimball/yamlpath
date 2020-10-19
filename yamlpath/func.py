@@ -8,6 +8,7 @@ import ast
 import re
 from sys import maxsize, stdin
 from distutils.util import strtobool
+from datetime import date
 from typing import Any, Generator, List, Optional, Tuple
 
 from ruamel.yaml import YAML
@@ -719,4 +720,16 @@ def unwrap_node_coords(data: Any) -> Any:
             stripped_nodes.append(unwrap_node_coords(ele))
         return stripped_nodes
 
+    return data
+
+def stringify_dates(data: Any) -> Any:
+    """Recurse through a data structure, converting all dates to strings."""
+    if isinstance(data, dict):
+        for key, val in data.items():
+            data[key] = stringify_dates(val)
+    elif isinstance(data, list):
+        for idx, ele in enumerate(data):
+            data[idx] = stringify_dates(ele)
+    elif isinstance(data, date):
+        return str(data)
     return data
