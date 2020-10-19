@@ -26,7 +26,8 @@ from yamlpath.func import (
     clone_node,
     build_next_node,
     get_yaml_data,
-    get_yaml_editor
+    get_yaml_editor,
+    stringify_dates,
 )
 from yamlpath import YAMLPath
 from yamlpath.exceptions import YAMLPathException
@@ -248,7 +249,7 @@ def save_to_json_file(args, log, yaml_data):
     """Save to a JSON file."""
     log.verbose("Writing changed data as JSON to {}.".format(args.yaml_file))
     with open(args.yaml_file, 'w') as out_fhnd:
-        json.dump(yaml_data, out_fhnd)
+        json.dump(stringify_dates(yaml_data), out_fhnd)
 
 def save_to_yaml_file(args, log, yaml_parser, yaml_data, backup_file):
     """Save to a YAML file."""
@@ -321,7 +322,7 @@ def write_output_document(args, log, yaml, yaml_data):
         if write_document_as_yaml(args.yaml_file, yaml_data):
             yaml.dump(yaml_data, sys.stdout)
         else:
-            json.dump(yaml_data, sys.stdout)
+            json.dump(stringify_dates(yaml_data), sys.stdout)
     else:
         save_to_file(args, log, yaml, yaml_data, backup_file)
 

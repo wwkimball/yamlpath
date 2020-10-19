@@ -450,6 +450,7 @@ class Processor:
                       and stripped_attrs == val.anchor.value):
                     yield NodeCoords(val, data, key)
 
+    # pylint: disable=too-many-statements
     def _get_nodes_by_search(
             self, data: Any, terms: SearchTerms, **kwargs: Any
     ) -> Generator[NodeCoords, None, None]:
@@ -487,6 +488,8 @@ class Processor:
         method = terms.method
         attr = terms.attribute
         term = terms.term
+        matches = False
+        desc_path = YAMLPath(attr)
         if isinstance(data, list):
             if not traverse_lists:
                 return
@@ -496,6 +499,14 @@ class Processor:
                     matches = search_matches(method, term, ele)
                 elif isinstance(ele, dict) and attr in ele:
                     matches = search_matches(method, term, ele[attr])
+                else:
+                    # Attempt a descendant search
+                    for desc_node in self._get_required_nodes(
+                        ele, desc_path, 0
+                    ):
+                        matches = search_matches(
+                            method, term, desc_node.node)
+                        break
 
                 if (matches and not invert) or (invert and not matches):
                     self.logger.debug(
@@ -527,6 +538,17 @@ class Processor:
                         data=value,
                         prefix="Processor::_get_nodes_by_search:  ")
                     yield NodeCoords(value, data, attr)
+
+            else:
+                # Attempt a descendant search
+                for desc_node in self._get_required_nodes(
+                    data, desc_path, 0, parent=parent, parentref=parentref
+                ):
+                    matches = search_matches(method, term, desc_node.node)
+                    break
+
+                if (matches and not invert) or (invert and not matches):
+                    yield NodeCoords(data, parent, parentref)
 
         else:
             # Check the passed data itself for a match

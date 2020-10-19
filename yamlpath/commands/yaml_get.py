@@ -15,7 +15,12 @@ from os import access, R_OK
 from os.path import isfile
 
 from yamlpath.common import YAMLPATH_VERSION
-from yamlpath.func import get_yaml_data, get_yaml_editor, unwrap_node_coords
+from yamlpath.func import (
+    get_yaml_data,
+    get_yaml_editor,
+    stringify_dates,
+    unwrap_node_coords,
+)
 from yamlpath import YAMLPath
 from yamlpath.exceptions import YAMLPathException
 from yamlpath.eyaml.exceptions import EYAMLCommandException
@@ -181,7 +186,7 @@ def main():
 
     for node in discovered_nodes:
         if isinstance(node, (dict, list)):
-            print(json.dumps(node))
+            print(json.dumps(stringify_dates(node)))
         else:
             print("{}".format(str(node).replace("\n", r"\n")))
 

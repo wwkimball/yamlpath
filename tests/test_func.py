@@ -22,6 +22,7 @@ from yamlpath.func import (
     get_yaml_editor,
     get_yaml_multidoc_data,
     make_new_node,
+    stringify_dates,
     wrap_type,
 )
 
@@ -355,3 +356,13 @@ class Test_func():
 
         with pytest.raises(AttributeError):
             _ = create_searchterms_from_pathattributes("nothing-to-see-here")
+
+
+    ###
+    # stringify_dates
+    ###
+    def test_stringify_dates(self):
+        from datetime import date
+        yaml_safe_data = { "string": "Value", "number": 1, "date": date(2020, 10, 19) }
+        json_safe_data = { "string": "Value", "number": 1, "date": "2020-10-19" }
+        assert stringify_dates(yaml_safe_data) == json_safe_data

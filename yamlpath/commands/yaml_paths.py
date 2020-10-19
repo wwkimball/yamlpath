@@ -24,6 +24,7 @@ from yamlpath.func import (
     get_yaml_editor,
     search_matches,
     search_anchor,
+    stringify_dates,
 )
 from yamlpath.exceptions import YAMLPathException
 from yamlpath.enums import (
@@ -699,7 +700,7 @@ def print_results(
             for node_coordinate in processor.get_nodes(result, mustexist=True):
                 node = node_coordinate.node
                 if isinstance(node, (dict, list)):
-                    resline += "{}".format(json.dumps(node))
+                    resline += "{}".format(json.dumps(stringify_dates(node)))
                 else:
                     resline += "{}".format(str(node).replace("\n", r"\n"))
                 break

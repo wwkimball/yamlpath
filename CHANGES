@@ -1,3 +1,16 @@
+3.2.0:
+Enhancements:
+* Expanded YAML Path Search Expressions such that the OPERAND of a Search
+  Expression may be a sub-YAML Path.  This enables searching descendent nodes
+  -- without moving the document pointer -- to yield ancestors with matching
+  descendants.  This has more utility when searching against Arrays-of-Hashes.
+
+Bug Fixes:
+* Date values in YAML could not be written to JSON streams; the JSON renderer
+  would generate an incompatibility error.  Now, dates are written as Strings
+  to JSON.  This affected: yaml-get, yaml-set (in stream mode), yaml-merge, and
+  yaml-paths.
+
 3.1.0:
 Enhancements:
 * yaml-set can now delete nodes when using --delete rather than other input
