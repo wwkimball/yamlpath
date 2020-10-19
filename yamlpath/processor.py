@@ -487,6 +487,7 @@ class Processor:
         method = terms.method
         attr = terms.attribute
         term = terms.term
+        matches = False
         if isinstance(data, list):
             if not traverse_lists:
                 return
