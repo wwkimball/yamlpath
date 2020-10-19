@@ -501,18 +501,12 @@ class Processor:
                     matches = search_matches(method, term, ele[attr])
                 else:
                     # Attempt a descendant search
-                    try:
-                        for desc_node in self._get_required_nodes(
-                            ele, desc_path, 0
-                        ):
-                            matches = search_matches(
-                                method, term, desc_node.node)
-                            break
-                    except YAMLPathException as ype:
-                        matches = False
-                        self.logger.warning(
-                            "Descendant search YAML Path error: {}"
-                            .format(ype))
+                    for desc_node in self._get_required_nodes(
+                        ele, desc_path, 0
+                    ):
+                        matches = search_matches(
+                            method, term, desc_node.node)
+                        break
 
                 if (matches and not invert) or (invert and not matches):
                     self.logger.debug(
@@ -547,17 +541,11 @@ class Processor:
 
             else:
                 # Attempt a descendant search
-                try:
-                    for desc_node in self._get_required_nodes(
-                        data, desc_path, 0, parent=parent, parentref=parentref
-                    ):
-                        matches = search_matches(method, term, desc_node.node)
-                        break
-                except YAMLPathException as ype:
-                    matches = False
-                    self.logger.warning(
-                        "Descendant search YAML Path error: {}"
-                        .format(ype))
+                for desc_node in self._get_required_nodes(
+                    data, desc_path, 0, parent=parent, parentref=parentref
+                ):
+                    matches = search_matches(method, term, desc_node.node)
+                    break
 
                 if (matches and not invert) or (invert and not matches):
                     yield NodeCoords(data, parent, parentref)
