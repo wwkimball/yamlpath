@@ -1,4 +1,5 @@
 import pytest
+from datetime import date
 
 from ruamel.yaml import YAML
 
@@ -68,6 +69,8 @@ class Test_Processor():
         ("/**/Hey*", ["Hey, Number Two!"], True, None),
         ("lots_of_names.**.name", ["Name 1-1", "Name 2-1", "Name 3-1", "Name 4-1", "Name 4-2", "Name 4-3", "Name 4-4"], True, None),
         ("/array_of_hashes/**", [1, "one", 2, "two"], True, None),
+        ("products_hash.*[dimensions.weight==4].(availability.start.date)+(availability.stop.date)", [[date(2020, 8, 1), date(2020, 9, 25)], [date(2020, 1, 1), date(2020, 1, 1)]], True, None),
+        ("products_array[dimensions.weight==4].product", ["doohickey", "widget"], True, None),
     ])
     def test_get_nodes(self, quiet_logger, yamlpath, results, mustexist, default):
         yamldata = """---
@@ -124,6 +127,90 @@ lots_of_names:
           tag: Tag 4-4
           name: Name 4-4
           other: Other 4-4
+
+###############################################################################
+# For descendent searching:
+products_hash:
+  doodad:
+    availability:
+      start:
+        date: 2020-10-10
+        time: 08:00
+      stop:
+        date: 2020-10-29
+        time: 17:00
+    dimensions:
+      width: 5
+      height: 5
+      depth: 5
+      weight: 10
+  doohickey:
+    availability:
+      start:
+        date: 2020-08-01
+        time: 10:00
+      stop:
+        date: 2020-09-25
+        time: 10:00
+    dimensions:
+      width: 1
+      height: 2
+      depth: 3
+      weight: 4
+  widget:
+    availability:
+      start:
+        date: 2020-01-01
+        time: 12:00
+      stop:
+        date: 2020-01-01
+        time: 16:00
+    dimensions:
+      width: 9
+      height: 10
+      depth: 1
+      weight: 4
+products_array:
+  - product: doodad
+    availability:
+      start:
+        date: 2020-10-10
+        time: 08:00
+      stop:
+        date: 2020-10-29
+        time: 17:00
+    dimensions:
+      width: 5
+      height: 5
+      depth: 5
+      weight: 10
+  - product: doohickey
+    availability:
+      start:
+        date: 2020-08-01
+        time: 10:00
+      stop:
+        date: 2020-09-25
+        time: 10:00
+    dimensions:
+      width: 1
+      height: 2
+      depth: 3
+      weight: 4
+  - product: widget
+    availability:
+      start:
+        date: 2020-01-01
+        time: 12:00
+      stop:
+        date: 2020-01-01
+        time: 16:00
+    dimensions:
+      width: 9
+      height: 10
+      depth: 1
+      weight: 4
+###############################################################################
 """
         yaml = YAML()
         processor = Processor(quiet_logger, yaml.load(yamldata))
