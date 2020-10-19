@@ -195,6 +195,9 @@ YAML Path understands these segment types:
     `"` must be escaped lest they be deemed unmatched demarcation pairings)
   * Multi-level matching: `hash[name%admin].pass[encrypted!^ENC\[]` or
     `/hash[name%admin]/pass[encrypted!^ENC\[]`
+  * Descendent node searches:
+    `structure[has.descendant.with=something].has.another.field` or
+    `/structure[/has/descendant/with=something]/has/another/field`
 * Array element searches with all of the search methods above via `.` (yields
   any matching elements): `array[.>9000]`
 * Hash key-name searches with all of the search methods above via `.` (yields
