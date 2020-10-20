@@ -2,36 +2,14 @@
 Implement YAML document Differ.
 
 Copyright 2020 William W. Kimball, Jr. MBA MSIS
-
-DEVELOPMENT NOTES
-
-Desired Output:
-$ yaml-diff file1 file2
-path.to.CHANGE:
-< ORIGINAL NODE
----
-> NEW NODE
-
-path.to.DELETION:
-< ORIGINAL NODE
-
-path.to.ADDITION:
-> NEW NODE
-
-$ echo $?
-1
-
-$ yaml-diff file1 file1
-
-$ echo $?
-0
 """
-from typing import Any, Generator
+from itertools import zip_longest
+from typing import Any, Generator, List
 
+from yamlpath import YAMLPath
 from yamlpath.wrappers import ConsolePrinter
 from .enums.diffactions import DiffActions
 from .diffentry import DiffEntry
-from .difflist import DiffList
 
 
 class Differ:
@@ -50,93 +28,141 @@ class Differ:
         Raises:  N/A
         """
         self.logger: ConsolePrinter = logger
-        self._diffs: DiffList = DiffList()
         self._data: Any = document
-        self._prime_diff(document)
+        self._diffs: List[DiffEntry] = []
 
     def compare_to(self, document: Any) -> None:
         """Perform the diff calculation."""
-        if document is None and self._data is not None:
-            # Report deletion of every node
-            pass
-        elif self._data is None and document is not None:
-            # Report addition of every node
-            pass
-        elif isinstance(document, dict):
-            self._diff_dicts(document)
-        elif isinstance(document, list):
-            self._diff_lists(document)
-        else:
-            self._diff_scalars(document)
+        self._diffs: List[DiffEntry] = []
+        self._diff_between(YAMLPath(), self._data, document)
 
     def get_report(self) -> Generator[str, None, None]:
         """Get the diff report."""
-        for entry in self._diffs.get_all():
+        for entry in self._diffs:
             yield str(entry)
 
-    def _prime_diff(self, doc: Any) -> None:
-        """Prime the diff report based on the initial document."""
-        if isinstance(doc, dict):
-            self.logger.debug("Differ::_prime_diff:  Adding an empty Hash.")
-            self._diffs.append(DiffEntry(DiffActions.ADD, {}))
-            self._diff_dicts(doc)
-        elif isinstance(doc, list):
-            self.logger.debug("Differ::_prime_diff:  Adding an empty Array.")
-            self._diffs.append(DiffEntry(DiffActions.ADD, []))
-            self._diff_lists(doc)
+    def _diff_between(self, path: YAMLPath, lhs: Any, rhs: Any) -> None:
+        """Calculate the differences between two document nodes."""
+        # If the roots are different, delete all LHS and add all RHS.
+        lhs_is_dict = isinstance(lhs, dict)
+        lhs_is_list = isinstance(lhs, list)
+        lhs_is_scalar = not (lhs_is_dict or lhs_is_list)
+        rhs_is_dict = isinstance(rhs, dict)
+        rhs_is_list = isinstance(rhs, list)
+        rhs_is_scalar = not (rhs_is_dict or rhs_is_list)
+        same_types = (
+            (lhs_is_dict and rhs_is_dict)
+            or (lhs_is_list and rhs_is_list)
+            or (lhs_is_scalar and rhs_is_scalar)
+        )
+        if same_types:
+            if lhs_is_dict:
+                self._diff_dicts(path, lhs, rhs)
+            elif lhs_is_list:
+                self._diff_lists(path, lhs, rhs)
+            else:
+                self._diff_scalars(path, lhs, rhs)
         else:
-            self.logger.debug(
-                "Adding a populated Scalar:", prefix="Differ::_prime_diff:  ",
-                data=doc)
-            self._diffs.append(DiffEntry(DiffActions.ADD, doc))
+            if lhs_is_dict:
+                for key in lhs:
+                    next_path = path.append(key)
+                    self._diffs.append(
+                        DiffEntry(DiffActions.DELETE, next_path, key, None)
+                    )
+                if rhs_is_list:
+                    for idx, ele in enumerate(rhs):
+                        next_path = path.append("[{}]".format(idx))
+                        self._diffs.append(
+                            DiffEntry(DiffActions.ADD, next_path, None, ele)
+                        )
+                else:
+                    self._diffs.append(
+                        DiffEntry(DiffActions.ADD, path, None, rhs)
+                    )
+            elif lhs_is_list:
+                for idx, _ in enumerate(rhs):
+                    next_path = path.append("[{}]".format(idx))
+                    self._diffs.append(
+                        DiffEntry(DiffActions.DELETE, next_path, idx, None)
+                    )
+                if rhs_is_dict:
+                    for key, val in rhs.items():
+                        next_path = path.append(key)
+                        self._diffs.append(
+                            DiffEntry(DiffActions.ADD, next_path, None, val)
+                        )
+                else:
+                    self._diffs.append(
+                        DiffEntry(DiffActions.ADD, path, None, rhs)
+                    )
+            else:
+                self._diffs.append(
+                    DiffEntry(DiffActions.DELETE, path, lhs, None)
+                )
+                if rhs_is_list:
+                    for idx, ele in enumerate(rhs):
+                        next_path = path.append("[{}]".format(idx))
+                        self._diffs.append(
+                            DiffEntry(DiffActions.ADD, next_path, None, ele)
+                        )
+                else:
+                    for key, val in rhs.items():
+                        next_path = path.append(key)
+                        self._diffs.append(
+                            DiffEntry(DiffActions.ADD, next_path, None, val)
+                        )
 
-    def _diff_dicts(self, rhs: dict) -> None:
+    def _diff_dicts(self, path: YAMLPath, lhs: dict, rhs: dict) -> None:
         """Diff two dicts."""
-        if rhs is None:
-            return
+        lhs_keys = set(lhs)
+        rhs_keys = set(rhs)
 
-        for key, val in rhs.items():
-            if isinstance(val, dict):
-                self.logger.debug(
-                    "Differ::_diff_dicts:  Adding an empty Hash for key, {}."
-                    .format(key))
-                self._diffs.append(DiffEntry(DiffActions.ADD, {key: {}}))
-                self._diff_dicts(val)
-            elif isinstance(val, list):
-                self.logger.debug(
-                    "Differ::_diff_dicts:  Adding an empty Array for key, {}."
-                    .format(key))
-                self._diffs.append(DiffEntry(DiffActions.ADD, {key: []}))
-                self._diff_lists(val)
-            else:
-                self.logger.debug(
-                    "Adding a populated Scalar for key, {}.".format(key),
-                    prefix="Differ::_diff_dicts:  ", data=val)
-                self._diffs.append(DiffEntry(DiffActions.ADD, {key: val}))
+        # Look for deleted keys
+        for key in lhs_keys - rhs_keys:
+            next_path = path.append(key)
+            self._diffs.append(
+                DiffEntry(DiffActions.DELETE, next_path, key, None)
+            )
 
-    def _diff_lists(self, rhs: Any) -> None:
+        # Look for new keys
+        for key in rhs_keys - lhs_keys:
+            next_path = path.append(key)
+            self._diffs.append(
+                DiffEntry(DiffActions.ADD, next_path, None, key)
+            )
+
+        # Recurse into the rest
+        for key, val in [
+            (key, val) for key, val in rhs.items()
+            if key in lhs and key in rhs
+        ]:
+            next_path = path.append(key)
+            self._diff_between(next_path, lhs[key], val)
+
+    def _diff_lists(self, path: YAMLPath, lhs: list, rhs: list) -> None:
         """Diff two lists."""
-        if rhs is None:
-            return
-
-        for idx, ele in enumerate(rhs):
-            if isinstance(ele, dict):
-                self.logger.debug(
-                    "Differ::_diff_lists:  Adding an empty Hash for element,"
-                    " {}.".format(idx))
-                self._diffs.append(DiffEntry(DiffActions.ADD, [idx, {}]))
-                self._diff_dicts(ele)
-            elif isinstance(ele, list):
-                self.logger.debug(
-                    "Differ::_diff_lists:  Adding an empty Array for element,"
-                    " {}.".format(idx))
-                self._diffs.append(DiffEntry(DiffActions.ADD, [idx, []]))
-                self._diff_lists(ele)
+        idx = 0
+        for (lele, rele) in zip_longest(lhs, rhs):
+            next_path = path.append("[{}]".format(idx))
+            idx += 1
+            if lele is None:
+                self._diffs.append(
+                    DiffEntry(DiffActions.ADD, path, None, rele)
+                )
+            elif rele is None:
+                self._diffs.append(
+                    DiffEntry(DiffActions.DELETE, path, lele, None)
+                )
             else:
-                self.logger.debug(
-                    "Adding a populated Scalar for element, {}.".format(idx),
-                    prefix="Differ::_diff_lists:  ", data=ele)
-                self._diffs.append(DiffEntry(DiffActions.ADD, [idx, ele]))
+                self._diff_between(next_path, lele, rele)
 
-    def _diff_scalars(self, rhs: Any) -> None:
+    def _diff_scalars(self, path: YAMLPath, lhs: Any, rhs: Any) -> None:
         """Diff two Scalar values."""
+        if lhs == rhs:
+            self._diffs.append(
+                DiffEntry(DiffActions.SAME, path, lhs, rhs)
+            )
+        else:
+            self._diffs.append(
+                DiffEntry(DiffActions.CHANGE, path, lhs, rhs)
+            )

@@ -2,6 +2,29 @@
 Calculate the differences between two YAML/JSON/Compatible documents.
 
 Copyright 2020 William W. Kimball, Jr. MBA MSIS
+
+DEVELOPMENT NOTES
+
+Desired Output:
+$ yaml-diff file1 file2
+path.to.CHANGE:
+< ORIGINAL NODE
+---
+> NEW NODE
+
+path.to.DELETION:
+< ORIGINAL NODE
+
+path.to.ADDITION:
+> NEW NODE
+
+$ echo $?
+1
+
+$ yaml-diff file1 file1
+
+$ echo $?
+0
 """
 import sys
 import argparse
@@ -84,15 +107,23 @@ def main():
     validateargs(args, log)
     exit_state = 0
     lhs_file = args.yaml_files[0]
-    #rhs_file = args.yaml_files[1] if len(args.yaml_files) > 1 else "-"
-    yaml = get_yaml_editor()
+    rhs_file = args.yaml_files[1] if len(args.yaml_files) > 1 else "-"
+    lhs_yaml = get_yaml_editor()
+    rhs_yaml = get_yaml_editor()
 
-    (yaml_data, doc_loaded) = get_yaml_data(yaml, log, lhs_file)
+    (lhs_document, doc_loaded) = get_yaml_data(lhs_yaml, log, lhs_file)
     if not doc_loaded:
         # An error message has already been logged
         sys.exit(1)
 
-    diff = Differ(log, yaml_data)
+    (rhs_document, doc_loaded) = get_yaml_data(rhs_yaml, log, rhs_file)
+    if not doc_loaded:
+        # An error message has already been logged
+        sys.exit(1)
+
+    diff = Differ(log, lhs_document)
+    diff.compare_to(rhs_document)
+
     for line in diff.get_report():
         log.info(line)
 
