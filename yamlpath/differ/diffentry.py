@@ -34,3 +34,8 @@ class DiffEntry:
         else:
             output += "= {}".format(self._lhs)
         return output
+
+    @property
+    def action(self) -> DiffActions:
+        """Get the action of this difference (read-only)."""
+        return self._action

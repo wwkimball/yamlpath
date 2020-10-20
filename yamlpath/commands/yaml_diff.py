@@ -33,7 +33,7 @@ from yamlpath.common import YAMLPATH_VERSION
 from yamlpath.wrappers import ConsolePrinter
 from yamlpath.func import get_yaml_data, get_yaml_editor
 from yamlpath.differ import Differ
-
+from yamlpath.differ.enums import DiffActions
 
 def processcli():
     """Process command-line arguments."""
@@ -46,11 +46,19 @@ def processcli():
     parser.add_argument("-V", "--version", action="version",
                         version="%(prog)s " + YAMLPATH_VERSION)
 
+    sameness_group = parser.add_mutually_exclusive_group()
+    sameness_group.add_argument(
+        "-s", "--same", action="store_true",
+        help="Show all nodes which are the same in addition to differences")
+    sameness_group.add_argument(
+        "-o", "--onlysame", action="store_true",
+        help="Show only nodes which are the same, still reporting that"
+             " differences exist -- when they do -- with an exit-state of 1")
+
     parser.add_argument(
         "-S", "--nostdin", action="store_true",
-        help=(
-            "Do not implicitly read from STDIN, even when there are\n"
-            "no - pseudo-files in YAML_FILEs with a non-TTY session"))
+        help="Do not implicitly read from STDIN, even when there are no -"
+             " pseudo-files in YAML_FILEs with a non-TTY session")
 
     noise_group = parser.add_mutually_exclusive_group()
     noise_group.add_argument(
@@ -100,6 +108,23 @@ def validateargs(args, log):
     if has_errors:
         sys.exit(1)
 
+def print_report(log, args, diff):
+    """Print user-customized report."""
+    changes_found = False
+    for entry in diff.get_report():
+        is_different = entry.action is not DiffActions.SAME
+        if is_different:
+            changes_found = True
+
+        if (
+            (is_different and not args.onlysame)
+            or (args.onlysame and not is_different)
+            or args.same
+        ):
+            log.info(entry)
+
+    return changes_found
+
 def main():
     """Main code."""
     args = processcli()
@@ -123,10 +148,7 @@ def main():
 
     diff = Differ(log, lhs_document)
     diff.compare_to(rhs_document)
-
-    for line in diff.get_report():
-        log.info(line)
-
+    exit_state = 1 if print_report(log, args, diff) else 0
     sys.exit(exit_state)
 
 if __name__ == "__main__":

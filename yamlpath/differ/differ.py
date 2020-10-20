@@ -33,13 +33,13 @@ class Differ:
 
     def compare_to(self, document: Any) -> None:
         """Perform the diff calculation."""
-        self._diffs: List[DiffEntry] = []
+        self._diffs.clear()
         self._diff_between(YAMLPath(), self._data, document)
 
-    def get_report(self) -> Generator[str, None, None]:
+    def get_report(self) -> Generator[DiffEntry, None, None]:
         """Get the diff report."""
         for entry in self._diffs:
-            yield str(entry)
+            yield entry
 
     def _diff_between(self, path: YAMLPath, lhs: Any, rhs: Any) -> None:
         """Calculate the differences between two document nodes."""
@@ -147,11 +147,11 @@ class Differ:
             idx += 1
             if lele is None:
                 self._diffs.append(
-                    DiffEntry(DiffActions.ADD, path, None, rele)
+                    DiffEntry(DiffActions.ADD, next_path, None, rele)
                 )
             elif rele is None:
                 self._diffs.append(
-                    DiffEntry(DiffActions.DELETE, path, lele, None)
+                    DiffEntry(DiffActions.DELETE, next_path, lele, None)
                 )
             else:
                 self._diff_between(next_path, lele, rele)
