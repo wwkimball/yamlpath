@@ -24,7 +24,7 @@ class DiffEntry:
     def __str__(self):
         """Get the string representation of this object."""
         diffaction = self._action
-        output = "{}\n".format(self._path)
+        output = "{} {}\n".format(diffaction, self._path)
         if diffaction is DiffActions.ADD:
             output += "> {}".format(self._rhs)
         elif diffaction is DiffActions.CHANGE:

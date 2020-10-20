@@ -27,3 +27,15 @@ class DiffActions(Enum):
     CHANGE = auto()
     DELETE = auto()
     SAME = auto()
+
+    def __str__(self) -> str:
+        diff_type = ""
+        if self is DiffActions.ADD:
+            diff_type = "a"
+        elif self is DiffActions.CHANGE:
+            diff_type = "c"
+        elif self is DiffActions.DELETE:
+            diff_type = "d"
+        else:
+            diff_type = "s"
+        return diff_type
