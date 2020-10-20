@@ -65,13 +65,13 @@ class Differ:
         else:
             if lhs_is_dict:
                 for key in lhs:
-                    next_path = path.append(key)
+                    next_path = YAMLPath(path).append(key)
                     self._diffs.append(
                         DiffEntry(DiffActions.DELETE, next_path, key, None)
                     )
                 if rhs_is_list:
                     for idx, ele in enumerate(rhs):
-                        next_path = path.append("[{}]".format(idx))
+                        next_path = YAMLPath(path).append("[{}]".format(idx))
                         self._diffs.append(
                             DiffEntry(DiffActions.ADD, next_path, None, ele)
                         )
@@ -81,13 +81,13 @@ class Differ:
                     )
             elif lhs_is_list:
                 for idx, _ in enumerate(rhs):
-                    next_path = path.append("[{}]".format(idx))
+                    next_path = YAMLPath(path).append("[{}]".format(idx))
                     self._diffs.append(
                         DiffEntry(DiffActions.DELETE, next_path, idx, None)
                     )
                 if rhs_is_dict:
                     for key, val in rhs.items():
-                        next_path = path.append(key)
+                        next_path = YAMLPath(path).append(key)
                         self._diffs.append(
                             DiffEntry(DiffActions.ADD, next_path, None, val)
                         )
@@ -101,13 +101,13 @@ class Differ:
                 )
                 if rhs_is_list:
                     for idx, ele in enumerate(rhs):
-                        next_path = path.append("[{}]".format(idx))
+                        next_path = YAMLPath(path).append("[{}]".format(idx))
                         self._diffs.append(
                             DiffEntry(DiffActions.ADD, next_path, None, ele)
                         )
                 else:
                     for key, val in rhs.items():
-                        next_path = path.append(key)
+                        next_path = YAMLPath(path).append(key)
                         self._diffs.append(
                             DiffEntry(DiffActions.ADD, next_path, None, val)
                         )
@@ -119,14 +119,14 @@ class Differ:
 
         # Look for deleted keys
         for key in lhs_keys - rhs_keys:
-            next_path = path.append(key)
+            next_path = YAMLPath(path).append(key)
             self._diffs.append(
                 DiffEntry(DiffActions.DELETE, next_path, key, None)
             )
 
         # Look for new keys
         for key in rhs_keys - lhs_keys:
-            next_path = path.append(key)
+            next_path = YAMLPath(path).append(key)
             self._diffs.append(
                 DiffEntry(DiffActions.ADD, next_path, None, key)
             )
@@ -136,14 +136,14 @@ class Differ:
             (key, val) for key, val in rhs.items()
             if key in lhs and key in rhs
         ]:
-            next_path = path.append(key)
+            next_path = YAMLPath(path).append(key)
             self._diff_between(next_path, lhs[key], val)
 
     def _diff_lists(self, path: YAMLPath, lhs: list, rhs: list) -> None:
         """Diff two lists."""
         idx = 0
         for (lele, rele) in zip_longest(lhs, rhs):
-            next_path = path.append("[{}]".format(idx))
+            next_path = YAMLPath(path).append("[{}]".format(idx))
             idx += 1
             if lele is None:
                 self._diffs.append(
