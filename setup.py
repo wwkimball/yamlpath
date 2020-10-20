@@ -37,6 +37,7 @@ setuptools.setup(
             "yaml-set = yamlpath.commands.yaml_set:main",
             "yaml-merge = yamlpath.commands.yaml_merge:main",
             "yaml-validate = yamlpath.commands.yaml_validate:main",
+            "yaml-diff = yamlpath.commands.yaml_diff:main",
         ]
     },
     python_requires=">3.6.0",
