@@ -61,15 +61,14 @@ class DiffEntry:
         lhs_line = float(lhs_lc)
         rhs_line = float(rhs_lc)
         if lhs_line < rhs_line:
-            lhs_lc = rhs_lc
-            rhs_lc = "0.0"
+            lhs_lc, rhs_lc = rhs_lc, lhs_lc
 
         self._index = "{}.{}".format(lhs_lc, rhs_lc)
 
     def __str__(self) -> str:
         """Get the string representation of this object."""
         diffaction = self._action
-        output = "{}{} {}\n".format(diffaction, self._index, self._path)
+        output = "{} {}\n".format(diffaction, self._path)
         if diffaction is DiffActions.ADD:
             output += "> {}".format(DiffEntry._jsonify_data(self._rhs))
         elif diffaction is DiffActions.CHANGE:
