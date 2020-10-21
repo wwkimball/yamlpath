@@ -47,14 +47,16 @@ class Differ:
             for key, val in data.items():
                 next_path = YAMLPath(path).append(key)
                 self._diffs.append(
-                    DiffEntry(DiffActions.DELETE, next_path, val, None)
-                )
+                    DiffEntry(
+                        DiffActions.DELETE, next_path, val, None,
+                        lhs_parent=data))
         elif isinstance(data, list):
             for idx, _ in enumerate(data):
                 next_path = YAMLPath(path).append("[{}]".format(idx))
                 self._diffs.append(
-                    DiffEntry(DiffActions.DELETE, next_path, idx, None)
-                )
+                    DiffEntry(
+                        DiffActions.DELETE, next_path, idx, None,
+                        lhs_parent=data))
         else:
             if data is not None:
                 self._diffs.append(
@@ -67,18 +69,21 @@ class Differ:
             for key, val in data.items():
                 next_path = YAMLPath(path).append(key)
                 self._diffs.append(
-                    DiffEntry(DiffActions.ADD, next_path, None, val)
-                )
+                    DiffEntry(
+                        DiffActions.ADD, next_path, None, val,
+                        rhs_parent=data))
         elif isinstance(data, list):
             for idx, ele in enumerate(data):
                 next_path = YAMLPath(path).append("[{}]".format(idx))
                 self._diffs.append(
-                    DiffEntry(DiffActions.ADD, next_path, None, ele)
-                )
+                    DiffEntry(
+                        DiffActions.ADD, next_path, None, ele,
+                        rhs_parent=data))
         else:
-            self._diffs.append(
-                DiffEntry(DiffActions.ADD, path, None, data)
-            )
+            if data is not None:
+                self._diffs.append(
+                    DiffEntry(DiffActions.ADD, path, None, data)
+                )
 
     def _diff_between(self, path: YAMLPath, lhs: Any, rhs: Any) -> None:
         """Calculate the differences between two document nodes."""
@@ -114,15 +119,17 @@ class Differ:
         for key in lhs_keys - rhs_keys:
             next_path = YAMLPath(path).append(key)
             self._diffs.append(
-                DiffEntry(DiffActions.DELETE, next_path, lhs[key], None)
-            )
+                DiffEntry(
+                    DiffActions.DELETE, next_path, lhs[key], None,
+                    lhs_parent=lhs))
 
         # Look for new keys
         for key in rhs_keys - lhs_keys:
             next_path = YAMLPath(path).append(key)
             self._diffs.append(
-                DiffEntry(DiffActions.ADD, next_path, None, rhs[key])
-            )
+                DiffEntry(
+                    DiffActions.ADD, next_path, None, rhs[key],
+                    rhs_parent=rhs))
 
         # Recurse into the rest
         for key, val in [
@@ -140,12 +147,14 @@ class Differ:
             idx += 1
             if lele is None:
                 self._diffs.append(
-                    DiffEntry(DiffActions.ADD, next_path, None, rele)
-                )
+                    DiffEntry(
+                        DiffActions.ADD, next_path, None, rele,
+                        rhs_parent=rhs))
             elif rele is None:
                 self._diffs.append(
-                    DiffEntry(DiffActions.DELETE, next_path, lele, None)
-                )
+                    DiffEntry(
+                        DiffActions.DELETE, next_path, lele, None,
+                        lhs_parent=lhs))
             else:
                 self._diff_between(next_path, lele, rele)
 
