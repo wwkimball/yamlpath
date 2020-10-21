@@ -2,11 +2,6 @@
 Calculate the differences between two YAML/JSON/Compatible documents.
 
 Copyright 2020 William W. Kimball, Jr. MBA MSIS
-
-DEVELOPMENT NOTES
-
-Remaining Tasks:
-1. Test with multi-line (> and |) text values.
 """
 import sys
 import argparse

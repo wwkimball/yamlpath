@@ -55,6 +55,14 @@ class DiffEntry:
             data_lc = DiffEntry._get_lc(parent)
         return data_lc
 
+    @classmethod
+    def _present_data(cls, data: Any, prefix: str) -> str:
+        """Stringify data."""
+        return "{} {}".format(
+            prefix,
+            DiffEntry._jsonify_data(data).strip().replace(
+                "\n", "\n{} ".format(prefix)))
+
     def _set_index(self, lhs: Any, rhs: Any, **kwargs) -> Any:
         """Build the sortable index for this entry."""
         lhs_lc = DiffEntry._get_index(lhs, kwargs.pop("lhs_parent", None))
@@ -71,15 +79,15 @@ class DiffEntry:
         output = "{} {}\n".format(
             diffaction, self._path if self._path else "-")
         if diffaction is DiffActions.ADD:
-            output += "> {}".format(DiffEntry._jsonify_data(self._rhs).strip())
+            output += DiffEntry._present_data(self._rhs, ">")
         elif diffaction is DiffActions.CHANGE:
-            output += "< {}\n---\n> {}".format(
-                DiffEntry._jsonify_data(self._lhs).strip(),
-                DiffEntry._jsonify_data(self._rhs).strip())
+            output += "{}\n---\n{}".format(
+                DiffEntry._present_data(self._lhs, "<"),
+                DiffEntry._present_data(self._rhs, ">"))
         elif diffaction is DiffActions.DELETE:
-            output += "< {}".format(DiffEntry._jsonify_data(self._lhs).strip())
+            output += "{}".format(DiffEntry._present_data(self._lhs, "<"))
         else:
-            output += "= {}".format(DiffEntry._jsonify_data(self._lhs).strip())
+            output += "{}".format(DiffEntry._present_data(self._lhs, "="))
         return output
 
     @property
