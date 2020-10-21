@@ -46,13 +46,7 @@ rhs_exclusive:
     structure: true
 """
 
-    standard_diff = """d lhs_exclusive
-< ["node"]
-
-a rhs_exclusive
-> {"with": {"structure": true}}
-
-c key
+    standard_diff = """c key
 < value
 ---
 > different value
@@ -88,8 +82,14 @@ c aoh[2].name
 ---
 > three (new)
 
+d lhs_exclusive
+< ["node"]
+
 a aoh[3]
 > {"id": "4 (new)", "name": "four (new)"}
+
+a rhs_exclusive
+> {"with": {"structure": true}}
 """
 
     def test_no_options(self, script_runner):
@@ -213,3 +213,59 @@ a aoh[3]
         )
         assert 1 == result.returncode, result.stderr
         assert self.standard_diff == result.stdout
+
+    def test_simple_diff_from_nothing_via_stdin(self, script_runner, tmp_path_factory):
+        import subprocess
+        rhs_file = create_temp_yaml_file(tmp_path_factory, self.rhs_content)
+        stdout_content = """a key
+> different value
+
+a array
+> [1, 3, "4 (new)", "5 (new)"]
+
+a aoh
+> [{"id": 0, "name": "zero", "extra_field": "is an extra field (new)"}, {"id": 1, "name": "different one"}, {"id": "3 (new)", "name": "three (new)"}, {"id": "4 (new)", "name": "four (new)"}]
+
+a rhs_exclusive
+> {"with": {"structure": true}}
+"""
+
+        result = subprocess.run(
+            [self.command
+            , "-"
+            , rhs_file
+            ]
+            , stdout=subprocess.PIPE
+            , input=""
+            , universal_newlines=True
+        )
+        assert 1 == result.returncode, result.stderr
+        assert stdout_content == result.stdout
+
+    def test_simple_diff_into_nothing_via_stdin(self, script_runner, tmp_path_factory):
+        import subprocess
+        lhs_file = create_temp_yaml_file(tmp_path_factory, self.lhs_content)
+        stdout_content = """d key
+< value
+
+d array
+< [1, 2, 3]
+
+d aoh
+< [{"id": 0, "name": "zero"}, {"id": 1, "name": "one"}, {"id": 2, "name": "two"}]
+
+d lhs_exclusive
+< ["node"]
+"""
+
+        result = subprocess.run(
+            [self.command
+            , lhs_file
+            , "-"
+            ]
+            , stdout=subprocess.PIPE
+            , input=""
+            , universal_newlines=True
+        )
+        assert 1 == result.returncode, result.stderr
+        assert stdout_content == result.stdout
