@@ -71,15 +71,15 @@ class DiffEntry:
         output = "{} {}\n".format(
             diffaction, self._path if self._path else "-")
         if diffaction is DiffActions.ADD:
-            output += "> {}".format(DiffEntry._jsonify_data(self._rhs))
+            output += "> {}".format(DiffEntry._jsonify_data(self._rhs).strip())
         elif diffaction is DiffActions.CHANGE:
             output += "< {}\n---\n> {}".format(
-                DiffEntry._jsonify_data(self._lhs),
-                DiffEntry._jsonify_data(self._rhs))
+                DiffEntry._jsonify_data(self._lhs).strip(),
+                DiffEntry._jsonify_data(self._rhs).strip())
         elif diffaction is DiffActions.DELETE:
-            output += "< {}".format(DiffEntry._jsonify_data(self._lhs))
+            output += "< {}".format(DiffEntry._jsonify_data(self._lhs).strip())
         else:
-            output += "= {}".format(DiffEntry._jsonify_data(self._lhs))
+            output += "= {}".format(DiffEntry._jsonify_data(self._lhs).strip())
         return output
 
     @property

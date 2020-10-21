@@ -6,8 +6,8 @@ Copyright 2020 William W. Kimball, Jr. MBA MSIS
 DEVELOPMENT NOTES
 
 Remaining Tasks:
-1. EYAML value comparisons
-2. Allow --pathsep to set the seperator of reported diff YAML Paths.
+1. EYAML value comparisons.
+2. Test with multi-line (> and |) text values.
 """
 import sys
 import argparse
@@ -48,6 +48,22 @@ def processcli():
         type=PathSeperators.from_str,
         help="indicate which YAML Path seperator to use when rendering"
              "results; default=dot")
+
+    eyaml_group = parser.add_argument_group(
+        "EYAML options", "Left unset, the EYAML keys will default to your\
+         system or user defaults.  Both keys must be set either here or in\
+         your system or user EYAML configuration file when using EYAML.")
+    eyaml_group.add_argument(
+        "-x", "--eyaml",
+        default="eyaml",
+        help="the eyaml binary to use when it isn't on the PATH")
+    eyaml_group.add_argument("-r", "--privatekey", help="EYAML private key")
+    eyaml_group.add_argument("-u", "--publickey", help="EYAML public key")
+    eyaml_group.add_argument(
+        "-E", "--ignore-eyaml-values",
+        action="store_true",
+        help="Do not use EYAML to compare encrypted data; rather, treat"
+             " ENC[...] values as regular strings")
 
     noise_group = parser.add_mutually_exclusive_group()
     noise_group.add_argument(
@@ -129,7 +145,10 @@ def main():
         # An error message has already been logged
         sys.exit(1)
 
-    diff = Differ(log, lhs_document)
+    diff = Differ(
+        log, lhs_document,
+        ignore_eyaml_values=args.ignore_eyaml_values, binary=args.eyaml,
+        publickey=args.publickey, privatekey=args.privatekey)
     diff.compare_to(rhs_document)
     exit_state = 1 if print_report(log, args, diff) else 0
     sys.exit(exit_state)

@@ -8,6 +8,7 @@ from typing import Any, Generator, List
 
 from yamlpath import YAMLPath
 from yamlpath.wrappers import ConsolePrinter
+from yamlpath.eyaml import EYAMLProcessor
 from .enums.diffactions import DiffActions
 from .diffentry import DiffEntry
 
@@ -15,7 +16,9 @@ from .diffentry import DiffEntry
 class Differ:
     """Calculates the difference between two YAML documents."""
 
-    def __init__(self, logger: ConsolePrinter, document: Any) -> None:
+    def __init__(
+        self, logger: ConsolePrinter, document: Any, **kwargs
+    ) -> None:
         """
         Instantiate this class into an object.
 
@@ -27,9 +30,14 @@ class Differ:
 
         Raises:  N/A
         """
+        ignore_eyaml = kwargs.pop("ignore_eyaml_values", True)
         self.logger: ConsolePrinter = logger
         self._data: Any = document
         self._diffs: List[DiffEntry] = []
+        self._ignore_eyaml = ignore_eyaml
+        self._eyamlproc = (None
+                           if ignore_eyaml
+                           else EYAMLProcessor(logger, document, **kwargs))
 
     def compare_to(self, document: Any) -> None:
         """Perform the diff calculation."""
@@ -168,7 +176,17 @@ class Differ:
         self, path: YAMLPath, lhs: Any, rhs: Any, **kwargs
     ) -> None:
         """Diff two Scalar values."""
-        if lhs == rhs:
+        lhs_val = lhs
+        rhs_val = rhs
+        if not self._ignore_eyaml:
+            if self._eyamlproc.is_eyaml_value(lhs):
+                lhs_val = self._eyamlproc.decrypt_eyaml(lhs)
+                lhs = lhs.replace("\r", "").replace(" ", "")
+            if self._eyamlproc.is_eyaml_value(rhs):
+                rhs_val = self._eyamlproc.decrypt_eyaml(rhs)
+                rhs = rhs.replace("\r", "").replace(" ", "")
+
+        if lhs_val == rhs_val:
             self._diffs.append(
                 DiffEntry(DiffActions.SAME, path, lhs, rhs, **kwargs)
             )
