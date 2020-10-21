@@ -41,6 +41,45 @@ class Differ:
         for entry in self._diffs:
             yield entry
 
+    def _purge_document(self, path: YAMLPath, data: Any):
+        """Delete every node in the document."""
+        if isinstance(data, dict):
+            for key, val in data.items():
+                next_path = YAMLPath(path).append(key)
+                self._diffs.append(
+                    DiffEntry(DiffActions.DELETE, next_path, val, None)
+                )
+        elif isinstance(data, list):
+            for idx, _ in enumerate(data):
+                next_path = YAMLPath(path).append("[{}]".format(idx))
+                self._diffs.append(
+                    DiffEntry(DiffActions.DELETE, next_path, idx, None)
+                )
+        else:
+            if data is not None:
+                self._diffs.append(
+                    DiffEntry(DiffActions.DELETE, path, data, None)
+                )
+
+    def _add_everything(self, path: YAMLPath, data: Any) -> None:
+        """Add every node in the document."""
+        if isinstance(data, dict):
+            for key, val in data.items():
+                next_path = YAMLPath(path).append(key)
+                self._diffs.append(
+                    DiffEntry(DiffActions.ADD, next_path, None, val)
+                )
+        elif isinstance(data, list):
+            for idx, ele in enumerate(data):
+                next_path = YAMLPath(path).append("[{}]".format(idx))
+                self._diffs.append(
+                    DiffEntry(DiffActions.ADD, next_path, None, ele)
+                )
+        else:
+            self._diffs.append(
+                DiffEntry(DiffActions.ADD, path, None, data)
+            )
+
     def _diff_between(self, path: YAMLPath, lhs: Any, rhs: Any) -> None:
         """Calculate the differences between two document nodes."""
         # If the roots are different, delete all LHS and add all RHS.
@@ -63,55 +102,8 @@ class Differ:
             else:
                 self._diff_scalars(path, lhs, rhs)
         else:
-            if lhs_is_dict:
-                for key, val in lhs.items():
-                    next_path = YAMLPath(path).append(key)
-                    self._diffs.append(
-                        DiffEntry(DiffActions.DELETE, next_path, val, None)
-                    )
-                if rhs_is_list:
-                    for idx, ele in enumerate(rhs):
-                        next_path = YAMLPath(path).append("[{}]".format(idx))
-                        self._diffs.append(
-                            DiffEntry(DiffActions.ADD, next_path, None, ele)
-                        )
-                else:
-                    self._diffs.append(
-                        DiffEntry(DiffActions.ADD, path, None, rhs)
-                    )
-            elif lhs_is_list:
-                for idx, _ in enumerate(lhs):
-                    next_path = YAMLPath(path).append("[{}]".format(idx))
-                    self._diffs.append(
-                        DiffEntry(DiffActions.DELETE, next_path, idx, None)
-                    )
-                if rhs_is_dict:
-                    for key, val in rhs.items():
-                        next_path = YAMLPath(path).append(key)
-                        self._diffs.append(
-                            DiffEntry(DiffActions.ADD, next_path, None, val)
-                        )
-                else:
-                    self._diffs.append(
-                        DiffEntry(DiffActions.ADD, path, None, rhs)
-                    )
-            else:
-                if lhs is not None:
-                    self._diffs.append(
-                        DiffEntry(DiffActions.DELETE, path, lhs, None)
-                    )
-                if rhs_is_list:
-                    for idx, ele in enumerate(rhs):
-                        next_path = YAMLPath(path).append("[{}]".format(idx))
-                        self._diffs.append(
-                            DiffEntry(DiffActions.ADD, next_path, None, ele)
-                        )
-                else:
-                    for key, val in rhs.items():
-                        next_path = YAMLPath(path).append(key)
-                        self._diffs.append(
-                            DiffEntry(DiffActions.ADD, next_path, None, val)
-                        )
+            self._purge_document(path, lhs)
+            self._add_everything(path, rhs)
 
     def _diff_dicts(self, path: YAMLPath, lhs: dict, rhs: dict) -> None:
         """Diff two dicts."""
