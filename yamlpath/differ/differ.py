@@ -80,7 +80,7 @@ class Differ:
                         DiffEntry(DiffActions.ADD, path, None, rhs)
                     )
             elif lhs_is_list:
-                for idx, _ in enumerate(rhs):
+                for idx, _ in enumerate(lhs):
                     next_path = YAMLPath(path).append("[{}]".format(idx))
                     self._diffs.append(
                         DiffEntry(DiffActions.DELETE, next_path, idx, None)
