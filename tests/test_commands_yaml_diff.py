@@ -150,6 +150,22 @@ d [2]
         assert not result.success, result.stderr
         assert "File not found" in result.stderr
 
+    def test_bad_eyaml_value(self, script_runner, tmp_path_factory):
+        content = """---
+        aliases:
+          - &encryptedScalar >
+            ENC[PKCS7,MIIx...broken-on-purpose...==]
+        """
+        yaml_file = create_temp_yaml_file(tmp_path_factory, content)
+        result = script_runner.run(
+            self.command,
+            "--eyaml=/does/not/exist-on-most/systems",
+            yaml_file,
+            yaml_file
+        )
+        assert not result.success, result.stderr
+        assert "No accessible eyaml command" in result.stderr
+
     def test_no_diff_two_hash_files(self, script_runner, tmp_path_factory):
         lhs_file = create_temp_yaml_file(tmp_path_factory, self.lhs_hash_content)
         rhs_file = create_temp_yaml_file(tmp_path_factory, self.lhs_hash_content)

@@ -18,6 +18,7 @@ from yamlpath.wrappers import ConsolePrinter
 from yamlpath.func import get_yaml_data, get_yaml_editor
 from yamlpath.differ import Differ
 from yamlpath.differ.enums import DiffActions
+from yamlpath.eyaml.exceptions.eyamlcommand import EYAMLCommandException
 
 def processcli():
     """Process command-line arguments."""
@@ -149,7 +150,12 @@ def main():
         log, lhs_document,
         ignore_eyaml_values=args.ignore_eyaml_values, binary=args.eyaml,
         publickey=args.publickey, privatekey=args.privatekey)
-    diff.compare_to(rhs_document)
+
+    try:
+        diff.compare_to(rhs_document)
+    except EYAMLCommandException as ex:
+        log.critical(ex, 1)
+
     exit_state = 1 if print_report(log, args, diff) else 0
     sys.exit(exit_state)
 
