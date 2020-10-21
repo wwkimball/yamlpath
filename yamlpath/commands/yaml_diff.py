@@ -13,6 +13,7 @@ import sys
 import argparse
 
 from yamlpath.common import YAMLPATH_VERSION
+from yamlpath.enums import PathSeperators
 from yamlpath.wrappers import ConsolePrinter
 from yamlpath.func import get_yaml_data, get_yaml_editor
 from yamlpath.differ import Differ
@@ -23,8 +24,9 @@ def processcli():
     parser = argparse.ArgumentParser(
         description="Calculate the difference between two"
                     " YAML/JSON/Compatible documents.",
-        epilog="Only one YAML_FILE may be -.  For more information about YAML"
-               " Paths, please visit https://github.com/wwkimball/yamlpath."
+        epilog="Only one YAML_FILE may be the - pseudo-file for reading from"
+               " STDIN.  For more information about YAML Paths, please visit"
+               " https://github.com/wwkimball/yamlpath."
     )
     parser.add_argument("-V", "--version", action="version",
                         version="%(prog)s " + YAMLPATH_VERSION)
@@ -37,6 +39,15 @@ def processcli():
         "-o", "--onlysame", action="store_true",
         help="Show only nodes which are the same, still reporting that"
              " differences exist -- when they do -- with an exit-state of 1")
+
+    parser.add_argument(
+        "-t", "--pathsep",
+        default="dot",
+        choices=PathSeperators,
+        metavar=PathSeperators.get_choices(),
+        type=PathSeperators.from_str,
+        help="indicate which YAML Path seperator to use when rendering"
+             "results; default=dot")
 
     noise_group = parser.add_mutually_exclusive_group()
     noise_group.add_argument(
@@ -91,6 +102,7 @@ def print_report(log, args, diff):
         ):
             if print_sep:
                 log.info("")
+            entry.pathsep = args.pathsep
             log.info(entry)
             print_sep = True
 

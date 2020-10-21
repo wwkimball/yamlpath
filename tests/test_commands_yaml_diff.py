@@ -737,3 +737,66 @@ c collector_hash.aliased_string
             , rhs_file)
         assert not result.success, result.stderr
         assert stdout_content == result.stdout
+
+    def test_simple_diff_two_hash_files_fslash(self, script_runner, tmp_path_factory):
+        lhs_file = create_temp_yaml_file(tmp_path_factory, self.lhs_hash_content)
+        rhs_file = create_temp_yaml_file(tmp_path_factory, self.rhs_hash_content)
+        stdout_content = """c /key
+< value
+---
+> different value
+
+c /array[1]
+< 2
+---
+> 3
+
+c /array[2]
+< 3
+---
+> 4 (new)
+
+a /array[3]
+> 5 (new)
+
+a /aoh[0]/extra_field
+> is an extra field (new)
+
+c /aoh[1]/name
+< one
+---
+> different one
+
+c /aoh[2]/id
+< 2
+---
+> 3 (new)
+
+c /aoh[2]/name
+< two
+---
+> three (new)
+
+d /lhs_exclusive
+< ["node"]
+
+a /aoh[3]
+> {"id": "4 (new)", "name": "four (new)"}
+
+a /rhs_exclusive
+> {"with": {"structure": true}}
+"""
+
+        # DEBUG
+        # print("LHS File:  {}".format(lhs_file))
+        # print("RHS File:  {}".format(rhs_file))
+        # print("Expected Output:")
+        # print(merged_yaml_content)
+
+        result = script_runner.run(
+            self.command
+            , "--pathsep=/"
+            , lhs_file
+            , rhs_file)
+        assert not result.success, result.stderr
+        assert stdout_content == result.stdout

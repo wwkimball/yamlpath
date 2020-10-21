@@ -8,6 +8,7 @@ from typing import Any
 
 from ruamel.yaml.comments import CommentedBase
 
+from yamlpath.enums import PathSeperators
 from yamlpath import YAMLPath
 from yamlpath.func import stringify_dates
 from .enums.diffactions import DiffActions
@@ -90,3 +91,15 @@ class DiffEntry:
     def index(self) -> str:
         """Get the sortable index for this entry (read-only)."""
         return self._index
+
+    @property
+    def pathsep(self) -> PathSeperators:
+        """Seperator used to delimit reported YAML Paths (accessor)."""
+        return self._path.seperator
+
+    @pathsep.setter
+    def pathsep(self, value: PathSeperators) -> None:
+        """Seperator used to delimit reported YAML Paths (mutator)."""
+        # No unnecessary changes
+        if value is not self.pathsep:
+            self._path.seperator = value
