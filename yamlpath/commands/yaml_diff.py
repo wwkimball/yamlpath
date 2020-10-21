@@ -111,6 +111,7 @@ def validateargs(args, log):
 def print_report(log, args, diff):
     """Print user-customized report."""
     changes_found = False
+    print_sep = False
     for entry in diff.get_report():
         is_different = entry.action is not DiffActions.SAME
         if is_different:
@@ -121,7 +122,10 @@ def print_report(log, args, diff):
             or (args.onlysame and not is_different)
             or args.same
         ):
+            if print_sep:
+                log.info("")
             log.info(entry)
+            print_sep = True
 
     return changes_found
 
