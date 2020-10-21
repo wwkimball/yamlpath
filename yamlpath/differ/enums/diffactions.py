@@ -29,6 +29,7 @@ class DiffActions(Enum):
     SAME = auto()
 
     def __str__(self) -> str:
+        """Get the diff-like entry code for this action."""
         diff_type = ""
         if self is DiffActions.ADD:
             diff_type = "a"
