@@ -38,7 +38,9 @@ class Differ:
 
     def get_report(self) -> Generator[DiffEntry, None, None]:
         """Get the diff report."""
-        for entry in self._diffs:
+        for entry in sorted(
+            self._diffs, key=lambda e: [int(i) for i in e.index.split('.')]
+        ):
             yield entry
 
     def _purge_document(self, path: YAMLPath, data: Any):
@@ -85,7 +87,9 @@ class Differ:
                     DiffEntry(DiffActions.ADD, path, None, data)
                 )
 
-    def _diff_between(self, path: YAMLPath, lhs: Any, rhs: Any) -> None:
+    def _diff_between(
+        self, path: YAMLPath, lhs: Any, rhs: Any, **kwargs
+    ) -> None:
         """Calculate the differences between two document nodes."""
         # If the roots are different, delete all LHS and add all RHS.
         lhs_is_dict = isinstance(lhs, dict)
@@ -105,7 +109,7 @@ class Differ:
             elif lhs_is_list:
                 self._diff_lists(path, lhs, rhs)
             else:
-                self._diff_scalars(path, lhs, rhs)
+                self._diff_scalars(path, lhs, rhs, **kwargs)
         else:
             self._purge_document(path, lhs)
             self._add_everything(path, rhs)
@@ -121,7 +125,7 @@ class Differ:
             self._diffs.append(
                 DiffEntry(
                     DiffActions.DELETE, next_path, lhs[key], None,
-                    lhs_parent=lhs))
+                    lhs_parent=lhs, rhs_parent=rhs))
 
         # Look for new keys
         for key in rhs_keys - lhs_keys:
@@ -129,7 +133,7 @@ class Differ:
             self._diffs.append(
                 DiffEntry(
                     DiffActions.ADD, next_path, None, rhs[key],
-                    rhs_parent=rhs))
+                    lhs_parent=lhs, rhs_parent=rhs))
 
         # Recurse into the rest
         for key, val in [
@@ -137,7 +141,8 @@ class Differ:
             if key in lhs and key in rhs
         ]:
             next_path = YAMLPath(path).append(key)
-            self._diff_between(next_path, lhs[key], val)
+            self._diff_between(
+                next_path, lhs[key], val, lhs_parent=lhs, rhs_parent=rhs)
 
     def _diff_lists(self, path: YAMLPath, lhs: list, rhs: list) -> None:
         """Diff two lists."""
@@ -149,22 +154,25 @@ class Differ:
                 self._diffs.append(
                     DiffEntry(
                         DiffActions.ADD, next_path, None, rele,
-                        rhs_parent=rhs))
+                        lhs_parent=lhs, rhs_parent=rhs))
             elif rele is None:
                 self._diffs.append(
                     DiffEntry(
                         DiffActions.DELETE, next_path, lele, None,
-                        lhs_parent=lhs))
+                        lhs_parent=lhs, rhs_parent=rhs))
             else:
-                self._diff_between(next_path, lele, rele)
+                self._diff_between(
+                    next_path, lele, rele, lhs_parent=lhs, rhs_parent=rhs)
 
-    def _diff_scalars(self, path: YAMLPath, lhs: Any, rhs: Any) -> None:
+    def _diff_scalars(
+        self, path: YAMLPath, lhs: Any, rhs: Any, **kwargs
+    ) -> None:
         """Diff two Scalar values."""
         if lhs == rhs:
             self._diffs.append(
-                DiffEntry(DiffActions.SAME, path, lhs, rhs)
+                DiffEntry(DiffActions.SAME, path, lhs, rhs, **kwargs)
             )
         else:
             self._diffs.append(
-                DiffEntry(DiffActions.CHANGE, path, lhs, rhs)
+                DiffEntry(DiffActions.CHANGE, path, lhs, rhs, **kwargs)
             )

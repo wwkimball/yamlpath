@@ -25,7 +25,7 @@ class DiffEntry:
         self._path: YAMLPath = path
         self._lhs: Any = lhs
         self._rhs: Any = rhs
-        self._set_line_col(lhs, rhs, **kwargs)
+        self._set_index(lhs, rhs, **kwargs)
 
     @classmethod
     def _jsonify_data(cls, data: Any) -> str:
@@ -54,13 +54,16 @@ class DiffEntry:
             data_lc = DiffEntry._get_lc(parent)
         return data_lc
 
-    def _set_line_col(self, lhs: Any, rhs: Any, **kwargs) -> Any:
+    def _set_index(self, lhs: Any, rhs: Any, **kwargs) -> Any:
         """Sets the line-column number for this entry."""
         lhs_lc = DiffEntry._get_index(lhs, kwargs.pop("lhs_parent", None))
         rhs_lc = DiffEntry._get_index(rhs, kwargs.pop("rhs_parent", None))
-        if lhs_lc == "0.0":
+        lhs_line = float(lhs_lc)
+        rhs_line = float(rhs_lc)
+        if lhs_line < rhs_line:
             lhs_lc = rhs_lc
             rhs_lc = "0.0"
+
         self._index = "{}.{}".format(lhs_lc, rhs_lc)
 
     def __str__(self) -> str:
@@ -83,3 +86,8 @@ class DiffEntry:
     def action(self) -> DiffActions:
         """Get the action of this difference (read-only)."""
         return self._action
+
+    @property
+    def index(self) -> str:
+        """Get the sortable index for this entry (read-only)."""
+        return self._index
