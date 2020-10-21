@@ -529,9 +529,6 @@ d [2]
         assert 1 == result.returncode, result.stderr
         assert stdout_content == result.stdout
 
-
-
-
     def test_simple_diff_hash_into_text_via_stdin(self, script_runner, tmp_path_factory):
         import subprocess
         lhs_file = create_temp_yaml_file(tmp_path_factory, self.lhs_hash_content)
@@ -591,7 +588,6 @@ d [2]
         assert 1 == result.returncode, result.stderr
         assert stdout_content == result.stdout
 
-
     def test_onlysame_diff_two_hash_files(self, script_runner, tmp_path_factory):
         lhs_file = create_temp_yaml_file(tmp_path_factory, self.lhs_hash_content)
         rhs_file = create_temp_yaml_file(tmp_path_factory, self.rhs_hash_content)
@@ -647,6 +643,96 @@ s [1].action
         result = script_runner.run(
             self.command
             , "--onlysame"
+            , lhs_file
+            , rhs_file)
+        assert not result.success, result.stderr
+        assert stdout_content == result.stdout
+
+    def test_diff_two_aliased_hash_files(self, script_runner, tmp_path_factory):
+        """
+        Test Anchors, their Aliases, and YAML Merge Operators.
+
+        Also demonstrate that the yaml-diff tool is a FUNCTIONAL comparison of
+        two data files, NOT a textual comparison.  In other words, yaml-diff is
+        only interested in how the data is represented to YAML/JSON parsers,
+        NOT how the YAML/JSON file is constructed.  Immaterial elements like
+        comments, white-space, and demarcation symbols are deliberately ignored
+        because none of these have any impact on what data YAML/JSON parsers
+        actually percieve to be within the files at run-time.
+
+        Users who need a TEXTUAL (non-functional) comparison of two YAML/JSON
+        files should use the GNU `diff` command-line tool rather than this
+        yaml-diff command-line tool.
+        """
+        lhs_file = create_temp_yaml_file(tmp_path_factory, """---
+aliases:
+  - &string_value This is a reusable string value.
+  - &int_value 5280
+some_values: &some_values
+  aliased_int: *int_value
+  original_float: 3.14159265358
+more_values: &more_values
+  aliased_string: *string_value
+  original_string: This is another reusable string except its in a reusable parent Hash.
+collector_hash:
+  <<: [ *some_values, *more_values ]
+  concrete_string: This is a non-reusable concrete string.
+""")
+        rhs_file = create_temp_yaml_file(tmp_path_factory, """---
+# Reusable aliases
+aliases:
+  - &string_value This is a CHANGED reusable string value.
+  - &aliased_int_value 5280
+
+# Reusable numbers reusing one number
+some_values: &some_values
+  aliased_int: *aliased_int_value
+  original_float: 3.14
+
+# Reusable strings reusing one string
+more_values: &more_values
+  aliased_string: *string_value
+  original_string: "This is another reusable string except its in a reusable parent Hash."
+
+# Bring it all together
+collector_hash:
+  <<: [ *some_values, *more_values ]
+  concrete_string: 'This is a non-reusable concrete string.'
+""")
+        stdout_content = """c aliases[0]
+< This is a reusable string value.
+---
+> This is a CHANGED reusable string value.
+
+c some_values.original_float
+< 3.14159265358
+---
+> 3.14
+
+c more_values.aliased_string
+< This is a reusable string value.
+---
+> This is a CHANGED reusable string value.
+
+c collector_hash.original_float
+< 3.14159265358
+---
+> 3.14
+
+c collector_hash.aliased_string
+< This is a reusable string value.
+---
+> This is a CHANGED reusable string value.
+"""
+
+        # DEBUG
+        # print("LHS File:  {}".format(lhs_file))
+        # print("RHS File:  {}".format(rhs_file))
+        # print("Expected Output:")
+        # print(merged_yaml_content)
+
+        result = script_runner.run(
+            self.command
             , lhs_file
             , rhs_file)
         assert not result.success, result.stderr

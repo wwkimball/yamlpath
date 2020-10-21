@@ -7,7 +7,7 @@ DEVELOPMENT NOTES
 
 Remaining Tasks:
 1. EYAML value comparisons
-2. Test Anchors and merge operators
+2. Allow --pathsep to set the seperator of reported diff YAML Paths.
 """
 import sys
 import argparse
