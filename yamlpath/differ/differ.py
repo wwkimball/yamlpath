@@ -96,9 +96,10 @@ class Differ:
                         DiffEntry(DiffActions.ADD, path, None, rhs)
                     )
             else:
-                self._diffs.append(
-                    DiffEntry(DiffActions.DELETE, path, lhs, None)
-                )
+                if lhs is not None:
+                    self._diffs.append(
+                        DiffEntry(DiffActions.DELETE, path, lhs, None)
+                    )
                 if rhs_is_list:
                     for idx, ele in enumerate(rhs):
                         next_path = YAMLPath(path).append("[{}]".format(idx))
