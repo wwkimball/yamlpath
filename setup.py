@@ -9,7 +9,7 @@ setuptools.setup(
     name="yamlpath",
     version=YAMLPATH_VERSION,
     description=(
-        "Command-line get/set/merge/validate/scan/convert processors for"
+        "Command-line get/set/merge/validate/scan/convert/diff processors for"
         + " YAML/JSON/Compatible data using powerful, intuitive, command-line"
         + " friendly syntax"),
     long_description=long_description,
