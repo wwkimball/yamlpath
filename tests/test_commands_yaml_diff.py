@@ -1,6 +1,6 @@
 import pytest
 
-from tests.conftest import create_temp_yaml_file
+from tests.conftest import create_temp_yaml_file, requireseyaml, old_eyaml_keys
 
 
 class Test_commands_yaml_diff():
@@ -812,6 +812,203 @@ a /rhs_exclusive
         result = script_runner.run(
             self.command
             , "--pathsep=/"
+            , lhs_file
+            , rhs_file)
+        assert not result.success, result.stderr
+        assert stdout_content == result.stdout
+
+    @requireseyaml
+    def test_diff_eyaml_allowed(self, script_runner, tmp_path_factory, old_eyaml_keys):
+        lhs_file = create_temp_yaml_file(tmp_path_factory, """---
+same_secret_same_crypt: >
+  ENC[PKCS7,MIIBygYJKoZIhvcNAQcDoIIBuzCCAbcCAQAxggEhMIIBHQIBADAFMAACAQEw
+  DQYJKoZIhvcNAQEBBQAEggEAP5tXc8gPp1p5945Ih/i/k/OqvoDrWi/F05/V
+  EhlgUwXgNer0Y5C7G/FE4Gt5nasoolbPQTMVuq+CW8qQ6wsnVrB60SCDvy5q
+  9k7WGHyQU5n6UR00/RLhctStGe6nN/zIsoYLQyyY/+xJaHAwahB/GkzFPk9S
+  F2Zu+fsxj1X38XVuGFC+Nx89ODXnNYBxRuElUK9qHuC5rCRyPBWEM9brv6Am
+  7+PCig9WZSxXUkDyX6hG2Mzm/ndKgqonhCEBOp3CrDrmFdWCdmx81Qe1dLRl
+  mSonHjWYyFugtrRz6YV7Ni1cicEZoKUFT/XXqntX1BS97M9Ms8AZODrDxB66
+  rpZ41jCBjAYJKoZIhvcNAQcBMB0GCWCGSAFlAwQBKgQQBHXHyWGQNDL6l7tA
+  9Rf784BgLbcaRZMscSjL/ym69YQXRJPzo3nCBSVOCUrVtU0pGFpkSUvdYRmr
+  ZVlZ5jcv9xiU+ktGJZhjzzVcSHYMf9LkwtCiHYRYzVgDX/S24/NSVF5NEeTz
+  MvIW862oA8UFtodj]
+same_secret_different_crypt: >
+  ENC[PKCS7,MIIBygYJKoZIhvcNAQcDoIIBuzCCAbcCAQAxggEhMIIBHQIBADAFMAACAQEw
+  DQYJKoZIhvcNAQEBBQAEggEAYUDg4y4+LXY0IdEDYFgxfxRJ3dfkOPwTSLxl
+  A91x5IQlgQYQpXkgkFEeJj3EXdYwt9K6prtFywokVQoOaWgXWWV+Tf0lF5P0
+  0sw4LH7MgaszKPpiOHxx9hTmexEIusF+tzvQBOD1zHfDdkZQ0v9R3JLHckub
+  rg/XOLJXzkkyKEoKIFScBT115aedGY60baMtvD1Md9rxi97xCmj6BroatMlM
+  Cm266oFnijrQN9Xsb5ZTnGiPMA9hC2y6X+oJeMaG0S6G64EnTwnjAQytWE6a
+  JM1/YXVKIoE2c/E44/m74kuyO70RwACV9QknSqoLuUbYpcbU4FHU/xICiWAG
+  CaTz9zCBjAYJKoZIhvcNAQcBMB0GCWCGSAFlAwQBKgQQ9kFVNmG9heK0WyWU
+  R1kfyIBgCIJzi+XnQMS9w85Mbq6BaNPpJrU7ZaoHQ6c3Ps9sgJStVDQNmrbL
+  WAP8fEC6S7V07rA7hp4YomvAJRJjDIK7M2AzXDNzupuAh4crF905AR4TF+Jd
+  nNuWarGVGx1Bv+6h]
+different_secrets: >
+  ENC[PKCS7,MIIBmQYJKoZIhvcNAQcDoIIBijCCAYYCAQAxggEhMIIBHQIBADAFMAACAQEw
+  DQYJKoZIhvcNAQEBBQAEggEAJRw+urxm+Pyt0Xys5UpJUIaZhA0Tt1JuVsLG
+  9jiHb9aua+2bBr/kAN8D/+dowOJlVkG6LZ4Uzn+NZboO8Q2JpQeV9CJTqayJ
+  eZnRx02298qSrWOogSQUoS/or0+QWGLeQqJMiNuUx6IHskyWVsROamTmK9p2
+  gAgL5bAXzD2+1MHIRMrf8ascVmTOV4/JMckWznCseM+uJ7PkR12044mWhuvk
+  aJUjaXFXIEYhA4+jjKWdlOTWJAFkjhKE6HAHqaNZVlcf8X1WuoX4f1iPP53z
+  mATu0eDx8D5XwQnygUMrPWrlCyoIqRIcwU6f5iv+HT1EWEvSI5+i7bByx0hk
+  apUR+TBcBgkqhkiG9w0BBwEwHQYJYIZIAWUDBAEqBBCgVC5h5pznSfACl7+Q
+  ff+mgDBAZPMofXWfguD6OgcXu0/QMz90QHAN4bu+CHHZLZ+8X3qSgKHszijK
+  eEeStAMoq50=]
+""")
+        rhs_file = create_temp_yaml_file(tmp_path_factory, """---
+same_secret_same_crypt: >
+  ENC[PKCS7,MIIBygYJKoZIhvcNAQcDoIIBuzCCAbcCAQAxggEhMIIBHQIBADAFMAACAQEw
+  DQYJKoZIhvcNAQEBBQAEggEAP5tXc8gPp1p5945Ih/i/k/OqvoDrWi/F05/V
+  EhlgUwXgNer0Y5C7G/FE4Gt5nasoolbPQTMVuq+CW8qQ6wsnVrB60SCDvy5q
+  9k7WGHyQU5n6UR00/RLhctStGe6nN/zIsoYLQyyY/+xJaHAwahB/GkzFPk9S
+  F2Zu+fsxj1X38XVuGFC+Nx89ODXnNYBxRuElUK9qHuC5rCRyPBWEM9brv6Am
+  7+PCig9WZSxXUkDyX6hG2Mzm/ndKgqonhCEBOp3CrDrmFdWCdmx81Qe1dLRl
+  mSonHjWYyFugtrRz6YV7Ni1cicEZoKUFT/XXqntX1BS97M9Ms8AZODrDxB66
+  rpZ41jCBjAYJKoZIhvcNAQcBMB0GCWCGSAFlAwQBKgQQBHXHyWGQNDL6l7tA
+  9Rf784BgLbcaRZMscSjL/ym69YQXRJPzo3nCBSVOCUrVtU0pGFpkSUvdYRmr
+  ZVlZ5jcv9xiU+ktGJZhjzzVcSHYMf9LkwtCiHYRYzVgDX/S24/NSVF5NEeTz
+  MvIW862oA8UFtodj]
+same_secret_different_crypt: >
+  ENC[PKCS7,MIIBygYJKoZIhvcNAQcDoIIBuzCCAbcCAQAxggEhMIIBHQIBADAFMAACAQEw
+  DQYJKoZIhvcNAQEBBQAEggEAV/S/jxC79aiKR1UnPxcrPo7bLpSpsoUqJfdQ
+  znMp0LJrqacIcrq+jFRLqFUv2dDcTRnReP5CZy4HEJw73710Ngb+sJLQeCE9
+  f8qYvjKAlWyrw0Strpwe5BQT4g7ph5GX3lOqjCBJbqRPE9XfhI9DPljkUzBB
+  IQ8zVZz/zy5TbBCRZm7RKPjbczTMaHRRQb0fEKnK7tTdHIucNRQh0AZ9ZGuJ
+  8TchxlBhgtwjKU0NxbpQyi/hVyv7Dw8/wSq3Wp5nFYJj1uFxYES0sw6QAsM+
+  1LzY2hg+RCzL3gxU724gH0xRCv346tKoyqzVxtO+knLVh/m8HulrXJABKn0/
+  ZJrBezCBjAYJKoZIhvcNAQcBMB0GCWCGSAFlAwQBKgQQMvmLomzj48fPsA1H
+  DVQiaoBgctgTfmmKEaEoCYJqd4WXpJeb96viMyTXRaa8Pt0rl22mbt92qMUk
+  witfhD7lzteg1k2tunXQx8w37vx60kqY3aEXV8crQb1TQdBUuZIks1RnLFur
+  14/eAgRAn37NhJli]
+different_secrets: >
+  ENC[PKCS7,MIIBmQYJKoZIhvcNAQcDoIIBijCCAYYCAQAxggEhMIIBHQIBADAFMAACAQEw
+  DQYJKoZIhvcNAQEBBQAEggEAm9Sw3jUCLMOKU0wpQgu7kW4yO/MvoLbQpWMB
+  KKFEssxhJ0Kqc5Q+2cTAk6vo5K7GopVYr5iCaaoxLmCJq3ke1XBR6O182q/2
+  vcvgqTVq3OaaMR3qji1edJQd6NJuqpuV+tIf6RCktt5+9wlIXLxujnaYxmr1
+  vrEMXnb0R6PWunXsTAlDDrCVMC6iXIvbhsP2GF8zhhuTkCXp1LTDuvj3aSso
+  iloELuCdCGO7iFTXPuPy4nrgXjlaVnGftoDmVukDP8PUzyEBT1a9ZXUjrswS
+  sXzCsTnEGIpPlIe84Nvk43osbVw2sOgwod7Uko7KmdXVFAh8l15BoW5E9uRw
+  y2XahTBcBgkqhkiG9w0BBwEwHQYJYIZIAWUDBAEqBBAIA2FJ1Fo38jwnbHs8
+  V8GOgDAaCmR9jyjK/0f0V2WnRF+nPS21sNoB0qONn1V0GwAQbu0yk7QS5y8q
+  4OTZEGxziGU=]
+""")
+        stdout_content = """c different_secrets
+< ENC[PKCS7,MIIBmQYJKoZIhvcNAQcDoIIBijCCAYYCAQAxggEhMIIBHQIBADAFMAACAQEwDQYJKoZIhvcNAQEBBQAEggEAJRw+urxm+Pyt0Xys5UpJUIaZhA0Tt1JuVsLG9jiHb9aua+2bBr/kAN8D/+dowOJlVkG6LZ4Uzn+NZboO8Q2JpQeV9CJTqayJeZnRx02298qSrWOogSQUoS/or0+QWGLeQqJMiNuUx6IHskyWVsROamTmK9p2gAgL5bAXzD2+1MHIRMrf8ascVmTOV4/JMckWznCseM+uJ7PkR12044mWhuvkaJUjaXFXIEYhA4+jjKWdlOTWJAFkjhKE6HAHqaNZVlcf8X1WuoX4f1iPP53zmATu0eDx8D5XwQnygUMrPWrlCyoIqRIcwU6f5iv+HT1EWEvSI5+i7bByx0hkapUR+TBcBgkqhkiG9w0BBwEwHQYJYIZIAWUDBAEqBBCgVC5h5pznSfACl7+Qff+mgDBAZPMofXWfguD6OgcXu0/QMz90QHAN4bu+CHHZLZ+8X3qSgKHszijKeEeStAMoq50=]
+---
+> ENC[PKCS7,MIIBmQYJKoZIhvcNAQcDoIIBijCCAYYCAQAxggEhMIIBHQIBADAFMAACAQEwDQYJKoZIhvcNAQEBBQAEggEAm9Sw3jUCLMOKU0wpQgu7kW4yO/MvoLbQpWMBKKFEssxhJ0Kqc5Q+2cTAk6vo5K7GopVYr5iCaaoxLmCJq3ke1XBR6O182q/2vcvgqTVq3OaaMR3qji1edJQd6NJuqpuV+tIf6RCktt5+9wlIXLxujnaYxmr1vrEMXnb0R6PWunXsTAlDDrCVMC6iXIvbhsP2GF8zhhuTkCXp1LTDuvj3aSsoiloELuCdCGO7iFTXPuPy4nrgXjlaVnGftoDmVukDP8PUzyEBT1a9ZXUjrswSsXzCsTnEGIpPlIe84Nvk43osbVw2sOgwod7Uko7KmdXVFAh8l15BoW5E9uRwy2XahTBcBgkqhkiG9w0BBwEwHQYJYIZIAWUDBAEqBBAIA2FJ1Fo38jwnbHs8V8GOgDAaCmR9jyjK/0f0V2WnRF+nPS21sNoB0qONn1V0GwAQbu0yk7QS5y8q4OTZEGxziGU=]
+"""
+
+        # DEBUG
+        # print("LHS File:  {}".format(lhs_file))
+        # print("RHS File:  {}".format(rhs_file))
+        # print("Expected Output:")
+        # print(merged_yaml_content)
+
+        result = script_runner.run(
+            self.command
+            , "--privatekey={}".format(old_eyaml_keys[0])
+            , "--publickey={}".format(old_eyaml_keys[1])
+            , lhs_file
+            , rhs_file)
+        assert not result.success, result.stderr
+        assert stdout_content == result.stdout
+
+    def test_diff_eyaml_disallowed(self, script_runner, tmp_path_factory, old_eyaml_keys):
+        lhs_file = create_temp_yaml_file(tmp_path_factory, """---
+same_secret_same_crypt: >
+  ENC[PKCS7,MIIBygYJKoZIhvcNAQcDoIIBuzCCAbcCAQAxggEhMIIBHQIBADAFMAACAQEw
+  DQYJKoZIhvcNAQEBBQAEggEAP5tXc8gPp1p5945Ih/i/k/OqvoDrWi/F05/V
+  EhlgUwXgNer0Y5C7G/FE4Gt5nasoolbPQTMVuq+CW8qQ6wsnVrB60SCDvy5q
+  9k7WGHyQU5n6UR00/RLhctStGe6nN/zIsoYLQyyY/+xJaHAwahB/GkzFPk9S
+  F2Zu+fsxj1X38XVuGFC+Nx89ODXnNYBxRuElUK9qHuC5rCRyPBWEM9brv6Am
+  7+PCig9WZSxXUkDyX6hG2Mzm/ndKgqonhCEBOp3CrDrmFdWCdmx81Qe1dLRl
+  mSonHjWYyFugtrRz6YV7Ni1cicEZoKUFT/XXqntX1BS97M9Ms8AZODrDxB66
+  rpZ41jCBjAYJKoZIhvcNAQcBMB0GCWCGSAFlAwQBKgQQBHXHyWGQNDL6l7tA
+  9Rf784BgLbcaRZMscSjL/ym69YQXRJPzo3nCBSVOCUrVtU0pGFpkSUvdYRmr
+  ZVlZ5jcv9xiU+ktGJZhjzzVcSHYMf9LkwtCiHYRYzVgDX/S24/NSVF5NEeTz
+  MvIW862oA8UFtodj]
+same_secret_different_crypt: >
+  ENC[PKCS7,MIIBygYJKoZIhvcNAQcDoIIBuzCCAbcCAQAxggEhMIIBHQIBADAFMAACAQEw
+  DQYJKoZIhvcNAQEBBQAEggEAYUDg4y4+LXY0IdEDYFgxfxRJ3dfkOPwTSLxl
+  A91x5IQlgQYQpXkgkFEeJj3EXdYwt9K6prtFywokVQoOaWgXWWV+Tf0lF5P0
+  0sw4LH7MgaszKPpiOHxx9hTmexEIusF+tzvQBOD1zHfDdkZQ0v9R3JLHckub
+  rg/XOLJXzkkyKEoKIFScBT115aedGY60baMtvD1Md9rxi97xCmj6BroatMlM
+  Cm266oFnijrQN9Xsb5ZTnGiPMA9hC2y6X+oJeMaG0S6G64EnTwnjAQytWE6a
+  JM1/YXVKIoE2c/E44/m74kuyO70RwACV9QknSqoLuUbYpcbU4FHU/xICiWAG
+  CaTz9zCBjAYJKoZIhvcNAQcBMB0GCWCGSAFlAwQBKgQQ9kFVNmG9heK0WyWU
+  R1kfyIBgCIJzi+XnQMS9w85Mbq6BaNPpJrU7ZaoHQ6c3Ps9sgJStVDQNmrbL
+  WAP8fEC6S7V07rA7hp4YomvAJRJjDIK7M2AzXDNzupuAh4crF905AR4TF+Jd
+  nNuWarGVGx1Bv+6h]
+different_secrets: >
+  ENC[PKCS7,MIIBmQYJKoZIhvcNAQcDoIIBijCCAYYCAQAxggEhMIIBHQIBADAFMAACAQEw
+  DQYJKoZIhvcNAQEBBQAEggEAJRw+urxm+Pyt0Xys5UpJUIaZhA0Tt1JuVsLG
+  9jiHb9aua+2bBr/kAN8D/+dowOJlVkG6LZ4Uzn+NZboO8Q2JpQeV9CJTqayJ
+  eZnRx02298qSrWOogSQUoS/or0+QWGLeQqJMiNuUx6IHskyWVsROamTmK9p2
+  gAgL5bAXzD2+1MHIRMrf8ascVmTOV4/JMckWznCseM+uJ7PkR12044mWhuvk
+  aJUjaXFXIEYhA4+jjKWdlOTWJAFkjhKE6HAHqaNZVlcf8X1WuoX4f1iPP53z
+  mATu0eDx8D5XwQnygUMrPWrlCyoIqRIcwU6f5iv+HT1EWEvSI5+i7bByx0hk
+  apUR+TBcBgkqhkiG9w0BBwEwHQYJYIZIAWUDBAEqBBCgVC5h5pznSfACl7+Q
+  ff+mgDBAZPMofXWfguD6OgcXu0/QMz90QHAN4bu+CHHZLZ+8X3qSgKHszijK
+  eEeStAMoq50=]
+""")
+        rhs_file = create_temp_yaml_file(tmp_path_factory, """---
+same_secret_same_crypt: >
+  ENC[PKCS7,MIIBygYJKoZIhvcNAQcDoIIBuzCCAbcCAQAxggEhMIIBHQIBADAFMAACAQEw
+  DQYJKoZIhvcNAQEBBQAEggEAP5tXc8gPp1p5945Ih/i/k/OqvoDrWi/F05/V
+  EhlgUwXgNer0Y5C7G/FE4Gt5nasoolbPQTMVuq+CW8qQ6wsnVrB60SCDvy5q
+  9k7WGHyQU5n6UR00/RLhctStGe6nN/zIsoYLQyyY/+xJaHAwahB/GkzFPk9S
+  F2Zu+fsxj1X38XVuGFC+Nx89ODXnNYBxRuElUK9qHuC5rCRyPBWEM9brv6Am
+  7+PCig9WZSxXUkDyX6hG2Mzm/ndKgqonhCEBOp3CrDrmFdWCdmx81Qe1dLRl
+  mSonHjWYyFugtrRz6YV7Ni1cicEZoKUFT/XXqntX1BS97M9Ms8AZODrDxB66
+  rpZ41jCBjAYJKoZIhvcNAQcBMB0GCWCGSAFlAwQBKgQQBHXHyWGQNDL6l7tA
+  9Rf784BgLbcaRZMscSjL/ym69YQXRJPzo3nCBSVOCUrVtU0pGFpkSUvdYRmr
+  ZVlZ5jcv9xiU+ktGJZhjzzVcSHYMf9LkwtCiHYRYzVgDX/S24/NSVF5NEeTz
+  MvIW862oA8UFtodj]
+same_secret_different_crypt: >
+  ENC[PKCS7,MIIBygYJKoZIhvcNAQcDoIIBuzCCAbcCAQAxggEhMIIBHQIBADAFMAACAQEw
+  DQYJKoZIhvcNAQEBBQAEggEAV/S/jxC79aiKR1UnPxcrPo7bLpSpsoUqJfdQ
+  znMp0LJrqacIcrq+jFRLqFUv2dDcTRnReP5CZy4HEJw73710Ngb+sJLQeCE9
+  f8qYvjKAlWyrw0Strpwe5BQT4g7ph5GX3lOqjCBJbqRPE9XfhI9DPljkUzBB
+  IQ8zVZz/zy5TbBCRZm7RKPjbczTMaHRRQb0fEKnK7tTdHIucNRQh0AZ9ZGuJ
+  8TchxlBhgtwjKU0NxbpQyi/hVyv7Dw8/wSq3Wp5nFYJj1uFxYES0sw6QAsM+
+  1LzY2hg+RCzL3gxU724gH0xRCv346tKoyqzVxtO+knLVh/m8HulrXJABKn0/
+  ZJrBezCBjAYJKoZIhvcNAQcBMB0GCWCGSAFlAwQBKgQQMvmLomzj48fPsA1H
+  DVQiaoBgctgTfmmKEaEoCYJqd4WXpJeb96viMyTXRaa8Pt0rl22mbt92qMUk
+  witfhD7lzteg1k2tunXQx8w37vx60kqY3aEXV8crQb1TQdBUuZIks1RnLFur
+  14/eAgRAn37NhJli]
+different_secrets: >
+  ENC[PKCS7,MIIBmQYJKoZIhvcNAQcDoIIBijCCAYYCAQAxggEhMIIBHQIBADAFMAACAQEw
+  DQYJKoZIhvcNAQEBBQAEggEAm9Sw3jUCLMOKU0wpQgu7kW4yO/MvoLbQpWMB
+  KKFEssxhJ0Kqc5Q+2cTAk6vo5K7GopVYr5iCaaoxLmCJq3ke1XBR6O182q/2
+  vcvgqTVq3OaaMR3qji1edJQd6NJuqpuV+tIf6RCktt5+9wlIXLxujnaYxmr1
+  vrEMXnb0R6PWunXsTAlDDrCVMC6iXIvbhsP2GF8zhhuTkCXp1LTDuvj3aSso
+  iloELuCdCGO7iFTXPuPy4nrgXjlaVnGftoDmVukDP8PUzyEBT1a9ZXUjrswS
+  sXzCsTnEGIpPlIe84Nvk43osbVw2sOgwod7Uko7KmdXVFAh8l15BoW5E9uRw
+  y2XahTBcBgkqhkiG9w0BBwEwHQYJYIZIAWUDBAEqBBAIA2FJ1Fo38jwnbHs8
+  V8GOgDAaCmR9jyjK/0f0V2WnRF+nPS21sNoB0qONn1V0GwAQbu0yk7QS5y8q
+  4OTZEGxziGU=]
+""")
+        stdout_content = """c same_secret_different_crypt
+< ENC[PKCS7,MIIBygYJKoZIhvcNAQcDoIIBuzCCAbcCAQAxggEhMIIBHQIBADAFMAACAQEw DQYJKoZIhvcNAQEBBQAEggEAYUDg4y4+LXY0IdEDYFgxfxRJ3dfkOPwTSLxl A91x5IQlgQYQpXkgkFEeJj3EXdYwt9K6prtFywokVQoOaWgXWWV+Tf0lF5P0 0sw4LH7MgaszKPpiOHxx9hTmexEIusF+tzvQBOD1zHfDdkZQ0v9R3JLHckub rg/XOLJXzkkyKEoKIFScBT115aedGY60baMtvD1Md9rxi97xCmj6BroatMlM Cm266oFnijrQN9Xsb5ZTnGiPMA9hC2y6X+oJeMaG0S6G64EnTwnjAQytWE6a JM1/YXVKIoE2c/E44/m74kuyO70RwACV9QknSqoLuUbYpcbU4FHU/xICiWAG CaTz9zCBjAYJKoZIhvcNAQcBMB0GCWCGSAFlAwQBKgQQ9kFVNmG9heK0WyWU R1kfyIBgCIJzi+XnQMS9w85Mbq6BaNPpJrU7ZaoHQ6c3Ps9sgJStVDQNmrbL WAP8fEC6S7V07rA7hp4YomvAJRJjDIK7M2AzXDNzupuAh4crF905AR4TF+Jd nNuWarGVGx1Bv+6h]
+---
+> ENC[PKCS7,MIIBygYJKoZIhvcNAQcDoIIBuzCCAbcCAQAxggEhMIIBHQIBADAFMAACAQEw DQYJKoZIhvcNAQEBBQAEggEAV/S/jxC79aiKR1UnPxcrPo7bLpSpsoUqJfdQ znMp0LJrqacIcrq+jFRLqFUv2dDcTRnReP5CZy4HEJw73710Ngb+sJLQeCE9 f8qYvjKAlWyrw0Strpwe5BQT4g7ph5GX3lOqjCBJbqRPE9XfhI9DPljkUzBB IQ8zVZz/zy5TbBCRZm7RKPjbczTMaHRRQb0fEKnK7tTdHIucNRQh0AZ9ZGuJ 8TchxlBhgtwjKU0NxbpQyi/hVyv7Dw8/wSq3Wp5nFYJj1uFxYES0sw6QAsM+ 1LzY2hg+RCzL3gxU724gH0xRCv346tKoyqzVxtO+knLVh/m8HulrXJABKn0/ ZJrBezCBjAYJKoZIhvcNAQcBMB0GCWCGSAFlAwQBKgQQMvmLomzj48fPsA1H DVQiaoBgctgTfmmKEaEoCYJqd4WXpJeb96viMyTXRaa8Pt0rl22mbt92qMUk witfhD7lzteg1k2tunXQx8w37vx60kqY3aEXV8crQb1TQdBUuZIks1RnLFur 14/eAgRAn37NhJli]
+
+c different_secrets
+< ENC[PKCS7,MIIBmQYJKoZIhvcNAQcDoIIBijCCAYYCAQAxggEhMIIBHQIBADAFMAACAQEw DQYJKoZIhvcNAQEBBQAEggEAJRw+urxm+Pyt0Xys5UpJUIaZhA0Tt1JuVsLG 9jiHb9aua+2bBr/kAN8D/+dowOJlVkG6LZ4Uzn+NZboO8Q2JpQeV9CJTqayJ eZnRx02298qSrWOogSQUoS/or0+QWGLeQqJMiNuUx6IHskyWVsROamTmK9p2 gAgL5bAXzD2+1MHIRMrf8ascVmTOV4/JMckWznCseM+uJ7PkR12044mWhuvk aJUjaXFXIEYhA4+jjKWdlOTWJAFkjhKE6HAHqaNZVlcf8X1WuoX4f1iPP53z mATu0eDx8D5XwQnygUMrPWrlCyoIqRIcwU6f5iv+HT1EWEvSI5+i7bByx0hk apUR+TBcBgkqhkiG9w0BBwEwHQYJYIZIAWUDBAEqBBCgVC5h5pznSfACl7+Q ff+mgDBAZPMofXWfguD6OgcXu0/QMz90QHAN4bu+CHHZLZ+8X3qSgKHszijK eEeStAMoq50=]
+---
+> ENC[PKCS7,MIIBmQYJKoZIhvcNAQcDoIIBijCCAYYCAQAxggEhMIIBHQIBADAFMAACAQEw DQYJKoZIhvcNAQEBBQAEggEAm9Sw3jUCLMOKU0wpQgu7kW4yO/MvoLbQpWMB KKFEssxhJ0Kqc5Q+2cTAk6vo5K7GopVYr5iCaaoxLmCJq3ke1XBR6O182q/2 vcvgqTVq3OaaMR3qji1edJQd6NJuqpuV+tIf6RCktt5+9wlIXLxujnaYxmr1 vrEMXnb0R6PWunXsTAlDDrCVMC6iXIvbhsP2GF8zhhuTkCXp1LTDuvj3aSso iloELuCdCGO7iFTXPuPy4nrgXjlaVnGftoDmVukDP8PUzyEBT1a9ZXUjrswS sXzCsTnEGIpPlIe84Nvk43osbVw2sOgwod7Uko7KmdXVFAh8l15BoW5E9uRw y2XahTBcBgkqhkiG9w0BBwEwHQYJYIZIAWUDBAEqBBAIA2FJ1Fo38jwnbHs8 V8GOgDAaCmR9jyjK/0f0V2WnRF+nPS21sNoB0qONn1V0GwAQbu0yk7QS5y8q 4OTZEGxziGU=]
+"""
+
+        # DEBUG
+        # print("LHS File:  {}".format(lhs_file))
+        # print("RHS File:  {}".format(rhs_file))
+        # print("Expected Output:")
+        # print(merged_yaml_content)
+
+        result = script_runner.run(
+            self.command
+            , "--ignore-eyaml-values"
             , lhs_file
             , rhs_file)
         assert not result.success, result.stderr

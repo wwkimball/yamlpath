@@ -6,8 +6,7 @@ Copyright 2020 William W. Kimball, Jr. MBA MSIS
 DEVELOPMENT NOTES
 
 Remaining Tasks:
-1. EYAML value comparisons.
-2. Test with multi-line (> and |) text values.
+1. Test with multi-line (> and |) text values.
 """
 import sys
 import argparse

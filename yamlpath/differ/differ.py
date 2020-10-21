@@ -178,7 +178,9 @@ class Differ:
         """Diff two Scalar values."""
         lhs_val = lhs
         rhs_val = rhs
-        if not self._ignore_eyaml:
+        if (not self._ignore_eyaml
+            and isinstance(self._eyamlproc, EYAMLProcessor)
+        ):
             if self._eyamlproc.is_eyaml_value(lhs):
                 lhs_val = self._eyamlproc.decrypt_eyaml(lhs)
                 lhs = lhs.replace("\r", "").replace(" ", "")
