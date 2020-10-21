@@ -67,7 +67,8 @@ class DiffEntry:
     def __str__(self) -> str:
         """Get the string representation of this object."""
         diffaction = self._action
-        output = "{} {}\n".format(diffaction, self._path)
+        output = "{} {}\n".format(
+            diffaction, self._path if self._path else "-")
         if diffaction is DiffActions.ADD:
             output += "> {}".format(DiffEntry._jsonify_data(self._rhs))
         elif diffaction is DiffActions.CHANGE:

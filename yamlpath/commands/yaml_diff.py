@@ -5,26 +5,9 @@ Copyright 2020 William W. Kimball, Jr. MBA MSIS
 
 DEVELOPMENT NOTES
 
-Desired Output:
-$ yaml-diff file1 file2
-path.to.CHANGE:
-< ORIGINAL NODE
----
-> NEW NODE
-
-path.to.DELETION:
-< ORIGINAL NODE
-
-path.to.ADDITION:
-> NEW NODE
-
-$ echo $?
-1
-
-$ yaml-diff file1 file1
-
-$ echo $?
-0
+Remaining Tasks:
+1. EYAML value comparisons
+2. Test Anchors and merge operators
 """
 import sys
 import argparse
@@ -55,11 +38,6 @@ def processcli():
         help="Show only nodes which are the same, still reporting that"
              " differences exist -- when they do -- with an exit-state of 1")
 
-    parser.add_argument(
-        "-S", "--nostdin", action="store_true",
-        help="Do not implicitly read from STDIN, even when there are no -"
-             " pseudo-files in YAML_FILEs with a non-TTY session")
-
     noise_group = parser.add_mutually_exclusive_group()
     noise_group.add_argument(
         "-d", "--debug",
@@ -77,24 +55,13 @@ def processcli():
     parser.add_argument("yaml_files", metavar="YAML_FILE",
                         nargs=2,
                         help="exactly two YAML/JSON/compatible files to"
-                             " compare; omit one of these or use  - to read"
-                             " one document from STDIN")
+                             " compare; use - to read one document from STDIN")
 
     return parser.parse_args()
 
 def validateargs(args, log):
     """Validate command-line arguments."""
     has_errors = False
-
-    # There must be at least one input file or stream
-    input_file_count = len(args.yaml_files)
-    if (input_file_count < 2 and (
-            sys.stdin.isatty()
-            or args.nostdin)
-    ):
-        has_errors = True
-        log.error(
-            "There must be at least two YAML_FILEs.")
 
     # There can be only one -
     pseudofile_count = 0

@@ -53,11 +53,11 @@ class Differ:
                         DiffActions.DELETE, next_path, val, None,
                         lhs_parent=data))
         elif isinstance(data, list):
-            for idx, _ in enumerate(data):
+            for idx, ele in enumerate(data):
                 next_path = YAMLPath(path).append("[{}]".format(idx))
                 self._diffs.append(
                     DiffEntry(
-                        DiffActions.DELETE, next_path, idx, None,
+                        DiffActions.DELETE, next_path, ele, None,
                         lhs_parent=data))
         else:
             if data is not None:
