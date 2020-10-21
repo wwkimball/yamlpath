@@ -1013,6 +1013,7 @@ c different_secrets
             , rhs_file)
         assert not result.success, result.stderr
         assert stdout_content == result.stdout
+
     def test_diff_two_multiline_string_hash_files(self, script_runner, tmp_path_factory):
         lhs_file = create_temp_yaml_file(tmp_path_factory, """---
 folded_string: >
@@ -1107,6 +1108,106 @@ c literal_string
 
         result = script_runner.run(
             self.command
+            , lhs_file
+            , rhs_file)
+        assert not result.success, result.stderr
+        assert stdout_content == result.stdout
+
+    def test_diff_two_multiline_string_hash_files_verbosely(self, script_runner, tmp_path_factory):
+        lhs_file = create_temp_yaml_file(tmp_path_factory, """---
+folded_string: >
+  This is
+  one really long
+  string.  It
+  is presented in
+  YAML "folded"
+  format.  This will
+  cause all of the
+  new-line characters
+  to be replaced with
+  single spaces
+  when this value
+  is read by a
+  YAML parser.
+
+literal_string: |
+  This is another
+  really long string.
+  It is presented in
+  YAML "literal"
+  format.  When a
+  YAML parser reads
+  this value, all of
+  these new-line
+  characters will be
+  preserved.
+""")
+        rhs_file = create_temp_yaml_file(tmp_path_factory, """---
+folded_string: >
+  This CHANGED
+  one really long
+  string.  It
+  is presented in
+  YAML "folded"
+  format.  This will
+  cause all of the
+  new-line characters
+  to be replaced with
+  single spaces
+  when this value
+  is read by a
+  YAML parser.
+
+literal_string: |
+  This is another
+  really long CHANGED string.
+  It is presented in
+  YAML "literal"
+  format.  When a
+  YAML parser reads
+  this value, all of
+  these new-line
+  characters will be
+  preserved.
+""")
+        stdout_content = """c1.0.1.0 folded_string
+< This is one really long string.  It is presented in YAML "folded" format.  This will cause all of the new-line characters to be replaced with single spaces when this value is read by a YAML parser.
+---
+> This CHANGED one really long string.  It is presented in YAML "folded" format.  This will cause all of the new-line characters to be replaced with single spaces when this value is read by a YAML parser.
+
+c1.0.1.0 literal_string
+< This is another
+< really long string.
+< It is presented in
+< YAML "literal"
+< format.  When a
+< YAML parser reads
+< this value, all of
+< these new-line
+< characters will be
+< preserved.
+---
+> This is another
+> really long CHANGED string.
+> It is presented in
+> YAML "literal"
+> format.  When a
+> YAML parser reads
+> this value, all of
+> these new-line
+> characters will be
+> preserved.
+"""
+
+        # DEBUG
+        # print("LHS File:  {}".format(lhs_file))
+        # print("RHS File:  {}".format(rhs_file))
+        # print("Expected Output:")
+        # print(merged_yaml_content)
+
+        result = script_runner.run(
+            self.command
+            , "--verbose"
             , lhs_file
             , rhs_file)
         assert not result.success, result.stderr

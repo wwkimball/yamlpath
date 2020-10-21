@@ -17,8 +17,10 @@ from yamlpath.eyaml.exceptions.eyamlcommand import EYAMLCommandException
 def processcli():
     """Process command-line arguments."""
     parser = argparse.ArgumentParser(
-        description="Calculate the difference between two"
-                    " YAML/JSON/Compatible documents.",
+        description="Calculate the functional difference between two"
+                    " YAML/JSON/Compatible documents.  Immaterial differences"
+                    " (which YAML/JSON parsers discard) are ignored.  EYAML"
+                    " can be employed to compare encrypted values.",
         epilog="Only one YAML_FILE may be the - pseudo-file for reading from"
                " STDIN.  For more information about YAML Paths, please visit"
                " https://github.com/wwkimball/yamlpath."
@@ -42,7 +44,7 @@ def processcli():
         metavar=PathSeperators.get_choices(),
         type=PathSeperators.from_str,
         help="indicate which YAML Path seperator to use when rendering"
-             "results; default=dot")
+             " results; default=dot")
 
     eyaml_group = parser.add_argument_group(
         "EYAML options", "Left unset, the EYAML keys will default to your\
@@ -101,6 +103,7 @@ def print_report(log, args, diff):
     """Print user-customized report."""
     changes_found = False
     print_sep = False
+    print_verbosely = args.verbose or args.debug
     for entry in diff.get_report():
         is_different = entry.action is not DiffActions.SAME
         if is_different:
@@ -114,6 +117,7 @@ def print_report(log, args, diff):
             if print_sep:
                 log.info("")
             entry.pathsep = args.pathsep
+            entry.verbose = print_verbosely
             log.info(entry)
             print_sep = True
 
