@@ -34,6 +34,7 @@ class Differ:
         self.logger: ConsolePrinter = logger
         self._data: Any = document
         self._diffs: List[DiffEntry] = []
+        self._sync_arrays = kwargs.pop("sync_arrays", False)
         self._ignore_eyaml = ignore_eyaml
         self._eyamlproc = (None
                            if ignore_eyaml
@@ -154,6 +155,10 @@ class Differ:
 
     def _diff_lists(self, path: YAMLPath, lhs: list, rhs: list) -> None:
         """Diff two lists."""
+        if self._sync_arrays:
+            self._diff_synced_lists(path, lhs, rhs)
+            return
+
         idx = 0
         for (lele, rele) in zip_longest(lhs, rhs):
             next_path = YAMLPath(path).append("[{}]".format(idx))
@@ -171,6 +176,66 @@ class Differ:
             else:
                 self._diff_between(
                     next_path, lele, rele, lhs_parent=lhs, rhs_parent=rhs)
+
+    def _diff_synced_lists(self, path: YAMLPath, lhs: list, rhs: list) -> None:
+        """Diff two synchronized lists."""
+        # lhs = [1, 2, 2, 3]
+        # rhs = [2, 3, 3, 4]
+        # syn = [[1, None], [2, 2], [2, None], [3, 3], [None, 3], [None, 4]]
+        # lsy = [1,    2, 2,    3, None, None]
+        # rsy = [None, 2, None, 3, 3,    4]
+        rhs_reduced = rhs.copy()
+        syn_pairs = []
+        for lhs_ele in lhs:
+            del_index = -1
+            for idx, ele in enumerate(rhs_reduced):
+                if ele == lhs_ele:
+                    del_index = idx
+                    break
+            if del_index > -1:
+                rhs_ele = rhs_reduced.pop(del_index)
+                syn_pairs.append((lhs_ele, rhs_ele))
+            else:
+                syn_pairs.append((lhs_ele, None))
+        for rhs_ele in rhs_reduced:
+            syn_pairs.append((None, rhs_ele))
+
+        self.logger.debug(
+            "Got syn_pairs at {}:".format(path),
+            prefix="Differ::_diff_syncd_lists:  ",
+            data=syn_pairs)
+
+        idx = 0
+        for (lele, rele) in syn_pairs:
+            next_path = YAMLPath(path).append("[{}]".format(idx))
+            idx += 1
+            if lele is None:
+                self._diffs.append(
+                    DiffEntry(
+                        DiffActions.ADD, next_path, None, rele,
+                        lhs_parent=lhs, rhs_parent=rhs))
+            elif rele is None:
+                self._diffs.append(
+                    DiffEntry(
+                        DiffActions.DELETE, next_path, lele, None,
+                        lhs_parent=lhs, rhs_parent=rhs))
+            else:
+                self._diff_between(
+                    next_path, lele, rele, lhs_parent=lhs, rhs_parent=rhs)
+
+        # lhs_reduced = lhs.copy()
+        # rhs_reduced = rhs.copy()
+        # for idx, ele in [ (idx, ele)
+        #     for idx, ele in enumerate(lhs)
+        #     if ele in rhs
+        # ]:
+        #     rhs_reduced.pop(idx)
+
+        # for idx, ele in [ (idx, ele)
+        #     for idx, ele in enumerate(rhs)
+        #     if ele in lhs
+        # ]:
+        #     lhs_reduced.pop(idx)
 
     def _diff_scalars(
         self, path: YAMLPath, lhs: Any, rhs: Any, **kwargs

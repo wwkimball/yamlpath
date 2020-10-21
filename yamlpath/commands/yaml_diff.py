@@ -28,6 +28,14 @@ def processcli():
     parser.add_argument("-V", "--version", action="version",
                         version="%(prog)s " + YAMLPATH_VERSION)
 
+    parser.add_argument(
+        "-a", "--sync-arrays",
+        action="store_true",
+        help="Synchronize array elements before comparing them, thus ignoring"
+             " elements which appear in both documents even when they are at"
+             " different indexes"
+    )
+
     sameness_group = parser.add_mutually_exclusive_group()
     sameness_group.add_argument(
         "-s", "--same", action="store_true",
@@ -145,7 +153,7 @@ def main():
         sys.exit(1)
 
     diff = Differ(
-        log, lhs_document,
+        log, lhs_document, sync_arrays=args.sync_arrays,
         ignore_eyaml_values=args.ignore_eyaml_values, binary=args.eyaml,
         publickey=args.publickey, privatekey=args.privatekey)
 
