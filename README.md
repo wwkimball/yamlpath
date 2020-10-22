@@ -30,11 +30,12 @@ for other projects to readily employ YAML Paths.
 7. [Basic Usage](#basic-usage)
    1. [Basic Usage:  Command-Line Tools](#basic-usage--command-line-tools)
       1. [Rotate Your EYAML Keys](#rotate-your-eyaml-keys)
-      2. [Get a YAML/JSON/Compatible Value](#get-a-yamljsoncompatible-value)
-      3. [Search For YAML Paths](#search-for-yaml-paths)
-      4. [Change a YAML/JSON/Compatible Value](#change-a-yamljsoncompatible-value)
-      5. [Merge YAML/JSON/Compatible Files](#merge-yamljsoncompatible-files)
-      6. [Validate YAML/JSON/Compatible Documents](#validate-yamljsoncompatible-documents)
+      2. [Get the Differences Between Two Documents](#get-the-differences-between-two-documents)
+      3. [Get a YAML/JSON/Compatible Value](#get-a-yamljsoncompatible-value)
+      4. [Search For YAML Paths](#search-for-yaml-paths)
+      5. [Change a YAML/JSON/Compatible Value](#change-a-yamljsoncompatible-value)
+      6. [Merge YAML/JSON/Compatible Files](#merge-yamljsoncompatible-files)
+      7. [Validate YAML/JSON/Compatible Documents](#validate-yamljsoncompatible-documents)
    2. [Basic Usage:  Libraries](#basic-usage--libraries)
       1. [Initialize ruamel.yaml and These Helpers](#initialize-ruamelyaml-and-these-helpers)
       2. [Searching for YAML Nodes](#searching-for-yaml-nodes)
@@ -343,6 +344,63 @@ EYAML_KEYS:
 
 Any YAML_FILEs lacking EYAML values will not be modified (or backed up, even
 when -b/--backup is specified).
+```
+
+* [yaml-diff](yamlpath/commands/yaml_diff.py)
+
+```text
+usage: yaml-diff [-h] [-V] [-a] [-s | -o]
+                 [-t ['.', '/', 'auto', 'dot', 'fslash']] [-x EYAML]
+                 [-r PRIVATEKEY] [-u PUBLICKEY] [-E] [-d | -v | -q]
+                 YAML_FILE YAML_FILE
+
+Calculate the functional difference between two YAML/JSON/Compatible
+documents. Immaterial differences (which YAML/JSON parsers discard) are
+ignored. EYAML can be employed to compare encrypted values.
+
+positional arguments:
+  YAML_FILE             exactly two YAML/JSON/compatible files to compare; use
+                        - to read one document from STDIN
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -V, --version         show program's version number and exit
+  -a, --sync-arrays     Synchronize array elements before comparing them,
+                        resulting only in ADD, DELETE, and SAME differences
+                        (no CHANGEs because the positions of elements are
+                        disregarded); Array-of-Hash elements must completely
+                        and perfectly match or they will be deemed additions
+                        or deletions
+  -s, --same            Show all nodes which are the same in addition to
+                        differences
+  -o, --onlysame        Show only nodes which are the same, still reporting
+                        that differences exist -- when they do -- with an
+                        exit-state of 1
+  -t ['.', '/', 'auto', 'dot', 'fslash'], --pathsep ['.', '/', 'auto', 'dot', 'fslash']
+                        indicate which YAML Path seperator to use when
+                        rendering results; default=dot
+  -d, --debug           output debugging details
+  -v, --verbose         increase output verbosity
+  -q, --quiet           suppress all output except system errors
+
+EYAML options:
+  Left unset, the EYAML keys will default to your system or user defaults.
+  Both keys must be set either here or in your system or user EYAML
+  configuration file when using EYAML.
+
+  -x EYAML, --eyaml EYAML
+                        the eyaml binary to use when it isn't on the PATH
+  -r PRIVATEKEY, --privatekey PRIVATEKEY
+                        EYAML private key
+  -u PUBLICKEY, --publickey PUBLICKEY
+                        EYAML public key
+  -E, --ignore-eyaml-values
+                        Do not use EYAML to compare encrypted data; rather,
+                        treat ENC[...] values as regular strings
+
+Only one YAML_FILE may be the - pseudo-file for reading from STDIN. For more
+information about YAML Paths, please visit
+https://github.com/wwkimball/yamlpath.
 ```
 
 * [yaml-get](yamlpath/commands/yaml_get.py)
@@ -748,6 +806,43 @@ re-encrypt your data with the replacement certificates, hiera-eyaml 3.x will
 fail to decrypt your data!**  This is *not* a problem with YAML Path.
 hiera-eyaml certificate compatibility is well outside the purview of YAML Path
 and its tools.
+
+#### Get the Differences Between Two Documents
+
+For routine use:
+
+```shell
+yaml-diff yaml_file1.yaml yaml_file2.yaml
+```
+
+Output is very similar to that of standard GNU diff against text files, except
+it is generated against the *data* within the input files.  This excludes
+evaluating purely structural and immaterial differences between them like value
+demarcation, white-space, and comments.  When you need to evaluate the two
+files as if they were just text files, use GNU diff or any of its clones.
+
+To see all identical entries along with differences:
+
+```shell
+yaml-diff --same yaml_file1.yaml yaml_file2.yaml
+```
+
+To see *only* entries which are identical between the documents:
+
+```shell
+yaml-diff --onlysame yaml_file1.yaml yaml_file2.yaml
+```
+
+Advanced:  Arrays can be evaluated such that they are synchronized before
+evaluation.  Rather than compare elements by identical index in both
+documents -- reporting differences between them as changes and any additional
+elements as additions or deletions -- they can instead be compared by matching
+up all identical elements and then reporting only those values which are unique
+to either document (and optionally identical matches).
+
+```shell
+yaml-diff --sync-arrays yaml_file1.yaml yaml_file2.yaml
+```
 
 #### Get a YAML/JSON/Compatible Value
 
