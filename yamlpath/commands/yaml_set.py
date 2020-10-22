@@ -52,7 +52,7 @@ def processcli():
             value before checking it.",
         epilog="When no changes are made, no backup is created, even when\
             -b/--backup is specified.  For more information about YAML Paths,\
-            please visit https://github.com/wwkimball/yamlpath."
+            please visit https://github.com/wwkimball/yamlpath/wiki."
     )
     parser.add_argument("-V", "--version", action="version",
                         version="%(prog)s " + YAMLPATH_VERSION)
@@ -84,7 +84,8 @@ def processcli():
     input_group.add_argument(
         "-D", "--delete",
         action="store_true",
-        help="delete rather than change target node(s)")
+        help="delete rather than change target node(s); implies"
+             " --mustexist|-m")
 
     parser.add_argument(
         "-F", "--format",

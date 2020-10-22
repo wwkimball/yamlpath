@@ -38,7 +38,7 @@ def processcli():
             Hash), a JSON dump is produced to represent it.  EYAML can be\
             employed to decrypt the values.",
         epilog="For more information about YAML Paths, please visit\
-            https://github.com/wwkimball/yamlpath."
+            https://github.com/wwkimball/yamlpath/wiki."
     )
     parser.add_argument("-V", "--version", action="version",
                         version="%(prog)s " + YAMLPATH_VERSION)
