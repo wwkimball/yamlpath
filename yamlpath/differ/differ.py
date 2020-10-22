@@ -157,11 +157,6 @@ class Differ:
 
     def _diff_synced_lists(self, path: YAMLPath, lhs: list, rhs: list) -> None:
         """Diff two synchronized lists."""
-        # lhs = [1, 2, 2, 3]
-        # rhs = [2, 3, 3, 4]
-        # syn = [[1, None], [2, 2], [2, None], [3, 3], [None, 3], [None, 4]]
-        # lsy = [1,    2, 2,    3, None, None]
-        # rsy = [None, 2, None, 3, 3,    4]
         debug_path = path if path else "/"
         self.logger.debug(
             "Synchronizing LHS Array elements at YAML Path, {}:"
@@ -238,6 +233,7 @@ class Differ:
         if diff_mode is AoHDiffOpts.VALUE:
             self._diff_synced_lists(path, lhs, rhs)
             return
+        deep_diff = diff_mode is AoHDiffOpts.DEEP
 
         # Perform either a KEY or DEEP comparison; either way, the elements
         # must first be synchronized based on their identity key values.
@@ -249,7 +245,33 @@ class Differ:
                 "Differ::_diff_arrays_of_hashes:  RHS AoH yielded id_key:"
                 "  {}.".format(id_key))
 
-        # TODO:  This...
+        syn_pairs = Differ.synchronize_lods_by_key(lhs, rhs, id_key)
+        for (lidx, lele, ridx, rele) in syn_pairs:
+            if lele is None:
+                next_path = YAMLPath(path).append("[{}]".format(ridx))
+                self._diffs.append(
+                    DiffEntry(
+                        DiffActions.ADD, next_path, None, rele,
+                        lhs_parent=lhs, rhs_parent=rhs))
+            elif rele is None:
+                next_path = YAMLPath(path).append("[{}]".format(lidx))
+                self._diffs.append(
+                    DiffEntry(
+                        DiffActions.DELETE, next_path, lele, None,
+                        lhs_parent=lhs, rhs_parent=rhs))
+            else:
+                if deep_diff:
+                    next_path = YAMLPath(path).append("[{}]".format(ridx))
+                    self._diff_between(
+                        next_path, lele, rele, lhs_parent=lhs, rhs_parent=rhs,
+                        parentref=ridx)
+                else:
+                    diff_action = (DiffActions.SAME
+                                  if lele == rele
+                                  else DiffActions.CHANGE)
+                    self._diffs.append(
+                        DiffEntry(diff_action, path, lhs, rhs)
+                    )
 
     def _diff_lists(
         self, path: YAMLPath, lhs: list, rhs: list, **kwargs
@@ -312,12 +334,55 @@ class Differ:
                 if rhs_ele == lhs_ele:
                     del_index = rhs_idx
                     break
+
             if del_index > -1:
                 rhs_ele = rhs_reduced.pop(del_index)
                 rhs_indexes.remove(del_index)
                 syn_pairs.append((lhs_idx, lhs_ele, del_index, rhs_ele))
             else:
                 syn_pairs.append((lhs_idx, lhs_ele, None, None))
+
+        for (rhs_idx, rhs_ele) in zip(rhs_indexes, rhs_reduced):
+            syn_pairs.append((None, None, rhs_idx, rhs_ele))
+
+        return syn_pairs
+
+    @classmethod
+    def synchronize_lods_by_key(
+        cls, lhs: list, rhs: list, key_attr: str
+    ) -> Tuple[int, Any, int, Any]:
+        """Synchronize two lists-of-dictionaries by identity key."""
+        # Build a parallel index array to track the original RHS element
+        # indexes of any surviving elements.
+        rhs_indexes = []
+        for idx in range(len(rhs)):
+            rhs_indexes.append(idx)
+
+        rhs_reduced = rhs.copy()
+        syn_pairs = []
+        for lhs_idx, lhs_ele in enumerate(lhs):
+            if not key_attr in lhs_ele:
+                # Impossible to match this LHS record to any RHS record
+                syn_pairs.append((lhs_idx, lhs_ele, None, None))
+                continue
+
+            del_index = -1
+            for rhs_idx, rhs_ele in enumerate(rhs_reduced):
+                if not key_attr in rhs_ele:
+                    # Impossible to match this RHS record to any LHS record
+                    continue
+
+                if rhs_ele[key_attr] == lhs_ele[key_attr]:
+                    del_index = rhs_idx
+                    break
+
+            if del_index > -1:
+                rhs_ele = rhs_reduced.pop(del_index)
+                rhs_indexes.remove(del_index)
+                syn_pairs.append((lhs_idx, lhs_ele, del_index, rhs_ele))
+            else:
+                syn_pairs.append((lhs_idx, lhs_ele, None, None))
+
         for (rhs_idx, rhs_ele) in zip(rhs_indexes, rhs_reduced):
             syn_pairs.append((None, None, rhs_idx, rhs_ele))
 
