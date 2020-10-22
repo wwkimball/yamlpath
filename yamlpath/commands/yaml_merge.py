@@ -41,7 +41,7 @@ def processcli():
                     " YAML/JSON/Compatible documents\ntogether, including"
                     " complex data provided via STDIN.",
         epilog="""
-configuraiton file:
+configuration file:
   The CONFIG file is an INI file with up to three sections:
   [defaults] Sets equivalents of --anchors|-a, --arrays|-A, --hashes|-H, and
              --aoh|-O.
