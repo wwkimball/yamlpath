@@ -3,7 +3,7 @@ Enhancements:
 * A new command-line tool, yaml-diff, now compares exactly two
   YAML/JSON/Compatible documents, producing a GNU diff-like report of any
   differences in the data they present to parsers.  Along with diff's "a"
-  (add), "c" (change), and "d" (deleted) report entries, affected YAML Paths
+  (added), "c" (changed), and "d" (deleted) report entries, affected YAML Paths
   are printed in lieu of line numbers.  Further, a report entry of "s" (same)
   is available and can be enabled via command-line options.  This tool also
   features optional special handling of Arrays and Arrays-of-Hashes.
