@@ -150,6 +150,11 @@ d [2]
         assert not result.success, result.stderr
         assert "File not found" in result.stderr
 
+    def test_cannot_quiet_sameness(self, script_runner):
+        result = script_runner.run(self.command, "--quiet", "--same", "any-file.yaml", "any-other-file.json")
+        assert not result.success, result.stderr
+        assert "The --quiet|-q option suppresses all output, including" in result.stderr
+
     def test_bad_eyaml_value(self, script_runner, tmp_path_factory):
         content = """---
         aliases:
@@ -286,6 +291,24 @@ d [2]
             , universal_newlines=True
         )
         assert 0 == result.returncode, result.stderr
+        assert "" == result.stdout
+
+    def test_quiet_diff_two_hash_files(self, script_runner, tmp_path_factory):
+        lhs_file = create_temp_yaml_file(tmp_path_factory, self.lhs_hash_content)
+        rhs_file = create_temp_yaml_file(tmp_path_factory, self.rhs_hash_content)
+
+        # DEBUG
+        # print("LHS File:  {}".format(lhs_file))
+        # print("RHS File:  {}".format(rhs_file))
+        # print("Expected Output:")
+        # print(merged_yaml_content)
+
+        result = script_runner.run(
+            self.command
+            , "--quiet"
+            , lhs_file
+            , rhs_file)
+        assert not result.success, result.stderr
         assert "" == result.stdout
 
     def test_simple_diff_two_hash_files(self, script_runner, tmp_path_factory):

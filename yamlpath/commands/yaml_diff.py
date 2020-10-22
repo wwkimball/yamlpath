@@ -105,6 +105,13 @@ def validateargs(args, log):
         has_errors = True
         log.error("Only one YAML_FILE may be the - pseudo-file.")
 
+    # --quiet cannot be used with --same or --onlysame
+    if args.quiet and (args.same or args.onlysame):
+        has_errors = True
+        log.error(
+            "The --quiet|-q option suppresses all output, including that of"
+            " --same|-s and --onlysame|-o, so they cannot be set together.")
+
     if has_errors:
         sys.exit(1)
 
@@ -117,6 +124,9 @@ def print_report(log, args, diff):
         is_different = entry.action is not DiffActions.SAME
         if is_different:
             changes_found = True
+
+        if args.quiet:
+            continue
 
         if (
             (is_different and not args.onlysame)
