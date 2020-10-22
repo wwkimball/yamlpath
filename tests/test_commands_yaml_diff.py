@@ -1212,3 +1212,59 @@ c1.0.1.0 literal_string
             , rhs_file)
         assert not result.success, result.stderr
         assert stdout_content == result.stdout
+
+    def test_sync_arrays(self, script_runner, tmp_path_factory):
+        lhs_file = create_temp_yaml_file(tmp_path_factory, """---
+- alpha
+- mu
+- psi
+- beta
+- delta
+- chi
+- delta
+- gamma
+- alpha
+""")
+        rhs_file = create_temp_yaml_file(tmp_path_factory, """---
+- zeta
+- mu
+- psi
+- alpha
+- gamma
+- gamma
+- phi
+- beta
+- chi
+""")
+        stdout_content = """d [4]
+< delta
+
+d [6]
+< delta
+
+d [8]
+< alpha
+
+a [9]
+> zeta
+
+a [10]
+> gamma
+
+a [11]
+> phi
+"""
+
+        # DEBUG
+        # print("LHS File:  {}".format(lhs_file))
+        # print("RHS File:  {}".format(rhs_file))
+        # print("Expected Output:")
+        # print(merged_yaml_content)
+
+        result = script_runner.run(
+            self.command
+            , "--sync-arrays"
+            , lhs_file
+            , rhs_file)
+        assert not result.success, result.stderr
+        assert stdout_content == result.stdout
