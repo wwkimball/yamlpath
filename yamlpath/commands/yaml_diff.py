@@ -31,10 +31,11 @@ def processcli():
     parser.add_argument(
         "-a", "--sync-arrays",
         action="store_true",
-        help="Synchronize array elements before comparing them, thus ignoring"
-             " elements which appear in both documents even when they are at"
-             " different indexes"
-    )
+        help="Synchronize array elements before comparing them, resulting only"
+             " in ADD, DELETE, and SAME differences (no CHANGEs because the"
+             " positions of elements are disregarded); Array-of-Hash elements"
+             " must completely and perfectly match or they will be deemed"
+             " additions or deletions")
 
     sameness_group = parser.add_mutually_exclusive_group()
     sameness_group.add_argument(

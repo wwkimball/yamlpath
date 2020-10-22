@@ -63,6 +63,11 @@ class DiffEntry:
         return self._action
 
     @property
+    def path(self) -> YAMLPath:
+        """Get the YAML Path of this difference (ready-only)."""
+        return self._path
+
+    @property
     def index(self) -> str:
         """Get the sortable index for this entry (read-only)."""
         return self._index

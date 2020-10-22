@@ -219,7 +219,7 @@ class ConsolePrinter:
                 data, prefix=prefix, **kwargs
             ):
                 yield line
-        elif isinstance(data, list):
+        elif isinstance(data, (list, tuple)):
             for line in ConsolePrinter._debug_list(
                 data, prefix=prefix, **kwargs
             ):

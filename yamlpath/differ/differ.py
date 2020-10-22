@@ -184,6 +184,18 @@ class Differ:
         # syn = [[1, None], [2, 2], [2, None], [3, 3], [None, 3], [None, 4]]
         # lsy = [1,    2, 2,    3, None, None]
         # rsy = [None, 2, None, 3, 3,    4]
+        debug_path = path if path else "/"
+        self.logger.debug(
+            "Synchronizing LHS Array elements at YAML Path, {}:"
+            .format(debug_path),
+            prefix="Differ::_diff_syncd_lists:  ",
+            data=lhs)
+        self.logger.debug(
+            "Synchronizing RHS Array elements at YAML Path, {}:"
+            .format(debug_path),
+            prefix="Differ::_diff_syncd_lists:  ",
+            data=rhs)
+
         rhs_reduced = rhs.copy()
         syn_pairs = []
         for lhs_ele in lhs:
@@ -201,7 +213,8 @@ class Differ:
             syn_pairs.append((None, rhs_ele))
 
         self.logger.debug(
-            "Got syn_pairs at {}:".format(path),
+            "Got synchronized pairs of Array elements at YAML Path, {}:"
+            .format(debug_path),
             prefix="Differ::_diff_syncd_lists:  ",
             data=syn_pairs)
 
@@ -222,20 +235,6 @@ class Differ:
             else:
                 self._diff_between(
                     next_path, lele, rele, lhs_parent=lhs, rhs_parent=rhs)
-
-        # lhs_reduced = lhs.copy()
-        # rhs_reduced = rhs.copy()
-        # for idx, ele in [ (idx, ele)
-        #     for idx, ele in enumerate(lhs)
-        #     if ele in rhs
-        # ]:
-        #     rhs_reduced.pop(idx)
-
-        # for idx, ele in [ (idx, ele)
-        #     for idx, ele in enumerate(rhs)
-        #     if ele in lhs
-        # ]:
-        #     lhs_reduced.pop(idx)
 
     def _diff_scalars(
         self, path: YAMLPath, lhs: Any, rhs: Any, **kwargs
