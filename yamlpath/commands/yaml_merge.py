@@ -67,8 +67,12 @@ input files:
   or compatible file.
 
 For more information about YAML Paths, please visit
-https://github.com/wwkimball/yamlpath/wiki."""
-    )
+https://github.com/wwkimball/yamlpath/wiki.
+
+To report issues with this tool or to request enhancements, please visit
+https://github.com/wwkimball/yamlpath/issues.
+""")
+
     parser.add_argument("-V", "--version", action="version",
                         version="%(prog)s " + YAMLPATH_VERSION)
 
