@@ -1270,19 +1270,18 @@ c1.0.1.0 literal_string
         stdout_content = """d [4]
 < delta
 
-d [6]
-< delta
-
 d [8]
 < alpha
 
-a [9]
+a [0]
 > zeta
 
-a [10]
+a [5]
 > gamma
 
-a [11]
+c [6]
+< delta
+---
 > phi
 """
 
