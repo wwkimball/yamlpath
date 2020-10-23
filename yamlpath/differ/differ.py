@@ -59,19 +59,21 @@ class Differ:
     def _purge_document(self, path: YAMLPath, data: Any):
         """Delete every node in the document."""
         if isinstance(data, dict):
+            lhs_iteration = -1
             for key, val in data.items():
+                lhs_iteration += 1
                 next_path = YAMLPath(path).append(key)
                 self._diffs.append(
                     DiffEntry(
                         DiffActions.DELETE, next_path, val, None,
-                        lhs_parent=data))
+                        lhs_parent=data, lhs_iteration=lhs_iteration))
         elif isinstance(data, list):
             for idx, ele in enumerate(data):
                 next_path = YAMLPath(path).append("[{}]".format(idx))
                 self._diffs.append(
                     DiffEntry(
                         DiffActions.DELETE, next_path, ele, None,
-                        lhs_parent=data))
+                        lhs_parent=data, lhs_iteration=idx))
         else:
             if data is not None:
                 self._diffs.append(
@@ -81,19 +83,21 @@ class Differ:
     def _add_everything(self, path: YAMLPath, data: Any) -> None:
         """Add every node in the document."""
         if isinstance(data, dict):
+            rhs_iteration = -1
             for key, val in data.items():
+                rhs_iteration += 1
                 next_path = YAMLPath(path).append(key)
                 self._diffs.append(
                     DiffEntry(
                         DiffActions.ADD, next_path, None, val,
-                        rhs_parent=data))
+                        rhs_parent=data, rhs_iteration=rhs_iteration))
         elif isinstance(data, list):
             for idx, ele in enumerate(data):
                 next_path = YAMLPath(path).append("[{}]".format(idx))
                 self._diffs.append(
                     DiffEntry(
                         DiffActions.ADD, next_path, None, ele,
-                        rhs_parent=data))
+                        rhs_parent=data, rhs_iteration=idx))
         else:
             if data is not None:
                 self._diffs.append(
@@ -148,31 +152,39 @@ class Differ:
         lhs_keys = set(lhs)
         rhs_keys = set(rhs)
 
-        # Look for deleted keys
-        for key in lhs_keys - rhs_keys:
-            next_path = YAMLPath(path).append(key)
-            self._diffs.append(
-                DiffEntry(
-                    DiffActions.DELETE, next_path, lhs[key], None,
-                    lhs_parent=lhs, rhs_parent=rhs))
-
-        # Look for new keys
-        for key in rhs_keys - lhs_keys:
-            next_path = YAMLPath(path).append(key)
-            self._diffs.append(
-                DiffEntry(
-                    DiffActions.ADD, next_path, None, rhs[key],
-                    lhs_parent=lhs, rhs_parent=rhs))
-
         # Recurse into the rest
+        iteration = -1
         for key, val in [
             (key, val) for key, val in rhs.items()
             if key in lhs and key in rhs
         ]:
+            iteration += 1
             next_path = YAMLPath(path).append(key)
             self._diff_between(
-                next_path, lhs[key], val, lhs_parent=lhs, rhs_parent=rhs,
+                next_path, lhs[key], val,
+                lhs_parent=lhs, lhs_iteration=iteration,
+                rhs_parent=rhs, rhs_iteration=iteration,
                 parentref=key)
+
+        # Look for deleted keys
+        for key in lhs_keys - rhs_keys:
+            iteration += 1
+            next_path = YAMLPath(path).append(key)
+            self._diffs.append(
+                DiffEntry(
+                    DiffActions.DELETE, next_path, lhs[key], None,
+                    lhs_parent=lhs, lhs_iteration=iteration,
+                    rhs_parent=rhs, rhs_iteration=iteration))
+
+        # Look for new keys
+        for key in rhs_keys - lhs_keys:
+            iteration += 1
+            next_path = YAMLPath(path).append(key)
+            self._diffs.append(
+                DiffEntry(
+                    DiffActions.ADD, next_path, None, rhs[key],
+                    lhs_parent=lhs, lhs_iteration=iteration,
+                    rhs_parent=rhs, rhs_iteration=iteration))
 
     def _diff_synced_lists(self, path: YAMLPath, lhs: list, rhs: list) -> None:
         """Diff two synchronized lists."""
@@ -214,7 +226,8 @@ class Differ:
 
                 self._diffs.append(DiffEntry(
                     diff_action, next_path, opposite_val, rele,
-                    lhs_parent=lhs, rhs_parent=rhs))
+                    lhs_parent=lhs, lhs_iteration=lidx,
+                    rhs_parent=rhs, rhs_iteration=ridx))
             elif rele is None:
                 next_path = YAMLPath(path).append("[{}]".format(lidx))
                 diff_action = DiffActions.DELETE
@@ -234,11 +247,14 @@ class Differ:
                 self._diffs.append(
                     DiffEntry(
                         diff_action, next_path, lele, opposite_val,
-                        lhs_parent=lhs, rhs_parent=rhs))
+                        lhs_parent=lhs, lhs_iteration=lidx,
+                        rhs_parent=rhs, rhs_iteration=ridx))
             else:
                 next_path = YAMLPath(path).append("[{}]".format(lidx))
                 self._diff_between(
-                    next_path, lele, rele, lhs_parent=lhs, rhs_parent=rhs,
+                    next_path, lele, rele,
+                    lhs_parent=lhs, lhs_iteration=lidx,
+                    rhs_parent=rhs, rhs_iteration=ridx,
                     parentref=ridx)
 
     def _diff_arrays_of_scalars(
@@ -269,21 +285,27 @@ class Differ:
                 self._diffs.append(
                     DiffEntry(
                         DiffActions.ADD, next_path, None, rele,
-                        lhs_parent=lhs, rhs_parent=rhs))
+                        lhs_parent=lhs, lhs_iteration=idx,
+                        rhs_parent=rhs, rhs_iteration=idx))
             elif rele is None:
                 self._diffs.append(
                     DiffEntry(
                         DiffActions.DELETE, next_path, lele, None,
-                        lhs_parent=lhs, rhs_parent=rhs))
+                        lhs_parent=lhs, lhs_iteration=idx,
+                        rhs_parent=rhs, rhs_iteration=idx))
             elif diff_deeply:
                 self._diff_between(
-                    next_path, lele, rele, lhs_parent=lhs, rhs_parent=rhs,
+                    next_path, lele, rele,
+                    lhs_parent=lhs, lhs_iteration=idx,
+                    rhs_parent=rhs, rhs_iteration=idx,
                     parentref=idx)
             elif lele != rele:
                 self._diffs.append(
                     DiffEntry(
                         DiffActions.CHANGE, next_path, lele, rele,
-                        lhs_parent=lhs, rhs_parent=rhs, parentref=idx))
+                        lhs_parent=lhs, lhs_iteration=idx,
+                        rhs_parent=rhs, rhs_iteration=idx,
+                        parentref=idx))
 
     def _diff_arrays_of_hashes(
         self, path: YAMLPath, lhs: list, rhs: list, node_coord: NodeCoords
@@ -346,18 +368,22 @@ class Differ:
                 self._diffs.append(
                     DiffEntry(
                         DiffActions.ADD, next_path, None, rele,
-                        lhs_parent=lhs, rhs_parent=rhs))
+                        lhs_parent=lhs, lhs_iteration=lidx,
+                        rhs_parent=rhs, rhs_iteration=ridx))
             elif rele is None:
                 next_path = YAMLPath(path).append("[{}]".format(lidx))
                 self._diffs.append(
                     DiffEntry(
                         DiffActions.DELETE, next_path, lele, None,
-                        lhs_parent=lhs, rhs_parent=rhs))
+                        lhs_parent=lhs, lhs_iteration=lidx,
+                        rhs_parent=rhs, rhs_iteration=ridx))
             else:
                 if deep_diff:
                     next_path = YAMLPath(path).append("[{}]".format(ridx))
                     self._diff_between(
-                        next_path, lele, rele, lhs_parent=lhs, rhs_parent=rhs,
+                        next_path, lele, rele,
+                        lhs_parent=lhs, lhs_iteration=lidx,
+                        rhs_parent=rhs, rhs_iteration=ridx,
                         parentref=ridx)
                 else:
                     # KEY-based comparisons
@@ -367,7 +393,9 @@ class Differ:
                                   else DiffActions.CHANGE)
                     self._diffs.append(
                         DiffEntry(diff_action, next_path, lele, rele,
-                        lhs_parent=lhs, rhs_parent=rhs, parentref=lidx))
+                        lhs_parent=lhs, lhs_iteration=lidx,
+                        rhs_parent=rhs, rhs_iteration=ridx,
+                        parentref=lidx))
 
     def _diff_lists(
         self, path: YAMLPath, lhs: list, rhs: list, **kwargs
