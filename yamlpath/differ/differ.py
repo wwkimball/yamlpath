@@ -104,7 +104,15 @@ class Differ:
         self, path: YAMLPath, lhs: Any, rhs: Any, **kwargs
     ) -> None:
         """Diff two Scalar values."""
-        self.logger.debug("Differ::_diff_scalars:  Starting...")
+        self.logger.debug(
+            "Comparing LHS:",
+            prefix="Differ::_diff_scalars:  ",
+            data=lhs)
+        self.logger.debug(
+            "Against RHS:",
+            prefix="Differ::_diff_scalars:  ",
+            data=rhs)
+
         lhs_val = lhs
         rhs_val = rhs
         if (not self._ignore_eyaml
@@ -128,7 +136,15 @@ class Differ:
 
     def _diff_dicts(self, path: YAMLPath, lhs: dict, rhs: dict) -> None:
         """Diff two dicts."""
-        self.logger.debug("Differ::_diff_dicts:  Starting...")
+        self.logger.debug(
+            "Comparing LHS:",
+            prefix="Differ::_diff_dicts:  ",
+            data=lhs)
+        self.logger.debug(
+            "Against RHS:",
+            prefix="Differ::_diff_dicts:  ",
+            data=rhs)
+
         lhs_keys = set(lhs)
         rhs_keys = set(rhs)
 
@@ -230,7 +246,15 @@ class Differ:
         **kwargs
     ) -> None:
         """Diff two lists of scalars."""
-        self.logger.debug("Differ::_diff_arrays_of_scalars:  Starting...")
+        self.logger.debug(
+            "Comparing LHS:",
+            prefix="Differ::_diff_arrays_of_scalars:  ",
+            data=lhs)
+        self.logger.debug(
+            "Against RHS:",
+            prefix="Differ::_diff_arrays_of_scalars:  ",
+            data=rhs)
+
         diff_mode = self.config.array_diff_mode(node_coord)
         if diff_mode is ArrayDiffOpts.VALUE:
             self._diff_synced_lists(path, lhs, rhs)
@@ -265,7 +289,14 @@ class Differ:
         self, path: YAMLPath, lhs: list, rhs: list, node_coord: NodeCoords
     ) -> None:
         """Diff two lists-of-dictionaries."""
-        self.logger.debug("Differ::_diff_arrays_of_hashes:  Starting...")
+        self.logger.debug(
+            "Comparing LHS:",
+            prefix="Differ::_diff_arrays_of_hashes:  ",
+            data=lhs)
+        self.logger.debug(
+            "Against RHS:",
+            prefix="Differ::_diff_arrays_of_hashes:  ",
+            data=rhs)
 
         diff_mode = self.config.aoh_diff_mode(node_coord)
         if diff_mode is AoHDiffOpts.POSITION:
@@ -342,7 +373,15 @@ class Differ:
         self, path: YAMLPath, lhs: list, rhs: list, **kwargs
     ) -> None:
         """Diff two lists."""
-        self.logger.debug("Differ::_diff_lists:  Starting...")
+        self.logger.debug(
+            "Comparing LHS:",
+            prefix="Differ::_diff_lists:  ",
+            data=lhs)
+        self.logger.debug(
+            "Against RHS:",
+            prefix="Differ::_diff_lists:  ",
+            data=rhs)
+
         parent: Any = kwargs.pop("rhs_parent", None)
         parentref: Any = kwargs.pop("parentref", None)
         node_coord = NodeCoords(rhs, parent, parentref)
@@ -358,7 +397,15 @@ class Differ:
         self, path: YAMLPath, lhs: Any, rhs: Any, **kwargs
     ) -> None:
         """Calculate the differences between two document nodes."""
-        self.logger.debug("Differ::_diff_between:  Starting...")
+        self.logger.debug(
+            "Comparing LHS:",
+            prefix="Differ::_diff_between:  ",
+            data=lhs)
+        self.logger.debug(
+            "Against RHS:",
+            prefix="Differ::_diff_between:  ",
+            data=rhs)
+
         # If the roots are different, delete all LHS and add all RHS.
         lhs_is_dict = isinstance(lhs, dict)
         lhs_is_list = isinstance(lhs, list)
