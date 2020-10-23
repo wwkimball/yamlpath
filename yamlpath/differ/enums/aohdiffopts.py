@@ -14,22 +14,28 @@ class AoHDiffOpts(Enum):
     Options include:
 
     `DEEP`
-        Like KEY except the two records are deeply traversed, looking for
+        Like KEY except the record pairs are deeply traversed, looking for
         specific internal differences, after being matched up.
+
+    `DPOS`
+        Like POSITION (no KEY matching) except the record pairs are deeply
+        traversed to report every specific difference between them.
 
     `KEY`
         AoH records are synchronized by their identity key before being
         compared as whole units (no deep traversal).
 
     `POSITION`
-        AoH records are compared based on their ordinal position in each
-        document.
+        AoH records are compared as whole units (no deep traversal) based on
+        their ordinal position in each document.
 
     `VALUE`
-        AoH records are synchronized by value before being compared.
+        AoH records are synchronized as whole units (no deep traversal) before
+        being compared.
     """
 
     DEEP = auto()
+    DPOS = auto()
     KEY = auto()
     POSITION = auto()
     VALUE = auto()

@@ -272,6 +272,10 @@ class Differ:
             self._diff_arrays_of_scalars(
                 path, lhs, rhs, node_coord, diff_deeply=False)
             return
+        if diff_mode is AoHDiffOpts.DPOS:
+            self._diff_arrays_of_scalars(
+                path, lhs, rhs, node_coord, diff_deeply=True)
+            return
         if diff_mode is AoHDiffOpts.VALUE:
             self._diff_synced_lists(path, lhs, rhs)
             return
@@ -326,11 +330,12 @@ class Differ:
                         parentref=ridx)
                 else:
                     # KEY-based comparisons
+                    next_path = YAMLPath(path).append("[{}]".format(lidx))
                     diff_action = (DiffActions.SAME
                                   if lele == rele
                                   else DiffActions.CHANGE)
                     self._diffs.append(
-                        DiffEntry(diff_action, path, lele, rele,
+                        DiffEntry(diff_action, next_path, lele, rele,
                         lhs_parent=lhs, rhs_parent=rhs, parentref=lidx))
 
     def _diff_lists(
