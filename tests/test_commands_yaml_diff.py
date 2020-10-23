@@ -69,7 +69,7 @@ rhs_exclusive:
   message: A tout %args[0]!
 """
 
-    standard_hash_diff = """c key
+    deep_aoh_hash_diff = """c key
 < value
 ---
 > different value
@@ -115,7 +115,7 @@ a rhs_exclusive
 > {"with": {"structure": true}}
 """
 
-    standard_array_diff = """c [0].args[0]
+    deep_array_diff = """c [0].args[0]
 < world
 ---
 > le monde
@@ -323,10 +323,11 @@ d [2]
 
         result = script_runner.run(
             self.command
+            , "--aoh=deep"
             , lhs_file
             , rhs_file)
         assert not result.success, result.stderr
-        assert self.standard_hash_diff == result.stdout
+        assert self.deep_aoh_hash_diff == result.stdout
 
     def test_simple_diff_two_array_files(self, script_runner, tmp_path_factory):
         lhs_file = create_temp_yaml_file(tmp_path_factory, self.lhs_array_content)
@@ -340,10 +341,11 @@ d [2]
 
         result = script_runner.run(
             self.command
+            , "--aoh=deep"
             , lhs_file
             , rhs_file)
         assert not result.success, result.stderr
-        assert self.standard_array_diff == result.stdout
+        assert self.deep_array_diff == result.stdout
 
     def test_simple_hash_diff_lhs_from_stdin(self, script_runner, tmp_path_factory):
         import subprocess
@@ -351,6 +353,7 @@ d [2]
 
         result = subprocess.run(
             [self.command
+            , "--aoh=deep"
             , "-"
             , rhs_file
             ]
@@ -359,7 +362,7 @@ d [2]
             , universal_newlines=True
         )
         assert 1 == result.returncode, result.stderr
-        assert self.standard_hash_diff == result.stdout
+        assert self.deep_aoh_hash_diff == result.stdout
 
     def test_simple_array_diff_lhs_from_stdin(self, script_runner, tmp_path_factory):
         import subprocess
@@ -367,6 +370,7 @@ d [2]
 
         result = subprocess.run(
             [self.command
+            , "--aoh=deep"
             , "-"
             , rhs_file
             ]
@@ -375,7 +379,7 @@ d [2]
             , universal_newlines=True
         )
         assert 1 == result.returncode, result.stderr
-        assert self.standard_array_diff == result.stdout
+        assert self.deep_array_diff == result.stdout
 
     def test_simple_hash_diff_rhs_from_stdin(self, script_runner, tmp_path_factory):
         import subprocess
@@ -383,6 +387,7 @@ d [2]
 
         result = subprocess.run(
             [self.command
+            , "--aoh=deep"
             , lhs_file
             , "-"
             ]
@@ -391,7 +396,7 @@ d [2]
             , universal_newlines=True
         )
         assert 1 == result.returncode, result.stderr
-        assert self.standard_hash_diff == result.stdout
+        assert self.deep_aoh_hash_diff == result.stdout
 
     def test_simple_array_diff_rhs_from_stdin(self, script_runner, tmp_path_factory):
         import subprocess
@@ -399,6 +404,7 @@ d [2]
 
         result = subprocess.run(
             [self.command
+            , "--aoh=deep"
             , lhs_file
             , "-"
             ]
@@ -407,7 +413,7 @@ d [2]
             , universal_newlines=True
         )
         assert 1 == result.returncode, result.stderr
-        assert self.standard_array_diff == result.stdout
+        assert self.deep_array_diff == result.stdout
 
     def test_simple_diff_hash_from_nothing_via_stdin(self, script_runner, tmp_path_factory):
         import subprocess
@@ -652,6 +658,7 @@ s aoh[1].id
         result = script_runner.run(
             self.command
             , "--onlysame"
+            , "--aoh=deep"
             , lhs_file
             , rhs_file)
         assert not result.success, result.stderr
@@ -682,6 +689,7 @@ s [1].action
         result = script_runner.run(
             self.command
             , "--onlysame"
+            , "--aoh=deep"
             , lhs_file
             , rhs_file)
         assert not result.success, result.stderr
