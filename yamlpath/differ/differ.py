@@ -4,7 +4,7 @@ Implement YAML document Differ.
 Copyright 2020 William W. Kimball, Jr. MBA MSIS
 """
 from itertools import zip_longest
-from typing import Any, Generator, List, Tuple
+from typing import Any, Generator, List, Optional, Tuple
 
 from yamlpath import YAMLPath
 from yamlpath.wrappers import ConsolePrinter, NodeCoords
@@ -161,22 +161,21 @@ class Differ:
     def _diff_synced_lists(self, path: YAMLPath, lhs: list, rhs: list) -> None:
         """Diff two synchronized lists."""
         self.logger.debug("Differ::_diff_synced_lists:  Starting...")
-        debug_path = path if path else "/"
         self.logger.debug(
             "Synchronizing LHS Array elements at YAML Path, {}:"
-            .format(debug_path),
+            .format(path if path else "/"),
             prefix="Differ::_diff_syncd_lists:  ",
             data=lhs)
         self.logger.debug(
             "Synchronizing RHS Array elements at YAML Path, {}:"
-            .format(debug_path),
+            .format(path if path else "/"),
             prefix="Differ::_diff_syncd_lists:  ",
             data=rhs)
 
         syn_pairs = Differ.synchronize_lists_by_value(lhs, rhs)
         self.logger.debug(
             "Got synchronized pairs of Array elements at YAML Path, {}:"
-            .format(debug_path),
+            .format(path if path else "/"),
             prefix="Differ::_diff_syncd_lists:  ",
             data=syn_pairs)
 
@@ -278,15 +277,14 @@ class Differ:
             return
         deep_diff = diff_mode is AoHDiffOpts.DEEP
 
-        debug_path = path if path else "/"
         self.logger.debug(
             "Synchronizing LHS Array elements at YAML Path, {}:"
-            .format(debug_path),
+            .format(path if path else "/"),
             prefix="Differ::_diff_arrays_of_hashes:  ",
             data=lhs)
         self.logger.debug(
             "Synchronizing RHS Array elements at YAML Path, {}:"
-            .format(debug_path),
+            .format(path if path else "/"),
             prefix="Differ::_diff_arrays_of_hashes:  ",
             data=rhs)
 
@@ -303,7 +301,7 @@ class Differ:
         syn_pairs = Differ.synchronize_lods_by_key(lhs, rhs, id_key)
         self.logger.debug(
             "Got synchronized pairs of Array elements at YAML Path, {}:"
-            .format(debug_path),
+            .format(path if path else "/"),
             prefix="Differ::_diff_arrays_of_hashes:  ",
             data=syn_pairs)
 
@@ -382,7 +380,9 @@ class Differ:
     @classmethod
     def synchronize_lists_by_value(
         cls, lhs: list, rhs: list
-    ) -> Tuple[int, Any, int, Any]:
+    ) -> List[Tuple[
+        Optional[int], Optional[Any], Optional[int], Optional[Any]
+    ]]:
         """Synchronize two lists by value."""
         # Build a parallel index array to track the original RHS element
         # indexes of any surviving elements.
@@ -390,7 +390,9 @@ class Differ:
         for original_idx, val in enumerate(rhs):
             rhs_reduced.append((original_idx, val))
 
-        syn_pairs = []
+        syn_pairs: List[Tuple[
+            Optional[int], Optional[Any], Optional[int], Optional[Any]
+        ]] = []
         for lhs_idx, lhs_ele in enumerate(lhs):
             del_index = -1
             for reduced_idx, rhs_pair in enumerate(rhs_reduced):
@@ -412,9 +414,12 @@ class Differ:
         return syn_pairs
 
     @classmethod
+    #pylint: disable=too-many-locals
     def synchronize_lods_by_key(
         cls, lhs: list, rhs: list, key_attr: str
-    ) -> Tuple[int, Any, int, Any]:
+    ) -> List[Tuple[
+        Optional[int], Optional[Any], Optional[int], Optional[Any]
+    ]]:
         """Synchronize two lists-of-dictionaries by identity key."""
         # Build a parallel index array to track the original RHS element
         # indexes of any surviving elements.
@@ -422,7 +427,9 @@ class Differ:
         for original_idx, val in enumerate(rhs):
             rhs_reduced.append((original_idx, val))
 
-        syn_pairs = []
+        syn_pairs: List[Tuple[
+            Optional[int], Optional[Any], Optional[int], Optional[Any]
+        ]] = []
         for lhs_idx, lhs_ele in enumerate(lhs):
             if not key_attr in lhs_ele:
                 # Impossible to match this LHS record to any RHS record
