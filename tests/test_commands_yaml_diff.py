@@ -95,15 +95,11 @@ c aoh[1].name
 ---
 > different one
 
-c aoh[2].id
-< 2
----
-> 3 (new)
+d aoh[2]
+< {"id": 2, "name": "two"}
 
-c aoh[2].name
-< two
----
-> three (new)
+a aoh[2]
+> {"id": "3 (new)", "name": "three (new)"}
 
 d lhs_exclusive
 < ["node"]
@@ -814,15 +810,11 @@ c /aoh[1]/name
 ---
 > different one
 
-c /aoh[2]/id
-< 2
----
-> 3 (new)
+d /aoh[2]
+< {"id": 2, "name": "two"}
 
-c /aoh[2]/name
-< two
----
-> three (new)
+a /aoh[2]
+> {"id": "3 (new)", "name": "three (new)"}
 
 d /lhs_exclusive
 < ["node"]
@@ -843,6 +835,7 @@ a /rhs_exclusive
         result = script_runner.run(
             self.command
             , "--pathsep=/"
+            , "--aoh=deep"
             , lhs_file
             , rhs_file)
         assert not result.success, result.stderr
