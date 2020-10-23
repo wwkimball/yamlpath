@@ -34,7 +34,7 @@ class DiffEntry:
         lhs_lc = DiffEntry._get_index(lhs, kwargs.pop("lhs_parent", None))
         rhs_lc = DiffEntry._get_index(rhs, kwargs.pop("rhs_parent", None))
         lhs_line = float(lhs_lc)
-        if lhs_line == 0.0:
+        if lhs_line == 0.0 or self.action is DiffActions.ADD:
             lhs_lc, rhs_lc = rhs_lc, lhs_lc
         self._index = "{}.{}".format(lhs_lc, rhs_lc)
 

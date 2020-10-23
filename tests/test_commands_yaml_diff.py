@@ -1294,7 +1294,7 @@ a [11]
 
         result = script_runner.run(
             self.command
-            , "--sync-arrays"
+            , "--arrays=value"
             , lhs_file
             , rhs_file)
         assert not result.success, result.stderr
