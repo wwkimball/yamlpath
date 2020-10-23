@@ -1194,12 +1194,12 @@ literal_string: |
   characters will be
   preserved.
 """)
-        stdout_content = """c1.0.1.0 folded_string
+        stdout_content = """c1.0.0.1.0.0 folded_string
 < This is one really long string.  It is presented in YAML "folded" format.  This will cause all of the new-line characters to be replaced with single spaces when this value is read by a YAML parser.
 ---
 > This CHANGED one really long string.  It is presented in YAML "folded" format.  This will cause all of the new-line characters to be replaced with single spaces when this value is read by a YAML parser.
 
-c1.0.1.0 literal_string
+c1.0.1.1.0.1 literal_string
 < This is another
 < really long string.
 < It is presented in
@@ -1260,13 +1260,7 @@ c1.0.1.0 literal_string
 - beta
 - chi
 """)
-        stdout_content = """d [4]
-< delta
-
-d [8]
-< alpha
-
-a [0]
+        stdout_content = """a [0]
 > zeta
 
 a [5]
@@ -1276,6 +1270,12 @@ c [6]
 < delta
 ---
 > phi
+
+d [4]
+< delta
+
+d [8]
+< alpha
 """
 
         # DEBUG
