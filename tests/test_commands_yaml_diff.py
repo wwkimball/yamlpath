@@ -52,6 +52,7 @@ rhs_exclusive: value
 - delta
 - gamma
 - alpha
+- theta
 """
 
     rhs_array_content = """---
@@ -100,6 +101,9 @@ c [8]
 < alpha
 ---
 > chi
+
+d [9]
+< theta
 """
 
 
@@ -562,6 +566,35 @@ a [3].args
             , rhs_file)
         assert not result.success, result.stderr
         assert self.diff_aoh_deep == result.stdout
+
+    def test_value_diff_two_aoh_files(self, script_runner, tmp_path_factory):
+        lhs_file = create_temp_yaml_file(tmp_path_factory, self.lhs_aoh_content)
+        rhs_file = create_temp_yaml_file(tmp_path_factory, self.rhs_aoh_content)
+        stdout_content = """d [1]
+< {"step": 1, "action": "input", "args": ["world"]}
+
+c [2]
+< {"step": 2, "action": "print", "message": "Hello, %args[0]!"}
+---
+> {"step": 2, "action": "print", "message": "A tout %args[0]!"}
+
+a [3]
+> {"step": 1, "action": "input", "args": ["le monde"]}
+"""
+
+        # DEBUG
+        # print("LHS File:  {}".format(lhs_file))
+        # print("RHS File:  {}".format(rhs_file))
+        # print("Expected Output:")
+        # print(merged_yaml_content)
+
+        result = script_runner.run(
+            self.command
+            , "--aoh=value"
+            , lhs_file
+            , rhs_file)
+        assert not result.success, result.stderr
+        assert stdout_content == result.stdout
 
     def test_simple_hash_diff_lhs_from_stdin(self, script_runner, tmp_path_factory):
         import subprocess
@@ -1529,6 +1562,9 @@ d [4]
 
 d [8]
 < alpha
+
+d [9]
+< theta
 """
 
         # DEBUG
@@ -1544,3 +1580,153 @@ d [8]
             , rhs_file)
         assert not result.success, result.stderr
         assert stdout_content == result.stdout
+
+    def test_diff_add_array_element(self, script_runner, tmp_path_factory):
+        lhs_file = create_temp_yaml_file(tmp_path_factory, """---
+- 0
+- 1
+""")
+        rhs_file = create_temp_yaml_file(tmp_path_factory, """---
+- 0
+- 1
+- 2
+""")
+        stdout_content = """a [2]
+> 2
+"""
+
+        # DEBUG
+        # print("LHS File:  {}".format(lhs_file))
+        # print("RHS File:  {}".format(rhs_file))
+        # print("Expected Output:")
+        # print(merged_yaml_content)
+
+        result = script_runner.run(
+            self.command
+            , lhs_file
+            , rhs_file)
+        assert not result.success, result.stderr
+        assert stdout_content == result.stdout
+
+    def test_diff_add_aoh_element_default(self, script_runner, tmp_path_factory):
+        lhs_file = create_temp_yaml_file(tmp_path_factory, """---
+- id: 0
+  name: zero
+""")
+        rhs_file = create_temp_yaml_file(tmp_path_factory, """---
+- id: 0
+  name: zero
+- id: 1
+  name: uno
+""")
+        stdout_content = """a [1]
+> {"id": 1, "name": "uno"}
+"""
+
+        # DEBUG
+        # print("LHS File:  {}".format(lhs_file))
+        # print("RHS File:  {}".format(rhs_file))
+        # print("Expected Output:")
+        # print(merged_yaml_content)
+
+        result = script_runner.run(
+            self.command
+            , lhs_file
+            , rhs_file)
+        assert not result.success, result.stderr
+        assert stdout_content == result.stdout
+
+    def test_diff_add_aoh_element_key(self, script_runner, tmp_path_factory):
+        lhs_file = create_temp_yaml_file(tmp_path_factory, """---
+- id: 1
+  name: uno
+- id: 0
+  name: zero
+""")
+        rhs_file = create_temp_yaml_file(tmp_path_factory, """---
+- id: 0
+  name: zero
+- id: 2
+  name: dos
+- id: 1
+  name: uno
+""")
+        stdout_content = """a [1]
+> {"id": 2, "name": "dos"}
+"""
+
+        # DEBUG
+        # print("LHS File:  {}".format(lhs_file))
+        # print("RHS File:  {}".format(rhs_file))
+        # print("Expected Output:")
+        # print(merged_yaml_content)
+
+        result = script_runner.run(
+            self.command
+            , "--aoh=key"
+            , lhs_file
+            , rhs_file)
+        assert not result.success, result.stderr
+        assert stdout_content == result.stdout
+
+    def test_diff_delete_aoh_element_default(self, script_runner, tmp_path_factory):
+        lhs_file = create_temp_yaml_file(tmp_path_factory, """---
+- id: 0
+  name: zero
+- id: 1
+  name: uno
+""")
+        rhs_file = create_temp_yaml_file(tmp_path_factory, """---
+- id: 0
+  name: zero
+""")
+        stdout_content = """d [1]
+< {"id": 1, "name": "uno"}
+"""
+
+        # DEBUG
+        # print("LHS File:  {}".format(lhs_file))
+        # print("RHS File:  {}".format(rhs_file))
+        # print("Expected Output:")
+        # print(merged_yaml_content)
+
+        result = script_runner.run(
+            self.command
+            , lhs_file
+            , rhs_file)
+        assert not result.success, result.stderr
+        assert stdout_content == result.stdout
+
+    def test_diff_delete_aoh_element_key(self, script_runner, tmp_path_factory):
+        lhs_file = create_temp_yaml_file(tmp_path_factory, """---
+- id: 0
+  name: zero
+- id: 1
+  name: uno
+- id: 2
+  name: dos
+""")
+        rhs_file = create_temp_yaml_file(tmp_path_factory, """---
+- id: 1
+  name: uno
+- id: 0
+  name: zero
+""")
+        stdout_content = """d [2]
+< {"id": 2, "name": "dos"}
+"""
+
+        # DEBUG
+        # print("LHS File:  {}".format(lhs_file))
+        # print("RHS File:  {}".format(rhs_file))
+        # print("Expected Output:")
+        # print(merged_yaml_content)
+
+        result = script_runner.run(
+            self.command
+            , "--aoh=key"
+            , lhs_file
+            , rhs_file)
+        assert not result.success, result.stderr
+        assert stdout_content == result.stdout
+
