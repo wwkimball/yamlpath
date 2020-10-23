@@ -4,7 +4,7 @@ Implement YAML document Differ.
 Copyright 2020 William W. Kimball, Jr. MBA MSIS
 """
 from itertools import zip_longest
-from typing import Any, Generator, List, Optional, Tuple
+from typing import Any, Dict, Generator, List, Optional, Tuple
 
 from yamlpath import YAMLPath
 from yamlpath.wrappers import ConsolePrinter, NodeCoords
@@ -151,40 +151,47 @@ class Differ:
 
         lhs_keys = set(lhs)
         rhs_keys = set(rhs)
+        lhs_key_indicies = Differ._get_key_indicies(lhs)
+        rhs_key_indicies = Differ._get_key_indicies(rhs)
 
-        # Recurse into the rest
-        iteration = -1
+        self.logger.debug(
+            "Got LHS key indicies:",
+            prefix="Differ::_diff_dicts:  ",
+            data=lhs_key_indicies)
+        self.logger.debug(
+            "Got RHS key indicies:",
+            prefix="Differ::_diff_dicts:  ",
+            data=rhs_key_indicies)
+
+        # Look for changes
         for key, val in [
             (key, val) for key, val in rhs.items()
             if key in lhs and key in rhs
         ]:
-            iteration += 1
             next_path = YAMLPath(path).append(key)
             self._diff_between(
                 next_path, lhs[key], val,
-                lhs_parent=lhs, lhs_iteration=iteration,
-                rhs_parent=rhs, rhs_iteration=iteration,
+                lhs_parent=lhs, lhs_iteration=lhs_key_indicies[key],
+                rhs_parent=rhs, rhs_iteration=rhs_key_indicies[key],
                 parentref=key)
 
         # Look for deleted keys
         for key in lhs_keys - rhs_keys:
-            iteration += 1
             next_path = YAMLPath(path).append(key)
             self._diffs.append(
                 DiffEntry(
                     DiffActions.DELETE, next_path, lhs[key], None,
-                    lhs_parent=lhs, lhs_iteration=iteration,
-                    rhs_parent=rhs, rhs_iteration=iteration))
+                    lhs_parent=lhs, lhs_iteration=lhs_key_indicies[key],
+                    rhs_parent=rhs))
 
         # Look for new keys
         for key in rhs_keys - lhs_keys:
-            iteration += 1
             next_path = YAMLPath(path).append(key)
             self._diffs.append(
                 DiffEntry(
                     DiffActions.ADD, next_path, None, rhs[key],
-                    lhs_parent=lhs, lhs_iteration=iteration,
-                    rhs_parent=rhs, rhs_iteration=iteration))
+                    lhs_parent=lhs,
+                    rhs_parent=rhs, rhs_iteration=rhs_key_indicies[key]))
 
     def _diff_synced_lists(self, path: YAMLPath, lhs: list, rhs: list) -> None:
         """Diff two synchronized lists."""
@@ -538,3 +545,12 @@ class Differ:
             syn_pairs.append((None, None, rhs_original_idx, rhs_ele))
 
         return syn_pairs
+
+    @classmethod
+    def _get_key_indicies(cls, data: dict) -> Dict[Any, int]:
+        """Get a dictionary mapping of keys to relative positions."""
+        key_map = {}
+        if isinstance(data, dict):
+            for idx, key in enumerate(data.keys()):
+                key_map[key] = idx
+        return key_map
