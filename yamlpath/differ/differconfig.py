@@ -57,7 +57,7 @@ class DifferConfig:
                 and "defaults" in self.config
                 and "arrays" in self.config["defaults"]):
             return ArrayDiffOpts.from_str(self.config["defaults"]["arrays"])
-        return ArrayDiffOpts.BYPOS
+        return ArrayDiffOpts.POSITION
 
     def aoh_diff_mode(self, node_coord: NodeCoords) -> AoHDiffOpts:
         """
@@ -82,7 +82,7 @@ class DifferConfig:
                 and "defaults" in self.config
                 and "aoh" in self.config["defaults"]):
             return AoHDiffOpts.from_str(self.config["defaults"]["aoh"])
-        return AoHDiffOpts.BYPOS
+        return AoHDiffOpts.POSITION
 
     def aoh_diff_key(
         self, node_coord: NodeCoords, data: dict

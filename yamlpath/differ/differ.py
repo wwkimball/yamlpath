@@ -46,6 +46,7 @@ class Differ:
     def compare_to(self, document: Any) -> None:
         """Perform the diff calculation."""
         self._diffs.clear()
+        self.config.prepare(document)
         self._diff_between(YAMLPath(), self._data, document)
 
     def get_report(self) -> Generator[DiffEntry, None, None]:
@@ -103,6 +104,7 @@ class Differ:
         self, path: YAMLPath, lhs: Any, rhs: Any, **kwargs
     ) -> None:
         """Diff two Scalar values."""
+        self.logger.debug("Differ::_diff_scalars:  Starting...")
         lhs_val = lhs
         rhs_val = rhs
         if (not self._ignore_eyaml
@@ -126,6 +128,7 @@ class Differ:
 
     def _diff_dicts(self, path: YAMLPath, lhs: dict, rhs: dict) -> None:
         """Diff two dicts."""
+        self.logger.debug("Differ::_diff_dicts:  Starting...")
         lhs_keys = set(lhs)
         rhs_keys = set(rhs)
 
@@ -157,6 +160,7 @@ class Differ:
 
     def _diff_synced_lists(self, path: YAMLPath, lhs: list, rhs: list) -> None:
         """Diff two synchronized lists."""
+        self.logger.debug("Differ::_diff_synced_lists:  Starting...")
         debug_path = path if path else "/"
         self.logger.debug(
             "Synchronizing LHS Array elements at YAML Path, {}:"
@@ -179,31 +183,62 @@ class Differ:
         for (lidx, lele, ridx, rele) in syn_pairs:
             if lele is None:
                 next_path = YAMLPath(path).append("[{}]".format(ridx))
-                self._diffs.append(
-                    DiffEntry(
-                        DiffActions.ADD, next_path, None, rele,
-                        lhs_parent=lhs, rhs_parent=rhs))
+                diff_action = DiffActions.ADD
+                opposite_val = None
+                pop_index = -1
+                for idx, ele in reversed(list(enumerate(self._diffs))):
+                    if (ele.action is DiffActions.DELETE
+                        and ele.path == next_path
+                    ):
+                        pop_index = idx
+                        break
+
+                if pop_index > -1:
+                    opposite_val = self._diffs.pop(pop_index).lhs
+                    diff_action = DiffActions.CHANGE
+
+                self._diffs.append(DiffEntry(
+                    diff_action, next_path, opposite_val, rele,
+                    lhs_parent=lhs, rhs_parent=rhs))
             elif rele is None:
                 next_path = YAMLPath(path).append("[{}]".format(lidx))
+                diff_action = DiffActions.DELETE
+                opposite_val = None
+                pop_index = -1
+                for idx, ele in reversed(list(enumerate(self._diffs))):
+                    if (ele.action is DiffActions.ADD
+                        and ele.path == next_path
+                    ):
+                        pop_index = idx
+                        break
+
+                if pop_index > -1:
+                    opposite_val = self._diffs.pop(pop_index).rhs
+                    diff_action = DiffActions.CHANGE
+
                 self._diffs.append(
                     DiffEntry(
-                        DiffActions.DELETE, next_path, lele, None,
+                        diff_action, next_path, lele, opposite_val,
                         lhs_parent=lhs, rhs_parent=rhs))
             else:
+                next_path = YAMLPath(path).append("[{}]".format(lidx))
                 self._diff_between(
                     next_path, lele, rele, lhs_parent=lhs, rhs_parent=rhs,
                     parentref=ridx)
 
     def _diff_arrays_of_scalars(
-        self, path: YAMLPath, lhs: list, rhs: list, node_coord: NodeCoords
+        self, path: YAMLPath, lhs: list, rhs: list, node_coord: NodeCoords,
+        **kwargs
     ) -> None:
         """Diff two lists of scalars."""
+        self.logger.debug("Differ::_diff_arrays_of_scalars:  Starting...")
         diff_mode = self.config.array_diff_mode(node_coord)
         if diff_mode is ArrayDiffOpts.VALUE:
             self._diff_synced_lists(path, lhs, rhs)
             return
 
         idx = 0
+        diff_deeply = kwargs.pop("diff_deeply", True)
         for (lele, rele) in zip_longest(lhs, rhs):
             next_path = YAMLPath(path).append("[{}]".format(idx))
             idx += 1
@@ -217,35 +252,61 @@ class Differ:
                     DiffEntry(
                         DiffActions.DELETE, next_path, lele, None,
                         lhs_parent=lhs, rhs_parent=rhs))
-            else:
+            elif diff_deeply:
                 self._diff_between(
                     next_path, lele, rele, lhs_parent=lhs, rhs_parent=rhs,
                     parentref=idx)
+            elif lele != rele:
+                self._diffs.append(
+                    DiffEntry(
+                        DiffActions.CHANGE, next_path, lele, rele,
+                        lhs_parent=lhs, rhs_parent=rhs, parentref=idx))
 
     def _diff_arrays_of_hashes(
         self, path: YAMLPath, lhs: list, rhs: list, node_coord: NodeCoords
     ) -> None:
         """Diff two lists-of-dictionaries."""
+        self.logger.debug("Differ::_diff_arrays_of_hashes:  Starting...")
+
         diff_mode = self.config.aoh_diff_mode(node_coord)
         if diff_mode is AoHDiffOpts.POSITION:
-            self._diff_arrays_of_scalars(path, lhs, rhs, node_coord)
+            self._diff_arrays_of_scalars(
+                path, lhs, rhs, node_coord, diff_deeply=False)
             return
         if diff_mode is AoHDiffOpts.VALUE:
             self._diff_synced_lists(path, lhs, rhs)
             return
         deep_diff = diff_mode is AoHDiffOpts.DEEP
 
+        debug_path = path if path else "/"
+        self.logger.debug(
+            "Synchronizing LHS Array elements at YAML Path, {}:"
+            .format(debug_path),
+            prefix="Differ::_diff_arrays_of_hashes:  ",
+            data=lhs)
+        self.logger.debug(
+            "Synchronizing RHS Array elements at YAML Path, {}:"
+            .format(debug_path),
+            prefix="Differ::_diff_arrays_of_hashes:  ",
+            data=rhs)
+
         # Perform either a KEY or DEEP comparison; either way, the elements
         # must first be synchronized based on their identity key values.
         id_key: str = ""
         if len(rhs) > 0 and isinstance(rhs[0], dict):
-            id_key = self.config.aoh_merge_key(
+            id_key = self.config.aoh_diff_key(
                 NodeCoords(rhs[0], rhs, 0), rhs[0])
             self.logger.debug(
                 "Differ::_diff_arrays_of_hashes:  RHS AoH yielded id_key:"
                 "  {}.".format(id_key))
 
         syn_pairs = Differ.synchronize_lods_by_key(lhs, rhs, id_key)
+        self.logger.debug(
+            "Got synchronized pairs of Array elements at YAML Path, {}:"
+            .format(debug_path),
+            prefix="Differ::_diff_arrays_of_hashes:  ",
+            data=syn_pairs)
+
         for (lidx, lele, ridx, rele) in syn_pairs:
             if lele is None:
                 next_path = YAMLPath(path).append("[{}]".format(ridx))
@@ -266,17 +327,19 @@ class Differ:
                         next_path, lele, rele, lhs_parent=lhs, rhs_parent=rhs,
                         parentref=ridx)
                 else:
+                    # KEY-based comparisons
                     diff_action = (DiffActions.SAME
                                   if lele == rele
                                   else DiffActions.CHANGE)
                     self._diffs.append(
-                        DiffEntry(diff_action, path, lhs, rhs)
-                    )
+                        DiffEntry(diff_action, path, lele, rele,
+                        lhs_parent=lhs, rhs_parent=rhs, parentref=lidx))
 
     def _diff_lists(
         self, path: YAMLPath, lhs: list, rhs: list, **kwargs
     ) -> None:
         """Diff two lists."""
+        self.logger.debug("Differ::_diff_lists:  Starting...")
         parent: Any = kwargs.pop("rhs_parent", None)
         parentref: Any = kwargs.pop("parentref", None)
         node_coord = NodeCoords(rhs, parent, parentref)
@@ -284,14 +347,15 @@ class Differ:
             if isinstance(rhs[0], dict):
                 # This list is an Array-of-Hashes
                 self._diff_arrays_of_hashes(path, lhs, rhs, node_coord)
-
-            # This list is an Array-of-Arrays or a simple list of Scalars
-            self._diff_arrays_of_scalars(path, lhs, rhs, node_coord)
+            else:
+                # This list is an Array-of-Arrays or a simple list of Scalars
+                self._diff_arrays_of_scalars(path, lhs, rhs, node_coord)
 
     def _diff_between(
         self, path: YAMLPath, lhs: Any, rhs: Any, **kwargs
     ) -> None:
         """Calculate the differences between two document nodes."""
+        self.logger.debug("Differ::_diff_between:  Starting...")
         # If the roots are different, delete all LHS and add all RHS.
         lhs_is_dict = isinstance(lhs, dict)
         lhs_is_list = isinstance(lhs, list)
@@ -322,28 +386,28 @@ class Differ:
         """Synchronize two lists by value."""
         # Build a parallel index array to track the original RHS element
         # indexes of any surviving elements.
-        rhs_indexes = []
-        for idx in range(len(rhs)):
-            rhs_indexes.append(idx)
+        rhs_reduced = []
+        for original_idx, val in enumerate(rhs):
+            rhs_reduced.append((original_idx, val))
 
-        rhs_reduced = rhs.copy()
         syn_pairs = []
         for lhs_idx, lhs_ele in enumerate(lhs):
             del_index = -1
-            for rhs_idx, rhs_ele in enumerate(rhs_reduced):
+            for reduced_idx, rhs_pair in enumerate(rhs_reduced):
+                (_, rhs_ele) = rhs_pair
                 if rhs_ele == lhs_ele:
-                    del_index = rhs_idx
+                    del_index = reduced_idx
                     break
 
             if del_index > -1:
-                rhs_ele = rhs_reduced.pop(del_index)
-                rhs_indexes.remove(del_index)
-                syn_pairs.append((lhs_idx, lhs_ele, del_index, rhs_ele))
+                (rhs_original_idx, rhs_ele) = rhs_reduced.pop(del_index)
+                syn_pairs.append((lhs_idx, lhs_ele, rhs_original_idx, rhs_ele))
             else:
                 syn_pairs.append((lhs_idx, lhs_ele, None, None))
 
-        for (rhs_idx, rhs_ele) in zip(rhs_indexes, rhs_reduced):
-            syn_pairs.append((None, None, rhs_idx, rhs_ele))
+        for rhs_pair in rhs_reduced:
+            (rhs_original_idx, rhs_ele) = rhs_pair
+            syn_pairs.append((None, None, rhs_original_idx, rhs_ele))
 
         return syn_pairs
 
@@ -354,11 +418,10 @@ class Differ:
         """Synchronize two lists-of-dictionaries by identity key."""
         # Build a parallel index array to track the original RHS element
         # indexes of any surviving elements.
-        rhs_indexes = []
-        for idx in range(len(rhs)):
-            rhs_indexes.append(idx)
+        rhs_reduced = []
+        for original_idx, val in enumerate(rhs):
+            rhs_reduced.append((original_idx, val))
 
-        rhs_reduced = rhs.copy()
         syn_pairs = []
         for lhs_idx, lhs_ele in enumerate(lhs):
             if not key_attr in lhs_ele:
@@ -367,23 +430,24 @@ class Differ:
                 continue
 
             del_index = -1
-            for rhs_idx, rhs_ele in enumerate(rhs_reduced):
+            for reduced_idx, rhs_pair in enumerate(rhs_reduced):
+                (_, rhs_ele) = rhs_pair
                 if not key_attr in rhs_ele:
                     # Impossible to match this RHS record to any LHS record
                     continue
 
                 if rhs_ele[key_attr] == lhs_ele[key_attr]:
-                    del_index = rhs_idx
+                    del_index = reduced_idx
                     break
 
             if del_index > -1:
-                rhs_ele = rhs_reduced.pop(del_index)
-                rhs_indexes.remove(del_index)
-                syn_pairs.append((lhs_idx, lhs_ele, del_index, rhs_ele))
+                (rhs_original_idx, rhs_ele) = rhs_reduced.pop(del_index)
+                syn_pairs.append((lhs_idx, lhs_ele, rhs_original_idx, rhs_ele))
             else:
                 syn_pairs.append((lhs_idx, lhs_ele, None, None))
 
-        for (rhs_idx, rhs_ele) in zip(rhs_indexes, rhs_reduced):
-            syn_pairs.append((None, None, rhs_idx, rhs_ele))
+        for rhs_pair in rhs_reduced:
+            (rhs_original_idx, rhs_ele) = rhs_pair
+            syn_pairs.append((None, None, rhs_original_idx, rhs_ele))
 
         return syn_pairs
