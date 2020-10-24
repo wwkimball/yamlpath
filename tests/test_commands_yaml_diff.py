@@ -1730,3 +1730,38 @@ d [9]
         assert not result.success, result.stderr
         assert stdout_content == result.stdout
 
+    def test_diff_unkeyed_aoh_elements(self, script_runner, tmp_path_factory):
+        lhs_file = create_temp_yaml_file(tmp_path_factory, """---
+- id: 1
+  name: uno
+- id: 0
+  name: zero
+- name: tres
+""")
+        rhs_file = create_temp_yaml_file(tmp_path_factory, """---
+- id: 0
+  name: zero
+- name: dos
+- id: 1
+  name: uno
+""")
+        stdout_content = """a [1]
+> {"name": "dos"}
+
+d [2]
+< {"name": "tres"}
+"""
+
+        # DEBUG
+        # print("LHS File:  {}".format(lhs_file))
+        # print("RHS File:  {}".format(rhs_file))
+        # print("Expected Output:")
+        # print(merged_yaml_content)
+
+        result = script_runner.run(
+            self.command
+            , "--aoh=key"
+            , lhs_file
+            , rhs_file)
+        assert not result.success, result.stderr
+        assert stdout_content == result.stdout

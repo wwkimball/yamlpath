@@ -77,11 +77,6 @@ class DiffEntry:
         return self._lhs
 
     @property
-    def rhs(self) -> Any:
-        """Get the RHS value of this difference (read-only)."""
-        return self._rhs
-
-    @property
     def index(self) -> str:
         """Get the sortable index for this entry (read-only)."""
         return self._index

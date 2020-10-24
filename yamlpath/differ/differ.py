@@ -227,6 +227,9 @@ class Differ:
                         pop_index = idx
                         break
 
+                # This YAML Path has ALREADY been recorded as a DELETE.  Since
+                # a DELETE->ADD action is really just a CHANGE, remove the
+                # conflicting entry and convert this pending ADD to a CHANGE.
                 if pop_index > -1:
                     opposite_val = self._diffs.pop(pop_index).lhs
                     diff_action = DiffActions.CHANGE
@@ -237,23 +240,9 @@ class Differ:
                     rhs_parent=rhs, rhs_iteration=ridx))
             elif rele is None:
                 next_path = YAMLPath(path).append("[{}]".format(lidx))
-                diff_action = DiffActions.DELETE
-                opposite_val = None
-                pop_index = -1
-                for idx, ele in reversed(list(enumerate(self._diffs))):
-                    if (ele.action is DiffActions.ADD
-                        and ele.path == next_path
-                    ):
-                        pop_index = idx
-                        break
-
-                if pop_index > -1:
-                    opposite_val = self._diffs.pop(pop_index).rhs
-                    diff_action = DiffActions.CHANGE
-
                 self._diffs.append(
                     DiffEntry(
-                        diff_action, next_path, lele, opposite_val,
+                        DiffActions.DELETE, next_path, lele, None,
                         lhs_parent=lhs, lhs_iteration=lidx,
                         rhs_parent=rhs, rhs_iteration=ridx))
             else:
