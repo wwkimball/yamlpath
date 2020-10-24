@@ -932,7 +932,7 @@ class Processor:
                             segment_node_coords.node, yaml_path, depth + 1,
                             parent=segment_node_coords.parent,
                             parentref=segment_node_coords.parentref,
-                            translated_path=translated_path):
+                            translated_path=segment_node_coords.path):
                         self.logger.debug(
                             "Finally returning segment data of type {} at"
                             " parentref {}:"
