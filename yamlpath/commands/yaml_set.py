@@ -43,16 +43,20 @@ from yamlpath.wrappers import ConsolePrinter, NodeCoords
 def processcli():
     """Process command-line arguments."""
     parser = argparse.ArgumentParser(
-        description="Changes one or more Scalar values in a\
-            YAML/JSON/Compatible document at a specified YAML Path.  Matched\
-            values can be checked before they are replaced to mitigate\
-            accidental change.  When matching singular results, the value can\
-            be archived to another key before it is replaced.  Further, EYAML\
-            can be employed to encrypt the new values and/or decrypt an old\
-            value before checking it.",
-        epilog="When no changes are made, no backup is created, even when\
-            -b/--backup is specified.  For more information about YAML Paths,\
-            please visit https://github.com/wwkimball/yamlpath."
+        description=(
+            "Changes one or more Scalar values in a YAML/JSON/Compatible"
+            " document at a specified YAML Path.  Matched values can be"
+            " checked before they are replaced to mitigate accidental change."
+            "  When matching singular results, the value can be archived to"
+            " another key before it is replaced.  Further, EYAML can be"
+            " employed to encrypt the new values and/or decrypt an old value"
+            " before checking it."),
+        epilog=(
+            "When no changes are made, no backup is created, even when"
+            " -b/--backup is specified.  For more information about YAML"
+            " Paths, please visit https://github.com/wwkimball/yamlpath/wiki."
+            "  To report issues with this tool or to request enhancements,"
+            " please visit https://github.com/wwkimball/yamlpath/issues.")
     )
     parser.add_argument("-V", "--version", action="version",
                         version="%(prog)s " + YAMLPATH_VERSION)
@@ -84,7 +88,8 @@ def processcli():
     input_group.add_argument(
         "-D", "--delete",
         action="store_true",
-        help="delete rather than change target node(s)")
+        help="delete rather than change target node(s); implies"
+             " --mustexist|-m")
 
     parser.add_argument(
         "-F", "--format",

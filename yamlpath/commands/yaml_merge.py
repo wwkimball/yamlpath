@@ -37,34 +37,42 @@ def processcli():
     """Process command-line arguments."""
     parser = argparse.ArgumentParser(
         formatter_class=argparse.RawTextHelpFormatter,
-        description=("Merges two or more YAML/JSON/Compatible documents"
-                    + "together, including\ncomplex data provided via STDIN."),
+        description="Merges two or more single- or multi-document"
+                    " YAML/JSON/Compatible documents\ntogether, including"
+                    " complex data provided via STDIN.",
         epilog="""
-            The CONFIG file is an INI file with up to three sections:
-            [defaults] Sets equivalents of -a|--anchors, -A|--arrays,
-                       -H|--hashes, and -O|--aoh.
-            [rules]    Each entry is a YAML Path assigning -A|--arrays,
-                       -H|--hashes, or -O|--aoh for precise nodes.
-            [keys]     Wherever -O|--aoh=DEEP, each entry is treated as a
-                       record with an identity key.  In order to match RHS
-                       records to LHS records, a key must be known and is
-                       identified on a YAML Path basis via this section.
-                       Where not specified, the first attribute of the first
-                       record in the Array-of-Hashes is presumed the identity
-                       key for all records in the set.
+configuration file:
+  The CONFIG file is an INI file with up to three sections:
+  [defaults] Sets equivalents of --anchors|-a, --arrays|-A, --hashes|-H, and
+             --aoh|-O.
+  [rules]    Each entry is a YAML Path assigning --arrays|-A, --hashes|-H,
+             or --aoh|-O for precise nodes.
+  [keys]     Wherever --aoh=DEEP (or -O deep), each entry is treated as a
+             record with an identity key.  In order to match RHS records to
+             LHS records, a key must be known and is identified on a YAML
+             Path basis via this section.  Where not specified, the first
+             attribute of the first record in the Array-of-Hashes is presumed
+             the identity key for all records in the set.
 
-            The left-to-right order of YAML_FILEs is significant.  Except
-            when this behavior is deliberately altered by your options, data
-            from files on the right overrides data in files to their left.
-            Only one input file may be the - pseudo-file (read from STDIN).
-            When no YAML_FILEs are provided, - will be inferred as long as you
-            are running this program without a TTY (unless you set
-            --nostdin|-S).  Any file, including input from STDIN, may be a
-            multi-document YAML or JSON file.
+input files:
+  The left-to-right order of YAML_FILEs is significant.  Except when this
+  behavior is deliberately altered by your options, data from files on the
+  right overrides data in files to their left.
 
-            For more information about YAML Paths, please visit
-            https://github.com/wwkimball/yamlpath."""
-    )
+  Only one input file may be the - pseudo-file (read from STDIN).  When no
+  YAML_FILEs are provided, - will be inferred as long as you are running
+  this program without a TTY (unless you set --nostdin|-S).
+
+  Any file, including input from STDIN, may be a multi-document YAML, JSON,
+  or compatible file.
+
+For more information about YAML Paths, please visit
+https://github.com/wwkimball/yamlpath/wiki.
+
+To report issues with this tool or to request enhancements, please visit
+https://github.com/wwkimball/yamlpath/issues.
+""")
+
     parser.add_argument("-V", "--version", action="version",
                         version="%(prog)s " + YAMLPATH_VERSION)
 

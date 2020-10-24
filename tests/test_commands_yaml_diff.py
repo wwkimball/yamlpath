@@ -7,24 +7,112 @@ class Test_commands_yaml_diff():
     """Tests for the yaml-diff command-line tool."""
     command = "yaml-diff"
 
+    ###
+    # Simple Hash comparisons
+    ###
     lhs_hash_content = """---
 key: value
-array:
-  - 1
-  - 2
-  - 3
-aoh:
-  - id: 0
-    name: zero
-  - id: 1
-    name: one
-  - id: 2
-    name: two
-lhs_exclusive:
-  - node
+hash:
+  with:
+    multiple: child
+    key_value: pairs
+  and:
+    complex: structure
+    with:
+      several: levels
+lhs_exclusive: value
 """
 
+    rhs_hash_content = """---
+key: changed value
+hash:
+  with:
+    multiple: children
+    key_value: pairs
+  and:
+    complex:
+      more: complex
+    with:
+      several_nested: levels
+  including:
+    additional: structure
+rhs_exclusive: value
+"""
+
+    ###
+    # Simple Array comparisons
+    ###
     lhs_array_content = """---
+- alpha
+- mu
+- psi
+- beta
+- delta
+- chi
+- delta
+- gamma
+- alpha
+- theta
+"""
+
+    rhs_array_content = """---
+- zeta
+- mu
+- psi
+- alpha
+- gamma
+- gamma
+- phi
+- beta
+- chi
+"""
+
+    diff_array_defaults = """c [0]
+< alpha
+---
+> zeta
+
+c [3]
+< beta
+---
+> alpha
+
+c [4]
+< delta
+---
+> gamma
+
+c [5]
+< chi
+---
+> gamma
+
+c [6]
+< delta
+---
+> phi
+
+c [7]
+< gamma
+---
+> beta
+
+c [8]
+< alpha
+---
+> chi
+
+d [9]
+< theta
+"""
+
+
+    ###
+    # Simple Array-of-Hashes comparisons
+    ###
+    lhs_aoh_content = """---
+- step: 0
+  action: INITIALIZE
 - step: 1
   action: input
   args:
@@ -35,98 +123,68 @@ lhs_exclusive:
 - step: 3
   action: quit
   status: 0
+- step: 9
+  action: CLEANUP
 """
 
-    rhs_hash_content = """---
-key: different value
-array:
-  - 1
-  - 3
-  - 4 (new)
-  - 5 (new)
-aoh:
-  - id: 0
-    name: zero
-    extra_field: is an extra field (new)
-  - id: 1
-    name: different one
-  - id: 3 (new)
-    name: three (new)
-  - id: 4 (new)
-    name: four (new)
-rhs_exclusive:
-  with:
-    structure: true
-"""
-
-    rhs_array_content = """---
+    rhs_aoh_content = """---
+- step: 0
+  action: INITIALIZE
+- step: 3
+  action: quit
+  status: 0
+- step: 2
+  action: print
+  message: A tout %args[0]!
 - step: 1
   action: input
   args:
     - le monde
-- step: 2
-  action: print
-  message: A tout %args[0]!
+- step: 9
+  action: CLEANUP
 """
 
-    standard_hash_diff = """c key
+    diff_hash_defaults = """d hash.and.complex
+< structure
+
+c key
 < value
 ---
-> different value
-
-c array[1]
-< 2
----
-> 3
-
-c array[2]
-< 3
----
-> 4 (new)
-
-a array[3]
-> 5 (new)
-
-a aoh[0].extra_field
-> is an extra field (new)
-
-c aoh[1].name
-< one
----
-> different one
-
-c aoh[2].id
-< 2
----
-> 3 (new)
-
-c aoh[2].name
-< two
----
-> three (new)
-
-d lhs_exclusive
-< ["node"]
-
-a aoh[3]
-> {"id": "4 (new)", "name": "four (new)"}
+> changed value
 
 a rhs_exclusive
-> {"with": {"structure": true}}
+> value
+
+d lhs_exclusive
+< value
+
+c hash.with.multiple
+< child
+---
+> children
+
+a hash.and.complex.more
+> complex
+
+d hash.and.with.several
+< levels
+
+a hash.and.with.several_nested
+> levels
+
+a hash.including
+> {"additional": "structure"}
 """
 
-    standard_array_diff = """c [0].args[0]
+    diff_aoh_deep = """c [3].args[0]
 < world
 ---
 > le monde
 
-c [1].message
+c [2].message
 < Hello, %args[0]!
 ---
 > A tout %args[0]!
-
-d [2]
-< {"step": 3, "action": "quit", "status": 0}
 """
 
     def test_no_options(self, script_runner):
@@ -154,6 +212,21 @@ d [2]
         result = script_runner.run(self.command, "--quiet", "--same", "any-file.yaml", "any-other-file.json")
         assert not result.success, result.stderr
         assert "The --quiet|-q option suppresses all output, including" in result.stderr
+
+    def test_missing_config_file(self, script_runner):
+        result = script_runner.run(self.command, "--config=/does/not/exist/on/most/systems.ini", "any-file.yaml", "any-other-file.json")
+        assert not result.success, result.stderr
+        assert "INI style configuration file is not readable" in result.stderr
+
+    def test_missing_private_key(self, script_runner):
+        result = script_runner.run(self.command, "--privatekey=/does/not/exist/on/most/systems.key", "any-file.yaml", "any-other-file.json")
+        assert not result.success, result.stderr
+        assert "EYAML private key is not a readable file" in result.stderr
+
+    def test_missing_public_key(self, script_runner):
+        result = script_runner.run(self.command, "--publickey=/does/not/exist/on/most/systems.key", "any-file.yaml", "any-other-file.json")
+        assert not result.success, result.stderr
+        assert "EYAML public key is not a readable file" in result.stderr
 
     def test_bad_eyaml_value(self, script_runner, tmp_path_factory):
         content = """---
@@ -188,9 +261,9 @@ d [2]
         assert result.success, result.stderr
         assert "" == result.stdout
 
-    def test_no_diff_two_array_files(self, script_runner, tmp_path_factory):
-        lhs_file = create_temp_yaml_file(tmp_path_factory, self.lhs_array_content)
-        rhs_file = create_temp_yaml_file(tmp_path_factory, self.lhs_array_content)
+    def test_no_diff_two_aoh_files(self, script_runner, tmp_path_factory):
+        lhs_file = create_temp_yaml_file(tmp_path_factory, self.lhs_aoh_content)
+        rhs_file = create_temp_yaml_file(tmp_path_factory, self.lhs_aoh_content)
 
         # DEBUG
         # print("LHS File:  {}".format(lhs_file))
@@ -227,9 +300,9 @@ d [2]
         assert 0 == result.returncode, result.stderr
         assert "" == result.stdout
 
-    def test_no_array_diff_lhs_from_stdin(self, script_runner, tmp_path_factory):
+    def test_no_aoh_diff_lhs_from_stdin(self, script_runner, tmp_path_factory):
         import subprocess
-        rhs_file = create_temp_yaml_file(tmp_path_factory, self.lhs_array_content)
+        rhs_file = create_temp_yaml_file(tmp_path_factory, self.lhs_aoh_content)
 
         # DEBUG
         # print("LHS File:  {}".format(lhs_file))
@@ -243,7 +316,7 @@ d [2]
             , rhs_file
             ]
             , stdout=subprocess.PIPE
-            , input=self.lhs_array_content
+            , input=self.lhs_aoh_content
             , universal_newlines=True
         )
         assert 0 == result.returncode, result.stderr
@@ -271,9 +344,9 @@ d [2]
         assert 0 == result.returncode, result.stderr
         assert "" == result.stdout
 
-    def test_no_array_diff_rhs_from_stdin(self, script_runner, tmp_path_factory):
+    def test_no_aoh_diff_rhs_from_stdin(self, script_runner, tmp_path_factory):
         import subprocess
-        lhs_file = create_temp_yaml_file(tmp_path_factory, self.rhs_array_content)
+        lhs_file = create_temp_yaml_file(tmp_path_factory, self.rhs_aoh_content)
 
         # DEBUG
         # print("LHS File:  {}".format(lhs_file))
@@ -287,7 +360,7 @@ d [2]
             , "-"
             ]
             , stdout=subprocess.PIPE
-            , input=self.rhs_array_content
+            , input=self.rhs_aoh_content
             , universal_newlines=True
         )
         assert 0 == result.returncode, result.stderr
@@ -326,11 +399,26 @@ d [2]
             , lhs_file
             , rhs_file)
         assert not result.success, result.stderr
-        assert self.standard_hash_diff == result.stdout
+        assert self.diff_hash_defaults == result.stdout
 
-    def test_simple_diff_two_array_files(self, script_runner, tmp_path_factory):
-        lhs_file = create_temp_yaml_file(tmp_path_factory, self.lhs_array_content)
-        rhs_file = create_temp_yaml_file(tmp_path_factory, self.rhs_array_content)
+    def test_default_diff_two_aoh_files(self, script_runner, tmp_path_factory):
+        lhs_file = create_temp_yaml_file(tmp_path_factory, self.lhs_aoh_content)
+        rhs_file = create_temp_yaml_file(tmp_path_factory, self.rhs_aoh_content)
+        stdout_content = """c [1]
+< {"step": 1, "action": "input", "args": ["world"]}
+---
+> {"step": 3, "action": "quit", "status": 0}
+
+c [2]
+< {"step": 2, "action": "print", "message": "Hello, %args[0]!"}
+---
+> {"step": 2, "action": "print", "message": "A tout %args[0]!"}
+
+c [3]
+< {"step": 3, "action": "quit", "status": 0}
+---
+> {"step": 1, "action": "input", "args": ["le monde"]}
+"""
 
         # DEBUG
         # print("LHS File:  {}".format(lhs_file))
@@ -343,7 +431,170 @@ d [2]
             , lhs_file
             , rhs_file)
         assert not result.success, result.stderr
-        assert self.standard_array_diff == result.stdout
+        assert stdout_content == result.stdout
+
+    def test_position_diff_two_aoh_files(self, script_runner, tmp_path_factory):
+        lhs_file = create_temp_yaml_file(tmp_path_factory, self.lhs_aoh_content)
+        rhs_file = create_temp_yaml_file(tmp_path_factory, self.rhs_aoh_content)
+        stdout_content = """c [1]
+< {"step": 1, "action": "input", "args": ["world"]}
+---
+> {"step": 3, "action": "quit", "status": 0}
+
+c [2]
+< {"step": 2, "action": "print", "message": "Hello, %args[0]!"}
+---
+> {"step": 2, "action": "print", "message": "A tout %args[0]!"}
+
+c [3]
+< {"step": 3, "action": "quit", "status": 0}
+---
+> {"step": 1, "action": "input", "args": ["le monde"]}
+"""
+
+        # DEBUG
+        # print("LHS File:  {}".format(lhs_file))
+        # print("RHS File:  {}".format(rhs_file))
+        # print("Expected Output:")
+        # print(merged_yaml_content)
+
+        result = script_runner.run(
+            self.command
+            , "--aoh=position"
+            , lhs_file
+            , rhs_file)
+        assert not result.success, result.stderr
+        assert stdout_content == result.stdout
+
+    def test_key_diff_two_aoh_files(self, script_runner, tmp_path_factory):
+        lhs_file = create_temp_yaml_file(tmp_path_factory, self.lhs_aoh_content)
+        rhs_file = create_temp_yaml_file(tmp_path_factory, self.rhs_aoh_content)
+        stdout_content = """c [1]
+< {"step": 1, "action": "input", "args": ["world"]}
+---
+> {"step": 1, "action": "input", "args": ["le monde"]}
+
+c [2]
+< {"step": 2, "action": "print", "message": "Hello, %args[0]!"}
+---
+> {"step": 2, "action": "print", "message": "A tout %args[0]!"}
+"""
+
+        # DEBUG
+        # print("LHS File:  {}".format(lhs_file))
+        # print("RHS File:  {}".format(rhs_file))
+        # print("Expected Output:")
+        # print(merged_yaml_content)
+
+        result = script_runner.run(
+            self.command
+            , "--aoh=key"
+            , lhs_file
+            , rhs_file)
+        assert not result.success, result.stderr
+        assert stdout_content == result.stdout
+
+    def test_dpos_diff_two_aoh_files(self, script_runner, tmp_path_factory):
+        lhs_file = create_temp_yaml_file(tmp_path_factory, self.lhs_aoh_content)
+        rhs_file = create_temp_yaml_file(tmp_path_factory, self.rhs_aoh_content)
+        stdout_content = """c [1].step
+< 1
+---
+> 3
+
+a [1].status
+> 0
+
+c [1].action
+< input
+---
+> quit
+
+d [1].args
+< ["world"]
+
+c [2].message
+< Hello, %args[0]!
+---
+> A tout %args[0]!
+
+c [3].step
+< 3
+---
+> 1
+
+c [3].action
+< quit
+---
+> input
+
+d [3].status
+< 0
+
+a [3].args
+> ["le monde"]
+"""
+
+        # DEBUG
+        # print("LHS File:  {}".format(lhs_file))
+        # print("RHS File:  {}".format(rhs_file))
+        # print("Expected Output:")
+        # print(merged_yaml_content)
+
+        result = script_runner.run(
+            self.command
+            , "--aoh=dpos"
+            , lhs_file
+            , rhs_file)
+        assert not result.success, result.stderr
+        assert stdout_content == result.stdout
+
+    def test_deep_diff_two_aoh_files(self, script_runner, tmp_path_factory):
+        lhs_file = create_temp_yaml_file(tmp_path_factory, self.lhs_aoh_content)
+        rhs_file = create_temp_yaml_file(tmp_path_factory, self.rhs_aoh_content)
+
+        # DEBUG
+        # print("LHS File:  {}".format(lhs_file))
+        # print("RHS File:  {}".format(rhs_file))
+        # print("Expected Output:")
+        # print(merged_yaml_content)
+
+        result = script_runner.run(
+            self.command
+            , "--aoh=deep"
+            , lhs_file
+            , rhs_file)
+        assert not result.success, result.stderr
+        assert self.diff_aoh_deep == result.stdout
+
+    def test_value_diff_two_aoh_files(self, script_runner, tmp_path_factory):
+        lhs_file = create_temp_yaml_file(tmp_path_factory, self.lhs_aoh_content)
+        rhs_file = create_temp_yaml_file(tmp_path_factory, self.rhs_aoh_content)
+        stdout_content = """d [1]
+< {"step": 1, "action": "input", "args": ["world"]}
+
+c [2]
+< {"step": 2, "action": "print", "message": "Hello, %args[0]!"}
+---
+> {"step": 2, "action": "print", "message": "A tout %args[0]!"}
+
+a [3]
+> {"step": 1, "action": "input", "args": ["le monde"]}
+"""
+
+        # DEBUG
+        # print("LHS File:  {}".format(lhs_file))
+        # print("RHS File:  {}".format(rhs_file))
+        # print("Expected Output:")
+        # print(merged_yaml_content)
+
+        result = script_runner.run(
+            self.command
+            , "--aoh=value"
+            , lhs_file
+            , rhs_file)
+        assert not result.success, result.stderr
+        assert stdout_content == result.stdout
 
     def test_simple_hash_diff_lhs_from_stdin(self, script_runner, tmp_path_factory):
         import subprocess
@@ -359,23 +610,24 @@ d [2]
             , universal_newlines=True
         )
         assert 1 == result.returncode, result.stderr
-        assert self.standard_hash_diff == result.stdout
+        assert self.diff_hash_defaults == result.stdout
 
-    def test_simple_array_diff_lhs_from_stdin(self, script_runner, tmp_path_factory):
+    def test_simple_aoh_diff_lhs_from_stdin(self, script_runner, tmp_path_factory):
         import subprocess
-        rhs_file = create_temp_yaml_file(tmp_path_factory, self.rhs_array_content)
+        rhs_file = create_temp_yaml_file(tmp_path_factory, self.rhs_aoh_content)
 
         result = subprocess.run(
             [self.command
+            , "--aoh=deep"
             , "-"
             , rhs_file
             ]
             , stdout=subprocess.PIPE
-            , input=self.lhs_array_content
+            , input=self.lhs_aoh_content
             , universal_newlines=True
         )
         assert 1 == result.returncode, result.stderr
-        assert self.standard_array_diff == result.stdout
+        assert self.diff_aoh_deep == result.stdout
 
     def test_simple_hash_diff_rhs_from_stdin(self, script_runner, tmp_path_factory):
         import subprocess
@@ -391,38 +643,36 @@ d [2]
             , universal_newlines=True
         )
         assert 1 == result.returncode, result.stderr
-        assert self.standard_hash_diff == result.stdout
+        assert self.diff_hash_defaults == result.stdout
 
-    def test_simple_array_diff_rhs_from_stdin(self, script_runner, tmp_path_factory):
+    def test_simple_aoh_diff_rhs_from_stdin(self, script_runner, tmp_path_factory):
         import subprocess
-        lhs_file = create_temp_yaml_file(tmp_path_factory, self.lhs_array_content)
+        lhs_file = create_temp_yaml_file(tmp_path_factory, self.lhs_aoh_content)
 
         result = subprocess.run(
             [self.command
+            , "--aoh=deep"
             , lhs_file
             , "-"
             ]
             , stdout=subprocess.PIPE
-            , input=self.rhs_array_content
+            , input=self.rhs_aoh_content
             , universal_newlines=True
         )
         assert 1 == result.returncode, result.stderr
-        assert self.standard_array_diff == result.stdout
+        assert self.diff_aoh_deep == result.stdout
 
     def test_simple_diff_hash_from_nothing_via_stdin(self, script_runner, tmp_path_factory):
         import subprocess
         rhs_file = create_temp_yaml_file(tmp_path_factory, self.rhs_hash_content)
         stdout_content = """a key
-> different value
-
-a array
-> [1, 3, "4 (new)", "5 (new)"]
-
-a aoh
-> [{"id": 0, "name": "zero", "extra_field": "is an extra field (new)"}, {"id": 1, "name": "different one"}, {"id": "3 (new)", "name": "three (new)"}, {"id": "4 (new)", "name": "four (new)"}]
+> changed value
 
 a rhs_exclusive
-> {"with": {"structure": true}}
+> value
+
+a hash
+> {"with": {"multiple": "children", "key_value": "pairs"}, "and": {"complex": {"more": "complex"}, "with": {"several_nested": "levels"}}, "including": {"additional": "structure"}}
 """
 
         result = subprocess.run(
@@ -437,14 +687,23 @@ a rhs_exclusive
         assert 1 == result.returncode, result.stderr
         assert stdout_content == result.stdout
 
-    def test_simple_diff_array_from_nothing_via_stdin(self, script_runner, tmp_path_factory):
+    def test_simple_diff_aoh_from_nothing_via_stdin(self, script_runner, tmp_path_factory):
         import subprocess
-        rhs_file = create_temp_yaml_file(tmp_path_factory, self.rhs_array_content)
+        rhs_file = create_temp_yaml_file(tmp_path_factory, self.rhs_aoh_content)
         stdout_content = """a [0]
-> {"step": 1, "action": "input", "args": ["le monde"]}
+> {"step": 0, "action": "INITIALIZE"}
 
 a [1]
+> {"step": 3, "action": "quit", "status": 0}
+
+a [2]
 > {"step": 2, "action": "print", "message": "A tout %args[0]!"}
+
+a [3]
+> {"step": 1, "action": "input", "args": ["le monde"]}
+
+a [4]
+> {"step": 9, "action": "CLEANUP"}
 """
 
         result = subprocess.run(
@@ -466,16 +725,13 @@ a [1]
 < This is a general text file.
 
 a key
-> different value
-
-a array
-> [1, 3, "4 (new)", "5 (new)"]
-
-a aoh
-> [{"id": 0, "name": "zero", "extra_field": "is an extra field (new)"}, {"id": 1, "name": "different one"}, {"id": "3 (new)", "name": "three (new)"}, {"id": "4 (new)", "name": "four (new)"}]
+> changed value
 
 a rhs_exclusive
-> {"with": {"structure": true}}
+> value
+
+a hash
+> {"with": {"multiple": "children", "key_value": "pairs"}, "and": {"complex": {"more": "complex"}, "with": {"several_nested": "levels"}}, "including": {"additional": "structure"}}
 """
 
         result = subprocess.run(
@@ -490,17 +746,26 @@ a rhs_exclusive
         assert 1 == result.returncode, result.stderr
         assert stdout_content == result.stdout
 
-    def test_simple_diff_array_from_text_via_stdin(self, script_runner, tmp_path_factory):
+    def test_simple_diff_aoh_from_text_via_stdin(self, script_runner, tmp_path_factory):
         import subprocess
-        rhs_file = create_temp_yaml_file(tmp_path_factory, self.rhs_array_content)
+        rhs_file = create_temp_yaml_file(tmp_path_factory, self.rhs_aoh_content)
         stdout_content = """d -
 < This is a general text file.
 
 a [0]
-> {"step": 1, "action": "input", "args": ["le monde"]}
+> {"step": 0, "action": "INITIALIZE"}
 
 a [1]
+> {"step": 3, "action": "quit", "status": 0}
+
+a [2]
 > {"step": 2, "action": "print", "message": "A tout %args[0]!"}
+
+a [3]
+> {"step": 1, "action": "input", "args": ["le monde"]}
+
+a [4]
+> {"step": 9, "action": "CLEANUP"}
 """
 
         result = subprocess.run(
@@ -521,14 +786,11 @@ a [1]
         stdout_content = """d key
 < value
 
-d array
-< [1, 2, 3]
-
-d aoh
-< [{"id": 0, "name": "zero"}, {"id": 1, "name": "one"}, {"id": 2, "name": "two"}]
-
 d lhs_exclusive
-< ["node"]
+< value
+
+d hash
+< {"with": {"multiple": "child", "key_value": "pairs"}, "and": {"complex": "structure", "with": {"several": "levels"}}}
 """
 
         result = subprocess.run(
@@ -543,17 +805,23 @@ d lhs_exclusive
         assert 1 == result.returncode, result.stderr
         assert stdout_content == result.stdout
 
-    def test_simple_diff_array_into_nothing_via_stdin(self, script_runner, tmp_path_factory):
+    def test_simple_diff_aoh_into_nothing_via_stdin(self, script_runner, tmp_path_factory):
         import subprocess
-        lhs_file = create_temp_yaml_file(tmp_path_factory, self.lhs_array_content)
+        lhs_file = create_temp_yaml_file(tmp_path_factory, self.lhs_aoh_content)
         stdout_content = """d [0]
-< {"step": 1, "action": "input", "args": ["world"]}
+< {"step": 0, "action": "INITIALIZE"}
 
 d [1]
-< {"step": 2, "action": "print", "message": "Hello, %args[0]!"}
+< {"step": 1, "action": "input", "args": ["world"]}
 
 d [2]
+< {"step": 2, "action": "print", "message": "Hello, %args[0]!"}
+
+d [3]
 < {"step": 3, "action": "quit", "status": 0}
+
+d [4]
+< {"step": 9, "action": "CLEANUP"}
 """
 
         result = subprocess.run(
@@ -577,14 +845,11 @@ d [2]
 d key
 < value
 
-d array
-< [1, 2, 3]
-
-d aoh
-< [{"id": 0, "name": "zero"}, {"id": 1, "name": "one"}, {"id": 2, "name": "two"}]
-
 d lhs_exclusive
-< ["node"]
+< value
+
+d hash
+< {"with": {"multiple": "child", "key_value": "pairs"}, "and": {"complex": "structure", "with": {"several": "levels"}}}
 """
 
         result = subprocess.run(
@@ -599,20 +864,26 @@ d lhs_exclusive
         assert 1 == result.returncode, result.stderr
         assert stdout_content == result.stdout
 
-    def test_simple_diff_array_into_text_via_stdin(self, script_runner, tmp_path_factory):
+    def test_simple_diff_aoh_into_text_via_stdin(self, script_runner, tmp_path_factory):
         import subprocess
-        lhs_file = create_temp_yaml_file(tmp_path_factory, self.lhs_array_content)
+        lhs_file = create_temp_yaml_file(tmp_path_factory, self.lhs_aoh_content)
         stdout_content = """a -
 > This is a general text file.
 
 d [0]
-< {"step": 1, "action": "input", "args": ["world"]}
+< {"step": 0, "action": "INITIALIZE"}
 
 d [1]
-< {"step": 2, "action": "print", "message": "Hello, %args[0]!"}
+< {"step": 1, "action": "input", "args": ["world"]}
 
 d [2]
+< {"step": 2, "action": "print", "message": "Hello, %args[0]!"}
+
+d [3]
 < {"step": 3, "action": "quit", "status": 0}
+
+d [4]
+< {"step": 9, "action": "CLEANUP"}
 """
 
         result = subprocess.run(
@@ -630,17 +901,8 @@ d [2]
     def test_onlysame_diff_two_hash_files(self, script_runner, tmp_path_factory):
         lhs_file = create_temp_yaml_file(tmp_path_factory, self.lhs_hash_content)
         rhs_file = create_temp_yaml_file(tmp_path_factory, self.rhs_hash_content)
-        stdout_content = """s array[0]
-= 1
-
-s aoh[0].id
-= 0
-
-s aoh[0].name
-= zero
-
-s aoh[1].id
-= 1
+        stdout_content = """s hash.with.key_value
+= pairs
 """
 
         # DEBUG
@@ -652,25 +914,47 @@ s aoh[1].id
         result = script_runner.run(
             self.command
             , "--onlysame"
+            , "--aoh=deep"
             , lhs_file
             , rhs_file)
         assert not result.success, result.stderr
         assert stdout_content == result.stdout
 
-    def test_onlysame_diff_two_array_files(self, script_runner, tmp_path_factory):
-        lhs_file = create_temp_yaml_file(tmp_path_factory, self.lhs_array_content)
-        rhs_file = create_temp_yaml_file(tmp_path_factory, self.rhs_array_content)
+    def test_onlysame_deep_diff_two_aoh_files(self, script_runner, tmp_path_factory):
+        lhs_file = create_temp_yaml_file(tmp_path_factory, self.lhs_aoh_content)
+        rhs_file = create_temp_yaml_file(tmp_path_factory, self.rhs_aoh_content)
         stdout_content = """s [0].step
-= 1
+= 0
 
 s [0].action
+= INITIALIZE
+
+s [3].step
+= 1
+
+s [3].action
 = input
 
-s [1].step
+s [2].step
 = 2
 
-s [1].action
+s [2].action
 = print
+
+s [1].step
+= 3
+
+s [1].action
+= quit
+
+s [1].status
+= 0
+
+s [4].step
+= 9
+
+s [4].action
+= CLEANUP
 """
 
         # DEBUG
@@ -682,6 +966,7 @@ s [1].action
         result = script_runner.run(
             self.command
             , "--onlysame"
+            , "--aoh=deep"
             , lhs_file
             , rhs_file)
         assert not result.success, result.stderr
@@ -780,50 +1065,36 @@ c collector_hash.aliased_string
     def test_simple_diff_two_hash_files_fslash(self, script_runner, tmp_path_factory):
         lhs_file = create_temp_yaml_file(tmp_path_factory, self.lhs_hash_content)
         rhs_file = create_temp_yaml_file(tmp_path_factory, self.rhs_hash_content)
-        stdout_content = """c /key
+        stdout_content = """d /hash/and/complex
+< structure
+
+c /key
 < value
 ---
-> different value
-
-c /array[1]
-< 2
----
-> 3
-
-c /array[2]
-< 3
----
-> 4 (new)
-
-a /array[3]
-> 5 (new)
-
-a /aoh[0]/extra_field
-> is an extra field (new)
-
-c /aoh[1]/name
-< one
----
-> different one
-
-c /aoh[2]/id
-< 2
----
-> 3 (new)
-
-c /aoh[2]/name
-< two
----
-> three (new)
-
-d /lhs_exclusive
-< ["node"]
-
-a /aoh[3]
-> {"id": "4 (new)", "name": "four (new)"}
+> changed value
 
 a /rhs_exclusive
-> {"with": {"structure": true}}
+> value
+
+d /lhs_exclusive
+< value
+
+c /hash/with/multiple
+< child
+---
+> children
+
+a /hash/and/complex/more
+> complex
+
+d /hash/and/with/several
+< levels
+
+a /hash/and/with/several_nested
+> levels
+
+a /hash/including
+> {"additional": "structure"}
 """
 
         # DEBUG
@@ -835,6 +1106,7 @@ a /rhs_exclusive
         result = script_runner.run(
             self.command
             , "--pathsep=/"
+            , "--aoh=deep"
             , lhs_file
             , rhs_file)
         assert not result.success, result.stderr
@@ -1193,12 +1465,12 @@ literal_string: |
   characters will be
   preserved.
 """)
-        stdout_content = """c1.0.1.0 folded_string
+        stdout_content = """c1.0.0.1.0.0 folded_string
 < This is one really long string.  It is presented in YAML "folded" format.  This will cause all of the new-line characters to be replaced with single spaces when this value is read by a YAML parser.
 ---
 > This CHANGED one really long string.  It is presented in YAML "folded" format.  This will cause all of the new-line characters to be replaced with single spaces when this value is read by a YAML parser.
 
-c1.0.1.0 literal_string
+c1.0.1.1.0.1 literal_string
 < This is another
 < really long string.
 < It is presented in
@@ -1236,46 +1508,63 @@ c1.0.1.0 literal_string
         assert not result.success, result.stderr
         assert stdout_content == result.stdout
 
-    def test_sync_arrays(self, script_runner, tmp_path_factory):
-        lhs_file = create_temp_yaml_file(tmp_path_factory, """---
-- alpha
-- mu
-- psi
-- beta
-- delta
-- chi
-- delta
-- gamma
-- alpha
-""")
-        rhs_file = create_temp_yaml_file(tmp_path_factory, """---
-- zeta
-- mu
-- psi
-- alpha
-- gamma
-- gamma
-- phi
-- beta
-- chi
-""")
-        stdout_content = """d [4]
-< delta
+    def test_diff_array_by_default(self, script_runner, tmp_path_factory):
+        lhs_file = create_temp_yaml_file(tmp_path_factory, self.lhs_array_content)
+        rhs_file = create_temp_yaml_file(tmp_path_factory, self.rhs_array_content)
 
-d [6]
+        # DEBUG
+        # print("LHS File:  {}".format(lhs_file))
+        # print("RHS File:  {}".format(rhs_file))
+        # print("Expected Output:")
+        # print(merged_yaml_content)
+
+        result = script_runner.run(
+            self.command
+            , lhs_file
+            , rhs_file)
+        assert not result.success, result.stderr
+        assert self.diff_array_defaults == result.stdout
+
+    def test_diff_array_by_position(self, script_runner, tmp_path_factory):
+        lhs_file = create_temp_yaml_file(tmp_path_factory, self.lhs_array_content)
+        rhs_file = create_temp_yaml_file(tmp_path_factory, self.rhs_array_content)
+
+        # DEBUG
+        # print("LHS File:  {}".format(lhs_file))
+        # print("RHS File:  {}".format(rhs_file))
+        # print("Expected Output:")
+        # print(merged_yaml_content)
+
+        result = script_runner.run(
+            self.command
+            , "--arrays=position"
+            , lhs_file
+            , rhs_file)
+        assert not result.success, result.stderr
+        assert self.diff_array_defaults == result.stdout
+
+    def test_diff_array_by_value(self, script_runner, tmp_path_factory):
+        lhs_file = create_temp_yaml_file(tmp_path_factory, self.lhs_array_content)
+        rhs_file = create_temp_yaml_file(tmp_path_factory, self.rhs_array_content)
+        stdout_content = """a [0]
+> zeta
+
+a [5]
+> gamma
+
+c [6]
+< delta
+---
+> phi
+
+d [4]
 < delta
 
 d [8]
 < alpha
 
-a [9]
-> zeta
-
-a [10]
-> gamma
-
-a [11]
-> phi
+d [9]
+< theta
 """
 
         # DEBUG
@@ -1286,7 +1575,192 @@ a [11]
 
         result = script_runner.run(
             self.command
-            , "--sync-arrays"
+            , "--arrays=value"
+            , lhs_file
+            , rhs_file)
+        assert not result.success, result.stderr
+        assert stdout_content == result.stdout
+
+    def test_diff_add_array_element(self, script_runner, tmp_path_factory):
+        lhs_file = create_temp_yaml_file(tmp_path_factory, """---
+- 0
+- 1
+""")
+        rhs_file = create_temp_yaml_file(tmp_path_factory, """---
+- 0
+- 1
+- 2
+""")
+        stdout_content = """a [2]
+> 2
+"""
+
+        # DEBUG
+        # print("LHS File:  {}".format(lhs_file))
+        # print("RHS File:  {}".format(rhs_file))
+        # print("Expected Output:")
+        # print(merged_yaml_content)
+
+        result = script_runner.run(
+            self.command
+            , lhs_file
+            , rhs_file)
+        assert not result.success, result.stderr
+        assert stdout_content == result.stdout
+
+    def test_diff_add_aoh_element_default(self, script_runner, tmp_path_factory):
+        lhs_file = create_temp_yaml_file(tmp_path_factory, """---
+- id: 0
+  name: zero
+""")
+        rhs_file = create_temp_yaml_file(tmp_path_factory, """---
+- id: 0
+  name: zero
+- id: 1
+  name: uno
+""")
+        stdout_content = """a [1]
+> {"id": 1, "name": "uno"}
+"""
+
+        # DEBUG
+        # print("LHS File:  {}".format(lhs_file))
+        # print("RHS File:  {}".format(rhs_file))
+        # print("Expected Output:")
+        # print(merged_yaml_content)
+
+        result = script_runner.run(
+            self.command
+            , lhs_file
+            , rhs_file)
+        assert not result.success, result.stderr
+        assert stdout_content == result.stdout
+
+    def test_diff_add_aoh_element_key(self, script_runner, tmp_path_factory):
+        lhs_file = create_temp_yaml_file(tmp_path_factory, """---
+- id: 1
+  name: uno
+- id: 0
+  name: zero
+""")
+        rhs_file = create_temp_yaml_file(tmp_path_factory, """---
+- id: 0
+  name: zero
+- id: 2
+  name: dos
+- id: 1
+  name: uno
+""")
+        stdout_content = """a [1]
+> {"id": 2, "name": "dos"}
+"""
+
+        # DEBUG
+        # print("LHS File:  {}".format(lhs_file))
+        # print("RHS File:  {}".format(rhs_file))
+        # print("Expected Output:")
+        # print(merged_yaml_content)
+
+        result = script_runner.run(
+            self.command
+            , "--aoh=key"
+            , lhs_file
+            , rhs_file)
+        assert not result.success, result.stderr
+        assert stdout_content == result.stdout
+
+    def test_diff_delete_aoh_element_default(self, script_runner, tmp_path_factory):
+        lhs_file = create_temp_yaml_file(tmp_path_factory, """---
+- id: 0
+  name: zero
+- id: 1
+  name: uno
+""")
+        rhs_file = create_temp_yaml_file(tmp_path_factory, """---
+- id: 0
+  name: zero
+""")
+        stdout_content = """d [1]
+< {"id": 1, "name": "uno"}
+"""
+
+        # DEBUG
+        # print("LHS File:  {}".format(lhs_file))
+        # print("RHS File:  {}".format(rhs_file))
+        # print("Expected Output:")
+        # print(merged_yaml_content)
+
+        result = script_runner.run(
+            self.command
+            , lhs_file
+            , rhs_file)
+        assert not result.success, result.stderr
+        assert stdout_content == result.stdout
+
+    def test_diff_delete_aoh_element_key(self, script_runner, tmp_path_factory):
+        lhs_file = create_temp_yaml_file(tmp_path_factory, """---
+- id: 0
+  name: zero
+- id: 1
+  name: uno
+- id: 2
+  name: dos
+""")
+        rhs_file = create_temp_yaml_file(tmp_path_factory, """---
+- id: 1
+  name: uno
+- id: 0
+  name: zero
+""")
+        stdout_content = """d [2]
+< {"id": 2, "name": "dos"}
+"""
+
+        # DEBUG
+        # print("LHS File:  {}".format(lhs_file))
+        # print("RHS File:  {}".format(rhs_file))
+        # print("Expected Output:")
+        # print(merged_yaml_content)
+
+        result = script_runner.run(
+            self.command
+            , "--aoh=key"
+            , lhs_file
+            , rhs_file)
+        assert not result.success, result.stderr
+        assert stdout_content == result.stdout
+
+    def test_diff_unkeyed_aoh_elements(self, script_runner, tmp_path_factory):
+        lhs_file = create_temp_yaml_file(tmp_path_factory, """---
+- id: 1
+  name: uno
+- id: 0
+  name: zero
+- name: tres
+""")
+        rhs_file = create_temp_yaml_file(tmp_path_factory, """---
+- id: 0
+  name: zero
+- name: dos
+- id: 1
+  name: uno
+""")
+        stdout_content = """a [1]
+> {"name": "dos"}
+
+d [2]
+< {"name": "tres"}
+"""
+
+        # DEBUG
+        # print("LHS File:  {}".format(lhs_file))
+        # print("RHS File:  {}".format(rhs_file))
+        # print("Expected Output:")
+        # print(merged_yaml_content)
+
+        result = script_runner.run(
+            self.command
+            , "--aoh=key"
             , lhs_file
             , rhs_file)
         assert not result.success, result.stderr

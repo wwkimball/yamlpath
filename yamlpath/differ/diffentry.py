@@ -33,11 +33,15 @@ class DiffEntry:
         """Build the sortable index for this entry."""
         lhs_lc = DiffEntry._get_index(lhs, kwargs.pop("lhs_parent", None))
         rhs_lc = DiffEntry._get_index(rhs, kwargs.pop("rhs_parent", None))
+        lhs_iteration = kwargs.pop("lhs_iteration", 0)
+        rhs_iteration = kwargs.pop("rhs_iteration", 0)
+        lhs_iteration = 0 if lhs_iteration is None else lhs_iteration
+        rhs_iteration = 0 if rhs_iteration is None else rhs_iteration
         lhs_line = float(lhs_lc)
-        rhs_line = float(rhs_lc)
-        if lhs_line < rhs_line:
+        if lhs_line == 0.0 or self.action is DiffActions.ADD:
             lhs_lc, rhs_lc = rhs_lc, lhs_lc
-        self._index = "{}.{}".format(lhs_lc, rhs_lc)
+        self._index = "{}.{}.{}.{}".format(
+            lhs_lc, lhs_iteration, rhs_lc, rhs_iteration)
 
     def __str__(self) -> str:
         """Get the string representation of this object."""
@@ -61,6 +65,16 @@ class DiffEntry:
     def action(self) -> DiffActions:
         """Get the action of this difference (read-only)."""
         return self._action
+
+    @property
+    def path(self) -> YAMLPath:
+        """Get the YAML Path of this difference (read-only)."""
+        return self._path
+
+    @property
+    def lhs(self) -> Any:
+        """Get the LHS value of this difference (read-only)."""
+        return self._lhs
 
     @property
     def index(self) -> str:
