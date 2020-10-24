@@ -23,19 +23,20 @@ def processcli():
         formatter_class=argparse.RawTextHelpFormatter,
         description=(
             "Compare YAML/JSON/Compatible documents node by node.  EYAML can"
-            "be employed to\ncompare encrypted values."),
+            " be employed to\ncompare encrypted values."),
         epilog="""
 configuration file:
   The CONFIG file is an INI file with up to three sections:
   [defaults] Sets equivalents of --arrays|-A and --aoh|-O.
   [rules]    Each entry is a YAML Path assigning --arrays|-A or --aoh|-O for
              precise nodes.
-  [keys]     Wherever --aoh=bykey (or -O bykey), each entry is treated as a
-             record with an identity key.  In order to match RHS records to
-             LHS records, a key must be known and is identified on a YAML
-             Path basis via this section.  Where not specified, the first
-             attribute of the first record in the Array-of-Hashes is presumed
-             the identity key for all records in the set.
+  [keys]     Wherever --aoh=key (or -O key) or --aoh=deep (or -O deep), each
+             entry is treated as a record with an identity key.  In order to
+             match RHS records to LHS records, a key must be known and is
+             identified on a YAML Path basis via this section.  Where not
+             specified, the first attribute of the first record in the
+             Array-of-Hashes is presumed the identity key for all records in
+             the set.
 
 input files:
   Only one input file may be the - pseudo-file (read from STDIN).  Because the
