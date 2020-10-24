@@ -318,17 +318,19 @@ class Processor:
             .format(str_stripped))
 
         if isinstance(data, dict):
-            next_path = translated_path + escape_path_section(
+            next_translated_path = translated_path + escape_path_section(
                 str_stripped, translated_path.seperator)
             if stripped_attrs in data:
                 yield NodeCoords(
-                    data[stripped_attrs], data, stripped_attrs, next_path)
+                    data[stripped_attrs], data, stripped_attrs,
+                    next_translated_path)
             else:
                 # Check for a string/int type mismatch
                 try:
                     intkey = int(str_stripped)
                     if intkey in data:
-                        yield NodeCoords(data[intkey], data, intkey, next_path)
+                        yield NodeCoords(
+                            data[intkey], data, intkey, next_translated_path)
                 except ValueError:
                     pass
         elif isinstance(data, list):
@@ -346,10 +348,12 @@ class Processor:
                     return
 
                 for eleidx, element in enumerate(data):
+                    next_translated_path = translated_path + "[{}]".format(
+                        eleidx)
                     for node_coord in self._get_nodes_by_path_segment(
                             element, yaml_path, segment_index, parent=data,
                             parentref=eleidx, traverse_lists=traverse_lists,
-                            translated_path=translated_path):
+                            translated_path=next_translated_path):
                         yield node_coord
 
     # pylint: disable=locally-disabled,too-many-locals
@@ -456,8 +460,9 @@ class Processor:
         """
         (_, stripped_attrs) = yaml_path.escaped[segment_index]
         translated_path = kwargs.pop("translated_path", YAMLPath(""))
-        next_path = translated_path + "[&{}]".format(
-            escape_path_section(stripped_attrs, translated_path.seperator))
+        next_translated_path = translated_path + "[&{}]".format(
+            escape_path_section(
+                str(stripped_attrs), translated_path.seperator))
 
         self.logger.debug(
             "Processor::_get_nodes_by_anchor:  Seeking ANCHOR node at {}."
@@ -467,15 +472,15 @@ class Processor:
             for lstidx, ele in enumerate(data):
                 if (hasattr(ele, "anchor")
                         and stripped_attrs == ele.anchor.value):
-                    yield NodeCoords(ele, data, lstidx, next_path)
+                    yield NodeCoords(ele, data, lstidx, next_translated_path)
         elif isinstance(data, dict):
             for key, val in data.items():
                 if (hasattr(key, "anchor")
                         and stripped_attrs == key.anchor.value):
-                    yield NodeCoords(val, data, key, next_path)
+                    yield NodeCoords(val, data, key, next_translated_path)
                 elif (hasattr(val, "anchor")
                       and stripped_attrs == val.anchor.value):
-                    yield NodeCoords(val, data, key, next_path)
+                    yield NodeCoords(val, data, key, next_translated_path)
 
     # pylint: disable=too-many-statements
     def _get_nodes_by_search(
@@ -529,8 +534,10 @@ class Processor:
                     matches = search_matches(method, term, ele[attr])
                 else:
                     # Attempt a descendant search
+                    next_translated_path = translated_path + "[{}]".format(
+                        lstidx)
                     for desc_node in self._get_required_nodes(
-                        ele, desc_path, 0, translated_path=translated_path
+                        ele, desc_path, 0, translated_path=next_translated_path
                     ):
                         matches = search_matches(
                             method, term, desc_node.node)
@@ -683,13 +690,14 @@ class Processor:
                                 and isinstance(node_coord.node, list)):
                             for coord_idx, coord in enumerate(node_coord.node):
                                 if not isinstance(coord, NodeCoords):
-                                    next_path = node_coord.path
-                                    if next_path is not None:
-                                        next_path = next_path + "[{}]".format(
-                                            coord_idx)
+                                    next_translated_path = node_coord.path
+                                    if next_translated_path is not None:
+                                        next_translated_path = (
+                                            next_translated_path +
+                                            "[{}]".format(coord_idx))
                                     coord = NodeCoords(
                                         coord, node_coord.node, coord_idx,
-                                        next_path)
+                                        next_translated_path)
                                 node_coords.append(coord)
                         else:
                             node_coords.append(node_coord)
@@ -763,10 +771,13 @@ class Processor:
             # This traversal is gathering every leaf node
             if isinstance(data, dict):
                 for key, val in data.items():
+                    next_translated_path = (
+                        translated_path + escape_path_section(
+                            key, translated_path.seperator))
                     for node_coord in self._get_nodes_by_traversal(
                         val, yaml_path, segment_index,
                         parent=data, parentref=key,
-                        translated_path=translated_path
+                        translated_path=next_translated_path
                     ):
                         self.logger.debug(
                             "Yielding unfiltered Hash value:",
@@ -775,10 +786,11 @@ class Processor:
                         yield node_coord
             elif isinstance(data, list):
                 for idx, ele in enumerate(data):
+                    next_translated_path = translated_path + "[{}]".format(idx)
                     for node_coord in self._get_nodes_by_traversal(
                         ele, yaml_path, segment_index,
                         parent=data, parentref=idx,
-                        translated_path=translated_path
+                        translated_path=next_translated_path
                     ):
                         self.logger.debug(
                             "Yielding unfiltered Array value:",
@@ -821,10 +833,13 @@ class Processor:
                         "Processor::_get_nodes_by_traversal:  Recursing into"
                         " KEY '{}' at ref '{}' for next-segment matches..."
                         .format(key, parentref))
+                    next_translated_path = (
+                        translated_path + escape_path_section(
+                            key, translated_path.seperator))
                     for node_coord in self._get_nodes_by_traversal(
                         val, yaml_path, segment_index,
                         parent=data, parentref=key,
-                        translated_path=translated_path
+                        translated_path=next_translated_path
                     ):
                         self.logger.debug(
                             "Yielding filtered indirect Hash value from KEY"
@@ -838,10 +853,11 @@ class Processor:
                         "Processor::_get_nodes_by_traversal:  Recursing into"
                         " INDEX '{}' at ref '{}' for next-segment matches..."
                         .format(idx, parentref))
+                    next_translated_path = translated_path + "[{}]".format(idx)
                     for node_coord in self._get_nodes_by_traversal(
                         ele, yaml_path, segment_index,
                         parent=data, parentref=idx,
-                        translated_path=translated_path
+                        translated_path=next_translated_path
                     ):
                         self.logger.debug(
                             "Yielding filtered indirect Array value from INDEX"
@@ -1006,7 +1022,7 @@ class Processor:
                         next_coord.node, yaml_path, value, depth + 1,
                         parent=next_coord.parent,
                         parentref=next_coord.parentref,
-                        translated_path=translated_path
+                        translated_path=next_coord.path
                 ):
                     yield node_coord
 
@@ -1034,10 +1050,13 @@ class Processor:
                         new_ele = append_list_element(
                             data, next_node, stripped_attrs
                         )
+                        new_idx = len(data) - 1
+                        next_translated_path = translated_path + "[{}]".format(
+                            new_idx)
                         for node_coord in self._get_optional_nodes(
                                 new_ele, yaml_path, value, depth + 1,
-                                parent=data, parentref=len(data) - 1,
-                                translated_path=translated_path
+                                parent=data, parentref=new_idx,
+                                translated_path=next_translated_path
                         ):
                             matched_nodes += 1
                             yield node_coord
@@ -1064,10 +1083,12 @@ class Processor:
                                 yaml_path, depth + 1, value
                             )
                             append_list_element(data, next_node)
+                        next_translated_path = translated_path + "[{}]".format(
+                            newidx)
                         for node_coord in self._get_optional_nodes(
                                 data[newidx], yaml_path, value,
                                 depth + 1, parent=data, parentref=newidx,
-                                translated_path=translated_path
+                                translated_path=next_translated_path
                         ):
                             matched_nodes += 1
                             yield node_coord
@@ -1093,11 +1114,15 @@ class Processor:
                         data[stripped_attrs] = build_next_node(
                             yaml_path, depth + 1, value
                         )
+                        next_translated_path = (
+                            translated_path + escape_path_section(
+                                str(stripped_attrs),
+                                translated_path.seperator))
                         for node_coord in self._get_optional_nodes(
                                 data[stripped_attrs], yaml_path, value,
                                 depth + 1, parent=data,
                                 parentref=stripped_attrs,
-                                translated_path=translated_path
+                                translated_path=next_translated_path
                         ):
                             matched_nodes += 1
                             yield node_coord

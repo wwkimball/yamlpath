@@ -253,9 +253,13 @@ class ConsolePrinter:
     ) -> Generator[str, None, None]:
         """Helper method for debug."""
         prefix = kwargs.pop("prefix", "")
+        path_prefix = "{}(path)".format(prefix)
         node_prefix = "{}(node)".format(prefix)
         parent_prefix = "{}(parent)".format(prefix)
         parentref_prefix = "{}(parentref)".format(prefix)
+
+        for line in ConsolePrinter._debug_dump(data.path, prefix=path_prefix):
+            yield line
 
         for line in ConsolePrinter._debug_dump(data.node, prefix=node_prefix):
             yield line
