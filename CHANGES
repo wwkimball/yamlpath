@@ -13,7 +13,12 @@ Enhancements:
 API Changes:
 * NodeCoords now employ a new `path` attribute.  This is an optional parameter
   which is assigned during construction to later report the translated origin
-  YAML Path; this is where the node was found or created within the DOM.
+  YAML Path; this is where the node was found or created within the DOM.  Note
+  that Collector segments work against virtual DOMs, so the YAML Path of an
+  outer Collector will be virtual, relative to its parent at construction; when
+  nested, this will be a bare list index.  Any NodeCoords in the virtual
+  container which point to real nodes in the DOM will have their own concrete
+  YAML Paths.
 
 3.2.0:
 Enhancements:
