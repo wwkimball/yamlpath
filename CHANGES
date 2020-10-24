@@ -19,6 +19,13 @@ API Changes:
   nested, this will be a bare list index.  Any NodeCoords in the virtual
   container which point to real nodes in the DOM will have their own concrete
   YAML Paths.
+* YAMLPath instances now support nonmutating addition of individual segments
+  via the + operator.  Whereas the append() method mutates the YAMLPath being
+  acted upon, + creates a new YAMLPath that is the original plus the new
+  segment.  In both cases, the orignal YAMLPath's seperator is retained during
+  both operations.  As with .append(), new segments added via + must also be
+  properly escaped -- typically via path.escape_path_section -- before being
+  added.
 
 3.2.0:
 Enhancements:
