@@ -14,7 +14,7 @@ class NodeCoords:
     """
 
     def __init__(
-        self, node: Any, parent: Any, parentref: Any, path: YAMLPath
+        self, node: Any, parent: Any, parentref: Any, path: YAMLPath = None
     ) -> None:
         """
         Initialize a new NodeCoords.

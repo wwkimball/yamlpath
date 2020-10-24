@@ -100,9 +100,14 @@ class YAMLPath:
         """Indicate non-equivalence of two YAMLPaths."""
         return not self == other
 
+    def __add__(self, other: object) -> "YAMLPath":
+        """Add a nonmutating -- pre-escaped -- path segment."""
+        next_segment = str(other) if not isinstance(other, str) else other
+        return YAMLPath(self).append(next_segment)
+
     def append(self, segment: str) -> "YAMLPath":
         """
-        Append a new segment to this YAML Path.
+        Append a new -- pre-escaped -- segment to this YAML Path.
 
         Parameters:
         1. segment (str) The new -- pre-escaped -- segment to append to this
