@@ -7,6 +7,7 @@ from ruamel.yaml.scalarstring import PlainScalarString
 
 from yamlpath.wrappers import NodeCoords
 from yamlpath.wrappers import ConsolePrinter
+from yamlpath import YAMLPath
 
 class Test_wrappers_ConsolePrinter():
     def test_info_noisy(self, capsys):
@@ -129,12 +130,13 @@ class Test_wrappers_ConsolePrinter():
             "DEBUG:  test_debug_noisy:  === FOOTER ===",
         ]) + "\n" == console.out
 
-        nc = NodeCoords("value", dict(key="value"), "key")
+        nc = NodeCoords("value", dict(key="value"), "key", YAMLPath("key"))
         logger.debug(
             "A node coordinate:", prefix="test_debug_noisy:  ", data=nc)
         console = capsys.readouterr()
         assert "\n".join([
             "DEBUG:  test_debug_noisy:  A node coordinate:",
+            "DEBUG:  test_debug_noisy:  (path)key",
             "DEBUG:  test_debug_noisy:  (node)value",
             "DEBUG:  test_debug_noisy:  (parent)[key]value<class 'str'>",
             "DEBUG:  test_debug_noisy:  (parentref)key",
