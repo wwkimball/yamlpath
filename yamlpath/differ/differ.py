@@ -6,6 +6,7 @@ Copyright 2020 William W. Kimball, Jr. MBA MSIS
 from itertools import zip_longest
 from typing import Any, Dict, Generator, List, Optional, Tuple
 
+from yamlpath.func import escape_path_section
 from yamlpath import YAMLPath
 from yamlpath.wrappers import ConsolePrinter, NodeCoords
 from yamlpath.eyaml import EYAMLProcessor
@@ -62,14 +63,14 @@ class Differ:
             lhs_iteration = -1
             for key, val in data.items():
                 lhs_iteration += 1
-                next_path = YAMLPath(path).append(key)
+                next_path = path + escape_path_section(key, path.seperator)
                 self._diffs.append(
                     DiffEntry(
                         DiffActions.DELETE, next_path, val, None,
                         lhs_parent=data, lhs_iteration=lhs_iteration))
         elif isinstance(data, list):
             for idx, ele in enumerate(data):
-                next_path = YAMLPath(path).append("[{}]".format(idx))
+                next_path = path + "[{}]".format(idx)
                 self._diffs.append(
                     DiffEntry(
                         DiffActions.DELETE, next_path, ele, None,
@@ -86,14 +87,14 @@ class Differ:
             rhs_iteration = -1
             for key, val in data.items():
                 rhs_iteration += 1
-                next_path = YAMLPath(path).append(key)
+                next_path = path + escape_path_section(key, path.seperator)
                 self._diffs.append(
                     DiffEntry(
                         DiffActions.ADD, next_path, None, val,
                         rhs_parent=data, rhs_iteration=rhs_iteration))
         elif isinstance(data, list):
             for idx, ele in enumerate(data):
-                next_path = YAMLPath(path).append("[{}]".format(idx))
+                next_path = path + "[{}]".format(idx)
                 self._diffs.append(
                     DiffEntry(
                         DiffActions.ADD, next_path, None, ele,
@@ -168,7 +169,7 @@ class Differ:
             (key, val) for key, val in rhs.items()
             if key in lhs and key in rhs
         ]:
-            next_path = YAMLPath(path).append(key)
+            next_path = path + escape_path_section(key, path.seperator)
             self._diff_between(
                 next_path, lhs[key], val,
                 lhs_parent=lhs, lhs_iteration=lhs_key_indicies[key],
@@ -177,7 +178,7 @@ class Differ:
 
         # Look for deleted keys
         for key in lhs_keys - rhs_keys:
-            next_path = YAMLPath(path).append(key)
+            next_path = path + escape_path_section(key, path.seperator)
             self._diffs.append(
                 DiffEntry(
                     DiffActions.DELETE, next_path, lhs[key], None,
@@ -186,7 +187,7 @@ class Differ:
 
         # Look for new keys
         for key in rhs_keys - lhs_keys:
-            next_path = YAMLPath(path).append(key)
+            next_path = path + escape_path_section(key, path.seperator)
             self._diffs.append(
                 DiffEntry(
                     DiffActions.ADD, next_path, None, rhs[key],
@@ -216,7 +217,7 @@ class Differ:
 
         for (lidx, lele, ridx, rele) in syn_pairs:
             if lele is None:
-                next_path = YAMLPath(path).append("[{}]".format(ridx))
+                next_path = path + "[{}]".format(ridx)
                 diff_action = DiffActions.ADD
                 opposite_val = None
                 pop_index = -1
@@ -239,14 +240,14 @@ class Differ:
                     lhs_parent=lhs, lhs_iteration=lidx,
                     rhs_parent=rhs, rhs_iteration=ridx))
             elif rele is None:
-                next_path = YAMLPath(path).append("[{}]".format(lidx))
+                next_path = path + "[{}]".format(lidx)
                 self._diffs.append(
                     DiffEntry(
                         DiffActions.DELETE, next_path, lele, None,
                         lhs_parent=lhs, lhs_iteration=lidx,
                         rhs_parent=rhs, rhs_iteration=ridx))
             else:
-                next_path = YAMLPath(path).append("[{}]".format(lidx))
+                next_path = path + "[{}]".format(lidx)
                 self._diff_between(
                     next_path, lele, rele,
                     lhs_parent=lhs, lhs_iteration=lidx,
@@ -275,7 +276,7 @@ class Differ:
         idx = 0
         diff_deeply = kwargs.pop("diff_deeply", True)
         for (lele, rele) in zip_longest(lhs, rhs):
-            next_path = YAMLPath(path).append("[{}]".format(idx))
+            next_path = path + "[{}]".format(idx)
             idx += 1
             if lele is None:
                 self._diffs.append(
@@ -360,14 +361,14 @@ class Differ:
 
         for (lidx, lele, ridx, rele) in syn_pairs:
             if lele is None:
-                next_path = YAMLPath(path).append("[{}]".format(ridx))
+                next_path = path + "[{}]".format(ridx)
                 self._diffs.append(
                     DiffEntry(
                         DiffActions.ADD, next_path, None, rele,
                         lhs_parent=lhs, lhs_iteration=lidx,
                         rhs_parent=rhs, rhs_iteration=ridx))
             elif rele is None:
-                next_path = YAMLPath(path).append("[{}]".format(lidx))
+                next_path = path + "[{}]".format(lidx)
                 self._diffs.append(
                     DiffEntry(
                         DiffActions.DELETE, next_path, lele, None,
@@ -375,7 +376,7 @@ class Differ:
                         rhs_parent=rhs, rhs_iteration=ridx))
             else:
                 if deep_diff:
-                    next_path = YAMLPath(path).append("[{}]".format(ridx))
+                    next_path = path + "[{}]".format(ridx)
                     self._diff_between(
                         next_path, lele, rele,
                         lhs_parent=lhs, lhs_iteration=lidx,
@@ -383,7 +384,7 @@ class Differ:
                         parentref=ridx)
                 else:
                     # KEY-based comparisons
-                    next_path = YAMLPath(path).append("[{}]".format(lidx))
+                    next_path = path + "[{}]".format(lidx)
                     diff_action = (DiffActions.SAME
                                   if lele == rele
                                   else DiffActions.CHANGE)

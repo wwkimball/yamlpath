@@ -1,6 +1,7 @@
 """Wrap a node along with its relative coordinates within its DOM."""
 from typing import Any
 
+from yamlpath import YAMLPath
 
 class NodeCoords:
     """
@@ -12,7 +13,9 @@ class NodeCoords:
     3. Index-or-Key-of-the-Node-Within-Its-Immediate-Parent
     """
 
-    def __init__(self, node: Any, parent: Any, parentref: Any) -> None:
+    def __init__(
+        self, node: Any, parent: Any, parentref: Any, path: YAMLPath = None
+    ) -> None:
         """
         Initialize a new NodeCoords.
 
@@ -21,6 +24,8 @@ class NodeCoords:
         2. parent (Any) Reference to `node`'s immediate DOM parent
         3. parentref (Any) The `list` index or `dict` key which indicates where
            within `parent` the `node` is located
+        4. path (YAMLPath) The YAML Path for this node, as reported by its
+           creator process
 
         Returns: N/A
 
@@ -29,6 +34,7 @@ class NodeCoords:
         self.node = node
         self.parent = parent
         self.parentref = parentref
+        self.path = path
 
     def __str__(self) -> str:
         """Get a String representation of this object."""

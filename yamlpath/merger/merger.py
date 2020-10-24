@@ -14,6 +14,7 @@ from ruamel.yaml.comments import CommentedSeq, CommentedMap
 
 from yamlpath.func import (
     append_list_element,
+    escape_path_section,
     build_next_node,
     stringify_dates,
 )
@@ -137,7 +138,7 @@ class Merger:
         buffer: List[Tuple[Any, Any]] = []
         buffer_pos = 0
         for key, val in rhs.non_merged_items():
-            path_next = YAMLPath(path).append(str(key))
+            path_next = path + escape_path_section(key, path.seperator)
             if key in lhs:
                 # Write the buffer if populated
                 for b_key, b_val in buffer:
@@ -260,7 +261,7 @@ class Merger:
 
         append_all = merge_mode is ArrayMergeOpts.ALL
         for idx, ele in enumerate(rhs):
-            path_next = YAMLPath(path).append("[{}]".format(idx))
+            path_next = path + "[{}]".format(idx)
             self.logger.debug(
                 "Processing element {} at {}.".format(idx, path_next),
                 prefix="Merger::_merge_simple_lists:  ", data=ele)
@@ -316,7 +317,7 @@ class Merger:
 
         merge_mode = self.config.aoh_merge_mode(node_coord)
         for idx, ele in enumerate(rhs):
-            path_next = YAMLPath(path).append("[{}]".format(idx))
+            path_next = path + "[{}]".format(idx)
             self.logger.debug(
                 "Processing element #{} at {}.".format(idx, path_next),
                 prefix="Merger::_merge_arrays_of_hashes:  ", data=ele)
