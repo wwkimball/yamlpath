@@ -36,11 +36,14 @@ def processcli():
     """Process command-line arguments."""
     parser = argparse.ArgumentParser(
         description="Validate YAML, JSON, and compatible files.",
-        epilog="Except when suppressing all report output with --quiet|-q,"
+        epilog=(
+            "Except when suppressing all report output with --quiet|-q,"
             " validation issues are printed to STDOUT (not STDERR).  Further,"
             " the exit-state will report 0 when there are no issues, 1 when"
             " there is an issue with the supplied command-line arguments, or 2"
-            " when validation has failed for any document."
+            " when validation has failed for any document.  To report issues"
+            " with this tool or to request enhancements, please visit"
+            " https://github.com/wwkimball/yamlpath/issues.")
     )
     parser.add_argument("-V", "--version", action="version",
                         version="%(prog)s " + YAMLPATH_VERSION)
