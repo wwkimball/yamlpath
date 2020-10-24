@@ -10,6 +10,11 @@ Enhancements:
   be configured as CLI options or via an INI file for distinct settings per
   YAML Path.  See --help or the Wiki for more detail.
 
+API Changes:
+* NodeCoords now employ a new `path` attribute.  This is an optional parameter
+  which is assigned during construction to later report the translated origin
+  YAML Path; this is where the node was found or created within the DOM.
+
 3.2.0:
 Enhancements:
 * Expanded YAML Path Search Expressions such that the OPERAND of a Search

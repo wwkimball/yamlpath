@@ -456,7 +456,8 @@ class Processor:
         """
         (_, stripped_attrs) = yaml_path.escaped[segment_index]
         translated_path = kwargs.pop("translated_path", YAMLPath(""))
-        next_path = translated_path + "[&{}]".format(stripped_attrs)
+        next_path = translated_path + "[&{}]".format(
+            escape_path_section(stripped_attrs, translated_path.seperator))
 
         self.logger.debug(
             "Processor::_get_nodes_by_anchor:  Seeking ANCHOR node at {}."
