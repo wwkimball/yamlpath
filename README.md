@@ -36,6 +36,7 @@ for other projects to readily employ YAML Paths.
       5. [Change a YAML/JSON/Compatible Value](#change-a-yamljsoncompatible-value)
       6. [Merge YAML/JSON/Compatible Files](#merge-yamljsoncompatible-files)
       7. [Validate YAML/JSON/Compatible Documents](#validate-yamljsoncompatible-documents)
+
    2. [Basic Usage:  Libraries](#basic-usage--libraries)
       1. [Initialize ruamel.yaml and These Helpers](#initialize-ruamelyaml-and-these-helpers)
       2. [Searching for YAML Nodes](#searching-for-yaml-nodes)
