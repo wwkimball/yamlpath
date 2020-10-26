@@ -1,13 +1,31 @@
-import setuptools
-
-from yamlpath.common import YAMLPATH_VERSION
+"""Build this project."""
+import codecs
+import os.path
+from setuptools import find_packages, setup
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
-setuptools.setup(
+# Centralized module versioning is based on:
+# https://packaging.python.org/guides/single-sourcing-package-version/
+def read(rel_path):
+    """Read a file with inferred codec."""
+    here = os.path.abspath(os.path.dirname(__file__))
+    with codecs.open(os.path.join(here, rel_path), 'r') as fhnd:
+        return fhnd.read()
+
+def get_version(rel_path):
+    """Get the value of __version__ from any file."""
+    for line in read(rel_path).splitlines():
+        if line.startswith('__version__'):
+            delim = '"' if '"' in line else "'"
+            return line.split(delim)[1]
+    raise RuntimeError(
+        "Unable to find __version__ string in {}.".format(rel_path))
+
+setup(
     name="yamlpath",
-    version=YAMLPATH_VERSION,
+    version=get_version("yamlpath/__init__.py"),
     description=(
         "Command-line get/set/merge/validate/scan/convert/diff processors for"
         + " YAML/JSON/Compatible data using powerful, intuitive, command-line"
@@ -27,8 +45,8 @@ setuptools.setup(
     author="William W. Kimball, Jr., MBA, MSIS",
     author_email="github-yamlpath@kimballstuff.com",
     license="ISC",
-    keywords="yaml eyaml json yaml-path",
-    packages=setuptools.find_packages(),
+    keywords="yaml eyaml json yaml-path diff merge",
+    packages=find_packages(),
     entry_points={
         "console_scripts": [
             "eyaml-rotate-keys = yamlpath.commands.eyaml_rotate_keys:main",

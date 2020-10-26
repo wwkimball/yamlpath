@@ -16,7 +16,7 @@ from typing import Any, Generator, List, Optional, Tuple
 
 from ruamel.yaml.comments import CommentedSeq, CommentedMap
 
-from yamlpath.common import YAMLPATH_VERSION
+from yamlpath import __version__ as YAMLPATH_VERSION
 from yamlpath.func import (
     create_searchterms_from_pathattributes,
     escape_path_section,

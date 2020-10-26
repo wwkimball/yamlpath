@@ -14,7 +14,7 @@ from os.path import isfile, exists
 from shutil import copy2
 from typing import Any
 
-from yamlpath.common import YAMLPATH_VERSION
+from yamlpath import __version__ as YAMLPATH_VERSION
 from yamlpath.merger.enums import (
     AnchorConflictResolutions,
     AoHMergeOpts,

@@ -21,7 +21,7 @@ from shutil import copy2, copyfileobj
 from pathlib import Path
 
 
-from yamlpath.common import YAMLPATH_VERSION
+from yamlpath import __version__ as YAMLPATH_VERSION
 from yamlpath.func import (
     clone_node,
     build_next_node,

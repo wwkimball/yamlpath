@@ -6,7 +6,7 @@ Copyright 2020 William W. Kimball, Jr. MBA MSIS
 import sys
 import argparse
 
-from yamlpath.common import YAMLPATH_VERSION
+from yamlpath import __version__ as YAMLPATH_VERSION
 from yamlpath.wrappers import ConsolePrinter
 from yamlpath.func import get_yaml_editor, get_yaml_multidoc_data
 

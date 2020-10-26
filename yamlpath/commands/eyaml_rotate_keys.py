@@ -14,7 +14,7 @@ from os.path import isfile, exists
 
 from ruamel.yaml.scalarstring import FoldedScalarString
 
-from yamlpath.common import YAMLPATH_VERSION
+from yamlpath import __version__ as YAMLPATH_VERSION
 from yamlpath.func import get_yaml_data, get_yaml_editor
 from yamlpath.eyaml.exceptions import EYAMLCommandException
 from yamlpath.eyaml import EYAMLProcessor

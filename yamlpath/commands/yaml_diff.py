@@ -8,7 +8,7 @@ import argparse
 from os import access, R_OK
 from os.path import isfile
 
-from yamlpath.common import YAMLPATH_VERSION
+from yamlpath import __version__ as YAMLPATH_VERSION
 from yamlpath.enums import PathSeperators
 from yamlpath.differ.enums import AoHDiffOpts, ArrayDiffOpts
 from yamlpath.wrappers import ConsolePrinter

@@ -14,7 +14,7 @@ import json
 from os import access, R_OK
 from os.path import isfile
 
-from yamlpath.common import YAMLPATH_VERSION
+from yamlpath import __version__ as YAMLPATH_VERSION
 from yamlpath.func import (
     get_yaml_data,
     get_yaml_editor,
