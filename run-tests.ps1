@@ -52,7 +52,7 @@ ForEach ($EnvDir in $EnvDirs) {
     pip install -e .
     if (!$?) {
         & deactivate
-        Remove-Item $TmpVEnv
+        Remove-Item -Recurse -Force $TmpVEnv
         Write-Error "`nERROR:  Unable to install self!"
         exit 124
     }
@@ -64,7 +64,7 @@ ForEach ($EnvDir in $EnvDirs) {
     pep257 yamlpath | Out-String
     if (!$?) {
         & deactivate
-        Remove-Item $TmpVEnv
+        Remove-Item -Recurse -Force $TmpVEnv
         Write-Error "PEP257 Error: $?"
         exit 9
     }
@@ -73,7 +73,7 @@ ForEach ($EnvDir in $EnvDirs) {
     mypy yamlpath | Out-String
     if (!$?) {
         & deactivate
-        Remove-Item $TmpVEnv
+        Remove-Item -Recurse -Force $TmpVEnv
         Write-Error "MYPY Error: $?"
         exit 10
     }
@@ -82,7 +82,7 @@ ForEach ($EnvDir in $EnvDirs) {
     pylint yamlpath | Out-String
     if (!$?) {
         & deactivate
-        Remove-Item $TmpVEnv
+        Remove-Item -Recurse -Force $TmpVEnv
         Write-Error "PYLINT Error: $?"
         exit 11
     }
@@ -91,14 +91,12 @@ ForEach ($EnvDir in $EnvDirs) {
     pytest -vv --cov=yamlpath --cov-report=term-missing --cov-fail-under=100 --script-launch-mode=subprocess tests
     if (!$?) {
         & deactivate
-        Remove-Item $TmpVEnv
+        Remove-Item -Recurse -Force $TmpVEnv
         Write-Error "PYTEST Error: $?"
         exit 12
     }
 
+    Write-Output "Deactivating virtual Python environment..."
     & deactivate
-    Remove-Item $TmpVEnv
+    Remove-Item -Recurse -Force $TmpVEnv
 }
-
-Write-Output "Deactivating virtual Python environment..."
-& deactivate
