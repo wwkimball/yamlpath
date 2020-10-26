@@ -1,4 +1,9 @@
 3.3.0:
+Bug Fixes:
+* It was impossible to install yamlpath 3.x without first installing
+  ruamel.yaml via pip for Python 3.x.  Not only has this been fixed but
+  explicit tests have been created to ensure this never happens again.
+
 Enhancements:
 * A new command-line tool, yaml-diff, now compares exactly two
   YAML/JSON/Compatible documents, producing a GNU diff-like report of any
