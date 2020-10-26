@@ -9,11 +9,11 @@ python:
   - 3.8
 
 install:
-  - pip install --upgrade ruamel.yaml mypy pytest pytest-cov pytest-console-scripts pylint coveralls pep257
+  - pip install --upgrade mypy pytest pytest-cov pytest-console-scripts pylint coveralls pep257
   - gem install hiera-eyaml -v 2.1.0
 
 script:
-  - pip install -e .
+  - pip install .
   - pep257 yamlpath
   - mypy yamlpath
   - pylint yamlpath
