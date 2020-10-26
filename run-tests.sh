@@ -38,6 +38,9 @@ EOF
 	echo "...upgrading pip"
 	python -m pip install --upgrade pip >/dev/null
 
+	echo "...upgrading setuptools"
+	pip install --upgrade setuptools >/dev/null
+
 	echo "...installing self"
 	if ! pip install -e . >/dev/null; then
 		deactivate

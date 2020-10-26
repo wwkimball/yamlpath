@@ -48,6 +48,9 @@ ForEach ($EnvDir in $EnvDirs) {
     Write-Output "...upgrading pip"
     python -m pip install --upgrade pip
 
+    Write-Output "...upgrading setuptools"
+    pip install --upgrade setuptools
+
     Write-Output "...installing self"
     pip install -e .
     if (!$?) {

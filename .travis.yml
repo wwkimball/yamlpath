@@ -9,7 +9,7 @@ python:
   - 3.8
 
 install:
-  - pip install --upgrade mypy pytest pytest-cov pytest-console-scripts pylint coveralls pep257
+  - pip install --upgrade setuptools mypy pytest pytest-cov pytest-console-scripts pylint coveralls pep257
   - gem install hiera-eyaml -v 2.1.0
 
 script:
