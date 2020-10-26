@@ -12,7 +12,7 @@ function New-TemporaryDirectory {
         $name = [System.IO.Path]::GetRandomFileName()
         $item = New-Item -Path $parent -Name $name -ItemType "directory" -ErrorAction SilentlyContinue
     } while (-not $item)
-    return $Item.FullName
+    return $Item
 }
 
 $EnvDirs = Get-ChildItem -Directory -Filter "env*"
