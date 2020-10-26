@@ -5,12 +5,22 @@ if (-Not $HasTestsDir -Or -Not $HasProjectDir) {
     exit 2
 }
 
+# Credit: https://stackoverflow.com/a/54935264
+function New-TemporaryDirectory {
+    $parent = [System.IO.Path]::GetTempPath()
+    do {
+        $name = [System.IO.Path]::GetRandomFileName()
+        $item = New-Item -Path $parent -Name $name -ItemType "directory" -ErrorAction SilentlyContinue
+    } while (-not $item)
+    return $Item.FullName
+}
+
 $EnvDirs = Get-ChildItem -Directory -Filter "env*"
 ForEach ($EnvDir in $EnvDirs) {
     & "$($EnvDir.FullName)\Scripts\Activate.ps1"
     if (!$?) {
         Write-Error "`nERROR:  Unable to activate $EnvDir!"
-        exit 20
+        continue
     }
 
     $PythonVersion = $(python --version)
@@ -21,18 +31,40 @@ ForEach ($EnvDir in $EnvDirs) {
         =========================================================================
 "@
 
+    Write-Output "...spawning a new temporary Virtual Environment..."
+    $TmpVEnv = New-TemporaryDirectory
+    python -m venv $TmpVEnv
+    if (!$?) {
+        Write-Error "`nERROR:  Unable to spawn a new temporary virtual environment at $TmpVEnv!"
+        exit 125
+    }
+    & deactivate
+    & "$($TmpVEnv.FullName)\Scripts\Activate.ps1"
+    if (!$?) {
+        Write-Error "`nERROR:  Unable to activate $TmpVEnv!"
+        continue
+    }
+
     Write-Output "...upgrading pip"
     python -m pip install --upgrade pip
-    Write-Output "...reinstalling ruamel.yaml (because pip upgrades break it)"
-    pip install --force-reinstall ruamel.yaml==0.15.96
-    Write-Output "...upgrading testing tools"
-    pip install --upgrade mypy pytest pytest-cov pytest-console-scripts pylint coveralls pep257
+
     Write-Output "...installing self"
     pip install -e .
+    if (!$?) {
+        & deactivate
+        Remove-Item $TmpVEnv
+        Write-Error "`nERROR:  Unable to install self!"
+        exit 124
+    }
+
+    Write-Output "...upgrading testing tools"
+    pip install --upgrade mypy pytest pytest-cov pytest-console-scripts pylint coveralls pep257
 
     Write-Output "`nPEP257..."
     pep257 yamlpath | Out-String
     if (!$?) {
+        & deactivate
+        Remove-Item $TmpVEnv
         Write-Error "PEP257 Error: $?"
         exit 9
     }
@@ -40,6 +72,8 @@ ForEach ($EnvDir in $EnvDirs) {
     Write-Output "`nMYPY..."
     mypy yamlpath | Out-String
     if (!$?) {
+        & deactivate
+        Remove-Item $TmpVEnv
         Write-Error "MYPY Error: $?"
         exit 10
     }
@@ -47,6 +81,8 @@ ForEach ($EnvDir in $EnvDirs) {
     Write-Output "`nPYLINT..."
     pylint yamlpath | Out-String
     if (!$?) {
+        & deactivate
+        Remove-Item $TmpVEnv
         Write-Error "PYLINT Error: $?"
         exit 11
     }
@@ -54,9 +90,14 @@ ForEach ($EnvDir in $EnvDirs) {
     Write-Output "`n PYTEST..."
     pytest -vv --cov=yamlpath --cov-report=term-missing --cov-fail-under=100 --script-launch-mode=subprocess tests
     if (!$?) {
+        & deactivate
+        Remove-Item $TmpVEnv
         Write-Error "PYTEST Error: $?"
         exit 12
     }
+
+    & deactivate
+    Remove-Item $TmpVEnv
 }
 
 Write-Output "Deactivating virtual Python environment..."
