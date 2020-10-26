@@ -9,3 +9,4 @@ exclude_paths:
   - 'tests/**'
   - '**/*.md'
   - '**/__init__.py'
+  - 'README.md'
