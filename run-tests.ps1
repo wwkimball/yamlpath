@@ -7,6 +7,7 @@ if (-Not $HasTestsDir -Or -Not $HasProjectDir) {
 
 # Credit: https://stackoverflow.com/a/54935264
 function New-TemporaryDirectory {
+    [CmdletBinding(SupportsShouldProcess = $true)]
     $parent = [System.IO.Path]::GetTempPath()
     do {
         $name = [System.IO.Path]::GetRandomFileName()
