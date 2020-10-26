@@ -6,9 +6,8 @@ python:
   - 3.7
   - 3.8
 
-os:
-  - linux
-  - windows
+os: linux
+dist: xenial
 
 install:
   - pip install --upgrade setuptools mypy pytest pytest-cov pytest-console-scripts pylint coveralls pep257
