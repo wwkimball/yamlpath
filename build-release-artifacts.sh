@@ -10,7 +10,7 @@ if [ ! -x run-tests.sh ]; then
 	echo "ERROR:  run-tests.sh script must exist and be executable in the present directory!" >&2
 	exit 2
 fi
-./run-tests.sh || exit $?
+./run-tests.sh $@ || exit $?
 
 # Create a dedicated virtual Python enviroment for this
 envName=venv-build-release-artifacts-$(date +%Y%m%dT%H%M%S)
