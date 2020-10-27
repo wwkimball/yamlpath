@@ -1,7 +1,4 @@
 [run]
-# Trace partial-branches in code to ensure every line is executed
-branch = true
-
 # Enable multi-threaded processing of tests and coverage scanning
 parallel = true
 
