@@ -248,10 +248,23 @@ on your system at the same time, especially when using
 Each published version of this project can be installed from
 [PyPI](https://pypi.org/) using `pip`.  Note that on systems with more than one
 version of Python, you will probably need to use `pip3`, or equivalent (e.g.:
-Cygwin users may need to use `pip3.6`).
+Cygwin users may need to use `pip3.6`, `pip3.7`, `pip3.8`, or such).
 
 ```shell
 pip3 install yamlpath
+```
+
+Note that very old versions of Python 3 ship with seriously outdated versions
+of pip and setuptools.  You *must* update to at least **pip** version **18.1**
+and **setuptools** version **46.4.0** to install yamlpath without
+pre-installing its dependencies.  If you cannot update pip or setuptools, you
+can still install yamlpath except you'll first need to install **ruamel.yaml**
+like so:
+
+```shell
+# These commands CANNOT be joined, like: pip3.6 install ruamel.yaml yamlpath
+pip3.6 install ruamel.yaml
+pip3.6 install yamlpath
 ```
 
 EYAML support is entirely optional.  You do not need EYAML to use YAML Path.
