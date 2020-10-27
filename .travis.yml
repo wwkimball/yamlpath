@@ -10,11 +10,13 @@ os: linux
 dist: xenial
 
 install:
-  - pip install --upgrade setuptools mypy pytest pytest-cov pytest-console-scripts pylint coveralls pep257
+  - python -m pip install --upgrade pip
+  - pip install --upgrade setuptools
+  - pip install .
+  - pip install --upgrade mypy pytest pytest-cov pytest-console-scripts pylint coveralls pep257
   - gem install hiera-eyaml -v 2.1.0
 
 script:
-  - pip install .
   - pep257 yamlpath
   - mypy yamlpath
   - pylint yamlpath
