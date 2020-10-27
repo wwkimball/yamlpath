@@ -79,7 +79,7 @@ EOF
 
 	echo -e "\nPYTEST..."
 	if ! pytest \
-		-vv \
+		--verbose \
 		--cov=yamlpath \
 		--cov-report=term-missing \
 		--cov-fail-under=100 \
