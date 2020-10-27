@@ -5,7 +5,7 @@ python:
   - 3.6
   - 3.7
   - 3.8
-  - 3.9
+  # - 3.9 pylint will not support Python 3.9 until https://github.com/PyCQA/pylint/issues/3882 is resolved
 
 os: linux
 dist: xenial
