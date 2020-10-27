@@ -7,6 +7,12 @@ if ! [ -d tests -a -d yamlpath ]; then
 	exit 2
 fi
 
+# Delete all cached data
+find ./ -type d -name '__pycache__' -delete
+rm -rf yamlpath.egg-info
+rm -rf /tmp/yamlpath-python-coverage-data
+rm -f .coverage
+
 for envDir in env* venv*; do
 	deactivate &>/dev/null
 	if ! source "${envDir}/bin/activate"; then
