@@ -16,7 +16,7 @@ from typing import Any, Generator, List, Optional, Tuple
 
 from ruamel.yaml.comments import CommentedSeq, CommentedMap
 
-from yamlpath.common import YAMLPATH_VERSION
+from yamlpath import __version__ as YAMLPATH_VERSION
 from yamlpath.func import (
     create_searchterms_from_pathattributes,
     escape_path_section,
@@ -42,14 +42,19 @@ def processcli():
     """Process command-line arguments."""
     search_ops = ", ".join(PathSearchMethods.get_operators()) + ", or !"
     parser = argparse.ArgumentParser(
-        description="Returns zero or more YAML Paths indicating where in given\
-            YAML/JSON/Compatible data one or more search expressions match.\
-            Values, keys, and/or anchors can be searched.  EYAML can be\
-            employed to search encrypted values.",
-        epilog="A search or exception EXPRESSION takes the form of a YAML Path\
-            search operator -- {} -- followed by the search term, omitting the\
-            left-hand operand.  For more information about YAML Paths, please\
-            visit https://github.com/wwkimball/yamlpath.".format(search_ops)
+        description=(
+            "Returns zero or more YAML Paths indicating where in given"
+            " YAML/JSON/Compatible data one or more search expressions match."
+            "  Values, keys, and/or anchors can be searched.  EYAML can be"
+            " employed to search encrypted values."),
+        epilog=(
+            "A search or exception EXPRESSION takes the form of a YAML Path"
+            " search operator -- {} -- followed by the search term, omitting"
+            " the left-hand operand.  For more information about YAML Paths,"
+            " please visit https://github.com/wwkimball/yamlpath/wiki.  To"
+            " report issues with this tool or to request enhancements, please"
+            " visit https://github.com/wwkimball/yamlpath/issues.")
+            .format(search_ops)
     )
     parser.add_argument("-V", "--version", action="version",
                         version="%(prog)s " + YAMLPATH_VERSION)

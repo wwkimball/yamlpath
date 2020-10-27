@@ -14,7 +14,7 @@ from os.path import isfile, exists
 
 from ruamel.yaml.scalarstring import FoldedScalarString
 
-from yamlpath.common import YAMLPATH_VERSION
+from yamlpath import __version__ as YAMLPATH_VERSION
 from yamlpath.func import get_yaml_data, get_yaml_editor
 from yamlpath.eyaml.exceptions import EYAMLCommandException
 from yamlpath.eyaml import EYAMLProcessor
@@ -26,11 +26,17 @@ from yamlpath.wrappers import ConsolePrinter
 def processcli():
     """Process command-line arguments."""
     parser = argparse.ArgumentParser(
-        description="Rotates the encryption keys used for all EYAML values"
-        + " within a set of YAML files, decrypting with old keys and"
-        + " re-encrypting using replacement keys.",
-        epilog="Any YAML_FILEs lacking EYAML values will not be modified (or"
-        + " backed up, even when -b/--backup is specified)."
+        description=(
+            "Rotates the encryption keys used for all EYAML values"
+            " within a set of YAML files, decrypting with old keys and"
+            " re-encrypting using replacement keys."),
+        epilog=(
+            "Any YAML_FILEs lacking EYAML values will not be modified (or"
+            " backed up, even when -b/--backup is specified).  For more"
+            " information about YAML Paths, please visit"
+            " https://github.com/wwkimball/yamlpath/wiki.  To report issues"
+            " with this tool or to request enhancements, please visit"
+            " https://github.com/wwkimball/yamlpath/issues.")
     )
     parser.add_argument("-V", "--version", action="version",
                         version="%(prog)s " + YAMLPATH_VERSION)

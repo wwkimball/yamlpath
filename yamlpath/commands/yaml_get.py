@@ -14,7 +14,7 @@ import json
 from os import access, R_OK
 from os.path import isfile
 
-from yamlpath.common import YAMLPATH_VERSION
+from yamlpath import __version__ as YAMLPATH_VERSION
 from yamlpath.func import (
     get_yaml_data,
     get_yaml_editor,
@@ -32,13 +32,17 @@ from yamlpath.wrappers import ConsolePrinter
 def processcli():
     """Process command-line arguments."""
     parser = argparse.ArgumentParser(
-        description="Retrieves one or more values from a YAML/JSON/Compatible\
-            file at a specified YAML Path.  Output is printed to STDOUT, one\
-            line per result.  When a result is a complex data-type (Array or\
-            Hash), a JSON dump is produced to represent it.  EYAML can be\
-            employed to decrypt the values.",
-        epilog="For more information about YAML Paths, please visit\
-            https://github.com/wwkimball/yamlpath."
+        description=(
+            "Retrieves one or more values from a YAML/JSON/Compatible"
+            " file at a specified YAML Path.  Output is printed to STDOUT, one"
+            " line per result.  When a result is a complex data-type (Array or"
+            " Hash), a JSON dump is produced to represent it.  EYAML can be"
+            " employed to decrypt the values."),
+        epilog=(
+            "For more information about YAML Paths, please visit"
+            " https://github.com/wwkimball/yamlpath/wiki.  To report issues"
+            " with this tool or to request enhancements, please visit"
+            " https://github.com/wwkimball/yamlpath/issues.")
     )
     parser.add_argument("-V", "--version", action="version",
                         version="%(prog)s " + YAMLPATH_VERSION)

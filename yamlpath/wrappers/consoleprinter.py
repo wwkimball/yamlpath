@@ -14,7 +14,7 @@ Requires an object on init which has the following properties:
 Copyright 2018, 2019, 2020 William W. Kimball, Jr. MBA MSIS
 """
 import sys
-from typing import Any, Dict, Generator, List, Union
+from typing import Any, Dict, Generator, List, Tuple, Union
 
 from ruamel.yaml.comments import CommentedMap
 
@@ -219,7 +219,7 @@ class ConsolePrinter:
                 data, prefix=prefix, **kwargs
             ):
                 yield line
-        elif isinstance(data, list):
+        elif isinstance(data, (list, tuple)):
             for line in ConsolePrinter._debug_list(
                 data, prefix=prefix, **kwargs
             ):
@@ -253,9 +253,13 @@ class ConsolePrinter:
     ) -> Generator[str, None, None]:
         """Helper method for debug."""
         prefix = kwargs.pop("prefix", "")
+        path_prefix = "{}(path)".format(prefix)
         node_prefix = "{}(node)".format(prefix)
         parent_prefix = "{}(parent)".format(prefix)
         parentref_prefix = "{}(parentref)".format(prefix)
+
+        for line in ConsolePrinter._debug_dump(data.path, prefix=path_prefix):
+            yield line
 
         for line in ConsolePrinter._debug_dump(data.node, prefix=node_prefix):
             yield line
@@ -271,7 +275,9 @@ class ConsolePrinter:
             yield line
 
     @classmethod
-    def _debug_list(cls, data: List, **kwargs) -> Generator[str, None, None]:
+    def _debug_list(
+        cls, data: Union[List[Any], Tuple[Any, ...]], **kwargs
+    ) -> Generator[str, None, None]:
         """Helper for debug."""
         prefix = kwargs.pop("prefix", "")
         for idx, ele in enumerate(data):

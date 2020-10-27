@@ -1,15 +1,13 @@
-import setuptools
-
-from yamlpath.common import YAMLPATH_VERSION
+"""Build this project."""
+from setuptools import find_packages, setup
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
-setuptools.setup(
+setup(
     name="yamlpath",
-    version=YAMLPATH_VERSION,
     description=(
-        "Command-line get/set/merge/validate/scan/convert processors for"
+        "Command-line get/set/merge/validate/scan/convert/diff processors for"
         + " YAML/JSON/Compatible data using powerful, intuitive, command-line"
         + " friendly syntax"),
     long_description=long_description,
@@ -27,8 +25,8 @@ setuptools.setup(
     author="William W. Kimball, Jr., MBA, MSIS",
     author_email="github-yamlpath@kimballstuff.com",
     license="ISC",
-    keywords="yaml eyaml json yaml-path",
-    packages=setuptools.find_packages(),
+    keywords="yaml eyaml json yaml-path diff merge",
+    packages=find_packages(),
     entry_points={
         "console_scripts": [
             "eyaml-rotate-keys = yamlpath.commands.eyaml_rotate_keys:main",
@@ -37,6 +35,7 @@ setuptools.setup(
             "yaml-set = yamlpath.commands.yaml_set:main",
             "yaml-merge = yamlpath.commands.yaml_merge:main",
             "yaml-validate = yamlpath.commands.yaml_validate:main",
+            "yaml-diff = yamlpath.commands.yaml_diff:main",
         ]
     },
     python_requires=">3.6.0",

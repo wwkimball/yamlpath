@@ -1,4 +1,11 @@
 [run]
+# Enable multi-threaded processing of tests and coverage scanning
+parallel = true
+
+# Move .coverage and all temporary .coverage* files to a temporary directory
+data_file = /tmp/yamlpath-python-coverage-data
+
+# Ignore these files from coverage analysis
 omit =
 	# Don't bother with ruamel.yaml patches (not my code)
 	yamlpath/patches/emitter_write_folded_fix.py

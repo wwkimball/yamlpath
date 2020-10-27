@@ -1,3 +1,37 @@
+3.3.0:
+Bug Fixes:
+* It was impossible to install yamlpath 3.x without first installing
+  ruamel.yaml via pip for Python 3.x.  Not only has this been fixed but
+  explicit tests have been created to ensure this never happens again.
+
+Enhancements:
+* A new command-line tool, yaml-diff, now compares exactly two
+  YAML/JSON/Compatible documents, producing a GNU diff-like report of any
+  differences in the data they present to parsers.  Along with diff's "a"
+  (added), "c" (changed), and "d" (deleted) report entries, affected YAML Paths
+  are printed in lieu of line numbers.  Further, a report entry of "s" (same)
+  is available and can be enabled via command-line options.  This tool also
+  features optional special handling of Arrays and Arrays-of-Hashes, which can
+  be configured as CLI options or via an INI file for distinct settings per
+  YAML Path.  See --help or the Wiki for more detail.
+
+API Changes:
+* NodeCoords now employ a new `path` attribute.  This is an optional parameter
+  which is assigned during construction to later report the translated origin
+  YAML Path; this is where the node was found or created within the DOM.  Note
+  that Collector segments work against virtual DOMs, so the YAML Path of an
+  outer Collector will be virtual, relative to its parent at construction; when
+  nested, this will be a bare list index.  Any NodeCoords in the virtual
+  container which point to real nodes in the DOM will have their own concrete
+  YAML Paths.
+* YAMLPath instances now support nonmutating addition of individual segments
+  via the + operator.  Whereas the append() method mutates the YAMLPath being
+  acted upon, + creates a new YAMLPath that is the original plus the new
+  segment.  In both cases, the orignal YAMLPath's seperator is retained during
+  both operations.  As with .append(), new segments added via + must also be
+  properly escaped -- typically via path.escape_path_section -- before being
+  added.
+
 3.2.0:
 Enhancements:
 * Expanded YAML Path Search Expressions such that the OPERAND of a Search

@@ -1,5 +1,3 @@
-sudo: false
-
 language:
   - python
 
@@ -8,12 +6,19 @@ python:
   - 3.7
   - 3.8
 
+os: linux
+dist: xenial
+
+# Note:  pytest-cov requires the module to be installed with --editable lest it
+# will not cover all code-paths!
 install:
-  - pip install --upgrade ruamel.yaml mypy pytest pytest-cov pytest-console-scripts pylint coveralls pep257
+  - python -m pip install --upgrade pip
+  - pip install --upgrade setuptools
+  - pip install --editable .
+  - pip install --upgrade mypy pytest pytest-cov pytest-console-scripts pylint coveralls pep257
   - gem install hiera-eyaml -v 2.1.0
 
 script:
-  - pip install -e .
   - pep257 yamlpath
   - mypy yamlpath
   - pylint yamlpath
@@ -22,7 +27,7 @@ script:
 
 deploy:
   provider: pypi
-  user: wwkimball
+  username: wwkimball
   password:
     secure: "cBWRVvQibxw2KTYJoruKeOA1vNDk2+ZuZsAzW9hq3bk2Ab4GDy7G8pYRhVhiHNMDY0w5+Ii66/i0ERpBC95bi7Mzy/NOzbhoYflr+lDOoC6YR76VpCyHJQ/I3YmyTjSeWqB86JLfmQNi9RJWBbZYWpsCuEjBRP7w6oOf2QdAefQUctJ9g69Gt5r7okNm4nfbiAwvUAjGBT7dSRKPrMmRhP8Qc5ugXrO3xNnh9xCBqBkvXfDQjlA3YCi3RiuWJQHkwIhHjfwoDXzis4bprBQUOAZ/+c6WiCvEsMsG1551Ilt7Q1x6aiu98m4hYkZMTIl5IjCMSXbnlOSdlv0XvO8jSq/+GGSdI6EbLAYC1MTnob7w1/NQSsVfz6dKl/pMCRC2J+OGNqv5a3Ln3rzeOTs9opZunHQ34Ro+MxEKSf+XdU48YJR1DlDLWYV9tbiVFG+tSybu3uxcs825EB4aNzL7pMBaIzMpEjhsDNEDZ90T6jDnLzJHYFgH3yj9ortpjYI3CZdvzsVqQrTT1zXzKzMbW6/o0U8azzGQWu24Bn6HSe3Cr0PQQpalSyN/usZziBwLYVj42d3tCtg1xGNUvzgX1mRst8Ltsag4g4OG54IJ4RihcviQWLY6Jgjnob5KU3JcCYzKJjKu5cXyuK2ec7lMCBRaVo6qaiP1iVPNLpXsqz4="
   skip_existing: true
