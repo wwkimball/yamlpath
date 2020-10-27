@@ -7,37 +7,44 @@ if ! [ -d tests -a -d yamlpath ]; then
 	exit 2
 fi
 
+if [ 1 -gt "$#" ]; then
+	echo "You must specify at least one Python version.  Space-delimit multiples like: $0 3.6 3.7 3.8" >&2
+	exit 2
+fi
+
 # Delete all cached data
-find ./ -type d -name '__pycache__' -delete
+find ./ -name '__pycache__' -type d -print0 | xargs -r0 -- rm -rf || exit $?
 rm -rf yamlpath.egg-info
 rm -rf /tmp/yamlpath-python-coverage-data
 rm -f .coverage
 
-for envDir in env* venv*; do
-	deactivate &>/dev/null
-	if ! source "${envDir}/bin/activate"; then
-		echo -e "\nWARNING:  Unable to activate ${envDir}!" >&2
+for pythonVersion in "${@}"; do
+	which deactivate &>/dev/null && deactivate &>/dev/null
+
+	pyCommand=python${pythonVersion}
+	if ! which "$pyCommand" &>/dev/null; then
+		echo -e "\nWARNING:  Unable to find a Python binary named, ${pyCommand}!" >&2
 		continue
 	fi
+	pyVersion=$("$pyCommand" --version)
 
 	cat <<-EOF
 
 		=============================================================================
-		Using Python $(python --version)...
+		Using Python ${pyVersion}...
 		=============================================================================
 EOF
 
 	echo "...spawning a new temporary Virtual Environment..."
 	tmpVEnv=$(mktemp -d -t yamlpath-$(date +%Y%m%dT%H%M%S)-XXXXXXXXXX)
-	if ! python -m venv "$tmpVEnv"; then
+	if ! "$pyCommand" -m venv "$tmpVEnv"; then
 		rm -rf "$tmpVEnv"
 		echo -e "\nERROR:  Unable to spawn a new temporary virtual environment at ${tmpVEnv}!" >&2
 		exit 125
 	fi
-	deactivate
 	if ! source "${tmpVEnv}/bin/activate"; then
 		rm -rf "$tmpVEnv"
-		echo -e "\nWARNING:  Unable to activate ${envDir}!" >&2
+		echo -e "\nWARNING:  Unable to activate ${tmpVEnv}!" >&2
 		continue
 	fi
 
@@ -47,8 +54,8 @@ EOF
 	echo "...upgrading setuptools"
 	pip install --upgrade setuptools >/dev/null
 
-	echo "...installing self"
-	if ! pip install -e . >/dev/null; then
+	echo "...installing self (editable because without it, pytest-cov cannot trace code execution!)"
+	if ! pip install --editable . >/dev/null; then
 		deactivate
 		rm -rf "$tmpVEnv"
 		echo -e "\nERROR:  Unable to install self!" >&2
