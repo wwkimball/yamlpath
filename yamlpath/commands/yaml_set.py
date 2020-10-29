@@ -90,6 +90,11 @@ def processcli():
         action="store_true",
         help="delete rather than change target node(s); implies"
              " --mustexist|-m")
+    input_group.add_argument(
+        "-A", "--aliasof",
+        metavar="ANCHOR",
+        help="set the value as a YAML Alias of an existing Anchor, by name "
+             "(ineffective for non-YAML files)")
 
     parser.add_argument(
         "-F", "--format",
@@ -128,6 +133,12 @@ def processcli():
         help="characters from which to build a value for --random; default="
              "all upper- and lower-case letters and all digits"
     )
+    parser.add_argument(
+        "-H", "--anchor",
+        metavar="ANCHOR",
+        help="name of the ANCHOR to assign or rename to when using"
+             " --aliasof|-A; when unset and creating a new Anchor, a unique"
+             " name will be generated")
 
     eyaml_group = parser.add_argument_group(
         "EYAML options", "Left unset, the EYAML keys will default to your\

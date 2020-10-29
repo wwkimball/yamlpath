@@ -4,6 +4,14 @@ Bug Fixes:
   not being considered for comparison.  Any identity key set for the whole AoH
   was being applied to every record in the set.
 
+Enhancements:
+* The yaml-set command-line tool now supports assigning YAML Aliases to target
+  change nodes, referencing an existing YAML Anchor elsewhere in the document.
+  This new --aliasof|-A input option has no effect on non-YAML files.  Whenever
+  the Anchor does not already exist, another new option, --anchor|-H permits
+  assigning or changing the name of the Anchor; this option has no effect
+  without --aliasof|-A.
+
 3.3.0:
 Bug Fixes:
 * It was impossible to install yamlpath 3.x without first installing
