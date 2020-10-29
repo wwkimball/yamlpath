@@ -248,13 +248,13 @@ class Test_differ_DifferConfig():
         mc = DifferConfig(quiet_logger, SimpleNamespace())
         mc.prepare(lhs_data)
 
-        node = lhs_data["array_of_hashes"]
-        parent = lhs_data
-        parentref = "array_of_hashes"
-        record = node[0]
+        parent = lhs_data["array_of_hashes"]
+        parentref = 0
+        node = parent[parentref]
+        nc = NodeCoords(node, parent, parentref)
+        (key_attr, is_user_defined) = mc.aoh_diff_key(nc)
 
-        assert mc.aoh_diff_key(
-            NodeCoords(node, parent, parentref), record) == "name"
+        assert key_attr == "name" and is_user_defined == False
 
     def test_aoh_diff_key_ini(self, quiet_logger, tmp_path_factory):
         config_file = create_temp_yaml_file(tmp_path_factory, """
@@ -283,13 +283,13 @@ class Test_differ_DifferConfig():
         mc = DifferConfig(quiet_logger, SimpleNamespace(config=config_file))
         mc.prepare(lhs_data)
 
-        node = lhs_data["array_of_hashes"]
-        parent = lhs_data
-        parentref = "array_of_hashes"
-        record = node[0]
+        parent = lhs_data["array_of_hashes"]
+        parentref = 0
+        node = parent[parentref]
+        nc = NodeCoords(node, parent, parentref)
+        (key_attr, is_user_defined) = mc.aoh_diff_key(nc)
 
-        assert mc.aoh_diff_key(
-            NodeCoords(node, parent, parentref), record) == "id"
+        assert key_attr == "id" and is_user_defined == True
 
     def test_aoh_diff_key_ini_inferred_parent(
         self, quiet_logger, tmp_path_factory
@@ -320,13 +320,13 @@ class Test_differ_DifferConfig():
         mc = DifferConfig(quiet_logger, SimpleNamespace(config=config_file))
         mc.prepare(lhs_data)
 
-        node = lhs_data["array_of_hashes"][1]
         parent = lhs_data["array_of_hashes"]
         parentref = 1
-        record = node
+        node = parent[parentref]
+        nc = NodeCoords(node, parent, parentref)
+        (key_attr, is_user_defined) = mc.aoh_diff_key(nc)
 
-        assert mc.aoh_diff_key(
-            NodeCoords(node, parent, parentref), record) == "prop"
+        assert key_attr == "prop" and is_user_defined == True
 
 
     ###

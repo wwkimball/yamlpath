@@ -1765,3 +1765,159 @@ d [2]
             , rhs_file)
         assert not result.success, result.stderr
         assert stdout_content == result.stdout
+
+    def test_diff_custom_aoh_keyed_elements(self, script_runner, tmp_path_factory):
+        lhs_file = create_temp_yaml_file(tmp_path_factory, """---
+products:
+  - product: doodad
+    sku: 0-000-0001-0
+    availability:
+      start:
+        date: 2020-10-10
+        time: 08:00
+      stop:
+        date: 2020-10-29
+        time: 17:00
+    dimensions:
+      width: 5
+      height: 5
+      depth: 5
+      weight: 10
+  - product: dumdow
+    sku: 0-000-0002-0
+    availability:
+      start:
+        date: 2020-10-23
+        time: 08:00
+      stop:
+        date: 2020-11-23
+        time: 17:00
+    dimensions:
+      width: 3
+      height: 3
+      depth: 3
+      weight: 27
+  - product: doohickey
+    sku: 0-000-0003-0
+    availability:
+      start:
+        date: 2020-08-01
+        time: 10:00
+      stop:
+        date: 2020-09-25
+        time: 10:00
+    dimensions:
+      width: 1
+      height: 2
+      depth: 3
+      weight: 4
+  - product: widget
+    sku: 0-000-0004-0
+    availability:
+      start:
+        date: 2020-01-01
+        time: 12:00
+      stop:
+        date: 2020-01-01
+        time: 16:00
+    dimensions:
+      width: 9
+      height: 10
+      depth: 1
+      weight: 4
+""")
+        rhs_file = create_temp_yaml_file(tmp_path_factory, """---
+products:
+  - sku: 0-000-0001-0
+    availability:
+      start:
+        date: 2020-10-10
+        time: 08:00
+      stop:
+        date: 2020-10-29
+        time: 17:00
+    dimensions:
+      width: 5
+      height: 5
+      depth: 5
+      weight: 10
+  - sku: 0-000-0002-0
+    availability:
+      start:
+        date: 2020-10-23
+        time: 08:00
+      stop:
+        date: 2020-11-23
+        time: 17:00
+    dimensions:
+      width: 4
+      height: 3
+      depth: 3
+      weight: 27
+  - dimensions:
+      width: 9
+      height: 10
+      depth: 1
+      weight: 4
+    sku: 0-000-0004-0
+    availability:
+      start:
+        date: 2020-01-01
+        time: 12:00
+      stop:
+        date: 2020-01-01
+        time: 16:00
+  - product: doohickey
+    availability:
+      stop:
+        date: 2020-09-25
+        time: 10:00
+      start:
+        date: 2020-08-01
+        time: 10:00
+    dimensions:
+      weight: 4
+      width: 1
+      depth: 3
+      height: 2
+""")
+        config_file = create_temp_yaml_file(tmp_path_factory, """[rules]
+/products = key
+
+[keys]
+/products[product=doohickey] = product
+""")
+        stdout_content = """c products[0]
+< {"product": "doodad", "sku": "0-000-0001-0", "availability": {"start": {"date": "2020-10-10", "time": "08:00"}, "stop": {"date": "2020-10-29", "time": "17:00"}}, "dimensions": {"width": 5, "height": 5, "depth": 5, "weight": 10}}
+---
+> {"sku": "0-000-0001-0", "availability": {"start": {"date": "2020-10-10", "time": "08:00"}, "stop": {"date": "2020-10-29", "time": "17:00"}}, "dimensions": {"width": 5, "height": 5, "depth": 5, "weight": 10}}
+
+c products[1]
+< {"product": "dumdow", "sku": "0-000-0002-0", "availability": {"start": {"date": "2020-10-23", "time": "08:00"}, "stop": {"date": "2020-11-23", "time": "17:00"}}, "dimensions": {"width": 3, "height": 3, "depth": 3, "weight": 27}}
+---
+> {"sku": "0-000-0002-0", "availability": {"start": {"date": "2020-10-23", "time": "08:00"}, "stop": {"date": "2020-11-23", "time": "17:00"}}, "dimensions": {"width": 4, "height": 3, "depth": 3, "weight": 27}}
+
+c products[2]
+< {"product": "doohickey", "sku": "0-000-0003-0", "availability": {"start": {"date": "2020-08-01", "time": "10:00"}, "stop": {"date": "2020-09-25", "time": "10:00"}}, "dimensions": {"width": 1, "height": 2, "depth": 3, "weight": 4}}
+---
+> {"product": "doohickey", "availability": {"stop": {"date": "2020-09-25", "time": "10:00"}, "start": {"date": "2020-08-01", "time": "10:00"}}, "dimensions": {"weight": 4, "width": 1, "depth": 3, "height": 2}}
+
+c products[3]
+< {"product": "widget", "sku": "0-000-0004-0", "availability": {"start": {"date": "2020-01-01", "time": "12:00"}, "stop": {"date": "2020-01-01", "time": "16:00"}}, "dimensions": {"width": 9, "height": 10, "depth": 1, "weight": 4}}
+---
+> {"dimensions": {"width": 9, "height": 10, "depth": 1, "weight": 4}, "sku": "0-000-0004-0", "availability": {"start": {"date": "2020-01-01", "time": "12:00"}, "stop": {"date": "2020-01-01", "time": "16:00"}}}
+"""
+
+        # DEBUG
+        # print("LHS File:  {}".format(lhs_file))
+        # print("RHS File:  {}".format(rhs_file))
+        # print("Expected Output:")
+        # print(merged_yaml_content)
+
+        result = script_runner.run(
+            self.command
+            , "--config={}".format(config_file)
+            , lhs_file
+            , rhs_file)
+        assert not result.success, result.stderr
+        assert stdout_content == result.stdout

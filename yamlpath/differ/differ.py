@@ -344,15 +344,7 @@ class Differ:
 
         # Perform either a KEY or DEEP comparison; either way, the elements
         # must first be synchronized based on their identity key values.
-        id_key: str = ""
-        if len(rhs) > 0 and isinstance(rhs[0], dict):
-            id_key = self.config.aoh_diff_key(
-                NodeCoords(rhs[0], rhs, 0), rhs[0])
-            self.logger.debug(
-                "Differ::_diff_arrays_of_hashes:  RHS AoH yielded id_key:"
-                "  {}.".format(id_key))
-
-        syn_pairs = Differ.synchronize_lods_by_key(lhs, rhs, id_key)
+        syn_pairs = self.synchronize_lods_by_key(path, lhs, rhs)
         self.logger.debug(
             "Got synchronized pairs of Array elements at YAML Path, {}:"
             .format(path if path else "/"),
@@ -490,16 +482,23 @@ class Differ:
 
         return syn_pairs
 
-    @classmethod
     #pylint: disable=too-many-locals
     def synchronize_lods_by_key(
-        cls, lhs: list, rhs: list, key_attr: str
+        self, path: YAMLPath, lhs: list, rhs: list
     ) -> List[Tuple[
         Optional[int], Optional[Any], Optional[int], Optional[Any]
     ]]:
         """Synchronize two lists-of-dictionaries by identity key."""
         # Build a parallel index array to track the original RHS element
         # indexes of any surviving elements.
+        key_attr: str = ""
+        if len(rhs) > 0 and isinstance(rhs[0], dict):
+            (key_attr, _) = self.config.aoh_diff_key(
+                NodeCoords(rhs[0], rhs, 0))
+            self.logger.debug(
+                "Differ::synchronize_lods_by_key:  RHS AoH yielded key_attr:"
+                "  {}.".format(key_attr))
+
         rhs_reduced = []
         for original_idx, val in enumerate(rhs):
             rhs_reduced.append((original_idx, val))
@@ -510,17 +509,42 @@ class Differ:
         for lhs_idx, lhs_ele in enumerate(lhs):
             if not key_attr in lhs_ele:
                 # Impossible to match this LHS record to any RHS record
+                self.logger.debug(
+                    "LHS record has no identity key, {}, for record at {}:"
+                    .format(key_attr, path),
+                    data=lhs_ele,
+                    prefix="Differ::synchronize_lods_by_key:  ")
                 syn_pairs.append((lhs_idx, lhs_ele, None, None))
                 continue
 
             del_index = -1
             for reduced_idx, rhs_pair in enumerate(rhs_reduced):
-                (_, rhs_ele) = rhs_pair
-                if not key_attr in rhs_ele:
+                (rhs_idx, rhs_ele) = rhs_pair
+
+                # Check for a custom identity key assignment for this record
+                use_key = key_attr
+                (alt_key, is_user_key) = self.config.aoh_diff_key(
+                    NodeCoords(rhs_ele, rhs, rhs_idx))
+
+                if is_user_key and alt_key:
+                    use_key = alt_key
+                    self.logger.debug(
+                        "Using alternate key, {}, for record at {}[{}]."
+                        .format(use_key, path, rhs_idx),
+                        data=rhs_ele,
+                        prefix="Differ::synchronize_lods_by_key:  ")
+                else:
+                    self.logger.debug(
+                        "Using inferred key, {}, for record at {}[{}]."
+                        .format(use_key, path, rhs_idx),
+                        data=rhs_ele,
+                        prefix="Differ::synchronize_lods_by_key:  ")
+
+                if not use_key in rhs_ele:
                     # Impossible to match this RHS record to any LHS record
                     continue
 
-                if rhs_ele[key_attr] == lhs_ele[key_attr]:
+                if rhs_ele[use_key] == lhs_ele[use_key]:
                     del_index = reduced_idx
                     break
 

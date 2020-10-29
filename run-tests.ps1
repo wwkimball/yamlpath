@@ -17,7 +17,7 @@ function New-TemporaryDirectory {
     return $Item
 }
 
-$EnvDirs = Get-ChildItem -Directory -Filter "env*"
+$EnvDirs = Get-ChildItem -Directory -Filter "venv*"
 ForEach ($EnvDir in $EnvDirs) {
     & "$($EnvDir.FullName)\Scripts\Activate.ps1"
     if (!$?) {
@@ -54,7 +54,7 @@ ForEach ($EnvDir in $EnvDirs) {
     pip install --upgrade setuptools
 
     Write-Output "...installing self"
-    pip install -e .
+    pip install --editable .
     if (!$?) {
         & deactivate
         Remove-Item -Recurse -Force $TmpVEnv
