@@ -8,14 +8,6 @@ before it is replaced.  Further, EYAML can be employed to encrypt the new
 values and/or decrypt old values before checking them.
 
 Copyright 2018, 2019, 2020 William W. Kimball, Jr. MBA MSIS
-
-DEVELOPMENT GOALS:
-* --aliasof sets --change to *anchor_name
-* Let --aliasof and --change be identical when --anchor is also set as a way to
-  just rename an existing Anchor.
-* When --anchor conflicts with an existing name, bail out (because a deliberate
-  rename of the other Anchor is possible AND because --aliasof can be set to
-  the other pre-existing Anchor).
 """
 import sys
 import tempfile
@@ -27,6 +19,7 @@ from os import remove, access, R_OK
 from os.path import isfile, exists
 from shutil import copy2, copyfileobj
 from pathlib import Path
+from typing import Any, Dict
 
 from yamlpath import __version__ as YAMLPATH_VERSION
 from yamlpath.common import Anchors
@@ -453,8 +446,16 @@ def _alias_nodes(
             anchor_node)
         anchor_node = anchor_coord.parent[anchor_coord.parentref]
 
+    known_anchors: Dict[str, Any] = {}
+    Anchors.scan_for_anchors(processor.data, known_anchors)
+
     if anchor_name:
-        # Rename any pre-existing anchor or set an original anchor name
+        # Rename any pre-existing anchor or set an original anchor name; the
+        # assigned name must be unique!
+        if anchor_name in known_anchors:
+            log.critical(
+                "Anchor names must be unique within YAML documents.  Anchor"
+                " name, {}, is already used.".format(anchor_name))
         anchor_node.yaml_set_anchor(anchor_name, always_dump=True)
     elif anchor_node.anchor.value:
         # The source node already has an anchor name
@@ -462,7 +463,7 @@ def _alias_nodes(
     else:
         # An orignial, unique-to-the-document anchor name must be generated
         new_anchor = Anchors.generate_unique_anchor_name(
-            processor.data, anchor_coord)
+            processor.data, anchor_coord, known_anchors)
         anchor_node.yaml_set_anchor(new_anchor, always_dump=True)
 
     for node_coord in assign_to_nodes:

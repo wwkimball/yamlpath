@@ -3,7 +3,7 @@ Implement Anchors, a static library of generally-useful code for YAML Anchors.
 
 Copyright 2020 William W. Kimball, Jr. MBA MSIS
 """
-from typing import Any, Dict, List
+from typing import Any, Dict
 
 from ruamel.yaml.comments import CommentedSeq, CommentedMap
 
