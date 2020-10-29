@@ -137,7 +137,8 @@ class Anchors:
 
     @staticmethod
     def generate_unique_anchor_name(
-        document: Any, node_coord: NodeCoords, known_anchors: Dict[str, Any]
+        document: Any, node_coord: NodeCoords,
+        known_anchors: Dict[str, Any] = None
     ) -> str:
         """
         Generate a unique Anchor name to a given node.
@@ -150,20 +151,21 @@ class Anchors:
 
         Returns:  (str) The newly generated Anchor name.
         """
+        if not known_anchors:
+            known_anchors: Dict[str, Any] = {}
+            Anchors.scan_for_anchors(document, known_anchors)
+
         parentref = node_coord.parentref
         base_name = "id"
         if isinstance(parentref, str):
             base_name = parentref
-
-        if not known_anchors:
-            known_anchors: Dict[str, Any] = {}
-            Anchors.scan_for_anchors(document, known_anchors)
-            known_anchors = Anchors.scan_for_anchors
+            if base_name not in known_anchors:
+                return base_name
 
         anchor_id = 1
-        new_anchor = "{}{}".format(base_name, anchor_id)
+        new_anchor = "{}{:03d}".format(base_name, anchor_id)
         while new_anchor in known_anchors:
             anchor_id += 1
-            new_anchor = "{}{}".format(base_name, anchor_id)
+            new_anchor = "{}{:03d}".format(base_name, anchor_id)
 
         return new_anchor

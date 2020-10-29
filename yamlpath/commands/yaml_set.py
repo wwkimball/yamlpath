@@ -29,6 +29,7 @@ from shutil import copy2, copyfileobj
 from pathlib import Path
 
 from yamlpath import __version__ as YAMLPATH_VERSION
+from yamlpath.common import Anchors
 from yamlpath.func import (
     clone_node,
     build_next_node,
@@ -447,18 +448,22 @@ def _alias_nodes(
 
     anchor_coord = anchor_node_coordinates[0]
     anchor_node = anchor_coord.node
+    if not hasattr(anchor_node, "anchor"):
+        anchor_coord.parent[anchor_coord.parentref] = wrap_type(
+            anchor_node)
+        anchor_node = anchor_coord.parent[anchor_coord.parentref]
+
     if anchor_name:
         # Rename any pre-existing anchor or set an original anchor name
-        if not hasattr(anchor_node, "anchor"):
-            anchor_coord.parent[anchor_coord.parentref] = wrap_type(
-                anchor_node)
-            anchor_node = anchor_coord.parent[anchor_coord.parentref]
         anchor_node.anchor.value = anchor_name
-    elif hasattr(anchor_node, "anchor") and anchor_node.anchor.value:
+    elif anchor_node.anchor.value:
+        # The source node already has an anchor name
         anchor_name = anchor_node.anchor.value
     else:
         # An orignial, unique-to-the-document anchor name must be generated
-        anchor_node.yaml_set_anchor(None, always_dump=True)
+        new_anchor = Anchors.generate_unique_anchor_name(
+            processor.data, anchor_coord)
+        anchor_node.yaml_set_anchor(new_anchor, always_dump=True)
 
     for node_coord in assign_to_nodes:
         log.debug(
