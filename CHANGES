@@ -1,3 +1,9 @@
+3.3.1:
+Bug Fixes:
+* Custom identity keys for specific records in AoHs of the RHS document were
+  not being considered for comparison.  Any identity key set for the whole AoH
+  was being applied to every record in the set.
+
 3.3.0:
 Bug Fixes:
 * It was impossible to install yamlpath 3.x without first installing
