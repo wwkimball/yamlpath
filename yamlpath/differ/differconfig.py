@@ -4,7 +4,7 @@ Config file processor for the Differ.
 Copyright 2020 William W. Kimball, Jr. MBA MSIS
 """
 import configparser
-from typing import Any, Dict, Union
+from typing import Any, Dict, Tuple, Union
 from argparse import Namespace
 
 from yamlpath.exceptions import YAMLPathException
@@ -84,7 +84,7 @@ class DifferConfig:
             return AoHDiffOpts.from_str(self.config["defaults"]["aoh"])
         return AoHDiffOpts.POSITION
 
-    def aoh_diff_key(self, node_coord: NodeCoords) -> str:
+    def aoh_diff_key(self, node_coord: NodeCoords) -> Tuple[str, bool]:
         """
         Get the user-defined identity key for Array-of-Hashes comparisons.
 
