@@ -188,11 +188,15 @@ def main():
     except EYAMLCommandException as ex:
         log.critical(ex, 2)
 
-    for node in discovered_nodes:
-        if isinstance(node, (dict, list)):
-            print(json.dumps(stringify_dates(node)))
-        else:
-            print("{}".format(str(node).replace("\n", r"\n")))
+    try:
+        for node in discovered_nodes:
+            if isinstance(node, (dict, list)):
+                print(json.dumps(stringify_dates(node)))
+            else:
+                print("{}".format(str(node).replace("\n", r"\n")))
+    except RecursionError:
+        log.critical(
+            "The YAML data contains an infinitely recursing YAML Alias!", 1)
 
 if __name__ == "__main__":
     main()  # pragma: no cover
