@@ -84,20 +84,18 @@ class DifferConfig:
             return AoHDiffOpts.from_str(self.config["defaults"]["aoh"])
         return AoHDiffOpts.POSITION
 
-    def aoh_diff_key(
-        self, node_coord: NodeCoords, data: dict
-    ) -> str:
+    def aoh_diff_key(self, node_coord: NodeCoords) -> str:
         """
         Get the user-defined identity key for Array-of-Hashes comparisons.
 
         Parameters:
         1. node_coord (NodeCoords) The node for which to query.
-        2. data (dict) The diff source node from which an identity key will
-           be inferred if not explicity provided via user configuration.
 
-        Returns: (str) The identity key field name.
+        Returns: (str, bool) The identity key field name and whether the key
+          is specifically user-defined or inferred from the data.
         """
         # Check the user config for a specific key; fallback to first key.
+        is_user_key = True
         diff_key = self._get_key_for(node_coord)
         if not diff_key:
             # This node may be a child of one of the registered keys.  That
@@ -106,10 +104,14 @@ class DifferConfig:
                 if node_coord.parent == eval_nc.node:
                     diff_key = eval_key
                     break
-        if not diff_key and len(data.keys()) > 0:
+
+        node = node_coord.node
+        if not diff_key and isinstance(node, dict) and len(node.keys()) > 0:
             # Fallback to using the first key of the dict as an identity key
-            diff_key = list(data)[0]
-        return diff_key
+            is_user_key = False
+            diff_key = list(node)[0]
+
+        return (diff_key, is_user_key)
 
     def prepare(self, data: Any) -> None:
         """
