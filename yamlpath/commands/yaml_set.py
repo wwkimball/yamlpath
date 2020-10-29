@@ -455,7 +455,7 @@ def _alias_nodes(
 
     if anchor_name:
         # Rename any pre-existing anchor or set an original anchor name
-        anchor_node.anchor.value = anchor_name
+        anchor_node.yaml_set_anchor(anchor_name, always_dump=True)
     elif anchor_node.anchor.value:
         # The source node already has an anchor name
         anchor_name = anchor_node.anchor.value
