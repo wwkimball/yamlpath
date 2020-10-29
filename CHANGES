@@ -15,6 +15,22 @@ Enhancements:
   be used with --aliasof|-A.  Further, when --change|-g and --aliasof|-A are
   identical, --anchor|-H can be used to rename an existing Anchor.
 
+API Changes:
+* New static classes will be gradually replacing generally-useful methods from
+  other classes and eventually the func library.  This release begins this
+  gradual process and moves the following methods:
+  - yamlpath.merger.Merger.combine_merge_anchors
+    -> yamlpath.common.Anchors.combine_merge_anchors
+
+  - yamlpath.merger.Merger.rename_anchor
+    -> yamlpath.common.Anchors.rename_anchor
+
+  - yamlpath.merger.Merger.replace_anchor
+    -> yamlpath.common.Anchors.replace_anchor
+
+  - yamlpath.merger.Merger.scan_for_anchors
+    -> yamlpath.common.Anchors.scan_for_anchors
+
 3.3.0:
 Bug Fixes:
 * It was impossible to install yamlpath 3.x without first installing

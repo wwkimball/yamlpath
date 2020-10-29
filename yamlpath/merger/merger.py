@@ -18,6 +18,7 @@ from yamlpath.func import (
     build_next_node,
     stringify_dates,
 )
+from yamlpath.common import Anchors
 from yamlpath.wrappers import ConsolePrinter, NodeCoords
 from yamlpath.merger.exceptions import MergeException
 from yamlpath.merger.enums import (
@@ -186,7 +187,7 @@ class Merger:
                         "Document BEFORE calling combine_merge_anchors:",
                         data=lhs, prefix="Merger::_merge_dicts:  ",
                         header="+------------------+")
-                    Merger.combine_merge_anchors(lhs[key], val)
+                    Anchors.combine_merge_anchors(lhs[key], val)
                     self.logger.debug(
                         "Document AFTER calling combine_merge_anchors:",
                         data=lhs, prefix="Merger::_merge_dicts:  ",
@@ -418,13 +419,13 @@ class Merger:
         Returns:  N/A
         """
         lhs_anchors: Dict[str, Any] = {}
-        Merger.scan_for_anchors(self.data, lhs_anchors)
+        Anchors.scan_for_anchors(self.data, lhs_anchors)
         self.logger.debug(
             "LHS Anchors:", prefix="Merger::_resolve_anchor_conflicts:  ",
             data=lhs_anchors)
 
         rhs_anchors: Dict[str, Any] = {}
-        Merger.scan_for_anchors(rhs, rhs_anchors)
+        Anchors.scan_for_anchors(rhs, rhs_anchors)
         self.logger.debug(
             "RHS Anchors:", prefix="Merger::_resolve_anchor_conflicts:  ",
             data=rhs_anchors)
@@ -457,7 +458,7 @@ class Merger:
                         "Anchor {} conflict; will RENAME anchors."
                         .format(anchor),
                         prefix="Merger::_resolve_anchor_conflicts:  ")
-                    Merger.rename_anchor(
+                    Anchors.rename_anchor(
                         rhs, anchor,
                         self._calc_unique_anchor(
                             anchor,
@@ -470,13 +471,13 @@ class Merger:
                         "Anchor {} conflict; LEFT will override."
                         .format(anchor),
                         prefix="Merger::_resolve_anchor_conflicts:  ")
-                    Merger.replace_anchor(rhs, rhs_anchor, lhs_anchor)
+                    Anchors.replace_anchor(rhs, rhs_anchor, lhs_anchor)
                 elif conflict_mode is AnchorConflictResolutions.RIGHT:
                     self.logger.debug(
                         "Anchor {} conflict; RIGHT will override."
                         .format(anchor),
                         prefix="Merger::_resolve_anchor_conflicts:  ")
-                    Merger.replace_anchor(self.data, lhs_anchor, rhs_anchor)
+                    Anchors.replace_anchor(self.data, lhs_anchor, rhs_anchor)
                 else:
                     raise MergeException(
                         "Aborting due to anchor conflict with, {}."
@@ -489,7 +490,7 @@ class Merger:
                 # So, overwrite all matching LHS nodes with their RHS
                 # equivalents in order to stave off spurious anchor
                 # re-definitions.
-                Merger.replace_anchor(self.data, lhs_anchor, rhs_anchor)
+                Anchors.replace_anchor(self.data, lhs_anchor, rhs_anchor)
 
     def merge_with(self, rhs: Any) -> None:
         """
@@ -674,132 +675,6 @@ class Merger:
         elif isinstance(node, CommentedSeq):
             for ele in node:
                 Merger.set_flow_style(ele, is_flow)
-
-    @classmethod
-    def scan_for_anchors(cls, dom: Any, anchors: Dict[str, Any]):
-        """
-        Scan a document for all anchors contained within.
-
-        Parameters:
-        1. dom (Any) The document to scan.
-        2. anchors (dict) Collection of discovered anchors along with
-           references to the nodes they apply to.
-
-        Returns:  N/A
-        """
-        if isinstance(dom, CommentedMap):
-            for key, val in dom.items():
-                if hasattr(key, "anchor") and key.anchor.value is not None:
-                    anchors[key.anchor.value] = key
-
-                if hasattr(val, "anchor") and val.anchor.value is not None:
-                    anchors[val.anchor.value] = val
-
-                # Recurse into complex values
-                if isinstance(val, (CommentedMap, CommentedSeq)):
-                    Merger.scan_for_anchors(val, anchors)
-
-        elif isinstance(dom, CommentedSeq):
-            for ele in dom:
-                Merger.scan_for_anchors(ele, anchors)
-
-        elif hasattr(dom, "anchor") and dom.anchor.value is not None:
-            anchors[dom.anchor.value] = dom
-
-    @classmethod
-    def rename_anchor(cls, dom: Any, anchor: str, new_anchor: str):
-        """
-        Rename every use of an anchor in a document.
-
-        Parameters:
-        1. dom (Any) The document to modify.
-        2. anchor (str) The old anchor name to rename.
-        3. new_anchor (str) The new name to apply to the anchor.
-
-        Returns:  N/A
-        """
-        if isinstance(dom, CommentedMap):
-            for key, val in dom.non_merged_items():
-                if hasattr(key, "anchor") and key.anchor.value == anchor:
-                    key.anchor.value = new_anchor
-                if hasattr(val, "anchor") and val.anchor.value == anchor:
-                    val.anchor.value = new_anchor
-                Merger.rename_anchor(val, anchor, new_anchor)
-        elif isinstance(dom, CommentedSeq):
-            for ele in dom:
-                Merger.rename_anchor(ele, anchor, new_anchor)
-        elif hasattr(dom, "anchor") and dom.anchor.value == anchor:
-            dom.anchor.value = new_anchor
-
-    @classmethod
-    def replace_merge_anchor(
-        cls, data: Any, old_node: Any, repl_node: Any
-    ) -> None:
-        """
-        Replace anchor merge references.
-
-        Anchor merge references in YAML are formed using the `<<: *anchor`
-        operator.
-
-        Parameters:
-        1. data (Any) The DOM to adjust.
-        2. old_node (Any) The former anchor node.
-        3. repl_node (Any) The replacement anchor node.
-
-        Returns:  N/A
-        """
-        if hasattr(data, "merge") and len(data.merge) > 0:
-            for midx, merge_node in enumerate(data.merge):
-                if merge_node[1] is old_node:
-                    data.merge[midx] = (data.merge[midx][0], repl_node)
-
-    @classmethod
-    def combine_merge_anchors(cls, lhs: CommentedMap, rhs: CommentedMap):
-        """Merge YAML merge keys."""
-        for mele in rhs.merge:
-            lhs.add_yaml_merge([mele])
-
-    @classmethod
-    def replace_anchor(
-        cls, data: Any, old_node: Any, repl_node: Any
-    ) -> None:
-        """
-        Recursively replace every use of an anchor within a DOM.
-
-        Parameters:
-        1. data (Any) The DOM to adjust.
-        2. old_node (Any) The former anchor node.
-        3. repl_node (Any) The replacement anchor node.
-
-        Returns:  N/A
-        """
-        anchor_name = repl_node.anchor.value
-        if isinstance(data, CommentedMap):
-            Merger.replace_merge_anchor(data, old_node, repl_node)
-            for idx, key in [
-                (idx, key) for idx, key in enumerate(data.keys())
-                if hasattr(key, "anchor")
-                    and key.anchor.value == anchor_name
-            ]:
-                Merger.replace_merge_anchor(key, old_node, repl_node)
-                data.insert(idx, repl_node, data.pop(key))
-
-            for key, val in data.non_merged_items():
-                Merger.replace_merge_anchor(key, old_node, repl_node)
-                Merger.replace_merge_anchor(val, old_node, repl_node)
-                if (hasattr(val, "anchor")
-                        and val.anchor.value == anchor_name):
-                    data[key] = repl_node
-                else:
-                    Merger.replace_anchor(val, old_node, repl_node)
-        elif isinstance(data, CommentedSeq):
-            for idx, ele in enumerate(data):
-                Merger.replace_merge_anchor(ele, old_node, repl_node)
-                if (hasattr(ele, "anchor")
-                        and ele.anchor.value == anchor_name):
-                    data[idx] = repl_node
-                else:
-                    Merger.replace_anchor(ele, old_node, repl_node)
 
     # pylint: disable=line-too-long
     @classmethod
