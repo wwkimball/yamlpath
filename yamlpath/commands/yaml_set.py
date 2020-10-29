@@ -8,6 +8,14 @@ before it is replaced.  Further, EYAML can be employed to encrypt the new
 values and/or decrypt old values before checking them.
 
 Copyright 2018, 2019, 2020 William W. Kimball, Jr. MBA MSIS
+
+DEVELOPMENT GOALS:
+* --aliasof sets --change to *anchor_name
+* Let --aliasof and --change be identical when --anchor is also set as a way to
+  just rename an existing Anchor.
+* When --anchor conflicts with an existing name, bail out (because a deliberate
+  rename of the other Anchor is possible AND because --aliasof can be set to
+  the other pre-existing Anchor).
 """
 import sys
 import tempfile
@@ -74,6 +82,11 @@ def processcli():
         "-a", "--value",
         help="set the new value from the command-line instead of STDIN")
     input_group.add_argument(
+        "-A", "--aliasof",
+        metavar="ANCHOR",
+        help="set the value as a YAML Alias of an existing Anchor, by name "
+             "(merely copies the target value for non-YAML files)")
+    input_group.add_argument(
         "-f", "--file",
         help="read the new value from file (discarding any trailing\
               new-lines)")
@@ -90,11 +103,6 @@ def processcli():
         action="store_true",
         help="delete rather than change target node(s); implies"
              " --mustexist|-m")
-    input_group.add_argument(
-        "-A", "--aliasof",
-        metavar="ANCHOR",
-        help="set the value as a YAML Alias of an existing Anchor, by name "
-             "(ineffective for non-YAML files)")
 
     parser.add_argument(
         "-F", "--format",
@@ -136,9 +144,9 @@ def processcli():
     parser.add_argument(
         "-H", "--anchor",
         metavar="ANCHOR",
-        help="name of the ANCHOR to assign or rename to when using"
-             " --aliasof|-A; when unset and creating a new Anchor, a unique"
-             " name will be generated")
+        help="When --aliasof|-A points to a value which is not already"
+             " Anchored, a new Anchor with this name is created; renames an"
+             " existing Anchor if already set")
 
     eyaml_group = parser.add_argument_group(
         "EYAML options", "Left unset, the EYAML keys will default to your\
