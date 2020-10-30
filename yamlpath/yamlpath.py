@@ -646,9 +646,9 @@ class YAMLPath:
 
         return path_segments
 
-    @classmethod
+    @staticmethod
     def _expand_splats(
-        cls, yaml_path: str, segment_id: str,
+        yaml_path: str, segment_id: str,
         segment_type: Optional[PathSegmentTypes] = None
     ) -> tuple:
         """
@@ -723,17 +723,11 @@ class YAMLPath:
 
         return (coal_type, coal_value)
 
-    @classmethod
+    @staticmethod
     def _stringify_yamlpath_segments(
-        cls, segments: Deque[PathSegment], seperator: PathSeperators
+        segments: Deque[PathSegment], seperator: PathSeperators
     ) -> str:
         """Stringify segments of a YAMLPath."""
-        # The following import must not occur at the toplevel because doing so
-        # causes a cyclic dependency error.  The import must occur only when
-        # this method is invoked.
-        # pylint: disable=import-outside-toplevel
-        from yamlpath.func import ensure_escaped
-
         pathsep: str = str(seperator)
         add_sep: bool = False
         ppath: str = ""
@@ -749,7 +743,7 @@ class YAMLPath:
 
                 # Replace a subset of special characters to alert users to
                 # potentially unintentional demarcation.
-                ppath += ensure_escaped(
+                ppath += YAMLPath.ensure_escaped(
                     str(segment_attrs),
                     pathsep,
                     '(', ')', '[', ']', '^', '$', '%', ' ', "'", '"'
@@ -774,9 +768,8 @@ class YAMLPath:
 
         return ppath
 
-    @classmethod
-    def strip_path_prefix(cls, path: "YAMLPath",
-                          prefix: "YAMLPath") -> "YAMLPath":
+    @staticmethod
+    def strip_path_prefix(path: "YAMLPath", prefix: "YAMLPath") -> "YAMLPath":
         """
         Remove a prefix from a YAML Path.
 
@@ -802,3 +795,36 @@ class YAMLPath:
             return YAMLPath(path_str)
 
         return path
+
+    @staticmethod
+    def ensure_escaped(value: str, *symbols: str) -> str:
+        r"""
+        Escape all instances of a symbol within a value.
+
+        Ensures all instances of a symbol are escaped (via \) within a value.
+        Multiple symbols can be processed at once.
+        """
+        escaped: str = value
+        for symbol in symbols:
+            replace_term: str = "\\{}".format(symbol)
+            oparts: List[str] = str(escaped).split(replace_term)
+            eparts: List[str] = []
+            for opart in oparts:
+                eparts.append(opart.replace(symbol, replace_term))
+            escaped = replace_term.join(eparts)
+        return escaped
+
+    @staticmethod
+    def escape_path_section(section: str, pathsep: PathSeperators) -> str:
+        """
+        Escape all special symbols present within a YAML Path segment.
+
+        Renders inert via escaping all symbols within a string which have
+        special meaning to YAML Path.  The resulting string can be consumed as
+        a YAML Path section without triggering unwanted additional processing.
+        """
+        return YAMLPath.ensure_escaped(
+            section,
+            '\\', str(pathsep), '(', ')', '[', ']', '^', '$', '%',
+            ' ', "'", '"'
+        )

@@ -15,16 +15,12 @@ from os import access, R_OK
 from os.path import isfile
 
 from yamlpath import __version__ as YAMLPATH_VERSION
-from yamlpath.func import (
-    get_yaml_data,
-    get_yaml_editor,
-    stringify_dates,
-    unwrap_node_coords,
-)
+from yamlpath.common import Parsers
 from yamlpath import YAMLPath
 from yamlpath.exceptions import YAMLPathException
 from yamlpath.eyaml.exceptions import EYAMLCommandException
 from yamlpath.enums import PathSeperators
+from yamlpath.wrappers import NodeCoords
 from yamlpath.eyaml import EYAMLProcessor
 
 from yamlpath.wrappers import ConsolePrinter
@@ -162,10 +158,10 @@ def main():
     yaml_path = YAMLPath(args.query, pathsep=args.pathsep)
 
     # Prep the YAML parser
-    yaml = get_yaml_editor()
+    yaml = Parsers.get_yaml_editor()
 
     # Attempt to open the YAML file; check for parsing errors
-    (yaml_data, doc_loaded) = get_yaml_data(
+    (yaml_data, doc_loaded) = Parsers.get_yaml_data(
         yaml, log,
         args.yaml_file if args.yaml_file else "-")
     if not doc_loaded:
@@ -182,7 +178,7 @@ def main():
             log.debug(
                 "Got node from {}:".format(yaml_path), data=node,
                 prefix="yaml_get::main:  ")
-            discovered_nodes.append(unwrap_node_coords(node))
+            discovered_nodes.append(NodeCoords.unwrap_node_coords(node))
     except YAMLPathException as ex:
         log.critical(ex, 1)
     except EYAMLCommandException as ex:
@@ -191,7 +187,7 @@ def main():
     try:
         for node in discovered_nodes:
             if isinstance(node, (dict, list)):
-                print(json.dumps(stringify_dates(node)))
+                print(json.dumps(Parsers.stringify_dates(node)))
             else:
                 print("{}".format(str(node).replace("\n", r"\n")))
     except RecursionError:

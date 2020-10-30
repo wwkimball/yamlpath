@@ -18,9 +18,66 @@ Enhancements:
   type specifiers) to nodes created or updated during the operation.
 
 API Changes:
-* New static classes will be gradually replacing generally-useful methods from
-  other classes and eventually the func library.  This release begins this
-  gradual process and moves the following methods:
+* The yamlpath.func library is too big and some very useful general code has
+  become attached to special-purpose classes.  As such, it's time for
+  refactoring before this becomes untennable.  New, better-organized static
+  classes were created under a new yamlpath.common namespace.  Since this
+  would be destructive to other Python code which depends on the old
+  organization, this is a heads-up.  Your existing code will continue to work
+  without any changes, but only until 4.x (which is not yet planned).  Until
+  then, you must update your own code to use the new static classes for the
+  following functions and methods so as to avoid fatal errors down the road:
+  - yamlpath.func.append_list_element
+    -> yamlpath.common.Nodes.append_list_element
+
+  - yamlpath.func.build_next_node
+    -> yamlpath.common.Nodes.build_next_node
+
+  - yamlpath.func.clone_node
+    -> yamlpath.common.Nodes.clone_node
+
+  - yamlpath.func.create_searchterms_from_pathattributes
+    -> yamlpath.common.Searches.create_searchterms_from_pathattributes
+
+  - yamlpath.func.ensure_escaped
+    -> yamlpath.YAMLPath.ensure_escaped
+
+  - yamlpath.func.escape_path_section
+    -> yamlpath.YAMLPath.escape_path_section
+
+  - yamlpath.func.get_node_anchor
+    -> yamlpath.common.Anchors.get_node_anchor
+
+  - yamlpath.func.get_yaml_data
+    -> yamlpath.common.Parsers.get_yaml_data
+
+  - yamlpath.func.get_yaml_editor
+    -> yamlpath.common.Parsers.get_yaml_editor
+
+  - yamlpath.func.get_yaml_multidoc_data
+    -> yamlpath.common.Parsers.get_yaml_multidoc_data
+
+  - yamlpath.func.make_float_node
+    -> yamlpath.common.Nodes.make_float_node
+
+  - yamlpath.func.make_new_node
+    -> yamlpath.common.Nodes.make_new_node
+
+  - yamlpath.func.search_anchor
+    -> yamlpath.common.Searches.search_anchor
+
+  - yamlpath.func.search_matches
+    -> yamlpath.common.Searches.search_matches
+
+  - yamlpath.func.stringify_dates
+    -> yamlpath.common.Parsers.stringify_dates
+
+  - yamlpath.func.unwrap_node_coords
+    -> yamlpath.wrappers.nodecoords.NodeCoords.unwrap_node_coords
+
+  - yamlpath.func.wrap_type
+    -> yamlpath.common.Nodes.wrap_type
+
   - yamlpath.merger.Merger.combine_merge_anchors
     -> yamlpath.common.Anchors.combine_merge_anchors
 

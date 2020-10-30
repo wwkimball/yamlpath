@@ -22,15 +22,7 @@ from pathlib import Path
 from typing import Any, Dict
 
 from yamlpath import __version__ as YAMLPATH_VERSION
-from yamlpath.common import Anchors
-from yamlpath.func import (
-    clone_node,
-    build_next_node,
-    get_yaml_data,
-    get_yaml_editor,
-    stringify_dates,
-    wrap_type,
-)
+from yamlpath.common import Anchors, Nodes, Parsers
 from yamlpath import YAMLPath
 from yamlpath.exceptions import YAMLPathException
 from yamlpath.enums import YAMLValueFormats, PathSeperators
@@ -291,7 +283,7 @@ def save_to_json_file(args, log, yaml_data):
     """Save to a JSON file."""
     log.verbose("Writing changed data as JSON to {}.".format(args.yaml_file))
     with open(args.yaml_file, 'w') as out_fhnd:
-        json.dump(stringify_dates(yaml_data), out_fhnd)
+        json.dump(Parsers.stringify_dates(yaml_data), out_fhnd)
 
 def save_to_yaml_file(args, log, yaml_parser, yaml_data, backup_file):
     """Save to a YAML file."""
@@ -364,18 +356,18 @@ def write_output_document(args, log, yaml, yaml_data):
         if write_document_as_yaml(args.yaml_file, yaml_data):
             yaml.dump(yaml_data, sys.stdout)
         else:
-            json.dump(stringify_dates(yaml_data), sys.stdout)
+            json.dump(Parsers.stringify_dates(yaml_data), sys.stdout)
     else:
         save_to_file(args, log, yaml, yaml_data, backup_file)
 
 def _try_load_input_file(args, log, yaml, change_path, new_value):
     """Attempt to load the input data file or abend on error."""
-    (yaml_data, doc_loaded) = get_yaml_data(yaml, log, args.yaml_file)
+    (yaml_data, doc_loaded) = Parsers.get_yaml_data(yaml, log, args.yaml_file)
     if not doc_loaded:
         # An error message has already been logged
         sys.exit(1)
     elif yaml_data is None:
-        yaml_data = build_next_node(change_path, 0, new_value)
+        yaml_data = Nodes.build_next_node(change_path, 0, new_value)
     return yaml_data
 
 def _delete_nodes(log, delete_nodes) -> None:
@@ -448,7 +440,7 @@ def _alias_nodes(
     anchor_coord = anchor_node_coordinates[0]
     anchor_node = anchor_coord.node
     if not hasattr(anchor_node, "anchor"):
-        anchor_coord.parent[anchor_coord.parentref] = wrap_type(
+        anchor_coord.parent[anchor_coord.parentref] = Nodes.wrap_type(
             anchor_node)
         anchor_node = anchor_coord.parent[anchor_coord.parentref]
 
@@ -506,7 +498,7 @@ def main():
         )
 
     # Prep the YAML parser
-    yaml = get_yaml_editor()
+    yaml = Parsers.get_yaml_editor()
 
     # Attempt to open the YAML file; check for parsing errors
     if args.yaml_file:
@@ -603,7 +595,7 @@ def main():
 
         try:
             processor.set_value(
-                saveto_path, clone_node(old_value),
+                saveto_path, Nodes.clone_node(old_value),
                 value_format=old_format, tag=args.tag)
         except YAMLPathException as ex:
             log.critical(ex, 1)
@@ -639,7 +631,7 @@ def main():
         try:
             processor.set_value(
                 change_path, new_value, value_format=args.format,
-                mustexist=must_exist)
+                mustexist=must_exist, tag=args.tag)
         except YAMLPathException as ex:
             log.critical(ex, 1)
 

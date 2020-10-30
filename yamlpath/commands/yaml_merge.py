@@ -15,17 +15,13 @@ from shutil import copy2
 from typing import Any
 
 from yamlpath import __version__ as YAMLPATH_VERSION
+from yamlpath.common import Parsers
 from yamlpath.merger.enums import (
     AnchorConflictResolutions,
     AoHMergeOpts,
     ArrayMergeOpts,
     HashMergeOpts,
     OutputDocTypes,
-)
-from yamlpath.func import (
-    get_yaml_multidoc_data,
-    get_yaml_editor,
-    stringify_dates,
 )
 from yamlpath.merger.exceptions import MergeException
 from yamlpath.merger import Merger, MergerConfig
@@ -246,7 +242,7 @@ def validateargs(args, log):
 def merge_multidoc(yaml_file, yaml_editor, log, merger, merger_primed):
     """Merge all documents within a multi-document source."""
     exit_state = 0
-    for (yaml_data, doc_loaded) in get_yaml_multidoc_data(
+    for (yaml_data, doc_loaded) in Parsers.get_yaml_multidoc_data(
         yaml_editor, log, yaml_file
     ):
         if not doc_loaded:
@@ -306,12 +302,12 @@ def write_output_document(args, log, merger, yaml_editor):
     if args.output:
         with open(args.output, 'w') as out_fhnd:
             if document_is_json:
-                json.dump(stringify_dates(merger.data), out_fhnd)
+                json.dump(Parsers.stringify_dates(merger.data), out_fhnd)
             else:
                 yaml_editor.dump(merger.data, out_fhnd)
     else:
         if document_is_json:
-            json.dump(stringify_dates(merger.data), sys.stdout)
+            json.dump(Parsers.stringify_dates(merger.data), sys.stdout)
         else:
             yaml_editor.dump(merger.data, sys.stdout)
 
@@ -327,7 +323,7 @@ def main():
 
     # Merge all input files
     merger = Merger(log, None, MergerConfig(log, args))
-    yaml_editor = get_yaml_editor()
+    yaml_editor = Parsers.get_yaml_editor()
     exit_state = 0
     consumed_stdin = False
     merger_primed = False

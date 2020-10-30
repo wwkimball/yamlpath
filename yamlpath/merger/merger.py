@@ -12,13 +12,7 @@ import ruamel.yaml # type: ignore
 from ruamel.yaml.scalarstring import ScalarString
 from ruamel.yaml.comments import CommentedSeq, CommentedMap
 
-from yamlpath.func import (
-    append_list_element,
-    escape_path_section,
-    build_next_node,
-    stringify_dates,
-)
-from yamlpath.common import Anchors
+from yamlpath.common import Anchors, Nodes, Parsers
 from yamlpath.wrappers import ConsolePrinter, NodeCoords
 from yamlpath.merger.exceptions import MergeException
 from yamlpath.merger.enums import (
@@ -139,7 +133,8 @@ class Merger:
         buffer: List[Tuple[Any, Any]] = []
         buffer_pos = 0
         for key, val in rhs.non_merged_items():
-            path_next = path + escape_path_section(key, path.seperator)
+            path_next = (path +
+                YAMLPath.escape_path_section(key, path.seperator))
             if key in lhs:
                 # Write the buffer if populated
                 for b_key, b_val in buffer:
@@ -345,15 +340,15 @@ class Merger:
                     merged_hash = True
                     break
                 if not merged_hash:
-                    append_list_element(lhs, ele,
+                    Nodes.append_list_element(lhs, ele,
                         ele.anchor.value if hasattr(ele, "anchor") else None)
             elif merge_mode is AoHMergeOpts.UNIQUE:
                 if ele not in lhs:
-                    append_list_element(
+                    Nodes.append_list_element(
                         lhs, ele,
                         ele.anchor.value if hasattr(ele, "anchor") else None)
             else:
-                append_list_element(lhs, ele,
+                Nodes.append_list_element(lhs, ele,
                     ele.anchor.value if hasattr(ele, "anchor") else None)
         return lhs
 
@@ -518,7 +513,7 @@ class Merger:
             self.logger.debug(
                 "Replacing None data with:", prefix="Merger::merge_with:  ",
                 data=rhs, data_header="     *****")
-            self.data = build_next_node(insert_at, 0, rhs)
+            self.data = Nodes.build_next_node(insert_at, 0, rhs)
             self.logger.debug(
                 "Merged document is now:", prefix="Merger::merge_with:  ",
                 data=self.data, footer="     ***** ***** *****")
@@ -576,7 +571,7 @@ class Merger:
                 # The RHS document root is a Scalar value
                 target_node = node_coord.node
                 if isinstance(target_node, CommentedSeq):
-                    append_list_element(target_node, rhs)
+                    Nodes.append_list_element(target_node, rhs)
                     merge_performed = True
                 elif isinstance(target_node, CommentedMap):
                     raise MergeException(
@@ -636,7 +631,7 @@ class Merger:
             # Dump the document as true JSON and reload it; this automatically
             # exlodes all aliases.
             xfer_buffer = StringIO()
-            json.dump(stringify_dates(self.data), xfer_buffer)
+            json.dump(Parsers.stringify_dates(self.data), xfer_buffer)
             xfer_buffer.seek(0)
             self.data = yaml_writer.load(xfer_buffer)
 
