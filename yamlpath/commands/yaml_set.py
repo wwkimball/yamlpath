@@ -138,9 +138,13 @@ def processcli():
     parser.add_argument(
         "-H", "--anchor",
         metavar="ANCHOR",
-        help="When --aliasof|-A points to a value which is not already"
+        help="when --aliasof|-A points to a value which is not already"
              " Anchored, a new Anchor with this name is created; renames an"
              " existing Anchor if already set")
+    parser.add_argument(
+        "-T", "--tag",
+        metavar="TAG",
+        help="assign a custom data-type tag to the changed node(s)")
 
     eyaml_group = parser.add_argument_group(
         "EYAML options", "Left unset, the EYAML keys will default to your\
@@ -262,6 +266,11 @@ def validateargs(args, log):
     if len(args.random_from) < 2:
         has_errors = True
         log.error("The pool of random CHARS must have at least 2 characters.")
+
+    # Any set tag must have a prefix of at least one !
+    if args.tag and not args.tag[0] == "!":
+        has_errors = True
+        log.error("A YAML or JSON tag must be prefixed with 1 or 2 ! marks.")
 
     # When using --delete, --mustexist must also be set
     if args.delete:
@@ -595,7 +604,7 @@ def main():
         try:
             processor.set_value(
                 saveto_path, clone_node(old_value),
-                value_format=old_format)
+                value_format=old_format, tag=args.tag)
         except YAMLPathException as ex:
             log.critical(ex, 1)
 

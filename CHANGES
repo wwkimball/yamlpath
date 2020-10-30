@@ -14,6 +14,8 @@ Enhancements:
   permits assigning or changing the name of a new Anchor; this option can only
   be used with --aliasof|-A.  Further, when --change|-g and --aliasof|-A are
   identical, --anchor|-H can be used to rename an existing Anchor.
+* The yaml-set command-line tool now supports assigning custom YAML tags (data
+  type specifiers) to nodes created or updated during the operation.
 
 API Changes:
 * New static classes will be gradually replacing generally-useful methods from

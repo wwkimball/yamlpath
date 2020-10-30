@@ -122,6 +122,7 @@ class Processor:
         * pathsep (PathSeperators) Forced YAML Path segment seperator; set
           only when automatic inference fails;
           default = PathSeperators.AUTO
+        * tag (str) Custom data-type tag to assign
 
         Returns:  N/A
 
@@ -135,6 +136,7 @@ class Processor:
         value_format: YAMLValueFormats = kwargs.pop("value_format",
                                                     YAMLValueFormats.DEFAULT)
         pathsep: PathSeperators = kwargs.pop("pathsep", PathSeperators.AUTO)
+        tag: str = kwargs.pop("tag", None)
 
         if isinstance(yaml_path, str):
             yaml_path = YAMLPath(yaml_path, pathsep)
@@ -152,7 +154,7 @@ class Processor:
                 try:
                     self._update_node(
                         req_node.parent, req_node.parentref, value,
-                        value_format)
+                        value_format, tag)
                 except ValueError as vex:
                     raise YAMLPathException(
                         "Impossible to write '{}' as {}.  The error was:  {}"
@@ -183,7 +185,7 @@ class Processor:
                 try:
                     self._update_node(
                         node_coord.parent, node_coord.parentref, value,
-                        value_format)
+                        value_format, tag)
                 except ValueError as vex:
                     raise YAMLPathException(
                         "Impossible to write '{}' as {}.  The error was:  {}"
@@ -1149,8 +1151,11 @@ class Processor:
                 prefix="Processor::_get_optional_nodes:  ", data=data)
             yield NodeCoords(data, parent, parentref, translated_path)
 
-    def _update_node(self, parent: Any, parentref: Any, value: Any,
-                     value_format: YAMLValueFormats) -> None:
+    # pylint: disable=too-many-arguments
+    def _update_node(
+        self, parent: Any, parentref: Any, value: Any,
+        value_format: YAMLValueFormats, value_tag: str = None
+    ) -> None:
         """
         Set the value of a data node.
 
@@ -1165,6 +1170,7 @@ class Processor:
            its references
         4. value_format (YAMLValueFormats) the YAML representation of the
            value
+        5. value_tag (str) the custom YAML data-type tag of the value
 
         Returns: N/A
 
@@ -1202,6 +1208,8 @@ class Processor:
 
         change_node = parent[parentref]
         new_node = make_new_node(change_node, value, value_format)
+        if value_tag:
+            new_node.tag = value_tag
 
         self.logger.debug(
             "Changing the following node of type {} to {}<{}> as {}, a {} YAML"
