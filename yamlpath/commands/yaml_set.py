@@ -177,6 +177,7 @@ def processcli():
         help="the YAML file to update; omit or use - to read from STDIN")
     return parser.parse_args()
 
+# pylint: disable=too-many-branches
 def validateargs(args, log):
     """Validate command-line arguments."""
     has_errors = False
@@ -430,11 +431,7 @@ def _alias_nodes(
     """Assign YAML Aliases to the target nodes."""
     anchor_node_coordinates = _get_nodes(
         log, processor, anchor_path, must_exist=True)
-    if not anchor_node_coordinates:
-        log.critical(
-            "It is mpossible to Alias an Anchor node which does not exist at"
-            " {}!".format(anchor_path), 1)
-    elif len(anchor_node_coordinates) > 1:
+    if len(anchor_node_coordinates) > 1:
         log.critical(
             "It is impossible to Alias more than one Anchor at a time from {}!"
             .format(anchor_path), 1)

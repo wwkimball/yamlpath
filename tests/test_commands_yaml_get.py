@@ -90,6 +90,20 @@ class Test_yaml_get():
         assert not result.success, result.stderr
         assert "No accessible eyaml command" in result.stderr
 
+    def test_recursive_yaml_anchor(self, script_runner, tmp_path_factory):
+        content = """--- &recursive_this
+hash:
+  recursive_key: *recursive_this
+"""
+        yaml_file = create_temp_yaml_file(tmp_path_factory, content)
+        result = script_runner.run(
+            self.command,
+            "--query=/hash",
+            yaml_file
+        )
+        assert not result.success, result.stderr
+        assert "contains an infinitely recursing" in result.stderr
+
     def test_query_anchor(self, script_runner, tmp_path_factory):
         content = """---
         aliases:

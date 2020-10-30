@@ -152,7 +152,7 @@ class Anchors:
         Returns:  (str) The newly generated Anchor name.
         """
         if not known_anchors:
-            known_anchors: Dict[str, Any] = {}
+            known_anchors = {}
             Anchors.scan_for_anchors(document, known_anchors)
 
         parentref = node_coord.parentref

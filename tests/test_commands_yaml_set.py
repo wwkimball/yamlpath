@@ -58,6 +58,12 @@ class Test_yaml_set():
         assert not result.success, result.stderr
         assert "applies only when reading from a file" in result.stderr
 
+    def test_no_anchor_without_aliasof(self, script_runner):
+        result = script_runner.run(
+            self.command, "--change=test", "--anchor=name", "-")
+        assert not result.success, result.stderr
+        assert "--anchor is meaningless without also setting --aliasof" in result.stderr
+
     def test_bad_data_type_optional(self, script_runner, tmp_path_factory):
         yaml_file = create_temp_yaml_file(tmp_path_factory, """---
 boolean: false
@@ -944,3 +950,141 @@ key: value
         )
         assert not result.success, result.stderr
         assert "Refusing to delete" in result.stderr
+
+    def test_rename_anchor(self, script_runner, tmp_path_factory):
+        yamlin = """---
+aliases:
+  - &old_anchor Some string
+key: *old_anchor
+"""
+        yamlout = """---
+aliases:
+  - &new_anchor Some string
+key: *new_anchor
+"""
+        yaml_file = create_temp_yaml_file(tmp_path_factory, yamlin)
+        result = script_runner.run(
+            self.command,
+            "--change=aliases[&old_anchor]",
+            "--aliasof=aliases[&old_anchor]",
+            "--anchor=new_anchor",
+            yaml_file
+        )
+        assert result.success, result.stderr
+
+        with open(yaml_file, 'r') as fhnd:
+            filedat = fhnd.read()
+        assert filedat == yamlout
+
+    def test_auto_anchor(self, script_runner, tmp_path_factory):
+        yamlin = """---
+some_key: its value
+a_hash:
+  a_key: A value
+"""
+        yamlout = """---
+some_key: &some_key its value
+a_hash:
+  a_key: *some_key
+"""
+        yaml_file = create_temp_yaml_file(tmp_path_factory, yamlin)
+        result = script_runner.run(
+            self.command,
+            "--change=a_hash.a_key",
+            "--aliasof=some_key",
+            yaml_file
+        )
+        assert result.success, result.stderr
+
+        with open(yaml_file, 'r') as fhnd:
+            filedat = fhnd.read()
+        assert filedat == yamlout
+
+    def test_too_many_nodes_to_alias(self, script_runner, tmp_path_factory):
+        yamlin = """---
+aliases:
+  - &valid_anchor Has validity
+  - &another_valid_anchor Also has validity
+hash:
+  concete_key: Concrete value
+  aliased_key: *valid_anchor
+"""
+        yaml_file = create_temp_yaml_file(tmp_path_factory, yamlin)
+        result = script_runner.run(
+            self.command,
+            "--change=hash.new_key",
+            "--aliasof=aliases.*",
+            yaml_file
+        )
+        assert not result.success, result.stderr
+        assert "impossible to Alias more than one Anchor at a time" in result.stderr
+
+    def test_auto_anchor_conflicted(self, script_runner, tmp_path_factory):
+        yamlin = """---
+a_key: &name_taken Conflicting anchored value
+another_key: its value
+a_hash:
+  a_key: A value
+"""
+        yaml_file = create_temp_yaml_file(tmp_path_factory, yamlin)
+        result = script_runner.run(
+            self.command,
+            "--change=a_hash.a_key",
+            "--aliasof=another_key",
+            "--anchor=name_taken",
+            yaml_file
+        )
+        assert not result.success, result.stderr
+        assert "Anchor names must be unique within YAML documents" in result.stderr
+
+    def test_auto_anchor_deconflicted(self, script_runner, tmp_path_factory):
+        yamlin = """---
+silly_key: &some_key Conflicting anchored value
+another_silly_key: &some_key001 Yet another conflict
+some_key: its value
+a_hash:
+  a_key: A value
+"""
+        yamlout = """---
+silly_key: &some_key Conflicting anchored value
+another_silly_key: &some_key001 Yet another conflict
+some_key: &some_key002 its value
+a_hash:
+  a_key: *some_key002
+"""
+        yaml_file = create_temp_yaml_file(tmp_path_factory, yamlin)
+        result = script_runner.run(
+            self.command,
+            "--change=a_hash.a_key",
+            "--aliasof=some_key",
+            yaml_file
+        )
+        assert result.success, result.stderr
+
+        with open(yaml_file, 'r') as fhnd:
+            filedat = fhnd.read()
+        assert filedat == yamlout
+
+    def test_reuse_anchor(self, script_runner, tmp_path_factory):
+        yamlin = """---
+some_key: &has_anchor its value
+a_hash:
+  a_key: A value
+"""
+        yamlout = """---
+some_key: &has_anchor its value
+a_hash:
+  a_key: *has_anchor
+"""
+        yaml_file = create_temp_yaml_file(tmp_path_factory, yamlin)
+        result = script_runner.run(
+            self.command,
+            "--change=a_hash.a_key",
+            "--aliasof=some_key",
+            yaml_file
+        )
+        assert result.success, result.stderr
+
+        with open(yaml_file, 'r') as fhnd:
+            filedat = fhnd.read()
+        assert filedat == yamlout
