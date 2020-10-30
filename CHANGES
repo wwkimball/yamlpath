@@ -4,6 +4,33 @@ Bug Fixes:
   not being considered for comparison.  Any identity key set for the whole AoH
   was being applied to every record in the set.
 
+Enhancements:
+* The yaml-set command-line tool now supports assigning YAML Aliases to target
+  --change|-g nodes, referencing an existing YAML Anchor elsewhere in the
+  document.  This new --aliasof|-A input option merely copies the target value
+  when used on non-YAML files, permitting duplication without knowing the
+  original value.  Should the Anchor not already exist, a unique name will be
+  automatically assigned.  As an alternative, another new option, --anchor|-H
+  permits assigning or changing the name of a new Anchor; this option can only
+  be used with --aliasof|-A.  Further, when --change|-g and --aliasof|-A are
+  identical, --anchor|-H can be used to rename an existing Anchor.
+
+API Changes:
+* New static classes will be gradually replacing generally-useful methods from
+  other classes and eventually the func library.  This release begins this
+  gradual process and moves the following methods:
+  - yamlpath.merger.Merger.combine_merge_anchors
+    -> yamlpath.common.Anchors.combine_merge_anchors
+
+  - yamlpath.merger.Merger.rename_anchor
+    -> yamlpath.common.Anchors.rename_anchor
+
+  - yamlpath.merger.Merger.replace_anchor
+    -> yamlpath.common.Anchors.replace_anchor
+
+  - yamlpath.merger.Merger.scan_for_anchors
+    -> yamlpath.common.Anchors.scan_for_anchors
+
 3.3.0:
 Bug Fixes:
 * It was impossible to install yamlpath 3.x without first installing

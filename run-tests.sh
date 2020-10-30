@@ -13,7 +13,7 @@ if [ 1 -gt "$#" ]; then
 fi
 
 # Delete all cached data
-find ./ -name '__pycache__' -type d -print0 | xargs -r0 -- rm -rf || exit $?
+find ./ -name '__pycache__' -type d -print0 | xargs -0 rm -rf || exit $?
 rm -rf yamlpath.egg-info
 rm -rf /tmp/yamlpath-python-coverage-data
 rm -f .coverage
