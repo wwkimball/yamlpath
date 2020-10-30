@@ -8,11 +8,14 @@ from sys import maxsize, stdin
 from datetime import date
 from typing import Any, Generator, Tuple
 
+import ruamel.yaml # type: ignore
 from ruamel.yaml import YAML
 from ruamel.yaml.parser import ParserError
 from ruamel.yaml.composer import ComposerError, ReusedAnchorWarning
 from ruamel.yaml.constructor import ConstructorError, DuplicateKeyError
 from ruamel.yaml.scanner import ScannerError
+from ruamel.yaml.scalarstring import ScalarString
+from ruamel.yaml.comments import CommentedSeq, CommentedMap
 
 from yamlpath.wrappers import ConsolePrinter
 
@@ -271,3 +274,59 @@ class Parsers:
         elif isinstance(data, date):
             return str(data)
         return data
+
+    @staticmethod
+    def delete_all_comments(dom: Any) -> None:
+        """
+        Recursively delete all comments from a YAML document.
+
+        See:
+        https://stackoverflow.com/questions/60080325/how-to-delete-all-comments-in-ruamel-yaml/60099750#60099750
+
+        Parameters:
+        1. dom (Any) The document to strip of all comments.
+
+        Returns:  N/A
+        """
+        if dom is None:
+            return
+
+        if isinstance(dom, CommentedMap):
+            for key, val in dom.items():
+                Parsers.delete_all_comments(key)
+                Parsers.delete_all_comments(val)
+        elif isinstance(dom, CommentedSeq):
+            for ele in dom:
+                Parsers.delete_all_comments(ele)
+        try:
+            # literal scalarstring might have comment associated with them
+            attr = "comment" if isinstance(dom, ScalarString) \
+                else ruamel.yaml.comments.Comment.attrib
+            delattr(dom, attr)
+        except AttributeError:
+            pass
+
+    @staticmethod
+    def set_flow_style(node: Any, is_flow: bool) -> None:
+        """
+        Recursively apply flow|block style to a node.
+
+        Parameters:
+        1. node (Any) The node to apply flow|block style to.
+        2. is_flow (bool) True=flow-style, False=block-style
+
+        Returns:  N/A
+        """
+        if hasattr(node, "fa"):
+            if is_flow:
+                node.fa.set_flow_style()
+            else:
+                node.fa.set_block_style()
+
+        if isinstance(node, CommentedMap):
+            for key, val in node.non_merged_items():
+                Parsers.set_flow_style(key, is_flow)
+                Parsers.set_flow_style(val, is_flow)
+        elif isinstance(node, CommentedSeq):
+            for ele in node:
+                Parsers.set_flow_style(ele, is_flow)

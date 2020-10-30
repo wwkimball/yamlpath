@@ -81,6 +81,9 @@ API Changes:
   - yamlpath.merger.Merger.combine_merge_anchors
     -> yamlpath.common.Anchors.combine_merge_anchors
 
+  - yamlpath.merger.Merger.delete_all_comments
+    -> yamlpath.common.Anchors.delete_all_comments
+
   - yamlpath.merger.Merger.rename_anchor
     -> yamlpath.common.Anchors.rename_anchor
 
@@ -89,6 +92,15 @@ API Changes:
 
   - yamlpath.merger.Merger.scan_for_anchors
     -> yamlpath.common.Anchors.scan_for_anchors
+
+  - yamlpath.merger.Merger.set_flow_style
+    -> yamlpath.common.Anchors.set_flow_style
+
+  Until you update your code, a deprecation warning will be printed to STDERR
+  every time the yamlpath.func file is imported and every time one of the
+  relocated Merger static methods is called.  To be rid of the message, update
+  your code to use the new sources of the deprecated functions/methods and
+  remove every import of and from yamlpath.func.
 
 3.3.0:
 Bug Fixes:
