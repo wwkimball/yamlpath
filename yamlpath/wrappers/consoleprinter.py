@@ -14,9 +14,9 @@ Requires an object on init which has the following properties:
 Copyright 2018, 2019, 2020 William W. Kimball, Jr. MBA MSIS
 """
 import sys
-from typing import Any, Dict, Generator, List, Tuple, Union
+from typing import Any, Dict, Generator, List, Set, Tuple, Union
 
-from ruamel.yaml.comments import CommentedMap
+from ruamel.yaml.comments import CommentedBase, CommentedMap, CommentedSet
 
 from yamlpath.wrappers.nodecoords import NodeCoords
 
@@ -198,20 +198,20 @@ class ConsolePrinter:
                 print(ConsolePrinter._debug_prefix_lines(
                     "{}{}".format(prefix, footer)))
 
-    @classmethod
-    def _debug_prefix_lines(cls, line: str) -> str:
+    @staticmethod
+    def _debug_prefix_lines(line: str) -> str:
         """Helper for debug."""
         return "DEBUG:  {}".format(str(line).replace("\n", "\nDEBUG:  "))
 
-    @classmethod
-    def _debug_get_anchor(cls, data: Any) -> str:
+    @staticmethod
+    def _debug_get_anchor(data: Any) -> str:
         """Helper for debug."""
         return ("&{}".format(data.anchor.value)
                 if hasattr(data, "anchor") and data.anchor.value is not None
                 else "")
 
-    @classmethod
-    def _debug_dump(cls, data: Any, **kwargs) -> Generator[str, None, None]:
+    @staticmethod
+    def _debug_dump(data: Any, **kwargs) -> Generator[str, None, None]:
         """Helper for debug."""
         prefix = kwargs.pop("prefix", "")
         if isinstance(data, dict):
@@ -219,7 +219,7 @@ class ConsolePrinter:
                 data, prefix=prefix, **kwargs
             ):
                 yield line
-        elif isinstance(data, (list, tuple)):
+        elif isinstance(data, (CommentedSet, list, set, tuple)):
             for line in ConsolePrinter._debug_list(
                 data, prefix=prefix, **kwargs
             ):
@@ -232,24 +232,31 @@ class ConsolePrinter:
         else:
             yield ConsolePrinter._debug_scalar(data, prefix=prefix, **kwargs)
 
-    @classmethod
-    def _debug_scalar(cls, data: Any, **kwargs) -> str:
+    @staticmethod
+    def _debug_scalar(data: Any, **kwargs) -> str:
         """Helper for debug."""
         prefix = kwargs.pop("prefix", "")
         print_anchor = kwargs.pop("print_anchor", True)
         print_type = kwargs.pop("print_type", False)
+        dtype = type(data) if print_type else ""
 
         if print_anchor:
             anchor = ConsolePrinter._debug_get_anchor(data)
             if anchor:
                 prefix += "({})".format(anchor)
 
-        return ConsolePrinter._debug_prefix_lines(
-            "{}{}{}".format(prefix, data, (type(data) if print_type else "")))
+        if (isinstance(data, CommentedBase)
+            and hasattr(data, "tag")
+            and data.tag.value
+        ):
+            prefix += "{{{}}}".format(data.tag.value)
 
-    @classmethod
+        return ConsolePrinter._debug_prefix_lines(
+            "{}{}{}".format(prefix, data, dtype))
+
+    @staticmethod
     def _debug_node_coord(
-        cls, data: NodeCoords, **kwargs
+        data: NodeCoords, **kwargs
     ) -> Generator[str, None, None]:
         """Helper method for debug."""
         prefix = kwargs.pop("prefix", "")
@@ -274,28 +281,35 @@ class ConsolePrinter:
         ):
             yield line
 
-    @classmethod
+    @staticmethod
     def _debug_list(
-        cls, data: Union[List[Any], Tuple[Any, ...]], **kwargs
+        data: Union[List[Any], Tuple[Any, ...], Set[Any]], **kwargs
     ) -> Generator[str, None, None]:
         """Helper for debug."""
         prefix = kwargs.pop("prefix", "")
+
+        if (isinstance(data, (CommentedBase, CommentedSet))
+            and hasattr(data, "tag")
+            and data.tag.value
+        ):
+            prefix += "{{{}}}".format(data.tag.value)
+
         for idx, ele in enumerate(data):
             ele_prefix = "{}[{}]".format(prefix, idx)
-            if isinstance(ele, dict):
-                for line in ConsolePrinter._debug_dict(ele, prefix=ele_prefix):
-                    yield line
-            elif isinstance(ele, list):
-                for line in ConsolePrinter._debug_list(ele, prefix=ele_prefix):
-                    yield line
-            else:
-                for line in ConsolePrinter._debug_dump(
-                    ele, prefix=ele_prefix, print_type=True
-                ):
-                    yield line
 
-    @classmethod
-    def _debug_get_kv_anchors(cls, key: Any, value: Any) -> str:
+            if (isinstance(data, (CommentedBase, CommentedSet))
+                and hasattr(ele, "tag")
+                and ele.tag.value
+            ):
+                ele_prefix += "{{{}}}".format(ele.tag.value)
+
+            for line in ConsolePrinter._debug_dump(
+                ele, prefix=ele_prefix, print_type=True
+            ):
+                yield line
+
+    @staticmethod
+    def _debug_get_kv_anchors(key: Any, value: Any) -> str:
         """Helper for debug."""
         key_anchor = ConsolePrinter._debug_get_anchor(key)
         val_anchor = ConsolePrinter._debug_get_anchor(value)
@@ -308,9 +322,9 @@ class ConsolePrinter:
             display_anchor = "(_,{})".format(val_anchor)
         return display_anchor
 
-    @classmethod
+    @staticmethod
     def _debug_dict(
-        cls, data: Union[Dict, CommentedMap], **kwargs
+        data: Union[Dict, CommentedMap], **kwargs
     ) -> Generator[str, None, None]:
         """Helper for debug."""
         prefix = kwargs.pop("prefix", "")
@@ -330,12 +344,7 @@ class ConsolePrinter:
             display_anchor = ConsolePrinter._debug_get_kv_anchors(key, val)
             kv_prefix = "{}[{}]{}".format(prefix, display_key, display_anchor)
 
-            if isinstance(val, dict):
-                for line in ConsolePrinter._debug_dict(val, prefix=kv_prefix):
-                    yield "{}".format(line)
-            elif isinstance(val, list):
-                for line in ConsolePrinter._debug_list(val, prefix=kv_prefix):
-                    yield "{}".format(line)
-            else:
-                yield ConsolePrinter._debug_scalar(
-                    val, prefix=kv_prefix, print_type=True, print_anchor=False)
+            for line in ConsolePrinter._debug_dump(
+                val, prefix=kv_prefix, print_type=True, print_anchor=False
+            ):
+                yield line
