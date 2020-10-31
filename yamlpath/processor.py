@@ -6,6 +6,8 @@ Copyright 2018, 2019, 2020 William W. Kimball, Jr. MBA MSIS
 """
 from typing import Any, Generator, List, Union
 
+from ruamel.yaml.comments import TaggedScalar
+
 from yamlpath.common import Nodes, Searches
 from yamlpath import YAMLPath
 from yamlpath.path import SearchTerms, CollectorTerms
@@ -1206,7 +1208,10 @@ class Processor:
         change_node = parent[parentref]
         new_node = Nodes.make_new_node(change_node, value, value_format)
         if value_tag:
-            new_node.tag = value_tag
+            if not isinstance(new_node, TaggedScalar):
+                new_node = TaggedScalar(value=new_node, tag=value_tag)
+            else:
+                new_node.tag = value_tag
 
         self.logger.debug(
             "Changing the following node of type {} to {}<{}> as {}, a {} YAML"
