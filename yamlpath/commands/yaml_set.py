@@ -283,7 +283,7 @@ def save_to_json_file(args, log, yaml_data):
     """Save to a JSON file."""
     log.verbose("Writing changed data as JSON to {}.".format(args.yaml_file))
     with open(args.yaml_file, 'w') as out_fhnd:
-        json.dump(Parsers.stringify_dates(yaml_data), out_fhnd)
+        json.dump(Parsers.jsonify_yaml_data(yaml_data), out_fhnd)
 
 def save_to_yaml_file(args, log, yaml_parser, yaml_data, backup_file):
     """Save to a YAML file."""
@@ -356,7 +356,7 @@ def write_output_document(args, log, yaml, yaml_data):
         if write_document_as_yaml(args.yaml_file, yaml_data):
             yaml.dump(yaml_data, sys.stdout)
         else:
-            json.dump(Parsers.stringify_dates(yaml_data), sys.stdout)
+            json.dump(Parsers.jsonify_yaml_data(yaml_data), sys.stdout)
     else:
         save_to_file(args, log, yaml, yaml_data, backup_file)
 

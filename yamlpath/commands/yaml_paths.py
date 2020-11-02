@@ -698,7 +698,7 @@ def print_results(
                 node = node_coordinate.node
                 if isinstance(node, (dict, list)):
                     resline += "{}".format(
-                        json.dumps(Parsers.stringify_dates(node)))
+                        json.dumps(Parsers.jsonify_yaml_data(node)))
                 else:
                     resline += "{}".format(str(node).replace("\n", r"\n"))
                 break

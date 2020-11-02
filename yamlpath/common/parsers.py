@@ -15,7 +15,7 @@ from ruamel.yaml.composer import ComposerError, ReusedAnchorWarning
 from ruamel.yaml.constructor import ConstructorError, DuplicateKeyError
 from ruamel.yaml.scanner import ScannerError
 from ruamel.yaml.scalarstring import ScalarString
-from ruamel.yaml.comments import CommentedSeq, CommentedMap
+from ruamel.yaml.comments import CommentedSeq, CommentedMap, TaggedScalar
 
 from yamlpath.wrappers import ConsolePrinter
 
@@ -262,6 +262,10 @@ class Parsers:
         """
         Recurse through a data structure, converting all dates to strings.
 
+        The jsonify_yaml_data covers more data-types than just dates.  This
+        stringify_dates method may be removed in a future version in favor of
+        the more comprehensive jsonify_yaml_data method.
+
         This is required for JSON output, which has no serialization support
         for native date objects.
         """
@@ -271,6 +275,28 @@ class Parsers:
         elif isinstance(data, list):
             for idx, ele in enumerate(data):
                 data[idx] = Parsers.stringify_dates(ele)
+        elif isinstance(data, date):
+            return str(data)
+        return data
+
+    @staticmethod
+    def jsonify_yaml_data(data: Any) -> Any:
+        """
+        Recurse through a data structure, converting all non-JSON-serializable
+        values to strings.
+
+        This is required when writing to JSON, which has no serialization
+        support for certain YAML extensions -- like tags -- and some otherwise
+        native data-types, like dates.
+        """
+        if isinstance(data, dict):
+            for key, val in data.items():
+                data[key] = Parsers.jsonify_yaml_data(val)
+        elif isinstance(data, list):
+            for idx, ele in enumerate(data):
+                data[idx] = Parsers.jsonify_yaml_data(ele)
+        elif isinstance(data, TaggedScalar):
+            return Parsers.jsonify_yaml_data(data.value)
         elif isinstance(data, date):
             return str(data)
         return data

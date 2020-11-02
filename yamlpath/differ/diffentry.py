@@ -109,7 +109,7 @@ class DiffEntry:
     def _jsonify_data(cls, data: Any) -> str:
         """Generate JSON representation of data."""
         if isinstance(data, (list, dict)):
-            return json.dumps(Parsers.stringify_dates(data))
+            return json.dumps(Parsers.jsonify_yaml_data(data))
         return str(data)
 
     @classmethod

@@ -187,7 +187,7 @@ def main():
     try:
         for node in discovered_nodes:
             if isinstance(node, (dict, list)):
-                print(json.dumps(Parsers.stringify_dates(node)))
+                print(json.dumps(Parsers.jsonify_yaml_data(node)))
             else:
                 print("{}".format(str(node).replace("\n", r"\n")))
     except RecursionError:

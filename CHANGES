@@ -72,6 +72,9 @@ API Changes:
 
   - yamlpath.func.stringify_dates
     -> yamlpath.common.Parsers.stringify_dates
+    NOTE that this method is deprecated and will be eliminated in favor of
+    using its more comprehensive replacement,
+    yamlpath.common.Parsers.jsonify_yaml_data
 
   - yamlpath.func.unwrap_node_coords
     -> yamlpath.wrappers.nodecoords.NodeCoords.unwrap_node_coords

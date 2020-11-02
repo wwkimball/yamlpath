@@ -302,12 +302,12 @@ def write_output_document(args, log, merger, yaml_editor):
     if args.output:
         with open(args.output, 'w') as out_fhnd:
             if document_is_json:
-                json.dump(Parsers.stringify_dates(merger.data), out_fhnd)
+                json.dump(Parsers.jsonify_yaml_data(merger.data), out_fhnd)
             else:
                 yaml_editor.dump(merger.data, out_fhnd)
     else:
         if document_is_json:
-            json.dump(Parsers.stringify_dates(merger.data), sys.stdout)
+            json.dump(Parsers.jsonify_yaml_data(merger.data), sys.stdout)
         else:
             yaml_editor.dump(merger.data, sys.stdout)
 

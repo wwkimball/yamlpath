@@ -636,7 +636,7 @@ class Merger:
             # Dump the document as true JSON and reload it; this automatically
             # exlodes all aliases.
             xfer_buffer = StringIO()
-            json.dump(Parsers.stringify_dates(self.data), xfer_buffer)
+            json.dump(Parsers.jsonify_yaml_data(self.data), xfer_buffer)
             xfer_buffer.seek(0)
             self.data = yaml_writer.load(xfer_buffer)
 
