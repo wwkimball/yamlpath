@@ -3,7 +3,7 @@ Implement YAML document Merger.
 
 Copyright 2020 William W. Kimball, Jr. MBA MSIS
 """
-#import sys  # For deprecation warnings
+import sys  # For deprecation warnings
 from typing import Any, Dict, List, Set, Tuple
 import json
 from io import StringIO
@@ -32,6 +32,7 @@ class Merger:
                            " the next major release of yamlpath.  Please refer"
                            " to the CHANGES file for more information (and how"
                            " to get rid of this message).")
+    depwarn_printed = False
 
     def __init__(
             self, logger: ConsolePrinter, lhs: Any, config: MergerConfig
@@ -650,38 +651,50 @@ class Merger:
 
         return OutputDocTypes.JSON if is_flow else OutputDocTypes.YAML
 
-    # @staticmethod
-    # def set_flow_style(*args):
-    #     """Relay function call to static method."""
-    #     print(Merger.DEPRECATION_WARNING, file=sys.stderr)
-    #     Parsers.set_flow_style(*args)
+    @classmethod
+    def set_flow_style(cls, *args):
+        """Relay function call to static method."""
+        if not cls.depwarn_printed:
+            cls.depwarn_printed = True
+            print(Merger.DEPRECATION_WARNING, file=sys.stderr)
+        Parsers.set_flow_style(*args)
 
-    # @staticmethod
-    # def delete_all_comments(*args):
-    #     """Relay function call to static method."""
-    #     print(Merger.DEPRECATION_WARNING, file=sys.stderr)
-    #     Parsers.delete_all_comments(*args)
+    @classmethod
+    def delete_all_comments(cls, *args):
+        """Relay function call to static method."""
+        if not cls.depwarn_printed:
+            cls.depwarn_printed = True
+            print(Merger.DEPRECATION_WARNING, file=sys.stderr)
+        Parsers.delete_all_comments(*args)
 
-    # @staticmethod
-    # def combine_merge_anchors(*args):
-    #     """Relay function call to static method."""
-    #     print(Merger.DEPRECATION_WARNING, file=sys.stderr)
-    #     Anchors.combine_merge_anchors(*args)
+    @classmethod
+    def combine_merge_anchors(cls, *args):
+        """Relay function call to static method."""
+        if not cls.depwarn_printed:
+            cls.depwarn_printed = True
+            print(Merger.DEPRECATION_WARNING, file=sys.stderr)
+        Anchors.combine_merge_anchors(*args)
 
-    # @staticmethod
-    # def rename_anchor(*args):
-    #     """Relay function call to static method."""
-    #     print(Merger.DEPRECATION_WARNING, file=sys.stderr)
-    #     Anchors.rename_anchor(*args)
+    @classmethod
+    def rename_anchor(cls, *args):
+        """Relay function call to static method."""
+        if not cls.depwarn_printed:
+            cls.depwarn_printed = True
+            print(Merger.DEPRECATION_WARNING, file=sys.stderr)
+        Anchors.rename_anchor(*args)
 
-    # @staticmethod
-    # def replace_anchor(*args):
-    #     """Relay function call to static method."""
-    #     print(Merger.DEPRECATION_WARNING, file=sys.stderr)
-    #     Anchors.replace_anchor(*args)
+    @classmethod
+    def replace_anchor(cls, *args):
+        """Relay function call to static method."""
+        if not cls.depwarn_printed:
+            cls.depwarn_printed = True
+            print(Merger.DEPRECATION_WARNING, file=sys.stderr)
+        Anchors.replace_anchor(*args)
 
-    # @staticmethod
-    # def scan_for_anchors(*args):
-    #     """Relay function call to static method."""
-    #     print(Merger.DEPRECATION_WARNING, file=sys.stderr)
-    #     Anchors.scan_for_anchors(*args)
+    @classmethod
+    def scan_for_anchors(cls, *args):
+        """Relay function call to static method."""
+        if not cls.depwarn_printed:
+            cls.depwarn_printed = True
+            print(Merger.DEPRECATION_WARNING, file=sys.stderr)
+        Anchors.scan_for_anchors(*args)

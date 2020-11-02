@@ -1,19 +1,19 @@
 3.3.1:
 Bug Fixes:
-* Custom identity keys for specific records in AoHs of the RHS document were
-  not being considered for comparison.  Any identity key set for the whole AoH
-  was being applied to every record in the set.
+* For the yaml-diff command-line tool, custom identity keys for specific
+  records in AoHs of the RHS document were not being considered for comparison.
+  Any identity key set for the whole AoH was being applied to every record in
+  the set.
 
 Enhancements:
 * The yaml-set command-line tool now supports assigning YAML Aliases to target
-  --change|-g nodes, referencing an existing YAML Anchor elsewhere in the
-  document.  This new --aliasof|-A input option merely copies the target value
-  when used on non-YAML files, permitting duplication without knowing the
-  original value.  Should the Anchor not already exist, a unique name will be
-  automatically assigned.  As an alternative, another new option, --anchor|-H
-  permits assigning or changing the name of a new Anchor; this option can only
-  be used with --aliasof|-A.  Further, when --change|-g and --aliasof|-A are
-  identical, --anchor|-H can be used to rename an existing Anchor.
+  --change|-g nodes, referencing any other node via --aliasof|-A whether it is
+  already Anchored, or not.  Should the Anchor not already exist, a unique name
+  will be automatically assigned.  This name can instead be set via
+  --anchor|-H.  Setting --change|-g and --aliasof|-A to the same node along
+  with a new --anchor|-H enables renaming an existing Anchor and its Aliases.
+  Using --aliasof|-A with non-YAML files merely duplicates the target value to
+  the indicated --change|-g nodes.
 * The yaml-set command-line tool now supports assigning custom YAML tags (data
   type specifiers) to nodes created or updated during the operation.
 
@@ -97,7 +97,7 @@ API Changes:
     -> yamlpath.common.Anchors.set_flow_style
 
   Until you update your code, a deprecation warning will be printed to STDERR
-  every time the yamlpath.func file is imported and every time one of the
+  every time the yamlpath.func file is imported and the first time one of the
   relocated Merger static methods is called.  To be rid of the message, update
   your code to use the new sources of the deprecated functions/methods and
   remove every import of and from yamlpath.func.
