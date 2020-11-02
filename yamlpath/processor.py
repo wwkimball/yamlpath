@@ -1179,7 +1179,7 @@ class Processor:
             # Empty document
             return
 
-        # This update_refs function was contributed by Anthon van der Neut, the
+        # This recurse function was contributed by Anthon van der Neut, the
         # author of ruamel.yaml, to resolve how to update all references to an
         # Anchor throughout the parsed data structure.
         def recurse(data, parent, parentref, reference_node, replacement_node):
@@ -1205,13 +1205,27 @@ class Processor:
                         recurse(item, parent, parentref, reference_node,
                                 replacement_node)
 
+        # Due to --anchor and --tag options, the changing node may not be a
+        # leaf (Scalar).
         change_node = parent[parentref]
-        new_node = Nodes.make_new_node(change_node, value, value_format)
-        if value_tag:
-            if not isinstance(new_node, TaggedScalar):
-                new_node = TaggedScalar(value=new_node, tag=value_tag)
-            else:
-                new_node.tag = value_tag
+        if isinstance(change_node, (dict, list)):
+            # Non-Scalar node
+            new_node = change_node
+            self.logger.debug(
+                "Attempting to set the tag of a {} node:"
+                .format(type(new_node)),
+                prefix="Processor::_update_node:  ",
+                data=new_node)
+
+            if value_tag:
+                new_node.yaml_set_tag(value_tag)
+        else:
+            new_node = Nodes.make_new_node(change_node, value, value_format)
+            if value_tag:
+                if not isinstance(new_node, TaggedScalar):
+                    new_node = TaggedScalar(value=new_node, tag=value_tag)
+                else:
+                    new_node.tag = value_tag
 
         self.logger.debug(
             "Changing the following node of type {} to {}<{}> as {}, a {} YAML"

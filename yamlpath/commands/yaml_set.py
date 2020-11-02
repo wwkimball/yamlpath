@@ -197,11 +197,12 @@ def validateargs(args, log):
             or args.stdin
             or args.random
             or args.delete
+            or args.tag
     ):
         has_errors = True
         log.error(
             "Exactly one of the following must be set:  --value, --aliasof,"
-            " --file, --stdin, or --random")
+            " --file, --stdin, --random, or --tag")
 
     # --stdin cannot be used with -, explicit or implied
     if args.stdin and in_stream_mode:
