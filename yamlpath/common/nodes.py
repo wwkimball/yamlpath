@@ -7,7 +7,7 @@ import ast
 from distutils.util import strtobool
 from typing import Any
 
-from ruamel.yaml.comments import CommentedSeq, CommentedMap
+from ruamel.yaml.comments import CommentedSeq, CommentedMap, TaggedScalar
 from ruamel.yaml.scalarbool import ScalarBoolean
 from ruamel.yaml.scalarfloat import ScalarFloat
 from ruamel.yaml.scalarint import ScalarInt
@@ -32,8 +32,7 @@ class Nodes:
     @staticmethod
     # pylint: disable=too-many-branches,too-many-statements,too-many-locals
     def make_new_node(
-        source_node: Any, value: Any,
-        value_format: YAMLValueFormats
+        source_node: Any, value: Any, value_format: YAMLValueFormats, **kwargs
     ) -> Any:
         """
         Create a new data node based on a sample node.
@@ -45,7 +44,10 @@ class Nodes:
         1. source_node (Any) The node from which to copy type
         2. value (Any) The value to assign to the new node
         3. value_format (YAMLValueFormats) The YAML presentation format to
-        apply to value when it is dumped
+           apply to value when it is dumped
+
+        Keyword Arguments:
+        * tag (str) Custom data-type tag to apply to this node
 
         Returns: (Any) The new node
 
@@ -126,13 +128,18 @@ class Nodes:
             new_type = type(wrapped_value)
             new_format = YAMLValueFormats.from_node(wrapped_value)
             if new_format is not YAMLValueFormats.DEFAULT:
-                new_node = Nodes.make_new_node(source_node, value, new_format)
+                new_node = Nodes.make_new_node(
+                    source_node, value, new_format, **kwargs)
 
         if new_node is None:
             if hasattr(source_node, "anchor"):
                 new_node = new_type(new_value, anchor=source_node.anchor.value)
             else:
                 new_node = new_type(new_value)
+
+        # Apply a custom tag, if provided
+        if "tag" in kwargs:
+            new_node = Nodes.apply_yaml_tag(new_node, kwargs.pop("tag"))
 
         return new_node
 
@@ -312,3 +319,44 @@ class Nodes:
                 ]
 
         return new_element
+
+    @staticmethod
+    def apply_yaml_tag(node: Any, value_tag: str) -> Any:
+        """
+        Apply a YAML Tag (AKA Schema) to a node or remove one.
+
+        Using None for the tag simply preserves the existing tag.  To delete a
+        tag, it must be set to an empty-string.
+
+        Parameters:
+        1. node (Any) the node to update
+        2. value_tag (str) Tag to apply (or None to remove)
+
+        Returns: (Any) the updated node; may be new data, so replace your node
+        with this returned value!
+        """
+        if value_tag is None:
+            raise NotImplementedError
+            return node
+
+        new_node = node
+        if Nodes.node_is_leaf(new_node):
+            if isinstance(new_node, TaggedScalar):
+                if value_tag:
+                    new_node.yaml_set_tag(value_tag)
+                else:
+                    # Strip off the tag
+                    new_node = node.value
+            elif value_tag:
+                new_node = TaggedScalar(value=node, tag=value_tag)
+                if hasattr(node, "anchor") and node.anchor.value:
+                    new_node.yaml_set_anchor(node.anchor.value)
+        else:
+            new_node.yaml_set_tag(value_tag)
+
+        return new_node
+
+    @staticmethod
+    def node_is_leaf(node: Any) -> bool:
+        """Indicate whether a node is a leaf (Scalar data)."""
+        return not isinstance(node, (dict, list, set))

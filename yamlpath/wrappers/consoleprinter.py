@@ -16,7 +16,12 @@ Copyright 2018, 2019, 2020 William W. Kimball, Jr. MBA MSIS
 import sys
 from typing import Any, Dict, Generator, List, Set, Tuple, Union
 
-from ruamel.yaml.comments import CommentedBase, CommentedMap, CommentedSet
+from ruamel.yaml.comments import (
+    CommentedBase,
+    CommentedMap,
+    CommentedSet,
+    TaggedScalar
+)
 
 from yamlpath.wrappers.nodecoords import NodeCoords
 
@@ -237,22 +242,28 @@ class ConsolePrinter:
         """Helper for debug."""
         prefix = kwargs.pop("prefix", "")
         print_anchor = kwargs.pop("print_anchor", True)
+        print_tag = kwargs.pop("print_tag", True)
         print_type = kwargs.pop("print_type", False)
         dtype = type(data) if print_type else ""
+        anchor_prefix = ""
+        print_prefix = prefix
 
         if print_anchor:
             anchor = ConsolePrinter._debug_get_anchor(data)
             if anchor:
-                prefix += "({})".format(anchor)
+                anchor_prefix = "({})".format(anchor)
 
-        if (isinstance(data, CommentedBase)
-            and hasattr(data, "tag")
-            and data.tag.value
-        ):
-            prefix += "{{{}}}".format(data.tag.value)
+        if print_tag:
+            if isinstance(data, TaggedScalar):
+                tag_prefix = "{}{}<{}>".format(
+                    print_prefix, anchor_prefix, data.tag.value)
+                return ConsolePrinter._debug_scalar(
+                        data.value, prefix=tag_prefix,
+                        print_anchor=False, print_tag=False, print_type=True)
 
+        print_prefix += anchor_prefix
         return ConsolePrinter._debug_prefix_lines(
-            "{}{}{}".format(prefix, data, dtype))
+            "{}{}{}".format(print_prefix, data, dtype))
 
     @staticmethod
     def _debug_node_coord(
@@ -292,19 +303,20 @@ class ConsolePrinter:
             and hasattr(data, "tag")
             and data.tag.value
         ):
-            prefix += "{{{}}}".format(data.tag.value)
+            prefix += "<{}>".format(data.tag.value)
 
         for idx, ele in enumerate(data):
             ele_prefix = "{}[{}]".format(prefix, idx)
 
-            if (isinstance(data, (CommentedBase, CommentedSet))
-                and hasattr(ele, "tag")
-                and ele.tag.value
-            ):
-                ele_prefix += "{{{}}}".format(ele.tag.value)
+            # if (isinstance(data, (CommentedBase, CommentedSet))
+            #     and hasattr(ele, "tag")
+            #     and ele.tag.value
+            # ):
+            #     ele_prefix += "<{}>".format(ele.tag.value)
 
             for line in ConsolePrinter._debug_dump(
-                ele, prefix=ele_prefix, print_type=True
+                ele, prefix=ele_prefix, print_anchor=True, print_tag=True,
+                print_type=True
             ):
                 yield line
 
@@ -345,6 +357,7 @@ class ConsolePrinter:
             kv_prefix = "{}[{}]{}".format(prefix, display_key, display_anchor)
 
             for line in ConsolePrinter._debug_dump(
-                val, prefix=kv_prefix, print_type=True, print_anchor=False
+                val, prefix=kv_prefix, print_type=True, print_tag=True,
+                print_anchor=False
             ):
                 yield line

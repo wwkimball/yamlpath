@@ -197,7 +197,6 @@ def validateargs(args, log):
             or args.stdin
             or args.random
             or args.delete
-            or args.tag
     ):
         has_errors = True
         log.error(

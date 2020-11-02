@@ -6,8 +6,6 @@ Copyright 2018, 2019, 2020 William W. Kimball, Jr. MBA MSIS
 """
 from typing import Any, Generator, List, Union
 
-from ruamel.yaml.comments import TaggedScalar
-
 from yamlpath.common import Nodes, Searches
 from yamlpath import YAMLPath
 from yamlpath.path import SearchTerms, CollectorTerms
@@ -1176,7 +1174,9 @@ class Processor:
         Raises: N/A
         """
         if parent is None:
-            # Empty document
+            # Empty document or the document root
+            self.logger.debug(
+                "Processor::_update_node:  Ignoring node with no parent!")
             return
 
         # This recurse function was contributed by Anthon van der Neut, the
@@ -1208,31 +1208,13 @@ class Processor:
         # Due to --anchor and --tag options, the changing node may not be a
         # leaf (Scalar).
         change_node = parent[parentref]
-        if isinstance(change_node, (dict, list)):
-            # Non-Scalar node
-            new_node = change_node
-            self.logger.debug(
-                "Attempting to set the tag of a {} node:"
-                .format(type(new_node)),
-                prefix="Processor::_update_node:  ",
-                data=new_node)
-
-            if value_tag:
-                new_node.yaml_set_tag(value_tag)
-        else:
-            new_node = Nodes.make_new_node(change_node, value, value_format)
-            if value_tag:
-                if not isinstance(new_node, TaggedScalar):
-                    new_node = TaggedScalar(value=new_node, tag=value_tag)
-                else:
-                    new_node.tag = value_tag
+        new_node = Nodes.make_new_node(
+            change_node, value, value_format, tag=value_tag)
 
         self.logger.debug(
-            "Changing the following node of type {} to {}<{}> as {}, a {} YAML"
-            " element:"
-            .format(type(change_node), value, value_format,
-                     new_node, type(new_node)),
-            prefix="Processor::_update_node:  ", data=change_node)
+            "Changing the following <{}> formatted node:".format(value_format),
+            prefix="Processor::_update_node:  ",
+            data={ "__FROM__": change_node, "___TO___": new_node })
 
         recurse(self.data, parent, parentref, change_node, new_node)
 
