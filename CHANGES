@@ -1,4 +1,4 @@
-3.3.1:
+3.4.0:
 Bug Fixes:
 * For the yaml-diff command-line tool, custom identity keys for specific
   records in AoHs of the RHS document were not being considered for comparison.
@@ -14,8 +14,9 @@ Enhancements:
   with a new --anchor|-H enables renaming an existing Anchor and its Aliases.
   Using --aliasof|-A with non-YAML files merely duplicates the target value to
   the indicated --change|-g nodes.
-* The yaml-set command-line tool now supports assigning custom YAML tags (data
-  type specifiers) to nodes created or updated during the operation.
+* With a new --tag|-T auxilliary option, the yaml-set command-line tool now
+  supports assigning custom YAML tags (data-type specifiers) to nodes created
+  or updated during the operation.
 
 API Changes:
 * The yamlpath.func library is too big and some very useful general code has
