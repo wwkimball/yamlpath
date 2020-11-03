@@ -343,8 +343,9 @@ class Nodes:
         tag, it must be set to an empty-string.
 
         Parameters:
-        1. node (Any) the node to update
-        2. value_tag (str) Tag to apply (or None to remove)
+        1. document (Any) the document in which the node exists
+        2. node (Any) the node to update
+        3. value_tag (str) Tag to apply (or None to remove)
 
         Returns: (Any) the updated node; may be new data, so replace your node
         with this returned value!

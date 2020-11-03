@@ -197,6 +197,7 @@ def validateargs(args, log):
             or args.stdin
             or args.random
             or args.delete
+            or args.tag
     ):
         has_errors = True
         log.error(
@@ -472,6 +473,20 @@ def _alias_nodes(
             prefix="yaml_set::_alias_nodes:  ")
         node_coord.parent[node_coord.parentref] = anchor_node
 
+def _tag_nodes(document, tag, nodes):
+    """Assign a data-type tag to a set of nodes."""
+    for node_coord in nodes:
+        old_node = node_coord.node
+        if node_coord.parent is None:
+            node_coord.node.yaml_set_tag(tag)
+        else:
+            node_coord.parent[node_coord.parentref] = Nodes.apply_yaml_tag(
+                node_coord.node, tag)
+            if Anchors.get_node_anchor(old_node) is not None:
+                Anchors.replace_anchor(
+                    document, old_node,
+                    node_coord.parent[node_coord.parentref])
+
 # pylint: disable=locally-disabled,too-many-locals,too-many-branches,too-many-statements
 def main():
     """Main code."""
@@ -484,18 +499,23 @@ def main():
     # Obtain the replacement value
     consumed_stdin = False
     new_value = None
+    has_new_value = False
     if args.value or args.value == "":
         new_value = args.value
+        has_new_value = True
     elif args.stdin:
         new_value = ''.join(sys.stdin.readlines())
         consumed_stdin = True
+        has_new_value = True
     elif args.file:
         with open(args.file, 'r') as fhnd:
             new_value = fhnd.read().rstrip()
+        has_new_value = True
     elif args.random is not None:
         new_value = ''.join(
             secrets.choice(args.random_from) for _ in range(args.random)
         )
+        has_new_value = True
 
     # Prep the YAML parser
     yaml = Parsers.get_yaml_editor()
@@ -627,13 +647,15 @@ def main():
                 change_path, new_value, output=output_type, mustexist=False)
         except EYAMLCommandException as ex:
             log.critical(ex, 2)
-    else:
+    elif has_new_value:
         try:
             processor.set_value(
                 change_path, new_value, value_format=args.format,
                 mustexist=must_exist, tag=args.tag)
         except YAMLPathException as ex:
             log.critical(ex, 1)
+    elif args.tag:
+        _tag_nodes(processor.data, args.tag, change_node_coordinates)
 
     # Write out the result
     write_output_document(args, log, yaml, yaml_data)
