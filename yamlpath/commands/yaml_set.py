@@ -136,7 +136,8 @@ def processcli():
     parser.add_argument(
         "-T", "--tag",
         metavar="TAG",
-        help="assign a custom data-type tag to the changed node(s)")
+        help="assign a custom YAML (data-type) tag to the changed nodes; can"
+             " be used without other input options to assign or change a tag")
 
     eyaml_group = parser.add_argument_group(
         "EYAML options", "Left unset, the EYAML keys will default to your\
