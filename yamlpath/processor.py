@@ -1205,8 +1205,6 @@ class Processor:
                         recurse(item, parent, parentref, reference_node,
                                 replacement_node)
 
-        # Due to --anchor and --tag options, the changing node may not be a
-        # leaf (Scalar).
         change_node = parent[parentref]
         new_node = Nodes.make_new_node(
             change_node, value, value_format, tag=value_tag)

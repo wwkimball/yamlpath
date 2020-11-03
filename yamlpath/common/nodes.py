@@ -123,9 +123,21 @@ class Nodes:
                     .format(valform, value)
                 ) from wrap_ex
         else:
-            # Punt to whatever the best type may be
-            wrapped_value = Nodes.wrap_type(value)
-            new_type = type(wrapped_value)
+            # Punt to whatever the best Scalar type may be
+            try:
+                wrapped_value = Nodes.wrap_type(value)
+            except ValueError:
+                # Value cannot be safely converted to any native type
+                new_type = PlainScalarString
+                wrapped_value = PlainScalarString(value)
+
+            if Nodes.node_is_leaf(wrapped_value):
+                new_type = type(wrapped_value)
+            else:
+                # Disallow conversions to complex types
+                new_type = PlainScalarString
+                wrapped_value = PlainScalarString(value)
+
             new_format = YAMLValueFormats.from_node(wrapped_value)
             if new_format is not YAMLValueFormats.DEFAULT:
                 new_node = Nodes.make_new_node(
