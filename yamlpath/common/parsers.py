@@ -282,8 +282,7 @@ class Parsers:
     @staticmethod
     def jsonify_yaml_data(data: Any) -> Any:
         """
-        Recurse through a data structure, converting all non-JSON-serializable
-        values to strings.
+        Convert all non-JSON-serializable values to strings.
 
         This is required when writing to JSON, which has no serialization
         support for certain YAML extensions -- like tags -- and some otherwise

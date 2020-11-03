@@ -133,6 +133,8 @@ class Nodes:
 
         if new_node is None:
             if hasattr(source_node, "anchor"):
+                if new_type is str:
+                    new_type = PlainScalarString
                 new_node = new_type(new_value, anchor=source_node.anchor.value)
             else:
                 new_node = new_type(new_value)

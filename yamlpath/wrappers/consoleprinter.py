@@ -224,7 +224,7 @@ class ConsolePrinter:
                 data, prefix=prefix, **kwargs
             ):
                 yield line
-        elif isinstance(data, (CommentedSet, list, set, tuple)):
+        elif isinstance(data, (list, set, tuple)):
             for line in ConsolePrinter._debug_list(
                 data, prefix=prefix, **kwargs
             ):
