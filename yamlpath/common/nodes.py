@@ -336,7 +336,6 @@ class Nodes:
         with this returned value!
         """
         if value_tag is None:
-            raise NotImplementedError
             return node
 
         new_node = node
