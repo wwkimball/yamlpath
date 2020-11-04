@@ -3,7 +3,7 @@ Implement Anchors, a static library of generally-useful code for YAML Anchors.
 
 Copyright 2020 William W. Kimball, Jr. MBA MSIS
 """
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from ruamel.yaml.comments import CommentedSeq, CommentedMap
 
@@ -169,3 +169,15 @@ class Anchors:
             new_anchor = "{}{:03d}".format(base_name, anchor_id)
 
         return new_anchor
+
+    @staticmethod
+    def get_node_anchor(node: Any) -> Optional[str]:
+        """Return a node's Anchor/Alias name or None wheh there isn't one."""
+        if (
+                not hasattr(node, "anchor")
+                or node.anchor is None
+                or node.anchor.value is None
+                or not node.anchor.value
+        ):
+            return None
+        return str(node.anchor.value)

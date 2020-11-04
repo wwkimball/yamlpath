@@ -54,6 +54,9 @@ EOF
 	echo "...upgrading setuptools"
 	pip install --upgrade setuptools >/dev/null
 
+	echo "...upgrading wheel"
+	pip install --upgrade wheel >/dev/null
+
 	echo "...installing self (editable because without it, pytest-cov cannot trace code execution!)"
 	if ! pip install --editable . >/dev/null; then
 		deactivate

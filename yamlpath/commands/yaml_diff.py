@@ -9,10 +9,10 @@ from os import access, R_OK
 from os.path import isfile
 
 from yamlpath import __version__ as YAMLPATH_VERSION
+from yamlpath.common import Parsers
 from yamlpath.enums import PathSeperators
 from yamlpath.differ.enums import AoHDiffOpts, ArrayDiffOpts
 from yamlpath.wrappers import ConsolePrinter
-from yamlpath.func import get_yaml_data, get_yaml_editor
 from yamlpath.differ import DifferConfig, Differ
 from yamlpath.differ.enums import DiffActions
 from yamlpath.eyaml.exceptions.eyamlcommand import EYAMLCommandException
@@ -218,15 +218,15 @@ def main():
     exit_state = 0
     lhs_file = args.yaml_files[0]
     rhs_file = args.yaml_files[1]
-    lhs_yaml = get_yaml_editor()
-    rhs_yaml = get_yaml_editor()
+    lhs_yaml = Parsers.get_yaml_editor()
+    rhs_yaml = Parsers.get_yaml_editor()
 
-    (lhs_document, doc_loaded) = get_yaml_data(lhs_yaml, log, lhs_file)
+    (lhs_document, doc_loaded) = Parsers.get_yaml_data(lhs_yaml, log, lhs_file)
     if not doc_loaded:
         # An error message has already been logged
         sys.exit(1)
 
-    (rhs_document, doc_loaded) = get_yaml_data(rhs_yaml, log, rhs_file)
+    (rhs_document, doc_loaded) = Parsers.get_yaml_data(rhs_yaml, log, rhs_file)
     if not doc_loaded:
         # An error message has already been logged
         sys.exit(1)

@@ -2501,3 +2501,57 @@ rhs_exclusive:
             (os.path.getsize(output_file) == os.path.getsize(merged_yaml))
             and (open(output_file,'r').read() == open(merged_yaml,'r').read())
         )
+
+
+    ###
+    # set_flow_style
+    ###
+    def test_deprecated_set_flow_style(self):
+        Merger.depwarn_printed = False
+        Merger.set_flow_style("", False)
+
+
+    ###
+    # delete_all_comments
+    ###
+    def test_deprecated_delete_all_comments(self):
+        Merger.depwarn_printed = False
+        Merger.delete_all_comments(None)
+
+    
+    ###
+    # combine_merge_anchors
+    ###
+    def test_deprecated_combine_merge_anchors(self):
+        import ruamel.yaml as ry
+        lhs = ry.comments.CommentedMap({})
+        rhs = ry.comments.CommentedMap({})
+        Merger.depwarn_printed = False
+        Merger.combine_merge_anchors(lhs, rhs)
+
+
+    ###
+    # rename_anchor
+    ###
+    def test_deprecated_rename_anchor(self):
+        Merger.depwarn_printed = False
+        Merger.rename_anchor(None, "", "")
+
+
+    ###
+    # replace_anchor
+    ###
+    def test_deprecated_replace_anchor(self):
+        import ruamel.yaml as ry
+        old_node = ry.scalarstring.PlainScalarString("")
+        repl_node = ry.scalarstring.PlainScalarString("")
+        Merger.depwarn_printed = False
+        Merger.replace_anchor(None, old_node, repl_node)
+
+
+    ###
+    # scan_for_anchors
+    ###
+    def test_deprecated_scan_for_anchors(self):
+        Merger.depwarn_printed = False
+        Merger.scan_for_anchors(None, {})

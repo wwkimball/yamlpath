@@ -3,22 +3,15 @@ Implement YAML document Merger.
 
 Copyright 2020 William W. Kimball, Jr. MBA MSIS
 """
+import sys  # For deprecation warnings
 from typing import Any, Dict, List, Set, Tuple
 import json
 from io import StringIO
 from pathlib import Path
 
-import ruamel.yaml # type: ignore
-from ruamel.yaml.scalarstring import ScalarString
 from ruamel.yaml.comments import CommentedSeq, CommentedMap
 
-from yamlpath.func import (
-    append_list_element,
-    escape_path_section,
-    build_next_node,
-    stringify_dates,
-)
-from yamlpath.common import Anchors
+from yamlpath.common import Anchors, Nodes, Parsers
 from yamlpath.wrappers import ConsolePrinter, NodeCoords
 from yamlpath.merger.exceptions import MergeException
 from yamlpath.merger.enums import (
@@ -34,6 +27,12 @@ from yamlpath import YAMLPath, Processor
 
 class Merger:
     """Performs YAML document merges."""
+
+    DEPRECATION_WARNING = ("WARNING:  Deprecated methods will be removed in"
+                           " the next major release of yamlpath.  Please refer"
+                           " to the CHANGES file for more information (and how"
+                           " to get rid of this message).")
+    depwarn_printed = False
 
     def __init__(
             self, logger: ConsolePrinter, lhs: Any, config: MergerConfig
@@ -60,7 +59,7 @@ class Merger:
         # accurate but comment-insane.  This ruamel.yaml design decision forces
         # me to simply delete all comments from all merge documents to produce
         # a sensible result.
-        Merger.delete_all_comments(self.data)
+        Parsers.delete_all_comments(self.data)
 
     @property
     def data(self) -> Any:
@@ -70,7 +69,7 @@ class Merger:
     @data.setter
     def data(self, value: Any) -> None:
         """Document data being merged into (mutator)."""
-        Merger.delete_all_comments(value)
+        Parsers.delete_all_comments(value)
         self._data = value
 
     def _delete_mergeref_keys(self, data: CommentedMap) -> None:
@@ -139,7 +138,8 @@ class Merger:
         buffer: List[Tuple[Any, Any]] = []
         buffer_pos = 0
         for key, val in rhs.non_merged_items():
-            path_next = path + escape_path_section(key, path.seperator)
+            path_next = (path +
+                YAMLPath.escape_path_section(key, path.seperator))
             if key in lhs:
                 # Write the buffer if populated
                 for b_key, b_val in buffer:
@@ -345,15 +345,15 @@ class Merger:
                     merged_hash = True
                     break
                 if not merged_hash:
-                    append_list_element(lhs, ele,
+                    Nodes.append_list_element(lhs, ele,
                         ele.anchor.value if hasattr(ele, "anchor") else None)
             elif merge_mode is AoHMergeOpts.UNIQUE:
                 if ele not in lhs:
-                    append_list_element(
+                    Nodes.append_list_element(
                         lhs, ele,
                         ele.anchor.value if hasattr(ele, "anchor") else None)
             else:
-                append_list_element(lhs, ele,
+                Nodes.append_list_element(lhs, ele,
                     ele.anchor.value if hasattr(ele, "anchor") else None)
         return lhs
 
@@ -509,7 +509,7 @@ class Merger:
             return
 
         # Remove all comments (no sensible way to merge them)
-        Merger.delete_all_comments(rhs)
+        Parsers.delete_all_comments(rhs)
 
         # When LHS is None (empty document), just dump all of RHS into it,
         # honoring any --mergeat|-m location as best as possible.
@@ -518,7 +518,7 @@ class Merger:
             self.logger.debug(
                 "Replacing None data with:", prefix="Merger::merge_with:  ",
                 data=rhs, data_header="     *****")
-            self.data = build_next_node(insert_at, 0, rhs)
+            self.data = Nodes.build_next_node(insert_at, 0, rhs)
             self.logger.debug(
                 "Merged document is now:", prefix="Merger::merge_with:  ",
                 data=self.data, footer="     ***** ***** *****")
@@ -554,7 +554,7 @@ class Merger:
                 if isinstance(node_coord.node, (CommentedMap, CommentedSeq))
                 else node_coord.parent)
 
-            Merger.set_flow_style(
+            Parsers.set_flow_style(
                 rhs, (target_node.fa.flow_style()
                       if hasattr(target_node, "fa")
                       else None))
@@ -576,7 +576,7 @@ class Merger:
                 # The RHS document root is a Scalar value
                 target_node = node_coord.node
                 if isinstance(target_node, CommentedSeq):
-                    append_list_element(target_node, rhs)
+                    Nodes.append_list_element(target_node, rhs)
                     merge_performed = True
                 elif isinstance(target_node, CommentedMap):
                     raise MergeException(
@@ -636,7 +636,7 @@ class Merger:
             # Dump the document as true JSON and reload it; this automatically
             # exlodes all aliases.
             xfer_buffer = StringIO()
-            json.dump(stringify_dates(self.data), xfer_buffer)
+            json.dump(Parsers.jsonify_yaml_data(self.data), xfer_buffer)
             xfer_buffer.seek(0)
             self.data = yaml_writer.load(xfer_buffer)
 
@@ -644,7 +644,7 @@ class Merger:
             yaml_writer.explicit_start = False
         else:
             # Ensure block style output
-            Merger.set_flow_style(self.data, False)
+            Parsers.set_flow_style(self.data, False)
 
             # When writing YAML, ensure the document start mark is emitted
             yaml_writer.explicit_start = True
@@ -652,57 +652,49 @@ class Merger:
         return OutputDocTypes.JSON if is_flow else OutputDocTypes.YAML
 
     @classmethod
-    def set_flow_style(cls, node: Any, is_flow: bool) -> None:
-        """
-        Recursively apply flow|block style to a node.
+    def set_flow_style(cls, *args):
+        """Relay function call to static method."""
+        if not cls.depwarn_printed:
+            cls.depwarn_printed = True
+            print(Merger.DEPRECATION_WARNING, file=sys.stderr)
+        Parsers.set_flow_style(*args)
 
-        Parameters:
-        1. node (Any) The node to apply flow|block style to.
-        2. is_flow (bool) True=flow-style, False=block-style
-
-        Returns:  N/A
-        """
-        if hasattr(node, "fa"):
-            if is_flow:
-                node.fa.set_flow_style()
-            else:
-                node.fa.set_block_style()
-
-        if isinstance(node, CommentedMap):
-            for key, val in node.non_merged_items():
-                Merger.set_flow_style(key, is_flow)
-                Merger.set_flow_style(val, is_flow)
-        elif isinstance(node, CommentedSeq):
-            for ele in node:
-                Merger.set_flow_style(ele, is_flow)
-
-    # pylint: disable=line-too-long
     @classmethod
-    def delete_all_comments(cls, dom: Any) -> None:
-        """
-        Recursively delete all comments from a YAML document.
+    def delete_all_comments(cls, *args):
+        """Relay function call to static method."""
+        if not cls.depwarn_printed:
+            cls.depwarn_printed = True
+            print(Merger.DEPRECATION_WARNING, file=sys.stderr)
+        Parsers.delete_all_comments(*args)
 
-        See:  https://stackoverflow.com/questions/60080325/how-to-delete-all-comments-in-ruamel-yaml/60099750#60099750
+    @classmethod
+    def combine_merge_anchors(cls, *args):
+        """Relay function call to static method."""
+        if not cls.depwarn_printed:
+            cls.depwarn_printed = True
+            print(Merger.DEPRECATION_WARNING, file=sys.stderr)
+        Anchors.combine_merge_anchors(*args)
 
-        Parameters:
-        1. dom (Any) The document to strip of all comments.
+    @classmethod
+    def rename_anchor(cls, *args):
+        """Relay function call to static method."""
+        if not cls.depwarn_printed:
+            cls.depwarn_printed = True
+            print(Merger.DEPRECATION_WARNING, file=sys.stderr)
+        Anchors.rename_anchor(*args)
 
-        Returns:  N/A
-        """
-        if dom is None:
-            return
+    @classmethod
+    def replace_anchor(cls, *args):
+        """Relay function call to static method."""
+        if not cls.depwarn_printed:
+            cls.depwarn_printed = True
+            print(Merger.DEPRECATION_WARNING, file=sys.stderr)
+        Anchors.replace_anchor(*args)
 
-        if isinstance(dom, CommentedMap):
-            for key, val in dom.items():
-                Merger.delete_all_comments(key)
-                Merger.delete_all_comments(val)
-        elif isinstance(dom, CommentedSeq):
-            for ele in dom:
-                Merger.delete_all_comments(ele)
-        try:
-            # literal scalarstring might have comment associated with them
-            attr = "comment" if isinstance(dom, ScalarString) \
-                else ruamel.yaml.comments.Comment.attrib
-            delattr(dom, attr)
-        except AttributeError:
-            pass
+    @classmethod
+    def scan_for_anchors(cls, *args):
+        """Relay function call to static method."""
+        if not cls.depwarn_printed:
+            cls.depwarn_printed = True
+            print(Merger.DEPRECATION_WARNING, file=sys.stderr)
+        Anchors.scan_for_anchors(*args)

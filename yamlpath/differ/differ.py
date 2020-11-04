@@ -6,7 +6,6 @@ Copyright 2020 William W. Kimball, Jr. MBA MSIS
 from itertools import zip_longest
 from typing import Any, Dict, Generator, List, Optional, Tuple
 
-from yamlpath.func import escape_path_section
 from yamlpath import YAMLPath
 from yamlpath.wrappers import ConsolePrinter, NodeCoords
 from yamlpath.eyaml import EYAMLProcessor
@@ -63,7 +62,8 @@ class Differ:
             lhs_iteration = -1
             for key, val in data.items():
                 lhs_iteration += 1
-                next_path = path + escape_path_section(key, path.seperator)
+                next_path = (path +
+                    YAMLPath.escape_path_section(key, path.seperator))
                 self._diffs.append(
                     DiffEntry(
                         DiffActions.DELETE, next_path, val, None,
@@ -87,7 +87,8 @@ class Differ:
             rhs_iteration = -1
             for key, val in data.items():
                 rhs_iteration += 1
-                next_path = path + escape_path_section(key, path.seperator)
+                next_path = (path +
+                    YAMLPath.escape_path_section(key, path.seperator))
                 self._diffs.append(
                     DiffEntry(
                         DiffActions.ADD, next_path, None, val,
@@ -169,7 +170,8 @@ class Differ:
             (key, val) for key, val in rhs.items()
             if key in lhs and key in rhs
         ]:
-            next_path = path + escape_path_section(key, path.seperator)
+            next_path = (path +
+                YAMLPath.escape_path_section(key, path.seperator))
             self._diff_between(
                 next_path, lhs[key], val,
                 lhs_parent=lhs, lhs_iteration=lhs_key_indicies[key],
@@ -178,7 +180,8 @@ class Differ:
 
         # Look for deleted keys
         for key in lhs_keys - rhs_keys:
-            next_path = path + escape_path_section(key, path.seperator)
+            next_path = (path +
+                YAMLPath.escape_path_section(key, path.seperator))
             self._diffs.append(
                 DiffEntry(
                     DiffActions.DELETE, next_path, lhs[key], None,
@@ -187,7 +190,8 @@ class Differ:
 
         # Look for new keys
         for key in rhs_keys - lhs_keys:
-            next_path = path + escape_path_section(key, path.seperator)
+            next_path = (path +
+                YAMLPath.escape_path_section(key, path.seperator))
             self._diffs.append(
                 DiffEntry(
                     DiffActions.ADD, next_path, None, rhs[key],

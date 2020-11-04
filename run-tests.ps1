@@ -53,6 +53,9 @@ ForEach ($EnvDir in $EnvDirs) {
     Write-Output "...upgrading setuptools"
     pip install --upgrade setuptools
 
+    Write-Output "...upgrading wheel"
+    pip install --upgrade wheel
+
     Write-Output "...installing self"
     pip install --editable .
     if (!$?) {

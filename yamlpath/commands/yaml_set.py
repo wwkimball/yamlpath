@@ -22,15 +22,7 @@ from pathlib import Path
 from typing import Any, Dict
 
 from yamlpath import __version__ as YAMLPATH_VERSION
-from yamlpath.common import Anchors
-from yamlpath.func import (
-    clone_node,
-    build_next_node,
-    get_yaml_data,
-    get_yaml_editor,
-    stringify_dates,
-    wrap_type,
-)
+from yamlpath.common import Anchors, Nodes, Parsers
 from yamlpath import YAMLPath
 from yamlpath.exceptions import YAMLPathException
 from yamlpath.enums import YAMLValueFormats, PathSeperators
@@ -138,9 +130,14 @@ def processcli():
     parser.add_argument(
         "-H", "--anchor",
         metavar="ANCHOR",
-        help="When --aliasof|-A points to a value which is not already"
+        help="when --aliasof|-A points to a value which is not already"
              " Anchored, a new Anchor with this name is created; renames an"
              " existing Anchor if already set")
+    parser.add_argument(
+        "-T", "--tag",
+        metavar="TAG",
+        help="assign a custom YAML (data-type) tag to the changed nodes; can"
+             " be used without other input options to assign or change a tag")
 
     eyaml_group = parser.add_argument_group(
         "EYAML options", "Left unset, the EYAML keys will default to your\
@@ -201,11 +198,12 @@ def validateargs(args, log):
             or args.stdin
             or args.random
             or args.delete
+            or args.tag
     ):
         has_errors = True
         log.error(
             "Exactly one of the following must be set:  --value, --aliasof,"
-            " --file, --stdin, or --random")
+            " --file, --stdin, --random, or --tag")
 
     # --stdin cannot be used with -, explicit or implied
     if args.stdin and in_stream_mode:
@@ -263,6 +261,11 @@ def validateargs(args, log):
         has_errors = True
         log.error("The pool of random CHARS must have at least 2 characters.")
 
+    # Any set tag must have a prefix of at least one !
+    if args.tag and not args.tag[0] == "!":
+        has_errors = True
+        log.error("A YAML --tag must be prefixed with exactly 1 ! mark.")
+
     # When using --delete, --mustexist must also be set
     if args.delete:
         args.mustexist = True
@@ -282,7 +285,7 @@ def save_to_json_file(args, log, yaml_data):
     """Save to a JSON file."""
     log.verbose("Writing changed data as JSON to {}.".format(args.yaml_file))
     with open(args.yaml_file, 'w') as out_fhnd:
-        json.dump(stringify_dates(yaml_data), out_fhnd)
+        json.dump(Parsers.jsonify_yaml_data(yaml_data), out_fhnd)
 
 def save_to_yaml_file(args, log, yaml_parser, yaml_data, backup_file):
     """Save to a YAML file."""
@@ -355,18 +358,18 @@ def write_output_document(args, log, yaml, yaml_data):
         if write_document_as_yaml(args.yaml_file, yaml_data):
             yaml.dump(yaml_data, sys.stdout)
         else:
-            json.dump(stringify_dates(yaml_data), sys.stdout)
+            json.dump(Parsers.jsonify_yaml_data(yaml_data), sys.stdout)
     else:
         save_to_file(args, log, yaml, yaml_data, backup_file)
 
 def _try_load_input_file(args, log, yaml, change_path, new_value):
     """Attempt to load the input data file or abend on error."""
-    (yaml_data, doc_loaded) = get_yaml_data(yaml, log, args.yaml_file)
+    (yaml_data, doc_loaded) = Parsers.get_yaml_data(yaml, log, args.yaml_file)
     if not doc_loaded:
         # An error message has already been logged
         sys.exit(1)
     elif yaml_data is None:
-        yaml_data = build_next_node(change_path, 0, new_value)
+        yaml_data = Nodes.build_next_node(change_path, 0, new_value)
     return yaml_data
 
 def _delete_nodes(log, delete_nodes) -> None:
@@ -439,7 +442,7 @@ def _alias_nodes(
     anchor_coord = anchor_node_coordinates[0]
     anchor_node = anchor_coord.node
     if not hasattr(anchor_node, "anchor"):
-        anchor_coord.parent[anchor_coord.parentref] = wrap_type(
+        anchor_coord.parent[anchor_coord.parentref] = Nodes.wrap_type(
             anchor_node)
         anchor_node = anchor_coord.parent[anchor_coord.parentref]
 
@@ -471,6 +474,20 @@ def _alias_nodes(
             prefix="yaml_set::_alias_nodes:  ")
         node_coord.parent[node_coord.parentref] = anchor_node
 
+def _tag_nodes(document, tag, nodes):
+    """Assign a data-type tag to a set of nodes."""
+    for node_coord in nodes:
+        old_node = node_coord.node
+        if node_coord.parent is None:
+            node_coord.node.yaml_set_tag(tag)
+        else:
+            node_coord.parent[node_coord.parentref] = Nodes.apply_yaml_tag(
+                node_coord.node, tag)
+            if Anchors.get_node_anchor(old_node) is not None:
+                Anchors.replace_anchor(
+                    document, old_node,
+                    node_coord.parent[node_coord.parentref])
+
 # pylint: disable=locally-disabled,too-many-locals,too-many-branches,too-many-statements
 def main():
     """Main code."""
@@ -483,21 +500,26 @@ def main():
     # Obtain the replacement value
     consumed_stdin = False
     new_value = None
+    has_new_value = False
     if args.value or args.value == "":
         new_value = args.value
+        has_new_value = True
     elif args.stdin:
         new_value = ''.join(sys.stdin.readlines())
         consumed_stdin = True
+        has_new_value = True
     elif args.file:
         with open(args.file, 'r') as fhnd:
             new_value = fhnd.read().rstrip()
+        has_new_value = True
     elif args.random is not None:
         new_value = ''.join(
             secrets.choice(args.random_from) for _ in range(args.random)
         )
+        has_new_value = True
 
     # Prep the YAML parser
-    yaml = get_yaml_editor()
+    yaml = Parsers.get_yaml_editor()
 
     # Attempt to open the YAML file; check for parsing errors
     if args.yaml_file:
@@ -594,8 +616,8 @@ def main():
 
         try:
             processor.set_value(
-                saveto_path, clone_node(old_value),
-                value_format=old_format)
+                saveto_path, Nodes.clone_node(old_value),
+                value_format=old_format, tag=args.tag)
         except YAMLPathException as ex:
             log.critical(ex, 1)
 
@@ -626,13 +648,15 @@ def main():
                 change_path, new_value, output=output_type, mustexist=False)
         except EYAMLCommandException as ex:
             log.critical(ex, 2)
-    else:
+    elif has_new_value:
         try:
             processor.set_value(
                 change_path, new_value, value_format=args.format,
-                mustexist=must_exist)
+                mustexist=must_exist, tag=args.tag)
         except YAMLPathException as ex:
             log.critical(ex, 1)
+    elif args.tag:
+        _tag_nodes(processor.data, args.tag, change_node_coordinates)
 
     # Write out the result
     write_output_document(args, log, yaml, yaml_data)

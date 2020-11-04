@@ -8,9 +8,9 @@ from typing import Any
 
 from ruamel.yaml.comments import CommentedBase
 
+from yamlpath.common import Parsers
 from yamlpath.enums import PathSeperators
 from yamlpath import YAMLPath
-from yamlpath.func import stringify_dates
 from .enums.diffactions import DiffActions
 
 
@@ -109,7 +109,7 @@ class DiffEntry:
     def _jsonify_data(cls, data: Any) -> str:
         """Generate JSON representation of data."""
         if isinstance(data, (list, dict)):
-            return json.dumps(stringify_dates(data))
+            return json.dumps(Parsers.jsonify_yaml_data(data))
         return str(data)
 
     @classmethod

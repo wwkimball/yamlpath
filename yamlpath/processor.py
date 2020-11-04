@@ -6,14 +6,7 @@ Copyright 2018, 2019, 2020 William W. Kimball, Jr. MBA MSIS
 """
 from typing import Any, Generator, List, Union
 
-from yamlpath.func import (
-    append_list_element,
-    build_next_node,
-    escape_path_section,
-    make_new_node,
-    search_matches,
-    unwrap_node_coords,
-)
+from yamlpath.common import Nodes, Searches
 from yamlpath import YAMLPath
 from yamlpath.path import SearchTerms, CollectorTerms
 from yamlpath.wrappers import ConsolePrinter, NodeCoords
@@ -122,6 +115,7 @@ class Processor:
         * pathsep (PathSeperators) Forced YAML Path segment seperator; set
           only when automatic inference fails;
           default = PathSeperators.AUTO
+        * tag (str) Custom data-type tag to assign
 
         Returns:  N/A
 
@@ -135,6 +129,7 @@ class Processor:
         value_format: YAMLValueFormats = kwargs.pop("value_format",
                                                     YAMLValueFormats.DEFAULT)
         pathsep: PathSeperators = kwargs.pop("pathsep", PathSeperators.AUTO)
+        tag: str = kwargs.pop("tag", None)
 
         if isinstance(yaml_path, str):
             yaml_path = YAMLPath(yaml_path, pathsep)
@@ -152,7 +147,7 @@ class Processor:
                 try:
                     self._update_node(
                         req_node.parent, req_node.parentref, value,
-                        value_format)
+                        value_format, tag)
                 except ValueError as vex:
                     raise YAMLPathException(
                         "Impossible to write '{}' as {}.  The error was:  {}"
@@ -183,7 +178,7 @@ class Processor:
                 try:
                     self._update_node(
                         node_coord.parent, node_coord.parentref, value,
-                        value_format)
+                        value_format, tag)
                 except ValueError as vex:
                     raise YAMLPathException(
                         "Impossible to write '{}' as {}.  The error was:  {}"
@@ -318,8 +313,9 @@ class Processor:
             .format(str_stripped))
 
         if isinstance(data, dict):
-            next_translated_path = translated_path + escape_path_section(
-                str_stripped, translated_path.seperator)
+            next_translated_path = (translated_path +
+                YAMLPath.escape_path_section(
+                    str_stripped, translated_path.seperator))
             if stripped_attrs in data:
                 yield NodeCoords(
                     data[stripped_attrs], data, stripped_attrs,
@@ -422,7 +418,7 @@ class Processor:
                     if min_match <= key <= max_match:
                         yield NodeCoords(
                             val, data, key,
-                            translated_path + escape_path_section(
+                            translated_path + YAMLPath.escape_path_section(
                                 key, translated_path.seperator))
         else:
             try:
@@ -461,7 +457,7 @@ class Processor:
         (_, stripped_attrs) = yaml_path.escaped[segment_index]
         translated_path = kwargs.pop("translated_path", YAMLPath(""))
         next_translated_path = translated_path + "[&{}]".format(
-            escape_path_section(
+            YAMLPath.escape_path_section(
                 str(stripped_attrs), translated_path.seperator))
 
         self.logger.debug(
@@ -529,9 +525,9 @@ class Processor:
 
             for lstidx, ele in enumerate(data):
                 if attr == '.':
-                    matches = search_matches(method, term, ele)
+                    matches = Searches.search_matches(method, term, ele)
                 elif isinstance(ele, dict) and attr in ele:
-                    matches = search_matches(method, term, ele[attr])
+                    matches = Searches.search_matches(method, term, ele[attr])
                 else:
                     # Attempt a descendant search
                     next_translated_path = translated_path + "[{}]".format(
@@ -539,7 +535,7 @@ class Processor:
                     for desc_node in self._get_required_nodes(
                         ele, desc_path, 0, translated_path=next_translated_path
                     ):
-                        matches = search_matches(
+                        matches = Searches.search_matches(
                             method, term, desc_node.node)
                         break
 
@@ -556,7 +552,7 @@ class Processor:
             # Allow . to mean "each key's name"
             if attr == '.':
                 for key, val in data.items():
-                    matches = search_matches(method, term, key)
+                    matches = Searches.search_matches(method, term, key)
                     if (matches and not invert) or (invert and not matches):
                         self.logger.debug(
                             "Yielding dictionary key name match against '{}':"
@@ -565,12 +561,12 @@ class Processor:
                             prefix="Processor::_get_nodes_by_search:  ")
                         yield NodeCoords(
                             val, data, key,
-                            translated_path + escape_path_section(
+                            translated_path + YAMLPath.escape_path_section(
                                 key, translated_path.seperator))
 
             elif attr in data:
                 value = data[attr]
-                matches = search_matches(method, term, value)
+                matches = Searches.search_matches(method, term, value)
                 if (matches and not invert) or (invert and not matches):
                     self.logger.debug(
                         "Yielding dictionary attribute match against '{}':"
@@ -579,7 +575,7 @@ class Processor:
                         prefix="Processor::_get_nodes_by_search:  ")
                     yield NodeCoords(
                         value, data, attr,
-                        translated_path + escape_path_section(
+                        translated_path + YAMLPath.escape_path_section(
                             attr, translated_path.seperator))
 
             else:
@@ -588,7 +584,8 @@ class Processor:
                     data, desc_path, 0, parent=parent, parentref=parentref,
                     translated_path=translated_path
                 ):
-                    matches = search_matches(method, term, desc_node.node)
+                    matches = Searches.search_matches(
+                        method, term, desc_node.node)
                     break
 
                 if (matches and not invert) or (invert and not matches):
@@ -596,7 +593,7 @@ class Processor:
 
         else:
             # Check the passed data itself for a match
-            matches = search_matches(method, term, data)
+            matches = Searches.search_matches(method, term, data)
             if (matches and not invert) or (invert and not matches):
                 self.logger.debug(
                     "Yielding the queried data itself because it matches.",
@@ -707,7 +704,8 @@ class Processor:
                             data, peek_path, 0, parent=parent,
                             parentref=parentref,
                             translated_path=translated_path):
-                        unwrapped_data = unwrap_node_coords(node_coord)
+                        unwrapped_data = NodeCoords.unwrap_node_coords(
+                            node_coord)
                         if isinstance(unwrapped_data, list):
                             for unwrapped_datum in unwrapped_data:
                                 rem_data.append(unwrapped_datum)
@@ -715,7 +713,8 @@ class Processor:
                             rem_data.append(unwrapped_data)
 
                     node_coords = [e for e in node_coords
-                                   if unwrap_node_coords(e) not in rem_data]
+                                   if NodeCoords.unwrap_node_coords(e)
+                                   not in rem_data]
                 else:
                     raise YAMLPathException(
                         "Adjoining Collectors without an operator has no"
@@ -772,7 +771,7 @@ class Processor:
             if isinstance(data, dict):
                 for key, val in data.items():
                     next_translated_path = (
-                        translated_path + escape_path_section(
+                        translated_path + YAMLPath.escape_path_section(
                             key, translated_path.seperator))
                     for node_coord in self._get_nodes_by_traversal(
                         val, yaml_path, segment_index,
@@ -834,7 +833,7 @@ class Processor:
                         " KEY '{}' at ref '{}' for next-segment matches..."
                         .format(key, parentref))
                     next_translated_path = (
-                        translated_path + escape_path_section(
+                        translated_path + YAMLPath.escape_path_section(
                             key, translated_path.seperator))
                     for node_coord in self._get_nodes_by_traversal(
                         val, yaml_path, segment_index,
@@ -1044,10 +1043,10 @@ class Processor:
                             segment_type is PathSegmentTypes.ANCHOR
                             and isinstance(stripped_attrs, str)
                     ):
-                        next_node = build_next_node(
+                        next_node = Nodes.build_next_node(
                             yaml_path, depth + 1, value
                         )
-                        new_ele = append_list_element(
+                        new_ele = Nodes.append_list_element(
                             data, next_node, stripped_attrs
                         )
                         new_idx = len(data) - 1
@@ -1079,10 +1078,10 @@ class Processor:
                                     except_segment
                                 ) from wrap_ex
                         for _ in range(len(data) - 1, newidx):
-                            next_node = build_next_node(
+                            next_node = Nodes.build_next_node(
                                 yaml_path, depth + 1, value
                             )
-                            append_list_element(data, next_node)
+                            Nodes.append_list_element(data, next_node)
                         next_translated_path = translated_path + "[{}]".format(
                             newidx)
                         for node_coord in self._get_optional_nodes(
@@ -1111,11 +1110,11 @@ class Processor:
                             str(unstripped_attrs)
                         )
                     if segment_type is PathSegmentTypes.KEY:
-                        data[stripped_attrs] = build_next_node(
+                        data[stripped_attrs] = Nodes.build_next_node(
                             yaml_path, depth + 1, value
                         )
                         next_translated_path = (
-                            translated_path + escape_path_section(
+                            translated_path + YAMLPath.escape_path_section(
                                 str(stripped_attrs),
                                 translated_path.seperator))
                         for node_coord in self._get_optional_nodes(
@@ -1149,8 +1148,11 @@ class Processor:
                 prefix="Processor::_get_optional_nodes:  ", data=data)
             yield NodeCoords(data, parent, parentref, translated_path)
 
-    def _update_node(self, parent: Any, parentref: Any, value: Any,
-                     value_format: YAMLValueFormats) -> None:
+    # pylint: disable=too-many-arguments
+    def _update_node(
+        self, parent: Any, parentref: Any, value: Any,
+        value_format: YAMLValueFormats, value_tag: str = None
+    ) -> None:
         """
         Set the value of a data node.
 
@@ -1165,16 +1167,19 @@ class Processor:
            its references
         4. value_format (YAMLValueFormats) the YAML representation of the
            value
+        5. value_tag (str) the custom YAML data-type tag of the value
 
         Returns: N/A
 
         Raises: N/A
         """
         if parent is None:
-            # Empty document
+            # Empty document or the document root
+            self.logger.debug(
+                "Processor::_update_node:  Ignoring node with no parent!")
             return
 
-        # This update_refs function was contributed by Anthon van der Neut, the
+        # This recurse function was contributed by Anthon van der Neut, the
         # author of ruamel.yaml, to resolve how to update all references to an
         # Anchor throughout the parsed data structure.
         def recurse(data, parent, parentref, reference_node, replacement_node):
@@ -1201,14 +1206,13 @@ class Processor:
                                 replacement_node)
 
         change_node = parent[parentref]
-        new_node = make_new_node(change_node, value, value_format)
+        new_node = Nodes.make_new_node(
+            change_node, value, value_format, tag=value_tag)
 
         self.logger.debug(
-            "Changing the following node of type {} to {}<{}> as {}, a {} YAML"
-            " element:"
-            .format(type(change_node), value, value_format,
-                     new_node, type(new_node)),
-            prefix="Processor::_update_node:  ", data=change_node)
+            "Changing the following <{}> formatted node:".format(value_format),
+            prefix="Processor::_update_node:  ",
+            data={ "__FROM__": change_node, "___TO___": new_node })
 
         recurse(self.data, parent, parentref, change_node, new_node)
 
