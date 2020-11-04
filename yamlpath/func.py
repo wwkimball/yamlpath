@@ -61,9 +61,9 @@ def search_matches(*args):
     """Relay function call to static method."""
     return Searches.search_matches(*args)
 
-def search_anchor(*args):
+def search_anchor(*args, **kwargs):
     """Relay function call to static method."""
-    return Searches.search_anchor(*args)
+    return Searches.search_anchor(*args, **kwargs)
 
 def ensure_escaped(*args):
     """Relay function call to static method."""

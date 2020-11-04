@@ -64,6 +64,12 @@ class Test_yaml_set():
         assert not result.success, result.stderr
         assert "--anchor is meaningless without also setting --aliasof" in result.stderr
 
+    def test_tags_require_bang(self, script_runner):
+        result = script_runner.run(
+            self.command, "--change=test", "--tag=name", "-")
+        assert not result.success, result.stderr
+        assert "A YAML --tag must be prefixed with exactly 1 ! mark" in result.stderr
+
     def test_bad_data_type_optional(self, script_runner, tmp_path_factory):
         yaml_file = create_temp_yaml_file(tmp_path_factory, """---
 boolean: false
@@ -1081,6 +1087,94 @@ a_hash:
             self.command,
             "--change=a_hash.a_key",
             "--aliasof=some_key",
+            yaml_file
+        )
+        assert result.success, result.stderr
+
+        with open(yaml_file, 'r') as fhnd:
+            filedat = fhnd.read()
+        assert filedat == yamlout
+
+    def test_assign_docroot_tag(self, script_runner, tmp_path_factory):
+        yamlin = """---
+key: value
+"""
+        yamlout = """--- !something
+key: value
+"""
+        yaml_file = create_temp_yaml_file(tmp_path_factory, yamlin)
+        result = script_runner.run(
+            self.command,
+            "--change=/",
+            "--tag=!something",
+            yaml_file
+        )
+        assert result.success, result.stderr
+
+        with open(yaml_file, 'r') as fhnd:
+            filedat = fhnd.read()
+        assert filedat == yamlout
+
+    def test_assign_anchorless_tag(self, script_runner, tmp_path_factory):
+        yamlin = """---
+key: value
+"""
+        yamlout = """---
+key: !something value
+"""
+        yaml_file = create_temp_yaml_file(tmp_path_factory, yamlin)
+        result = script_runner.run(
+            self.command,
+            "--change=key",
+            "--tag=!something",
+            yaml_file
+        )
+        assert result.success, result.stderr
+
+        with open(yaml_file, 'r') as fhnd:
+            filedat = fhnd.read()
+        assert filedat == yamlout
+
+    def test_assign_original_anchored_tag(self, script_runner, tmp_path_factory):
+        yamlin = """---
+aliases:
+  - &anchored_scalar This (scalar) string is Anchored.
+key: *anchored_scalar
+"""
+        yamlout = """---
+aliases:
+  - &anchored_scalar !some_tag This (scalar) string is Anchored.
+key: *anchored_scalar
+"""
+        yaml_file = create_temp_yaml_file(tmp_path_factory, yamlin)
+        result = script_runner.run(
+            self.command,
+            "--change=aliases[&anchored_scalar]",
+            "--tag=!some_tag",
+            yaml_file
+        )
+        assert result.success, result.stderr
+
+        with open(yaml_file, 'r') as fhnd:
+            filedat = fhnd.read()
+        assert filedat == yamlout
+
+    def test_assign_original_aliased_tag(self, script_runner, tmp_path_factory):
+        yamlin = """---
+aliases:
+  - &anchored_scalar This (scalar) string is Anchored.
+key: *anchored_scalar
+"""
+        yamlout = """---
+aliases:
+  - &anchored_scalar !some_tag This (scalar) string is Anchored.
+key: *anchored_scalar
+"""
+        yaml_file = create_temp_yaml_file(tmp_path_factory, yamlin)
+        result = script_runner.run(
+            self.command,
+            "--change=key",
+            "--tag=!some_tag",
             yaml_file
         )
         assert result.success, result.stderr

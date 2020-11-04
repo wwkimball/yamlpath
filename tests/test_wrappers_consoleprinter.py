@@ -2,7 +2,7 @@ import pytest
 
 from types import SimpleNamespace
 
-from ruamel.yaml.comments import CommentedMap
+from ruamel.yaml.comments import CommentedMap, CommentedSeq, TaggedScalar
 from ruamel.yaml.scalarstring import PlainScalarString
 
 from yamlpath.wrappers import NodeCoords
@@ -92,6 +92,8 @@ class Test_wrappers_ConsolePrinter():
             "DEBUG:  [non-anchored-key](_,&Anchor)TestVal<class 'ruamel.yaml.scalarstring.PlainScalarString'>",
         ]) + "\n" == console.out
 
+        tagged_sequence = CommentedSeq(["a", "b"])
+        tagged_sequence.yaml_set_tag("!raz")
         logger.debug(
             "test_wrappers_consoleprinter:",
             prefix="test_debug_noisy:  ",
@@ -101,7 +103,9 @@ class Test_wrappers_ConsolePrinter():
             data_footer="::: DATA FOOTER :::",
             data=CommentedMap({
                 "key": "value",
+                "tagged": TaggedScalar("value", tag="!tag"),
                 "array": ["ichi", "ni", "san"],
+                "tagged_array": tagged_sequence,
                 "aoh": [{"id": 1},{"id": 2},{"id": 3}],
                 "aoa": [[True, True], [True, False], [False, True]],
                 "dod": {"a": {"b": {"c": "d"}}},
@@ -113,9 +117,12 @@ class Test_wrappers_ConsolePrinter():
             "DEBUG:  test_debug_noisy:  test_wrappers_consoleprinter:",
             "DEBUG:  test_debug_noisy:  +++ DATA HEADER +++",
             "DEBUG:  test_debug_noisy:  [key]value<class 'str'>",
+            "DEBUG:  test_debug_noisy:  [tagged]<!tag>value<class 'str'>",
             "DEBUG:  test_debug_noisy:  [array][0]ichi<class 'str'>",
             "DEBUG:  test_debug_noisy:  [array][1]ni<class 'str'>",
             "DEBUG:  test_debug_noisy:  [array][2]san<class 'str'>",
+            "DEBUG:  test_debug_noisy:  [tagged_array]<!raz>[0]a<class 'str'>",
+            "DEBUG:  test_debug_noisy:  [tagged_array]<!raz>[1]b<class 'str'>",
             "DEBUG:  test_debug_noisy:  [aoh][0][id]1<class 'int'>",
             "DEBUG:  test_debug_noisy:  [aoh][1][id]2<class 'int'>",
             "DEBUG:  test_debug_noisy:  [aoh][2][id]3<class 'int'>",

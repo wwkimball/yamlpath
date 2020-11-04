@@ -264,7 +264,7 @@ def validateargs(args, log):
     # Any set tag must have a prefix of at least one !
     if args.tag and not args.tag[0] == "!":
         has_errors = True
-        log.error("A YAML or JSON tag must be prefixed with 1 or 2 ! marks.")
+        log.error("A YAML --tag must be prefixed with exactly 1 ! mark.")
 
     # When using --delete, --mustexist must also be set
     if args.delete:
