@@ -295,6 +295,8 @@ class Parsers:
             for idx, ele in enumerate(data):
                 data[idx] = Parsers.jsonify_yaml_data(ele)
         elif isinstance(data, TaggedScalar):
+            if data.tag.value == "!null":
+                return None
             return Parsers.jsonify_yaml_data(data.value)
         elif isinstance(data, date):
             return str(data)
