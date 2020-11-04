@@ -11,9 +11,10 @@ Enhancements:
   already Anchored, or not.  Should the Anchor not already exist, a unique name
   will be automatically assigned.  This name can instead be set via
   --anchor|-H.  Setting --change|-g and --aliasof|-A to the same node along
-  with a new --anchor|-H enables renaming an existing Anchor and its Aliases.
-  Using --aliasof|-A with non-YAML files merely duplicates the target value to
-  the indicated --change|-g nodes.
+  with a new --anchor|-H explicitly renames an existing Anchor and its Aliases.
+  The same is implicitly possible by specifying --change|-g and --anchor|-H
+  without --aliasof|-A.  Using these against non-YAML files merely duplicates
+  the target value to the indicated --change|-g nodes.
 * With a new --tag|-T auxilliary option, the yaml-set command-line tool now
   supports assigning custom YAML tags (data-type specifiers) to nodes created
   or updated during the operation.

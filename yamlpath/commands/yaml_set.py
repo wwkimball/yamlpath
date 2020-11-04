@@ -198,12 +198,13 @@ def validateargs(args, log):
             or args.stdin
             or args.random
             or args.delete
+            or args.anchor
             or args.tag
     ):
         has_errors = True
         log.error(
             "Exactly one of the following must be set:  --value, --aliasof,"
-            " --file, --stdin, --random, or --tag")
+            " --file, --stdin, --random, --anchor, or --tag")
 
     # --stdin cannot be used with -, explicit or implied
     if args.stdin and in_stream_mode:
@@ -221,8 +222,7 @@ def validateargs(args, log):
             .replace("*", "")
         )
     if args.anchor and not args.aliasof:
-        has_errors = True
-        log.error("--anchor is meaningless without also setting --aliasof.")
+        args.aliasof = args.change
 
     # --backup has no meaning when reading the YAML file from STDIN
     if args.backup and in_stream_mode:

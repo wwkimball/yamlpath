@@ -58,12 +58,6 @@ class Test_yaml_set():
         assert not result.success, result.stderr
         assert "applies only when reading from a file" in result.stderr
 
-    def test_no_anchor_without_aliasof(self, script_runner):
-        result = script_runner.run(
-            self.command, "--change=test", "--anchor=name", "-")
-        assert not result.success, result.stderr
-        assert "--anchor is meaningless without also setting --aliasof" in result.stderr
-
     def test_tags_require_bang(self, script_runner):
         result = script_runner.run(
             self.command, "--change=test", "--tag=name", "-")
@@ -957,7 +951,7 @@ key: value
         assert not result.success, result.stderr
         assert "Refusing to delete" in result.stderr
 
-    def test_rename_anchor(self, script_runner, tmp_path_factory):
+    def test_rename_anchor_explicit(self, script_runner, tmp_path_factory):
         yamlin = """---
 aliases:
   - &old_anchor Some string
@@ -973,6 +967,30 @@ key: *new_anchor
             self.command,
             "--change=aliases[&old_anchor]",
             "--aliasof=aliases[&old_anchor]",
+            "--anchor=new_anchor",
+            yaml_file
+        )
+        assert result.success, result.stderr
+
+        with open(yaml_file, 'r') as fhnd:
+            filedat = fhnd.read()
+        assert filedat == yamlout
+
+    def test_rename_anchor_implicit(self, script_runner, tmp_path_factory):
+        yamlin = """---
+aliases:
+  - &old_anchor Some string
+key: *old_anchor
+"""
+        yamlout = """---
+aliases:
+  - &new_anchor Some string
+key: *new_anchor
+"""
+        yaml_file = create_temp_yaml_file(tmp_path_factory, yamlin)
+        result = script_runner.run(
+            self.command,
+            "--change=aliases[&old_anchor]",
             "--anchor=new_anchor",
             yaml_file
         )
