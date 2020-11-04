@@ -26,20 +26,27 @@ class Test_common_parsers():
     ###
     # jsonify_yaml_data
     ###
-    def test_jsonify_complex_data_with_dates(self):
-        node_tag = "!tagged"
-        node_data = "tagged value"
-        tagged_value = ry.scalarstring.PlainScalarString(node_data)
-        tagged_node = ry.comments.TaggedScalar(tagged_value, tag=node_tag)
+    def test_jsonify_complex_data(self):
+        tagged_tag = "!tagged"
+        tagged_value = "tagged value"
+        tagged_scalar = ry.scalarstring.PlainScalarString(tagged_value)
+        tagged_node = ry.comments.TaggedScalar(tagged_scalar, tag=tagged_tag)
+
+        null_tag = "!null"
+        null_value = None
+        null_node = ry.comments.TaggedScalar(None, tag=null_tag)
 
         cdata = {
             "tagged": tagged_node,
+            "null": null_node,
             "dates": [
                 dt.date(2020, 10, 31),
                 dt.date(2020, 11, 3)
             ]
         }
         jdata = Parsers.jsonify_yaml_data(cdata)
-        assert jdata["tagged"] == node_data
+        assert jdata["tagged"] == tagged_value
+        assert jdata["null"] == null_value
         assert jdata["dates"][0] == "2020-10-31"
         assert jdata["dates"][1] == "2020-11-03"
+ 
