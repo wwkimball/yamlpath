@@ -712,6 +712,7 @@ products_array:
         ("((/list1) + (/list2)) - (/exclude)", [[1, 2, 5, 6]]),
         ("(/list1) + ((/list2) - (/exclude))", [[1, 2, 3, 5, 6]]),
         ("((/list1) - (/exclude)) + ((/list2) - (/exclude))", [[1, 2, 5, 6]]),
+        ("((/list1) - (/exclude)) + ((/list2) - (/exclude))*", [1, 2, 5, 6]),
         ("(((/list1) - (/exclude)) + ((/list2) - (/exclude)))[2]", [5]),
     ])
     def test_scalar_collectors(self, quiet_logger, yamlpath, results):
@@ -739,5 +740,3 @@ products_array:
             assert unwrap_node_coords(node) == results[matchidx]
             matchidx += 1
         assert len(results) == matchidx
-
-    # TODO: test_collectors_expanded_via_star
