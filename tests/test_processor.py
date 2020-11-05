@@ -740,3 +740,33 @@ products_array:
             assert unwrap_node_coords(node) == results[matchidx]
             matchidx += 1
         assert len(results) == matchidx
+
+    def test_get_every_data_type(self, quiet_logger):
+        # Contributed by https://github.com/AndydeCleyre
+        yamldata = """---
+intthing: 6
+floatthing: 6.8
+yesthing: yes
+nothing: no
+truething: true
+falsething: false
+nullthing: null
+nothingthing:
+emptystring: ""
+nullstring: "null"
+        """
+
+        # Note that Python/pytest is translating nothingthing into a string, "null".
+        # This is NOT yamlpath doing this.  In fact, the yaml-get command-line tool
+        # actually translates true nulls into "\x00" (hexadecimal NULL control-characters).
+        results = [6, 6.8, "yes", "no", True, False, "", "null", "", "null"]
+
+        yaml = YAML()
+        data = yaml.load(yamldata)
+        processor = Processor(quiet_logger, data)
+        yamlpath = YAMLPath("*")
+
+        match_index = 0
+        for node in processor.get_nodes(yamlpath):
+            assert unwrap_node_coords(node) == results[match_index]
+            match_index += 1
