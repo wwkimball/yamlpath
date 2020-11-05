@@ -916,7 +916,10 @@ class Processor:
                     prefix="Processor::_get_required_nodes:  ",
                     data=segment_node_coords)
 
-                if segment_node_coords.node is None:
+                if (segment_node_coords is None
+                    or (hasattr(segment_node_coords, "node")
+                        and segment_node_coords.node is None)
+                ):
                     self.logger.debug(
                         "Processor::_get_required_nodes:  Yielding null.")
                     yield segment_node_coords
