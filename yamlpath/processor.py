@@ -916,6 +916,12 @@ class Processor:
                     prefix="Processor::_get_required_nodes:  ",
                     data=segment_node_coords)
 
+                if segment_node_coords.node is None:
+                    self.logger.debug(
+                        "Processor::_get_required_nodes:  Yielding null.")
+                    yield segment_node_coords
+                    return
+
                 if isinstance(segment_node_coords, list):
                     # Most likely the output of a Collector, this list will be
                     # of NodeCoords rather than an actual DOM reference.  As

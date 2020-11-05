@@ -178,7 +178,10 @@ def main():
             log.debug(
                 "Got node from {}:".format(yaml_path), data=node,
                 prefix="yaml_get::main:  ")
-            discovered_nodes.append(NodeCoords.unwrap_node_coords(node))
+            if node is None:
+                discovered_nodes.append('')
+            else:
+                discovered_nodes.append(NodeCoords.unwrap_node_coords(node))
     except YAMLPathException as ex:
         log.critical(ex, 1)
     except EYAMLCommandException as ex:
