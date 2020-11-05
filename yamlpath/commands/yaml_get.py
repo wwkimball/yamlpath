@@ -178,10 +178,7 @@ def main():
             log.debug(
                 "Got node from {}:".format(yaml_path), data=node,
                 prefix="yaml_get::main:  ")
-            if node is None:
-                discovered_nodes.append('')
-            else:
-                discovered_nodes.append(NodeCoords.unwrap_node_coords(node))
+            discovered_nodes.append(NodeCoords.unwrap_node_coords(node))
     except YAMLPathException as ex:
         log.critical(ex, 1)
     except EYAMLCommandException as ex:
@@ -192,6 +189,8 @@ def main():
             if isinstance(node, (dict, list)):
                 print(json.dumps(Parsers.jsonify_yaml_data(node)))
             else:
+                if node is None:
+                    node = "\x00"
                 print("{}".format(str(node).replace("\n", r"\n")))
     except RecursionError:
         log.critical(
