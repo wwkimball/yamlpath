@@ -22,16 +22,24 @@ class Test_Processor():
     def test_get_none_data_nodes(self, quiet_logger):
         processor = Processor(quiet_logger, None)
         yamlpath = YAMLPath("abc")
-        matches = 0
+        optional_matches = 0
+        must_exist_matches = 0
+        req_node_matches = 0
+        traversal_matches = 0
+
         for node in processor.get_nodes(yamlpath, mustexist=False):
-            matches += 1
+            optional_matches += 1
         for node in processor.get_nodes(yamlpath, mustexist=True):
-            matches += 1
+            must_exist_matches += 1
         for node in processor._get_required_nodes(None, yamlpath):
-            matches += 1
+            req_node_matches += 1
         for node in processor._get_nodes_by_traversal(None, yamlpath, 0):
-            matches += 1
-        assert matches == 0
+            traversal_matches += 1
+
+        assert optional_matches == 0
+        assert must_exist_matches == 0
+        assert req_node_matches == 0
+        assert traversal_matches == 1   # A None node traverses into null
 
     @pytest.mark.parametrize("yamlpath,results,mustexist,default", [
         ("aliases[&aliasAnchorOne]", ["Anchored Scalar Value"], True, None),
