@@ -4,8 +4,14 @@ Bug Fixes:
   records in AoHs of the RHS document were not being considered for comparison.
   Any identity key set for the whole AoH was being applied to every record in
   the set.
+* The Wildcard and Traversal segments were terminating upon encountering a node
+  with a `null` value, discarding all nodes after, if any.
 
 Enhancements:
+* The yaml-get command-line tool now retrives nodes with `null` values,
+  printing the ASCII NULL control-character (Hexadecimal 00) wherever
+  encountered.  While most terminals and shells won't visibly print this
+  character, it is there and can be picked up by downstream parsers of STDOUT.
 * The yaml-set command-line tool now supports assigning YAML Aliases to target
   --change|-g nodes, referencing any other node via --aliasof|-A whether it is
   already Anchored, or not.  Should the Anchor not already exist, a unique name

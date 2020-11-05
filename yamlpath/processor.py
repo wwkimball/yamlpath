@@ -761,7 +761,10 @@ class Processor:
 
         if data is None:
             self.logger.debug(
-                "Processor::_get_nodes_by_traversal:  Bailing on None data!")
+                "Processor::_get_nodes_by_traversal:  Yielding a None node.")
+            yield NodeCoords(None, parent, parentref)
+            self.logger.debug(
+                "Processor::_get_nodes_by_traversal:  Yielded a None node.")
             return
 
         # Is there a next segment?
@@ -769,10 +772,21 @@ class Processor:
         if segment_index + 1 == len(segments):
             # This traversal is gathering every leaf node
             if isinstance(data, dict):
+                debug_key_count = len(data.keys())
+                debug_key_iteration = 0
                 for key, val in data.items():
                     next_translated_path = (
                         translated_path + YAMLPath.escape_path_section(
                             key, translated_path.seperator))
+                    self.logger.debug(
+                        "Processor::_get_nodes_by_traversal:  On key {}/{}..."
+                        .format(debug_key_iteration, debug_key_count))
+                    debug_key_iteration += 1
+                    self.logger.debug(
+                        "Recursing into Hash node:",
+                        prefix="Processor::_get_nodes_by_traversal:  ",
+                        data={key: val})
+
                     for node_coord in self._get_nodes_by_traversal(
                         val, yaml_path, segment_index,
                         parent=data, parentref=key,
