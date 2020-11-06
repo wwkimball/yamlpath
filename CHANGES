@@ -4,8 +4,6 @@ Bug Fixes:
   records in AoHs of the RHS document were not being considered for comparison.
   Any identity key set for the whole AoH was being applied to every record in
   the set.
-* The Wildcard and Traversal segments were terminating upon encountering a node
-  with a `null` value, discarding all nodes after, if any.
 
 Enhancements:
 * The yaml-get command-line tool now retrives nodes with `null` values,
