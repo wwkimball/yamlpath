@@ -189,6 +189,8 @@ def main():
             if isinstance(node, (dict, list)):
                 print(json.dumps(Parsers.jsonify_yaml_data(node)))
             else:
+                if node is None:
+                    node = "\x00"
                 print("{}".format(str(node).replace("\n", r"\n")))
     except RecursionError:
         log.critical(

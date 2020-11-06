@@ -66,6 +66,9 @@ class Processor:
         pathsep: PathSeperators = kwargs.pop("pathsep", PathSeperators.AUTO)
 
         if self.data is None:
+            self.logger.debug(
+                "Refusing to get nodes from a null document!",
+                prefix="Processor::get_nodes:  ", data=self.data)
             return
 
         if isinstance(yaml_path, str):
@@ -123,6 +126,9 @@ class Processor:
             - `YAMLPathException` when YAML Path is invalid
         """
         if self.data is None:
+            self.logger.debug(
+                "Refusing to set nodes of a null document!",
+                prefix="Processor::set_nodes:  ", data=self.data)
             return
 
         mustexist: bool = kwargs.pop("mustexist", False)
@@ -217,17 +223,27 @@ class Processor:
             - `NotImplementedError` when the segment indicates an unknown
               PathSegmentTypes value.
         """
-        if data is None:
-            return
-
-        segments = yaml_path.escaped
-        if not (segments and len(segments) > segment_index):
-            return
-
         parent = kwargs.pop("parent", None)
         parentref = kwargs.pop("parentref", None)
         traverse_lists = kwargs.pop("traverse_lists", True)
         translated_path = kwargs.pop("translated_path", YAMLPath(""))
+        if data is None:
+            self.logger.debug(
+                "Bailing out on None data at parentref, {}, of parent:"
+                .format(parentref),
+                prefix="Processor::_get_nodes_by_path_segment:  ",
+                data=parent)
+            return
+
+        segments = yaml_path.escaped
+        if not (segments and len(segments) > segment_index):
+            self.logger.debug(
+                "Bailing out because there are not {} segments in:"
+                .format(segment_index),
+                prefix="Processor::_get_nodes_by_path_segment:  ",
+                data=segments)
+            return
+
         (segment_type, stripped_attrs) = segments[segment_index]
         (unesc_type, unesc_attrs) = yaml_path.unescaped[segment_index]
 
@@ -341,6 +357,9 @@ class Processor:
                 # Pass-through search against possible Array-of-Hashes, if
                 # allowed.
                 if not traverse_lists:
+                    self.logger.debug(
+                        "Processor::_get_nodes_by_key:  Refusing to traverse a"
+                        " list.")
                     return
 
                 for eleidx, element in enumerate(data):
@@ -521,6 +540,9 @@ class Processor:
         desc_path = YAMLPath(attr)
         if isinstance(data, list):
             if not traverse_lists:
+                self.logger.debug(
+                    "Processor::_get_nodes_by_search:  Refusing to traverse a"
+                    " list.")
                 return
 
             for lstidx, ele in enumerate(data):
@@ -761,7 +783,8 @@ class Processor:
 
         if data is None:
             self.logger.debug(
-                "Processor::_get_nodes_by_traversal:  Bailing on None data!")
+                "Processor::_get_nodes_by_traversal:  Yielding a None node.")
+            yield NodeCoords(None, parent, parentref)
             return
 
         # Is there a next segment?
@@ -884,12 +907,18 @@ class Processor:
 
         Raises:  N/A
         """
-        if data is None:
-            return
-
         parent = kwargs.pop("parent", None)
         parentref = kwargs.pop("parentref", None)
         translated_path = kwargs.pop("translated_path", YAMLPath(""))
+
+        if data is None:
+            self.logger.debug(
+                "Bailing out on None data at parentref, {}, of parent:"
+                .format(parentref),
+                prefix="Processor::_get_required_nodes:  ",
+                data=parent)
+            return
+
         segments = yaml_path.escaped
         if segments and len(segments) > depth:
             (segment_type, unstripped_attrs) = yaml_path.unescaped[depth]
@@ -916,7 +945,14 @@ class Processor:
                     prefix="Processor::_get_required_nodes:  ",
                     data=segment_node_coords)
 
-                if isinstance(segment_node_coords, list):
+                if (segment_node_coords is None
+                    or (hasattr(segment_node_coords, "node")
+                        and segment_node_coords.node is None)
+                ):
+                    self.logger.debug(
+                        "Processor::_get_required_nodes:  Yielding null.")
+                    yield segment_node_coords
+                elif isinstance(segment_node_coords, list):
                     # Most likely the output of a Collector, this list will be
                     # of NodeCoords rather than an actual DOM reference.  As
                     # such, it must be treated as a virtual DOM element that
@@ -978,15 +1014,16 @@ class Processor:
           an element that does not exist in data and this code isn't
           yet prepared to add it.
         """
-        if data is None:
-            self.logger.debug(
-                "Processor::_get_optional_nodes:  Bailing out on None"
-                + " data/path!")
-            return
-
         parent = kwargs.pop("parent", None)
         parentref = kwargs.pop("parentref", None)
         translated_path = kwargs.pop("translated_path", YAMLPath(""))
+        if data is None:
+            self.logger.debug(
+                "Bailing out on None data at parentref, {}, of parent:"
+                .format(parentref),
+                prefix="Processor::_get_optional_nodes:  ", data=parent)
+            return
+
         segments = yaml_path.escaped
         # pylint: disable=locally-disabled,too-many-nested-blocks
         if segments and len(segments) > depth:
