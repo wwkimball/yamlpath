@@ -85,6 +85,10 @@ def processcli():
         metavar="LENGTH",
         help="randomly generate a replacement value of a set length")
     input_group.add_argument(
+        "-N", "--null",
+        action="store_true",
+        help="sets the value to null")
+    input_group.add_argument(
         "-D", "--delete",
         action="store_true",
         help="delete rather than change target node(s); implies"
@@ -197,6 +201,7 @@ def validateargs(args, log):
             or args.file
             or args.stdin
             or args.random
+            or args.null
             or args.delete
             or args.anchor
             or args.tag
@@ -204,7 +209,7 @@ def validateargs(args, log):
         has_errors = True
         log.error(
             "Exactly one of the following must be set:  --value, --aliasof,"
-            " --file, --stdin, --random, --anchor, or --tag")
+            " --file, --stdin, --random, --null, --delete, --anchor, or --tag")
 
     # --stdin cannot be used with -, explicit or implied
     if args.stdin and in_stream_mode:
@@ -263,8 +268,7 @@ def validateargs(args, log):
 
     # Any set tag must have a prefix of at least one !
     if args.tag and not args.tag[0] == "!":
-        has_errors = True
-        log.error("A YAML --tag must be prefixed with exactly 1 ! mark.")
+        args.tag = "!{}".format(args.tag)
 
     # When using --delete, --mustexist must also be set
     if args.delete:
@@ -511,6 +515,9 @@ def main():
     elif args.file:
         with open(args.file, 'r') as fhnd:
             new_value = fhnd.read().rstrip()
+        has_new_value = True
+    elif args.null:
+        new_value = None
         has_new_value = True
     elif args.random is not None:
         new_value = ''.join(
