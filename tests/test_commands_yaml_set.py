@@ -58,12 +58,6 @@ class Test_yaml_set():
         assert not result.success, result.stderr
         assert "applies only when reading from a file" in result.stderr
 
-    def test_tags_require_bang(self, script_runner):
-        result = script_runner.run(
-            self.command, "--change=test", "--tag=name", "-")
-        assert not result.success, result.stderr
-        assert "A YAML --tag must be prefixed with exactly 1 ! mark" in result.stderr
-
     def test_bad_data_type_optional(self, script_runner, tmp_path_factory):
         yaml_file = create_temp_yaml_file(tmp_path_factory, """---
 boolean: false
@@ -1192,7 +1186,31 @@ key: *anchored_scalar
         result = script_runner.run(
             self.command,
             "--change=key",
-            "--tag=!some_tag",
+            "--tag=some_tag",
+            yaml_file
+        )
+        assert result.success, result.stderr
+
+        with open(yaml_file, 'r') as fhnd:
+            filedat = fhnd.read()
+        assert filedat == yamlout
+
+    def test_assign_null(self, script_runner, tmp_path_factory):
+        yamlin = """---
+ingress_key: Preceding value
+concrete_key: Old value
+egress_key: Following value
+"""
+        yamlout = """---
+ingress_key: Preceding value
+concrete_key:
+egress_key: Following value
+"""
+        yaml_file = create_temp_yaml_file(tmp_path_factory, yamlin)
+        result = script_runner.run(
+            self.command,
+            "--change=concrete_key",
+            "--null",
             yaml_file
         )
         assert result.success, result.stderr

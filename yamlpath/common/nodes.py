@@ -144,9 +144,9 @@ class Nodes:
                     source_node, value, new_format, **kwargs)
 
         if new_node is None:
-            if hasattr(source_node, "anchor"):
+            if hasattr(source_node, "anchor") and source_node.anchor.value:
                 new_node = new_type(new_value, anchor=source_node.anchor.value)
-            else:
+            elif new_type is not type(None):
                 new_node = new_type(new_value)
 
         # Apply a custom tag, if provided
