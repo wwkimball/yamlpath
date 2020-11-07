@@ -406,7 +406,7 @@ class Test_func():
     ###
     def test_stringify_dates(self):
         from datetime import date
-        yaml_safe_data = { "string": "Value", "number": 1, "date": date(2020, 10, 19) }
+        yaml_safe_data = CommentedMap({ "string": "Value", "number": 1, "date": date(2020, 10, 19) })
         json_safe_data = { "string": "Value", "number": 1, "date": "2020-10-19" }
         assert stringify_dates(yaml_safe_data) == json_safe_data
 
