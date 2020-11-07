@@ -218,7 +218,7 @@ class ConsolePrinter:
     @staticmethod
     def _debug_get_tag(data: Any) -> str:
         """Helper for debug."""
-        return (data.tag.value
+        return str(data.tag.value
                 if hasattr(data, "tag") and data.tag.value is not None
                 else "")
 
@@ -268,6 +268,10 @@ class ConsolePrinter:
                         data.value, prefix=tag_prefix,
                         print_anchor=False, print_tag=False, print_type=True)
 
+        # The "true" type of the value is nested in TaggedScalar.value
+        if isinstance(data, TaggedScalar):
+            dtype = "{}({})".format(dtype, type(data.value))
+
         print_prefix += anchor_prefix
         return ConsolePrinter._debug_prefix_lines(
             "{}{}{}".format(print_prefix, data, dtype))
@@ -305,8 +309,10 @@ class ConsolePrinter:
     ) -> Generator[str, None, None]:
         """Helper for debug."""
         prefix = kwargs.pop("prefix", "")
+        print_tag = kwargs.pop("print_tag", True)
 
-        if (isinstance(data, (CommentedBase, CommentedSet))
+        if (print_tag
+            and isinstance(data, (CommentedBase, CommentedSet))
             and hasattr(data, "tag")
             and data.tag.value
         ):

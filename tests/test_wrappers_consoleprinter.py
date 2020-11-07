@@ -92,6 +92,7 @@ class Test_wrappers_ConsolePrinter():
             "DEBUG:  [non-anchored-key](_,&Anchor)TestVal<class 'ruamel.yaml.scalarstring.PlainScalarString'>",
         ]) + "\n" == console.out
 
+        tagged_value = TaggedScalar("value", tag="!tag")
         tagged_sequence = CommentedSeq(["a", "b"])
         tagged_sequence.yaml_set_tag("!raz")
         logger.debug(
@@ -103,7 +104,7 @@ class Test_wrappers_ConsolePrinter():
             data_footer="::: DATA FOOTER :::",
             data=CommentedMap({
                 "key": "value",
-                "tagged": TaggedScalar("value", tag="!tag"),
+                "tagged": tagged_value,
                 "array": ["ichi", "ni", "san"],
                 "tagged_array": tagged_sequence,
                 "aoh": [{"id": 1},{"id": 2},{"id": 3}],
@@ -117,12 +118,12 @@ class Test_wrappers_ConsolePrinter():
             "DEBUG:  test_debug_noisy:  test_wrappers_consoleprinter:",
             "DEBUG:  test_debug_noisy:  +++ DATA HEADER +++",
             "DEBUG:  test_debug_noisy:  [key]value<class 'str'>",
-            "DEBUG:  test_debug_noisy:  [tagged]<!tag>value<class 'str'>",
+            "DEBUG:  test_debug_noisy:  [tagged]<_,!tag>value<class 'ruamel.yaml.comments.TaggedScalar'>(<class 'str'>)",
             "DEBUG:  test_debug_noisy:  [array][0]ichi<class 'str'>",
             "DEBUG:  test_debug_noisy:  [array][1]ni<class 'str'>",
             "DEBUG:  test_debug_noisy:  [array][2]san<class 'str'>",
-            "DEBUG:  test_debug_noisy:  [tagged_array]<!raz>[0]a<class 'str'>",
-            "DEBUG:  test_debug_noisy:  [tagged_array]<!raz>[1]b<class 'str'>",
+            "DEBUG:  test_debug_noisy:  [tagged_array]<_,!raz>[0]a<class 'str'>",
+            "DEBUG:  test_debug_noisy:  [tagged_array]<_,!raz>[1]b<class 'str'>",
             "DEBUG:  test_debug_noisy:  [aoh][0][id]1<class 'int'>",
             "DEBUG:  test_debug_noisy:  [aoh][1][id]2<class 'int'>",
             "DEBUG:  test_debug_noisy:  [aoh][2][id]3<class 'int'>",
@@ -136,6 +137,19 @@ class Test_wrappers_ConsolePrinter():
             "DEBUG:  test_debug_noisy:  ::: DATA FOOTER :::",
             "DEBUG:  test_debug_noisy:  === FOOTER ===",
         ]) + "\n" == console.out
+
+        logger.debug(tagged_value)
+        console = capsys.readouterr()
+        assert "\n".join([
+            "DEBUG:  <!tag>value<class 'ruamel.yaml.comments.TaggedScalar'>(<class 'str'>)",
+        ])
+
+        logger.debug(tagged_sequence)
+        console = capsys.readouterr()
+        assert "\n".join([
+            "DEBUG:  [tagged_array]<!raz>[0]a<class 'str'>",
+            "DEBUG:  [tagged_array]<!raz>[1]b<class 'str'>",
+        ])
 
         nc = NodeCoords("value", dict(key="value"), "key", YAMLPath("key"))
         logger.debug(

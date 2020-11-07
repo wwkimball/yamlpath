@@ -132,11 +132,13 @@ class DiffEntry:
     @classmethod
     def _present_data(cls, data: Any, prefix: str) -> str:
         """Stringify data."""
+        json_safe_data = Parsers.jsonify_yaml_data(data)
+        formatted_data = json_safe_data
+        if isinstance(json_safe_data, str):
+            formatted_data = json_safe_data.strip()
+        json_data = json.dumps(formatted_data).replace(
+                               "\\n", "\n{} ".format(prefix))
         data_tag = ""
         if isinstance(data, TaggedScalar) and data.tag.value:
             data_tag = "{} ".format(data.tag.value)
-        return "{} {}{}".format(
-            prefix,
-            data_tag,
-            json.dumps(Parsers.jsonify_yaml_data(data)).strip().replace(
-                "\n", "\n{} ".format(prefix)))
+        return "{} {}{}".format(prefix, data_tag, json_data)

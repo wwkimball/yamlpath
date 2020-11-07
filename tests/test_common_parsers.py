@@ -13,12 +13,12 @@ class Test_common_parsers():
     # stringify_dates
     ###
     def test_stringify_complex_data_with_dates(self):
-        cdata = {
-            "dates": [
+        cdata = ry.comments.CommentedMap({
+            "dates": ry.comments.CommentedSeq([
                 dt.date(2020, 10, 31),
                 dt.date(2020, 11, 3)
-            ]
-        }
+            ])
+        })
         sdata = Parsers.stringify_dates(cdata)
         assert sdata["dates"][0] == "2020-10-31"
         assert sdata["dates"][1] == "2020-11-03"
@@ -36,17 +36,16 @@ class Test_common_parsers():
         null_value = None
         null_node = ry.comments.TaggedScalar(None, tag=null_tag)
 
-        cdata = {
+        cdata = ry.comments.CommentedMap({
             "tagged": tagged_node,
             "null": null_node,
-            "dates": [
+            "dates": ry.comments.CommentedSeq([
                 dt.date(2020, 10, 31),
                 dt.date(2020, 11, 3)
-            ]
-        }
+            ])
+        })
         jdata = Parsers.jsonify_yaml_data(cdata)
         assert jdata["tagged"] == tagged_value
         assert jdata["null"] == null_value
         assert jdata["dates"][0] == "2020-10-31"
         assert jdata["dates"][1] == "2020-11-03"
- 
