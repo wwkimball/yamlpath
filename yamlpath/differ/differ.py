@@ -6,6 +6,8 @@ Copyright 2020 William W. Kimball, Jr. MBA MSIS
 from itertools import zip_longest
 from typing import Any, Dict, Generator, List, Optional, Tuple
 
+from ruamel.yaml.comments import TaggedScalar
+
 from yamlpath import YAMLPath
 from yamlpath.wrappers import ConsolePrinter, NodeCoords
 from yamlpath.eyaml import EYAMLProcessor
@@ -151,6 +153,22 @@ class Differ:
             prefix="Differ::_diff_dicts:  ",
             data=rhs)
 
+        # Check first for a difference in YAML Tag
+        lhs_tag = lhs.tag.value if hasattr(lhs, "tag") else None
+        rhs_tag = rhs.tag.value if hasattr(rhs, "tag") else None
+        if lhs_tag != rhs_tag:
+            self.logger.debug(
+                "Dictionaries have different YAML Tags; {} != {}:".format(
+                    lhs_tag, rhs_tag),
+                prefix="Differ::_diff_dicts:  ")
+            self._diffs.append(
+                DiffEntry(
+                    DiffActions.DELETE, path, lhs, None, key_tag=lhs_tag))
+            self._diffs.append(
+                DiffEntry(
+                    DiffActions.ADD, path, None, rhs, key_tag=rhs_tag))
+            return
+
         lhs_keys = set(lhs)
         rhs_keys = set(rhs)
         lhs_key_indicies = Differ._get_key_indicies(lhs)
@@ -186,7 +204,8 @@ class Differ:
                 DiffEntry(
                     DiffActions.DELETE, next_path, lhs[key], None,
                     lhs_parent=lhs, lhs_iteration=lhs_key_indicies[key],
-                    rhs_parent=rhs))
+                    rhs_parent=rhs,
+                    key_tag=key.tag.value if hasattr(key, "tag") else None))
 
         # Look for new keys
         for key in rhs_keys - lhs_keys:
@@ -196,7 +215,8 @@ class Differ:
                 DiffEntry(
                     DiffActions.ADD, next_path, None, rhs[key],
                     lhs_parent=lhs,
-                    rhs_parent=rhs, rhs_iteration=rhs_key_indicies[key]))
+                    rhs_parent=rhs, rhs_iteration=rhs_key_indicies[key],
+                    key_tag=key.tag.value if hasattr(key, "tag") else None))
 
     def _diff_synced_lists(self, path: YAMLPath, lhs: list, rhs: list) -> None:
         """Diff two synchronized lists."""

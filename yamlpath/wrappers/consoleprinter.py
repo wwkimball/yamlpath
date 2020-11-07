@@ -216,6 +216,13 @@ class ConsolePrinter:
                 else "")
 
     @staticmethod
+    def _debug_get_tag(data: Any) -> str:
+        """Helper for debug."""
+        return (data.tag.value
+                if hasattr(data, "tag") and data.tag.value is not None
+                else "")
+
+    @staticmethod
     def _debug_dump(data: Any, **kwargs) -> Generator[str, None, None]:
         """Helper for debug."""
         prefix = kwargs.pop("prefix", "")
@@ -335,6 +342,20 @@ class ConsolePrinter:
         return display_anchor
 
     @staticmethod
+    def _debug_get_kv_tags(key: Any, value: Any) -> str:
+        """Helper for debug."""
+        key_tag = ConsolePrinter._debug_get_tag(key)
+        val_tag = ConsolePrinter._debug_get_tag(value)
+        display_tag = ""
+        if key_tag and val_tag:
+            display_tag = "<{},{}>".format(key_tag, val_tag)
+        elif key_tag:
+            display_tag = "<{},_>".format(key_tag)
+        elif val_tag:
+            display_tag = "<_,{}>".format(val_tag)
+        return display_tag
+
+    @staticmethod
     def _debug_dict(
         data: Union[Dict, CommentedMap], **kwargs
     ) -> Generator[str, None, None]:
@@ -354,10 +375,12 @@ class ConsolePrinter:
                            if key in local_keys
                            else "<<:{}:>>".format(key))
             display_anchor = ConsolePrinter._debug_get_kv_anchors(key, val)
-            kv_prefix = "{}[{}]{}".format(prefix, display_key, display_anchor)
+            display_tag = ConsolePrinter._debug_get_kv_tags(key, val)
+            kv_prefix = "{}[{}]{}{}".format(
+                prefix, display_key, display_anchor, display_tag)
 
             for line in ConsolePrinter._debug_dump(
-                val, prefix=kv_prefix, print_type=True, print_tag=True,
+                val, prefix=kv_prefix, print_type=True, print_tag=False,
                 print_anchor=False
             ):
                 yield line
