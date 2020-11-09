@@ -7,10 +7,12 @@ Bug Fixes:
 
 Enhancements:
 * The yaml-get command-line tool -- and the underlying Processor::get_nodes
-  method -- now retrives nodes with `null` values.  Null results from yaml-get
-  are printed using the ASCII NULL control-character (Hexadecimal 00) wherever
-  encountered.  While most terminals and shells won't visibly print this
-  character, it is there and can be picked up by downstream parsers of STDOUT.
+  method -- now retrives nodes with `null` values.  Non-JSON null results from
+  yaml-get are printed using the ASCII NULL control-character (Hexadecimal 00)
+  wherever encountered.  While most terminals and shells won't visibly print
+  this character, it is there and can be picked up by downstream parsers of
+  STDOUT.  When the output is rendered as JSON, the unquoted "null" identifier
+  is used.
 * The yaml-set command-line tool now enables assigning null values using a new
   --null|-N input option.
 * The yaml-set command-line tool now supports assigning YAML Aliases to target
