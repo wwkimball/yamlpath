@@ -372,3 +372,14 @@ class Nodes:
     def node_is_leaf(node: Any) -> bool:
         """Indicate whether a node is a leaf (Scalar data)."""
         return not isinstance(node, (dict, list, set))
+
+    @staticmethod
+    def tagless_elements(data: list) -> list:
+        """Get a copy of a list with all elements stripped of YAML Tags."""
+        detagged = []
+        for ele in data:
+            if isinstance(ele, TaggedScalar):
+                detagged.append(ele.value)
+            else:
+                detagged.append(ele)
+        return detagged
