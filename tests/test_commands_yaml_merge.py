@@ -1349,11 +1349,122 @@ aliases:
     ):
         import subprocess
 
-        lhs_file = create_temp_yaml_file(tmp_path_factory, """
+        lhs_file = create_temp_yaml_file(tmp_path_factory, """---
+ports:
+  - !public_record
+    id: !privileged 7
+    name: echo
+    tcp: true
+    udp: true
+  - id: 15
+    name: netstat
+    tcp: true
+    udp: false
+  - !public_record
+    id: !privileged 80
+    name: http
+    tcp: true
+    udp: true
+  - id: 113
+    name: ident
+    tcp: true
+    udp: false
+  - !inferred_record
+    id: !unprivileged 1666
+    name: perforce
+    tcp: true
+    udp: false
+  - id: 1812
+    name: radius
+    tcp: true
+    udp: true
+  - !inferred_record
+    id: !unprivileged 1813
+    name: radius-acct
+    tcp: true
+    udp: true
+  - id: 2083
+    name: radsec
+    tcp: true
+    udp: true
 """)
-        rhs_content = """
+        rhs_content = """---
+ports:
+  - !public_record
+    id: !privileged 7
+    name: echo
+    tcp: true
+    udp: true
+  - id: 15
+    name: netstat
+    tcp: true
+    udp: false
+  - id: 80
+    name: http
+    tcp: true
+    udp: true
+  - !public_record
+    id: !privileged 113
+    name: ident
+    tcp: true
+    udp: false
+  - !inferred_record
+    id: !unprivileged 1666
+    name: perforce
+    tcp: true
+    udp: false
+  - id: 1812
+    name: radius
+    tcp: true
+    udp: true
+  - id: 1813
+    name: radius-acct
+    tcp: true
+    udp: true
+  - !inferred_record
+    id: !unprivileged 2083
+    name: radsec
+    tcp: true
+    udp: true
 """
-        merged_yaml_content = """
+        merged_yaml_content = """---
+ports:
+  - !public_record
+    id: !privileged 7
+    name: echo
+    tcp: true
+    udp: true
+  - id: 15
+    name: netstat
+    tcp: true
+    udp: false
+  - id: 80
+    name: http
+    tcp: true
+    udp: true
+  - !public_record
+    id: !privileged 113
+    name: ident
+    tcp: true
+    udp: false
+  - !inferred_record
+    id: !unprivileged 1666
+    name: perforce
+    tcp: true
+    udp: false
+  - id: 1812
+    name: radius
+    tcp: true
+    udp: true
+  - id: 1813
+    name: radius-acct
+    tcp: true
+    udp: true
+  - !inferred_record
+    id: !unprivileged 2083
+    name: radsec
+    tcp: true
+    udp: true
 """
 
         result = subprocess.run(
