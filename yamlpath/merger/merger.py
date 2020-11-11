@@ -372,25 +372,12 @@ class Merger:
                     )
 
                 merged_hash = False
-                for lhs_hash in lhs:
-                    has_id_key = False
-                    raw_identity: Any = None
-                    for raw_key in lhs_hash:
-                        cmp_key = raw_key
-                        if isinstance(raw_key, TaggedScalar):
-                            cmp_key = raw_key.value
-                        if cmp_key != id_key:
-                            continue
-                        has_id_key = True
-                        raw_identity = lhs_hash[raw_key]
-                        break
-                    if not has_id_key:
-                        continue
-
-                    cmp_identity = Nodes.tagless_value(raw_identity)
-                    if not cmp_identity == id_val:
-                        continue
-
+                for lhs_hash in (
+                    lhs_hash for lhs_hash in lhs
+                    if isinstance(lhs_hash, CommentedMap)
+                    and id_key in lhs_hash
+                    and Nodes.tagless_value(lhs_hash[id_key]) == id_val
+                ):
                     self._merge_dicts(lhs_hash, ele, path_next)
                     merged_hash = True
 
