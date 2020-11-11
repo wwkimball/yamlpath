@@ -4,7 +4,6 @@ Implement YAML document Merger.
 Copyright 2020 William W. Kimball, Jr. MBA MSIS
 """
 import sys  # For deprecation warnings
-from ast import literal_eval
 from typing import Any, Dict, List, Set, Tuple
 import json
 from io import StringIO
