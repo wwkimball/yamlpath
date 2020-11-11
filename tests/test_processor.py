@@ -22,16 +22,24 @@ class Test_Processor():
     def test_get_none_data_nodes(self, quiet_logger):
         processor = Processor(quiet_logger, None)
         yamlpath = YAMLPath("abc")
-        matches = 0
+        optional_matches = 0
+        must_exist_matches = 0
+        req_node_matches = 0
+        traversal_matches = 0
+
         for node in processor.get_nodes(yamlpath, mustexist=False):
-            matches += 1
+            optional_matches += 1
         for node in processor.get_nodes(yamlpath, mustexist=True):
-            matches += 1
+            must_exist_matches += 1
         for node in processor._get_required_nodes(None, yamlpath):
-            matches += 1
+            req_node_matches += 1
         for node in processor._get_nodes_by_traversal(None, yamlpath, 0):
-            matches += 1
-        assert matches == 0
+            traversal_matches += 1
+
+        assert optional_matches == 0
+        assert must_exist_matches == 0
+        assert req_node_matches == 0
+        assert traversal_matches == 1   # A None node traverses into null
 
     @pytest.mark.parametrize("yamlpath,results,mustexist,default", [
         ("aliases[&aliasAnchorOne]", ["Anchored Scalar Value"], True, None),
@@ -704,6 +712,7 @@ products_array:
         ("((/list1) + (/list2)) - (/exclude)", [[1, 2, 5, 6]]),
         ("(/list1) + ((/list2) - (/exclude))", [[1, 2, 3, 5, 6]]),
         ("((/list1) - (/exclude)) + ((/list2) - (/exclude))", [[1, 2, 5, 6]]),
+        ("((/list1) - (/exclude)) + ((/list2) - (/exclude))*", [1, 2, 5, 6]),
         ("(((/list1) - (/exclude)) + ((/list2) - (/exclude)))[2]", [5]),
     ])
     def test_scalar_collectors(self, quiet_logger, yamlpath, results):
@@ -732,4 +741,32 @@ products_array:
             matchidx += 1
         assert len(results) == matchidx
 
-    # TODO: test_collectors_expanded_via_star
+    def test_get_every_data_type(self, quiet_logger):
+        # Contributed by https://github.com/AndydeCleyre
+        yamldata = """---
+intthing: 6
+floatthing: 6.8
+yesthing: yes
+nothing: no
+truething: true
+falsething: false
+nullthing: null
+nothingthing:
+emptystring: ""
+nullstring: "null"
+        """
+
+        # Note that Python/pytest is translating nothingthing into a string, "null".
+        # This is NOT yamlpath doing this.  In fact, the yaml-get command-line tool
+        # actually translates true nulls into "\x00" (hexadecimal NULL control-characters).
+        results = [6, 6.8, "yes", "no", True, False, "", "null", "", "null"]
+
+        yaml = YAML()
+        data = yaml.load(yamldata)
+        processor = Processor(quiet_logger, data)
+        yamlpath = YAMLPath("*")
+
+        match_index = 0
+        for node in processor.get_nodes(yamlpath):
+            assert unwrap_node_coords(node) == results[match_index]
+            match_index += 1

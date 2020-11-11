@@ -19,16 +19,10 @@ from os import remove, access, R_OK
 from os.path import isfile, exists
 from shutil import copy2, copyfileobj
 from pathlib import Path
-
+from typing import Any, Dict
 
 from yamlpath import __version__ as YAMLPATH_VERSION
-from yamlpath.func import (
-    clone_node,
-    build_next_node,
-    get_yaml_data,
-    get_yaml_editor,
-    stringify_dates,
-)
+from yamlpath.common import Anchors, Nodes, Parsers
 from yamlpath import YAMLPath
 from yamlpath.exceptions import YAMLPathException
 from yamlpath.enums import YAMLValueFormats, PathSeperators
@@ -74,6 +68,11 @@ def processcli():
         "-a", "--value",
         help="set the new value from the command-line instead of STDIN")
     input_group.add_argument(
+        "-A", "--aliasof",
+        metavar="ANCHOR",
+        help="set the value as a YAML Alias of an existing Anchor, by name "
+             "(merely copies the target value for non-YAML files)")
+    input_group.add_argument(
         "-f", "--file",
         help="read the new value from file (discarding any trailing\
               new-lines)")
@@ -85,6 +84,10 @@ def processcli():
         type=int,
         metavar="LENGTH",
         help="randomly generate a replacement value of a set length")
+    input_group.add_argument(
+        "-N", "--null",
+        action="store_true",
+        help="sets the value to null")
     input_group.add_argument(
         "-D", "--delete",
         action="store_true",
@@ -128,6 +131,17 @@ def processcli():
         help="characters from which to build a value for --random; default="
              "all upper- and lower-case letters and all digits"
     )
+    parser.add_argument(
+        "-H", "--anchor",
+        metavar="ANCHOR",
+        help="when --aliasof|-A points to a value which is not already"
+             " Anchored, a new Anchor with this name is created; renames an"
+             " existing Anchor if already set")
+    parser.add_argument(
+        "-T", "--tag",
+        metavar="TAG",
+        help="assign a custom YAML (data-type) tag to the changed nodes; can"
+             " be used without other input options to assign or change a tag")
 
     eyaml_group = parser.add_argument_group(
         "EYAML options", "Left unset, the EYAML keys will default to your\
@@ -164,6 +178,7 @@ def processcli():
         help="the YAML file to update; omit or use - to read from STDIN")
     return parser.parse_args()
 
+# pylint: disable=too-many-branches
 def validateargs(args, log):
     """Validate command-line arguments."""
     has_errors = False
@@ -177,19 +192,24 @@ def validateargs(args, log):
         has_errors = True
         log.error("There must be a YAML_FILE or STDIN document.")
 
-    # At least one of --value, --file, --stdin, or --random must be set
+    # At least one of --value, --aliasof, --file, --stdin, or --random must be
+    # set.
     if not (
             args.value
             or args.value == ""
+            or args.aliasof
             or args.file
             or args.stdin
             or args.random
+            or args.null
             or args.delete
+            or args.anchor
+            or args.tag
     ):
         has_errors = True
         log.error(
-            "Exactly one of the following must be set:  --value, --file,"
-            + " --stdin, or --random")
+            "Exactly one of the following must be set:  --value, --aliasof,"
+            " --file, --stdin, --random, --null, --delete, --anchor, or --tag")
 
     # --stdin cannot be used with -, explicit or implied
     if args.stdin and in_stream_mode:
@@ -197,6 +217,17 @@ def validateargs(args, log):
         log.error(
             "Impossible to read both document and replacement value from"
             " STDIN!")
+
+    # --anchor can be used only when --aliasof is set; remove illegal chars
+    if args.anchor:
+        args.anchor = (
+            args.anchor
+            .replace(" ", "")
+            .replace("&", "")
+            .replace("*", "")
+        )
+    if args.anchor and not args.aliasof:
+        args.aliasof = args.change
 
     # --backup has no meaning when reading the YAML file from STDIN
     if args.backup and in_stream_mode:
@@ -235,6 +266,10 @@ def validateargs(args, log):
         has_errors = True
         log.error("The pool of random CHARS must have at least 2 characters.")
 
+    # Any set tag must have a prefix of at least one !
+    if args.tag and not args.tag[0] == "!":
+        args.tag = "!{}".format(args.tag)
+
     # When using --delete, --mustexist must also be set
     if args.delete:
         args.mustexist = True
@@ -254,7 +289,7 @@ def save_to_json_file(args, log, yaml_data):
     """Save to a JSON file."""
     log.verbose("Writing changed data as JSON to {}.".format(args.yaml_file))
     with open(args.yaml_file, 'w') as out_fhnd:
-        json.dump(stringify_dates(yaml_data), out_fhnd)
+        json.dump(Parsers.jsonify_yaml_data(yaml_data), out_fhnd)
 
 def save_to_yaml_file(args, log, yaml_parser, yaml_data, backup_file):
     """Save to a YAML file."""
@@ -327,18 +362,18 @@ def write_output_document(args, log, yaml, yaml_data):
         if write_document_as_yaml(args.yaml_file, yaml_data):
             yaml.dump(yaml_data, sys.stdout)
         else:
-            json.dump(stringify_dates(yaml_data), sys.stdout)
+            json.dump(Parsers.jsonify_yaml_data(yaml_data), sys.stdout)
     else:
         save_to_file(args, log, yaml, yaml_data, backup_file)
 
 def _try_load_input_file(args, log, yaml, change_path, new_value):
     """Attempt to load the input data file or abend on error."""
-    (yaml_data, doc_loaded) = get_yaml_data(yaml, log, args.yaml_file)
+    (yaml_data, doc_loaded) = Parsers.get_yaml_data(yaml, log, args.yaml_file)
     if not doc_loaded:
         # An error message has already been logged
         sys.exit(1)
     elif yaml_data is None:
-        yaml_data = build_next_node(change_path, 0, new_value)
+        yaml_data = Nodes.build_next_node(change_path, 0, new_value)
     return yaml_data
 
 def _delete_nodes(log, delete_nodes) -> None:
@@ -374,6 +409,89 @@ def _delete_nodes(log, delete_nodes) -> None:
                 " document is YAML, JSON, or compatible and --change|-g is"
                 " non-empty and not the document root.", 1)
 
+def _get_nodes(log, processor, yaml_path, **kwargs):
+    """Gather requested nodes."""
+    must_exist = kwargs.pop("must_exist", False)
+    default_value = kwargs.pop("default_value", " ")
+    gathered_nodes = []
+
+    try:
+        for node_coordinate in processor.get_nodes(
+                yaml_path, mustexist=must_exist,
+                default_value=default_value):
+            log.debug(
+                "Got node from {}:".format(yaml_path),
+                data=node_coordinate, prefix="yaml_set::_get_nodes:  ")
+            gathered_nodes.append(node_coordinate)
+    except YAMLPathException as ex:
+        log.critical(ex, 1)
+
+    log.debug(
+        "Collected nodes:", data=gathered_nodes,
+        prefix="yaml_set::_get_nodes:  ")
+
+    return gathered_nodes
+
+def _alias_nodes(
+    log, processor, assign_to_nodes, anchor_path, anchor_name
+):
+    """Assign YAML Aliases to the target nodes."""
+    anchor_node_coordinates = _get_nodes(
+        log, processor, anchor_path, must_exist=True)
+    if len(anchor_node_coordinates) > 1:
+        log.critical(
+            "It is impossible to Alias more than one Anchor at a time from {}!"
+            .format(anchor_path), 1)
+
+    anchor_coord = anchor_node_coordinates[0]
+    anchor_node = anchor_coord.node
+    if not hasattr(anchor_node, "anchor"):
+        anchor_coord.parent[anchor_coord.parentref] = Nodes.wrap_type(
+            anchor_node)
+        anchor_node = anchor_coord.parent[anchor_coord.parentref]
+
+    known_anchors: Dict[str, Any] = {}
+    Anchors.scan_for_anchors(processor.data, known_anchors)
+
+    if anchor_name:
+        # Rename any pre-existing anchor or set an original anchor name; the
+        # assigned name must be unique!
+        if anchor_name in known_anchors:
+            log.critical(
+                "Anchor names must be unique within YAML documents.  Anchor"
+                " name, {}, is already used.".format(anchor_name))
+        anchor_node.yaml_set_anchor(anchor_name, always_dump=True)
+    elif anchor_node.anchor.value:
+        # The source node already has an anchor name
+        anchor_name = anchor_node.anchor.value
+    else:
+        # An orignial, unique-to-the-document anchor name must be generated
+        new_anchor = Anchors.generate_unique_anchor_name(
+            processor.data, anchor_coord, known_anchors)
+        anchor_node.yaml_set_anchor(new_anchor, always_dump=True)
+
+    for node_coord in assign_to_nodes:
+        log.debug(
+            "Attempting to set the anchor name for node to {}:"
+            .format(anchor_name),
+            data=node_coord,
+            prefix="yaml_set::_alias_nodes:  ")
+        node_coord.parent[node_coord.parentref] = anchor_node
+
+def _tag_nodes(document, tag, nodes):
+    """Assign a data-type tag to a set of nodes."""
+    for node_coord in nodes:
+        old_node = node_coord.node
+        if node_coord.parent is None:
+            node_coord.node.yaml_set_tag(tag)
+        else:
+            node_coord.parent[node_coord.parentref] = Nodes.apply_yaml_tag(
+                node_coord.node, tag)
+            if Anchors.get_node_anchor(old_node) is not None:
+                Anchors.replace_anchor(
+                    document, old_node,
+                    node_coord.parent[node_coord.parentref])
+
 # pylint: disable=locally-disabled,too-many-locals,too-many-branches,too-many-statements
 def main():
     """Main code."""
@@ -386,21 +504,29 @@ def main():
     # Obtain the replacement value
     consumed_stdin = False
     new_value = None
+    has_new_value = False
     if args.value or args.value == "":
         new_value = args.value
+        has_new_value = True
     elif args.stdin:
         new_value = ''.join(sys.stdin.readlines())
         consumed_stdin = True
+        has_new_value = True
     elif args.file:
         with open(args.file, 'r') as fhnd:
             new_value = fhnd.read().rstrip()
+        has_new_value = True
+    elif args.null:
+        new_value = None
+        has_new_value = True
     elif args.random is not None:
         new_value = ''.join(
             secrets.choice(args.random_from) for _ in range(args.random)
         )
+        has_new_value = True
 
     # Prep the YAML parser
-    yaml = get_yaml_editor()
+    yaml = Parsers.get_yaml_editor()
 
     # Attempt to open the YAML file; check for parsing errors
     if args.yaml_file:
@@ -419,23 +545,15 @@ def main():
         yaml_data = _try_load_input_file(
             args, log, yaml, change_path, new_value)
 
-    # Load the present value at the specified YAML Path
-    change_node_coordinates = []
-    old_format = YAMLValueFormats.DEFAULT
+    # Load the present nodes at the specified YAML Path
     processor = EYAMLProcessor(
         log, yaml_data, binary=args.eyaml,
         publickey=args.publickey, privatekey=args.privatekey)
-    try:
-        for node_coordinate in processor.get_nodes(
-                change_path, mustexist=must_exist,
-                default_value=("" if new_value else " ")):
-            log.debug(
-                "Got node from {}:".format(change_path),
-                data=node_coordinate, prefix="yaml_set::main:  ")
-            change_node_coordinates.append(node_coordinate)
-    except YAMLPathException as ex:
-        log.critical(ex, 1)
+    change_node_coordinates = _get_nodes(
+        log, processor, change_path, must_exist=must_exist,
+        default_value=("" if new_value else " "))
 
+    old_format = YAMLValueFormats.DEFAULT
     if len(change_node_coordinates) == 1:
         # When there is exactly one result, its old format can be known.  This
         # is necessary to retain whether the replacement value should be
@@ -443,10 +561,6 @@ def main():
         # encrypted.
         old_format = YAMLValueFormats.from_node(
             change_node_coordinates[0].node)
-
-    log.debug(
-        "Collected nodes:", data=change_node_coordinates,
-        prefix="yaml_set::main:  ")
 
     # Check the value(s), if desired
     if args.check:
@@ -509,8 +623,8 @@ def main():
 
         try:
             processor.set_value(
-                saveto_path, clone_node(old_value),
-                value_format=old_format)
+                saveto_path, Nodes.clone_node(old_value),
+                value_format=old_format, tag=args.tag)
         except YAMLPathException as ex:
             log.critical(ex, 1)
 
@@ -521,6 +635,10 @@ def main():
         # they were discovered.  This is necessary lest Array elements be
         # improperly handled, leading to unwanted data loss.
         _delete_nodes(log, change_node_coordinates)
+    elif args.aliasof:
+        # Assign the change nodes as Aliases of whatever --aliasof points to
+        _alias_nodes(
+            log, processor, change_node_coordinates, args.aliasof, args.anchor)
     elif args.eyamlcrypt:
         # If the user hasn't specified a format, use the same format as the
         # value being replaced, if known.
@@ -537,13 +655,15 @@ def main():
                 change_path, new_value, output=output_type, mustexist=False)
         except EYAMLCommandException as ex:
             log.critical(ex, 2)
-    else:
+    elif has_new_value:
         try:
             processor.set_value(
                 change_path, new_value, value_format=args.format,
-                mustexist=must_exist)
+                mustexist=must_exist, tag=args.tag)
         except YAMLPathException as ex:
             log.critical(ex, 1)
+    elif args.tag:
+        _tag_nodes(processor.data, args.tag, change_node_coordinates)
 
     # Write out the result
     write_output_document(args, log, yaml, yaml_data)

@@ -3,21 +3,15 @@ Implement YAML document Merger.
 
 Copyright 2020 William W. Kimball, Jr. MBA MSIS
 """
+import sys  # For deprecation warnings
 from typing import Any, Dict, List, Set, Tuple
 import json
 from io import StringIO
 from pathlib import Path
 
-import ruamel.yaml # type: ignore
-from ruamel.yaml.scalarstring import ScalarString
-from ruamel.yaml.comments import CommentedSeq, CommentedMap
+from ruamel.yaml.comments import CommentedSeq, CommentedMap, TaggedScalar
 
-from yamlpath.func import (
-    append_list_element,
-    escape_path_section,
-    build_next_node,
-    stringify_dates,
-)
+from yamlpath.common import Anchors, Nodes, Parsers
 from yamlpath.wrappers import ConsolePrinter, NodeCoords
 from yamlpath.merger.exceptions import MergeException
 from yamlpath.merger.enums import (
@@ -33,6 +27,12 @@ from yamlpath import YAMLPath, Processor
 
 class Merger:
     """Performs YAML document merges."""
+
+    DEPRECATION_WARNING = ("WARNING:  Deprecated methods will be removed in"
+                           " the next major release of yamlpath.  Please refer"
+                           " to the CHANGES file for more information (and how"
+                           " to get rid of this message).")
+    depwarn_printed = False
 
     def __init__(
             self, logger: ConsolePrinter, lhs: Any, config: MergerConfig
@@ -59,7 +59,7 @@ class Merger:
         # accurate but comment-insane.  This ruamel.yaml design decision forces
         # me to simply delete all comments from all merge documents to produce
         # a sensible result.
-        Merger.delete_all_comments(self.data)
+        Parsers.delete_all_comments(self.data)
 
     @property
     def data(self) -> Any:
@@ -69,7 +69,7 @@ class Merger:
     @data.setter
     def data(self, value: Any) -> None:
         """Document data being merged into (mutator)."""
-        Merger.delete_all_comments(value)
+        Parsers.delete_all_comments(value)
         self._data = value
 
     def _delete_mergeref_keys(self, data: CommentedMap) -> None:
@@ -121,11 +121,17 @@ class Merger:
                 "Impossible to add Hash data to non-Hash destination.", path)
 
         self.logger.debug(
-            "Merging INTO dict with keys: {}:".format(", ".join(lhs.keys())),
+            "Merging INTO dict with keys: {}:".format(", ".join([
+                    str(k.value) if isinstance(k, TaggedScalar)
+                    else str(k)
+                    for k in lhs.keys()])),
             data=lhs, prefix="Merger::_merge_dicts:  ",
             header="--------------------")
         self.logger.debug(
-            "Merging FROM dict with keys: {}:".format(", ".join(rhs.keys())),
+            "Merging FROM dict with keys: {}:".format(", ".join([
+                    str(k.value) if isinstance(k, TaggedScalar)
+                    else str(k)
+                    for k in rhs.keys()])),
             data=rhs, prefix="Merger::_merge_dicts:  ",
             footer="====================")
 
@@ -138,7 +144,8 @@ class Merger:
         buffer: List[Tuple[Any, Any]] = []
         buffer_pos = 0
         for key, val in rhs.non_merged_items():
-            path_next = path + escape_path_section(key, path.seperator)
+            path_next = (path +
+                YAMLPath.escape_path_section(key, path.seperator))
             if key in lhs:
                 # Write the buffer if populated
                 for b_key, b_val in buffer:
@@ -182,11 +189,18 @@ class Merger:
 
                 if isinstance(val, CommentedMap):
                     lhs[key] = self._merge_dicts(lhs[key], val, path_next)
+
+                    # Synchronize any YAML Tag
+                    self.logger.debug(
+                        "Merger::_merge_dicts:  Setting LHS tag from {} to {}."
+                        .format(lhs[key].tag.value, val.tag.value))
+                    lhs[key].yaml_set_tag(val.tag.value)
+
                     self.logger.debug(
                         "Document BEFORE calling combine_merge_anchors:",
                         data=lhs, prefix="Merger::_merge_dicts:  ",
                         header="+------------------+")
-                    Merger.combine_merge_anchors(lhs[key], val)
+                    Anchors.combine_merge_anchors(lhs[key], val)
                     self.logger.debug(
                         "Document AFTER calling combine_merge_anchors:",
                         data=lhs, prefix="Merger::_merge_dicts:  ",
@@ -194,6 +208,12 @@ class Merger:
                 elif isinstance(val, CommentedSeq):
                     lhs[key] = self._merge_lists(
                         lhs[key], val, path_next, parent=rhs, parentref=key)
+
+                    # Synchronize any YAML Tag
+                    self.logger.debug(
+                        "Merger::_merge_dicts:  Setting LHS tag from {} to {}."
+                        .format(lhs[key].tag.value, val.tag.value))
+                    lhs[key].yaml_set_tag(val.tag.value)
                 else:
                     self.logger.debug(
                         "Merger::_merge_dicts:  Updating key, {}, at path,"
@@ -259,15 +279,33 @@ class Merger:
         if merge_mode is ArrayMergeOpts.RIGHT:
             return rhs
 
-        append_all = merge_mode is ArrayMergeOpts.ALL
+        tagless_lhs = Nodes.tagless_elements(lhs)
         for idx, ele in enumerate(rhs):
             path_next = path + "[{}]".format(idx)
             self.logger.debug(
                 "Processing element {} at {}.".format(idx, path_next),
                 prefix="Merger::_merge_simple_lists:  ", data=ele)
 
-            if append_all or (ele not in lhs):
-                lhs.append(ele)
+            if merge_mode is ArrayMergeOpts.UNIQUE:
+                cmp_val = ele
+                if isinstance(ele, TaggedScalar):
+                    cmp_val = ele.value
+
+                self.logger.debug(
+                    "Looking for comparison value, {}, in:".format(cmp_val),
+                    prefix="Merger::_merge_simple_lists:  ", data=tagless_lhs)
+
+                if cmp_val in tagless_lhs:
+                    lhs = CommentedSeq([ele
+                           if (e == cmp_val
+                               or (isinstance(e, TaggedScalar)
+                                   and e.value == cmp_val)
+                           ) else e
+                           for e in lhs])
+                else:
+                    lhs.append(ele)
+                continue
+            lhs.append(ele)
         return lhs
 
     # pylint: disable=locally-disabled,too-many-branches
@@ -324,7 +362,7 @@ class Merger:
 
             if merge_mode is AoHMergeOpts.DEEP:
                 if id_key in ele:
-                    id_val = ele[id_key]
+                    id_val = Nodes.tagless_value(ele[id_key])
                 else:
                     raise MergeException(
                         "Mandatory identity key, {}, not present in Hash with"
@@ -338,21 +376,24 @@ class Merger:
                     lhs_hash for lhs_hash in lhs
                     if isinstance(lhs_hash, CommentedMap)
                     and id_key in lhs_hash
-                    and lhs_hash[id_key] == id_val
+                    and Nodes.tagless_value(lhs_hash[id_key]) == id_val
                 ):
                     self._merge_dicts(lhs_hash, ele, path_next)
                     merged_hash = True
+
+                    # Synchronize YAML Tags
+                    lhs_hash.yaml_set_tag(ele.tag.value)
                     break
                 if not merged_hash:
-                    append_list_element(lhs, ele,
+                    Nodes.append_list_element(lhs, ele,
                         ele.anchor.value if hasattr(ele, "anchor") else None)
             elif merge_mode is AoHMergeOpts.UNIQUE:
                 if ele not in lhs:
-                    append_list_element(
+                    Nodes.append_list_element(
                         lhs, ele,
                         ele.anchor.value if hasattr(ele, "anchor") else None)
             else:
-                append_list_element(lhs, ele,
+                Nodes.append_list_element(lhs, ele,
                     ele.anchor.value if hasattr(ele, "anchor") else None)
         return lhs
 
@@ -418,13 +459,13 @@ class Merger:
         Returns:  N/A
         """
         lhs_anchors: Dict[str, Any] = {}
-        Merger.scan_for_anchors(self.data, lhs_anchors)
+        Anchors.scan_for_anchors(self.data, lhs_anchors)
         self.logger.debug(
             "LHS Anchors:", prefix="Merger::_resolve_anchor_conflicts:  ",
             data=lhs_anchors)
 
         rhs_anchors: Dict[str, Any] = {}
-        Merger.scan_for_anchors(rhs, rhs_anchors)
+        Anchors.scan_for_anchors(rhs, rhs_anchors)
         self.logger.debug(
             "RHS Anchors:", prefix="Merger::_resolve_anchor_conflicts:  ",
             data=rhs_anchors)
@@ -451,13 +492,25 @@ class Merger:
                 "rhs_anchor:", prefix="Merger::_resolve_anchor_conflicts:  ",
                 data=rhs_anchor)
 
-            if lhs_anchor != rhs_anchor:
+            anchors_match = True
+            lhs_is_tagged = isinstance(lhs_anchor, TaggedScalar)
+            rhs_is_tagged = isinstance(rhs_anchor, TaggedScalar)
+            if lhs_is_tagged != rhs_is_tagged:
+                anchors_match = False
+            elif lhs_is_tagged:
+                anchors_match = (
+                    (lhs_anchor.value == rhs_anchor.value)
+                    and (lhs_anchor.tag.value == rhs_anchor.tag.value))
+            else:
+                anchors_match = lhs_anchor == rhs_anchor
+
+            if not anchors_match:
                 if conflict_mode is AnchorConflictResolutions.RENAME:
                     self.logger.debug(
                         "Anchor {} conflict; will RENAME anchors."
                         .format(anchor),
                         prefix="Merger::_resolve_anchor_conflicts:  ")
-                    Merger.rename_anchor(
+                    Anchors.rename_anchor(
                         rhs, anchor,
                         self._calc_unique_anchor(
                             anchor,
@@ -470,26 +523,27 @@ class Merger:
                         "Anchor {} conflict; LEFT will override."
                         .format(anchor),
                         prefix="Merger::_resolve_anchor_conflicts:  ")
-                    Merger.replace_anchor(rhs, rhs_anchor, lhs_anchor)
+                    Anchors.replace_anchor(rhs, rhs_anchor, lhs_anchor)
                 elif conflict_mode is AnchorConflictResolutions.RIGHT:
                     self.logger.debug(
                         "Anchor {} conflict; RIGHT will override."
                         .format(anchor),
                         prefix="Merger::_resolve_anchor_conflicts:  ")
-                    Merger.replace_anchor(self.data, lhs_anchor, rhs_anchor)
+                    Anchors.replace_anchor(self.data, lhs_anchor, rhs_anchor)
                 else:
                     raise MergeException(
                         "Aborting due to anchor conflict with, {}."
                         .format(anchor))
             else:
                 self.logger.debug(
-                    "Anchor {} is symmetric; RIGHT will override to eliminate"
-                    " spurious anchor re-definition.".format(anchor))
+                    "Merger::_resolve_anchor_conflicts:  Anchor {} is"
+                    " symmetric; RIGHT will override to eliminate spurious"
+                    " anchor re-definition.".format(anchor))
                 # While the anchors are identical, the reference nodes are not.
                 # So, overwrite all matching LHS nodes with their RHS
                 # equivalents in order to stave off spurious anchor
                 # re-definitions.
-                Merger.replace_anchor(self.data, lhs_anchor, rhs_anchor)
+                Anchors.replace_anchor(self.data, lhs_anchor, rhs_anchor)
 
     def merge_with(self, rhs: Any) -> None:
         """
@@ -508,7 +562,7 @@ class Merger:
             return
 
         # Remove all comments (no sensible way to merge them)
-        Merger.delete_all_comments(rhs)
+        Parsers.delete_all_comments(rhs)
 
         # When LHS is None (empty document), just dump all of RHS into it,
         # honoring any --mergeat|-m location as best as possible.
@@ -517,7 +571,7 @@ class Merger:
             self.logger.debug(
                 "Replacing None data with:", prefix="Merger::merge_with:  ",
                 data=rhs, data_header="     *****")
-            self.data = build_next_node(insert_at, 0, rhs)
+            self.data = Nodes.build_next_node(insert_at, 0, rhs)
             self.logger.debug(
                 "Merged document is now:", prefix="Merger::merge_with:  ",
                 data=self.data, footer="     ***** ***** *****")
@@ -553,7 +607,7 @@ class Merger:
                 if isinstance(node_coord.node, (CommentedMap, CommentedSeq))
                 else node_coord.parent)
 
-            Merger.set_flow_style(
+            Parsers.set_flow_style(
                 rhs, (target_node.fa.flow_style()
                       if hasattr(target_node, "fa")
                       else None))
@@ -566,16 +620,28 @@ class Merger:
                         target_node, CommentedSeq([rhs]), insert_at)
                 else:
                     self._merge_dicts(target_node, rhs, insert_at)
+
+                    # Synchronize YAML Tags
+                    self.logger.debug(
+                        "Merger::merge_with:  Setting LHS tag from {} to {}."
+                        .format(target_node.tag.value, rhs.tag.value))
+                    target_node.yaml_set_tag(rhs.tag.value)
                 merge_performed = True
             elif isinstance(rhs, CommentedSeq):
                 # The RHS document root is a list
                 self._merge_lists(target_node, rhs, insert_at)
                 merge_performed = True
+
+                # Synchronize any YAML Tag
+                self.logger.debug(
+                    "Merger::merge_with:  Setting LHS tag from {} to {}."
+                    .format(target_node.tag.value, rhs.tag.value))
+                target_node.yaml_set_tag(rhs.tag.value)
             else:
                 # The RHS document root is a Scalar value
                 target_node = node_coord.node
                 if isinstance(target_node, CommentedSeq):
-                    append_list_element(target_node, rhs)
+                    Nodes.append_list_element(target_node, rhs)
                     merge_performed = True
                 elif isinstance(target_node, CommentedMap):
                     raise MergeException(
@@ -635,7 +701,7 @@ class Merger:
             # Dump the document as true JSON and reload it; this automatically
             # exlodes all aliases.
             xfer_buffer = StringIO()
-            json.dump(stringify_dates(self.data), xfer_buffer)
+            json.dump(Parsers.jsonify_yaml_data(self.data), xfer_buffer)
             xfer_buffer.seek(0)
             self.data = yaml_writer.load(xfer_buffer)
 
@@ -643,7 +709,7 @@ class Merger:
             yaml_writer.explicit_start = False
         else:
             # Ensure block style output
-            Merger.set_flow_style(self.data, False)
+            Parsers.set_flow_style(self.data, False)
 
             # When writing YAML, ensure the document start mark is emitted
             yaml_writer.explicit_start = True
@@ -651,183 +717,49 @@ class Merger:
         return OutputDocTypes.JSON if is_flow else OutputDocTypes.YAML
 
     @classmethod
-    def set_flow_style(cls, node: Any, is_flow: bool) -> None:
-        """
-        Recursively apply flow|block style to a node.
-
-        Parameters:
-        1. node (Any) The node to apply flow|block style to.
-        2. is_flow (bool) True=flow-style, False=block-style
-
-        Returns:  N/A
-        """
-        if hasattr(node, "fa"):
-            if is_flow:
-                node.fa.set_flow_style()
-            else:
-                node.fa.set_block_style()
-
-        if isinstance(node, CommentedMap):
-            for key, val in node.non_merged_items():
-                Merger.set_flow_style(key, is_flow)
-                Merger.set_flow_style(val, is_flow)
-        elif isinstance(node, CommentedSeq):
-            for ele in node:
-                Merger.set_flow_style(ele, is_flow)
+    def set_flow_style(cls, *args):
+        """Relay function call to static method."""
+        if not cls.depwarn_printed:
+            cls.depwarn_printed = True
+            print(Merger.DEPRECATION_WARNING, file=sys.stderr)
+        Parsers.set_flow_style(*args)
 
     @classmethod
-    def scan_for_anchors(cls, dom: Any, anchors: Dict[str, Any]):
-        """
-        Scan a document for all anchors contained within.
-
-        Parameters:
-        1. dom (Any) The document to scan.
-        2. anchors (dict) Collection of discovered anchors along with
-           references to the nodes they apply to.
-
-        Returns:  N/A
-        """
-        if isinstance(dom, CommentedMap):
-            for key, val in dom.items():
-                if hasattr(key, "anchor") and key.anchor.value is not None:
-                    anchors[key.anchor.value] = key
-
-                if hasattr(val, "anchor") and val.anchor.value is not None:
-                    anchors[val.anchor.value] = val
-
-                # Recurse into complex values
-                if isinstance(val, (CommentedMap, CommentedSeq)):
-                    Merger.scan_for_anchors(val, anchors)
-
-        elif isinstance(dom, CommentedSeq):
-            for ele in dom:
-                Merger.scan_for_anchors(ele, anchors)
-
-        elif hasattr(dom, "anchor") and dom.anchor.value is not None:
-            anchors[dom.anchor.value] = dom
+    def delete_all_comments(cls, *args):
+        """Relay function call to static method."""
+        if not cls.depwarn_printed:
+            cls.depwarn_printed = True
+            print(Merger.DEPRECATION_WARNING, file=sys.stderr)
+        Parsers.delete_all_comments(*args)
 
     @classmethod
-    def rename_anchor(cls, dom: Any, anchor: str, new_anchor: str):
-        """
-        Rename every use of an anchor in a document.
-
-        Parameters:
-        1. dom (Any) The document to modify.
-        2. anchor (str) The old anchor name to rename.
-        3. new_anchor (str) The new name to apply to the anchor.
-
-        Returns:  N/A
-        """
-        if isinstance(dom, CommentedMap):
-            for key, val in dom.non_merged_items():
-                if hasattr(key, "anchor") and key.anchor.value == anchor:
-                    key.anchor.value = new_anchor
-                if hasattr(val, "anchor") and val.anchor.value == anchor:
-                    val.anchor.value = new_anchor
-                Merger.rename_anchor(val, anchor, new_anchor)
-        elif isinstance(dom, CommentedSeq):
-            for ele in dom:
-                Merger.rename_anchor(ele, anchor, new_anchor)
-        elif hasattr(dom, "anchor") and dom.anchor.value == anchor:
-            dom.anchor.value = new_anchor
+    def combine_merge_anchors(cls, *args):
+        """Relay function call to static method."""
+        if not cls.depwarn_printed:
+            cls.depwarn_printed = True
+            print(Merger.DEPRECATION_WARNING, file=sys.stderr)
+        Anchors.combine_merge_anchors(*args)
 
     @classmethod
-    def replace_merge_anchor(
-        cls, data: Any, old_node: Any, repl_node: Any
-    ) -> None:
-        """
-        Replace anchor merge references.
-
-        Anchor merge references in YAML are formed using the `<<: *anchor`
-        operator.
-
-        Parameters:
-        1. data (Any) The DOM to adjust.
-        2. old_node (Any) The former anchor node.
-        3. repl_node (Any) The replacement anchor node.
-
-        Returns:  N/A
-        """
-        if hasattr(data, "merge") and len(data.merge) > 0:
-            for midx, merge_node in enumerate(data.merge):
-                if merge_node[1] is old_node:
-                    data.merge[midx] = (data.merge[midx][0], repl_node)
+    def rename_anchor(cls, *args):
+        """Relay function call to static method."""
+        if not cls.depwarn_printed:
+            cls.depwarn_printed = True
+            print(Merger.DEPRECATION_WARNING, file=sys.stderr)
+        Anchors.rename_anchor(*args)
 
     @classmethod
-    def combine_merge_anchors(cls, lhs: CommentedMap, rhs: CommentedMap):
-        """Merge YAML merge keys."""
-        for mele in rhs.merge:
-            lhs.add_yaml_merge([mele])
+    def replace_anchor(cls, *args):
+        """Relay function call to static method."""
+        if not cls.depwarn_printed:
+            cls.depwarn_printed = True
+            print(Merger.DEPRECATION_WARNING, file=sys.stderr)
+        Anchors.replace_anchor(*args)
 
     @classmethod
-    def replace_anchor(
-        cls, data: Any, old_node: Any, repl_node: Any
-    ) -> None:
-        """
-        Recursively replace every use of an anchor within a DOM.
-
-        Parameters:
-        1. data (Any) The DOM to adjust.
-        2. old_node (Any) The former anchor node.
-        3. repl_node (Any) The replacement anchor node.
-
-        Returns:  N/A
-        """
-        anchor_name = repl_node.anchor.value
-        if isinstance(data, CommentedMap):
-            Merger.replace_merge_anchor(data, old_node, repl_node)
-            for idx, key in [
-                (idx, key) for idx, key in enumerate(data.keys())
-                if hasattr(key, "anchor")
-                    and key.anchor.value == anchor_name
-            ]:
-                Merger.replace_merge_anchor(key, old_node, repl_node)
-                data.insert(idx, repl_node, data.pop(key))
-
-            for key, val in data.non_merged_items():
-                Merger.replace_merge_anchor(key, old_node, repl_node)
-                Merger.replace_merge_anchor(val, old_node, repl_node)
-                if (hasattr(val, "anchor")
-                        and val.anchor.value == anchor_name):
-                    data[key] = repl_node
-                else:
-                    Merger.replace_anchor(val, old_node, repl_node)
-        elif isinstance(data, CommentedSeq):
-            for idx, ele in enumerate(data):
-                Merger.replace_merge_anchor(ele, old_node, repl_node)
-                if (hasattr(ele, "anchor")
-                        and ele.anchor.value == anchor_name):
-                    data[idx] = repl_node
-                else:
-                    Merger.replace_anchor(ele, old_node, repl_node)
-
-    # pylint: disable=line-too-long
-    @classmethod
-    def delete_all_comments(cls, dom: Any) -> None:
-        """
-        Recursively delete all comments from a YAML document.
-
-        See:  https://stackoverflow.com/questions/60080325/how-to-delete-all-comments-in-ruamel-yaml/60099750#60099750
-
-        Parameters:
-        1. dom (Any) The document to strip of all comments.
-
-        Returns:  N/A
-        """
-        if dom is None:
-            return
-
-        if isinstance(dom, CommentedMap):
-            for key, val in dom.items():
-                Merger.delete_all_comments(key)
-                Merger.delete_all_comments(val)
-        elif isinstance(dom, CommentedSeq):
-            for ele in dom:
-                Merger.delete_all_comments(ele)
-        try:
-            # literal scalarstring might have comment associated with them
-            attr = "comment" if isinstance(dom, ScalarString) \
-                else ruamel.yaml.comments.Comment.attrib
-            delattr(dom, attr)
-        except AttributeError:
-            pass
+    def scan_for_anchors(cls, *args):
+        """Relay function call to static method."""
+        if not cls.depwarn_printed:
+            cls.depwarn_printed = True
+            print(Merger.DEPRECATION_WARNING, file=sys.stderr)
+        Anchors.scan_for_anchors(*args)

@@ -7,8 +7,8 @@ import sys
 import argparse
 
 from yamlpath import __version__ as YAMLPATH_VERSION
+from yamlpath.common import Parsers
 from yamlpath.wrappers import ConsolePrinter
-from yamlpath.func import get_yaml_editor, get_yaml_multidoc_data
 
 class LogErrorCap:
     """Capture only ERROR messages as a fake ConsolePrinter."""
@@ -107,7 +107,7 @@ def process_file(log, yaml, yaml_file):
     subdoc_index = 0
     exit_state = 0
     file_name = "STDIN" if yaml_file.strip() == "-" else yaml_file
-    for (_, doc_loaded) in get_yaml_multidoc_data(
+    for (_, doc_loaded) in Parsers.get_yaml_multidoc_data(
         yaml, logcap, yaml_file
     ):
         if doc_loaded:
@@ -132,7 +132,7 @@ def main():
     validateargs(args, log)
     exit_state = 0
     consumed_stdin = False
-    yaml = get_yaml_editor()
+    yaml = Parsers.get_yaml_editor()
 
     for yaml_file in args.yaml_files:
         if yaml_file.strip() == '-':

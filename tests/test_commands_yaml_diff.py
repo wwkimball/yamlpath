@@ -68,42 +68,42 @@ rhs_exclusive: value
 """
 
     diff_array_defaults = """c [0]
-< alpha
+< "alpha"
 ---
-> zeta
+> "zeta"
 
 c [3]
-< beta
+< "beta"
 ---
-> alpha
+> "alpha"
 
 c [4]
-< delta
+< "delta"
 ---
-> gamma
+> "gamma"
 
 c [5]
-< chi
+< "chi"
 ---
-> gamma
+> "gamma"
 
 c [6]
-< delta
+< "delta"
 ---
-> phi
+> "phi"
 
 c [7]
-< gamma
+< "gamma"
 ---
-> beta
+> "beta"
 
 c [8]
-< alpha
+< "alpha"
 ---
-> chi
+> "chi"
 
 d [9]
-< theta
+< "theta"
 """
 
 
@@ -145,46 +145,46 @@ d [9]
 """
 
     diff_hash_defaults = """d hash.and.complex
-< structure
+< "structure"
 
 c key
-< value
+< "value"
 ---
-> changed value
+> "changed value"
 
 a rhs_exclusive
-> value
+> "value"
 
 d lhs_exclusive
-< value
+< "value"
 
 c hash.with.multiple
-< child
+< "child"
 ---
-> children
+> "children"
 
 a hash.and.complex.more
-> complex
+> "complex"
 
 d hash.and.with.several
-< levels
+< "levels"
 
 a hash.and.with.several_nested
-> levels
+> "levels"
 
 a hash.including
 > {"additional": "structure"}
 """
 
     diff_aoh_deep = """c [3].args[0]
-< world
+< "world"
 ---
-> le monde
+> "le monde"
 
 c [2].message
-< Hello, %args[0]!
+< "Hello, %args[0]!"
 ---
-> A tout %args[0]!
+> "A tout %args[0]!"
 """
 
     def test_no_options(self, script_runner):
@@ -506,17 +506,17 @@ a [1].status
 > 0
 
 c [1].action
-< input
+< "input"
 ---
-> quit
+> "quit"
 
 d [1].args
 < ["world"]
 
 c [2].message
-< Hello, %args[0]!
+< "Hello, %args[0]!"
 ---
-> A tout %args[0]!
+> "A tout %args[0]!"
 
 c [3].step
 < 3
@@ -524,9 +524,9 @@ c [3].step
 > 1
 
 c [3].action
-< quit
+< "quit"
 ---
-> input
+> "input"
 
 d [3].status
 < 0
@@ -666,10 +666,10 @@ a [3]
         import subprocess
         rhs_file = create_temp_yaml_file(tmp_path_factory, self.rhs_hash_content)
         stdout_content = """a key
-> changed value
+> "changed value"
 
 a rhs_exclusive
-> value
+> "value"
 
 a hash
 > {"with": {"multiple": "children", "key_value": "pairs"}, "and": {"complex": {"more": "complex"}, "with": {"several_nested": "levels"}}, "including": {"additional": "structure"}}
@@ -722,13 +722,13 @@ a [4]
         import subprocess
         rhs_file = create_temp_yaml_file(tmp_path_factory, self.rhs_hash_content)
         stdout_content = """d -
-< This is a general text file.
+< "This is a general text file."
 
 a key
-> changed value
+> "changed value"
 
 a rhs_exclusive
-> value
+> "value"
 
 a hash
 > {"with": {"multiple": "children", "key_value": "pairs"}, "and": {"complex": {"more": "complex"}, "with": {"several_nested": "levels"}}, "including": {"additional": "structure"}}
@@ -750,7 +750,7 @@ a hash
         import subprocess
         rhs_file = create_temp_yaml_file(tmp_path_factory, self.rhs_aoh_content)
         stdout_content = """d -
-< This is a general text file.
+< "This is a general text file."
 
 a [0]
 > {"step": 0, "action": "INITIALIZE"}
@@ -784,10 +784,10 @@ a [4]
         import subprocess
         lhs_file = create_temp_yaml_file(tmp_path_factory, self.lhs_hash_content)
         stdout_content = """d key
-< value
+< "value"
 
 d lhs_exclusive
-< value
+< "value"
 
 d hash
 < {"with": {"multiple": "child", "key_value": "pairs"}, "and": {"complex": "structure", "with": {"several": "levels"}}}
@@ -840,13 +840,13 @@ d [4]
         import subprocess
         lhs_file = create_temp_yaml_file(tmp_path_factory, self.lhs_hash_content)
         stdout_content = """a -
-> This is a general text file.
+> "This is a general text file."
 
 d key
-< value
+< "value"
 
 d lhs_exclusive
-< value
+< "value"
 
 d hash
 < {"with": {"multiple": "child", "key_value": "pairs"}, "and": {"complex": "structure", "with": {"several": "levels"}}}
@@ -868,7 +868,7 @@ d hash
         import subprocess
         lhs_file = create_temp_yaml_file(tmp_path_factory, self.lhs_aoh_content)
         stdout_content = """a -
-> This is a general text file.
+> "This is a general text file."
 
 d [0]
 < {"step": 0, "action": "INITIALIZE"}
@@ -902,7 +902,7 @@ d [4]
         lhs_file = create_temp_yaml_file(tmp_path_factory, self.lhs_hash_content)
         rhs_file = create_temp_yaml_file(tmp_path_factory, self.rhs_hash_content)
         stdout_content = """s hash.with.key_value
-= pairs
+= "pairs"
 """
 
         # DEBUG
@@ -927,25 +927,25 @@ d [4]
 = 0
 
 s [0].action
-= INITIALIZE
+= "INITIALIZE"
 
 s [3].step
 = 1
 
 s [3].action
-= input
+= "input"
 
 s [2].step
 = 2
 
 s [2].action
-= print
+= "print"
 
 s [1].step
 = 3
 
 s [1].action
-= quit
+= "quit"
 
 s [1].status
 = 0
@@ -954,7 +954,7 @@ s [4].step
 = 9
 
 s [4].action
-= CLEANUP
+= "CLEANUP"
 """
 
         # DEBUG
@@ -1024,9 +1024,9 @@ collector_hash:
   concrete_string: 'This is a non-reusable concrete string.'
 """)
         stdout_content = """c aliases[0]
-< This is a reusable string value.
+< "This is a reusable string value."
 ---
-> This is a CHANGED reusable string value.
+> "This is a CHANGED reusable string value."
 
 c some_values.original_float
 < 3.14159265358
@@ -1034,9 +1034,9 @@ c some_values.original_float
 > 3.14
 
 c more_values.aliased_string
-< This is a reusable string value.
+< "This is a reusable string value."
 ---
-> This is a CHANGED reusable string value.
+> "This is a CHANGED reusable string value."
 
 c collector_hash.original_float
 < 3.14159265358
@@ -1044,9 +1044,9 @@ c collector_hash.original_float
 > 3.14
 
 c collector_hash.aliased_string
-< This is a reusable string value.
+< "This is a reusable string value."
 ---
-> This is a CHANGED reusable string value.
+> "This is a CHANGED reusable string value."
 """
 
         # DEBUG
@@ -1066,32 +1066,32 @@ c collector_hash.aliased_string
         lhs_file = create_temp_yaml_file(tmp_path_factory, self.lhs_hash_content)
         rhs_file = create_temp_yaml_file(tmp_path_factory, self.rhs_hash_content)
         stdout_content = """d /hash/and/complex
-< structure
+< "structure"
 
 c /key
-< value
+< "value"
 ---
-> changed value
+> "changed value"
 
 a /rhs_exclusive
-> value
+> "value"
 
 d /lhs_exclusive
-< value
+< "value"
 
 c /hash/with/multiple
-< child
+< "child"
 ---
-> children
+> "children"
 
 a /hash/and/complex/more
-> complex
+> "complex"
 
 d /hash/and/with/several
-< levels
+< "levels"
 
 a /hash/and/with/several_nested
-> levels
+> "levels"
 
 a /hash/including
 > {"additional": "structure"}
@@ -1115,7 +1115,7 @@ a /hash/including
     @requireseyaml
     def test_diff_eyaml_allowed(self, script_runner, tmp_path_factory, old_eyaml_keys):
         lhs_file = create_temp_yaml_file(tmp_path_factory, """---
-same_secret_same_crypt: >
+same_secret_same_crypt: >-
   ENC[PKCS7,MIIBygYJKoZIhvcNAQcDoIIBuzCCAbcCAQAxggEhMIIBHQIBADAFMAACAQEw
   DQYJKoZIhvcNAQEBBQAEggEAP5tXc8gPp1p5945Ih/i/k/OqvoDrWi/F05/V
   EhlgUwXgNer0Y5C7G/FE4Gt5nasoolbPQTMVuq+CW8qQ6wsnVrB60SCDvy5q
@@ -1127,7 +1127,7 @@ same_secret_same_crypt: >
   9Rf784BgLbcaRZMscSjL/ym69YQXRJPzo3nCBSVOCUrVtU0pGFpkSUvdYRmr
   ZVlZ5jcv9xiU+ktGJZhjzzVcSHYMf9LkwtCiHYRYzVgDX/S24/NSVF5NEeTz
   MvIW862oA8UFtodj]
-same_secret_different_crypt: >
+same_secret_different_crypt: >-
   ENC[PKCS7,MIIBygYJKoZIhvcNAQcDoIIBuzCCAbcCAQAxggEhMIIBHQIBADAFMAACAQEw
   DQYJKoZIhvcNAQEBBQAEggEAYUDg4y4+LXY0IdEDYFgxfxRJ3dfkOPwTSLxl
   A91x5IQlgQYQpXkgkFEeJj3EXdYwt9K6prtFywokVQoOaWgXWWV+Tf0lF5P0
@@ -1139,7 +1139,7 @@ same_secret_different_crypt: >
   R1kfyIBgCIJzi+XnQMS9w85Mbq6BaNPpJrU7ZaoHQ6c3Ps9sgJStVDQNmrbL
   WAP8fEC6S7V07rA7hp4YomvAJRJjDIK7M2AzXDNzupuAh4crF905AR4TF+Jd
   nNuWarGVGx1Bv+6h]
-different_secrets: >
+different_secrets: >-
   ENC[PKCS7,MIIBmQYJKoZIhvcNAQcDoIIBijCCAYYCAQAxggEhMIIBHQIBADAFMAACAQEw
   DQYJKoZIhvcNAQEBBQAEggEAJRw+urxm+Pyt0Xys5UpJUIaZhA0Tt1JuVsLG
   9jiHb9aua+2bBr/kAN8D/+dowOJlVkG6LZ4Uzn+NZboO8Q2JpQeV9CJTqayJ
@@ -1152,7 +1152,7 @@ different_secrets: >
   eEeStAMoq50=]
 """)
         rhs_file = create_temp_yaml_file(tmp_path_factory, """---
-same_secret_same_crypt: >
+same_secret_same_crypt: >-
   ENC[PKCS7,MIIBygYJKoZIhvcNAQcDoIIBuzCCAbcCAQAxggEhMIIBHQIBADAFMAACAQEw
   DQYJKoZIhvcNAQEBBQAEggEAP5tXc8gPp1p5945Ih/i/k/OqvoDrWi/F05/V
   EhlgUwXgNer0Y5C7G/FE4Gt5nasoolbPQTMVuq+CW8qQ6wsnVrB60SCDvy5q
@@ -1164,7 +1164,7 @@ same_secret_same_crypt: >
   9Rf784BgLbcaRZMscSjL/ym69YQXRJPzo3nCBSVOCUrVtU0pGFpkSUvdYRmr
   ZVlZ5jcv9xiU+ktGJZhjzzVcSHYMf9LkwtCiHYRYzVgDX/S24/NSVF5NEeTz
   MvIW862oA8UFtodj]
-same_secret_different_crypt: >
+same_secret_different_crypt: >-
   ENC[PKCS7,MIIBygYJKoZIhvcNAQcDoIIBuzCCAbcCAQAxggEhMIIBHQIBADAFMAACAQEw
   DQYJKoZIhvcNAQEBBQAEggEAV/S/jxC79aiKR1UnPxcrPo7bLpSpsoUqJfdQ
   znMp0LJrqacIcrq+jFRLqFUv2dDcTRnReP5CZy4HEJw73710Ngb+sJLQeCE9
@@ -1176,7 +1176,7 @@ same_secret_different_crypt: >
   DVQiaoBgctgTfmmKEaEoCYJqd4WXpJeb96viMyTXRaa8Pt0rl22mbt92qMUk
   witfhD7lzteg1k2tunXQx8w37vx60kqY3aEXV8crQb1TQdBUuZIks1RnLFur
   14/eAgRAn37NhJli]
-different_secrets: >
+different_secrets: >-
   ENC[PKCS7,MIIBmQYJKoZIhvcNAQcDoIIBijCCAYYCAQAxggEhMIIBHQIBADAFMAACAQEw
   DQYJKoZIhvcNAQEBBQAEggEAm9Sw3jUCLMOKU0wpQgu7kW4yO/MvoLbQpWMB
   KKFEssxhJ0Kqc5Q+2cTAk6vo5K7GopVYr5iCaaoxLmCJq3ke1XBR6O182q/2
@@ -1189,9 +1189,9 @@ different_secrets: >
   4OTZEGxziGU=]
 """)
         stdout_content = """c different_secrets
-< ENC[PKCS7,MIIBmQYJKoZIhvcNAQcDoIIBijCCAYYCAQAxggEhMIIBHQIBADAFMAACAQEwDQYJKoZIhvcNAQEBBQAEggEAJRw+urxm+Pyt0Xys5UpJUIaZhA0Tt1JuVsLG9jiHb9aua+2bBr/kAN8D/+dowOJlVkG6LZ4Uzn+NZboO8Q2JpQeV9CJTqayJeZnRx02298qSrWOogSQUoS/or0+QWGLeQqJMiNuUx6IHskyWVsROamTmK9p2gAgL5bAXzD2+1MHIRMrf8ascVmTOV4/JMckWznCseM+uJ7PkR12044mWhuvkaJUjaXFXIEYhA4+jjKWdlOTWJAFkjhKE6HAHqaNZVlcf8X1WuoX4f1iPP53zmATu0eDx8D5XwQnygUMrPWrlCyoIqRIcwU6f5iv+HT1EWEvSI5+i7bByx0hkapUR+TBcBgkqhkiG9w0BBwEwHQYJYIZIAWUDBAEqBBCgVC5h5pznSfACl7+Qff+mgDBAZPMofXWfguD6OgcXu0/QMz90QHAN4bu+CHHZLZ+8X3qSgKHszijKeEeStAMoq50=]
+< "ENC[PKCS7,MIIBmQYJKoZIhvcNAQcDoIIBijCCAYYCAQAxggEhMIIBHQIBADAFMAACAQEwDQYJKoZIhvcNAQEBBQAEggEAJRw+urxm+Pyt0Xys5UpJUIaZhA0Tt1JuVsLG9jiHb9aua+2bBr/kAN8D/+dowOJlVkG6LZ4Uzn+NZboO8Q2JpQeV9CJTqayJeZnRx02298qSrWOogSQUoS/or0+QWGLeQqJMiNuUx6IHskyWVsROamTmK9p2gAgL5bAXzD2+1MHIRMrf8ascVmTOV4/JMckWznCseM+uJ7PkR12044mWhuvkaJUjaXFXIEYhA4+jjKWdlOTWJAFkjhKE6HAHqaNZVlcf8X1WuoX4f1iPP53zmATu0eDx8D5XwQnygUMrPWrlCyoIqRIcwU6f5iv+HT1EWEvSI5+i7bByx0hkapUR+TBcBgkqhkiG9w0BBwEwHQYJYIZIAWUDBAEqBBCgVC5h5pznSfACl7+Qff+mgDBAZPMofXWfguD6OgcXu0/QMz90QHAN4bu+CHHZLZ+8X3qSgKHszijKeEeStAMoq50=]"
 ---
-> ENC[PKCS7,MIIBmQYJKoZIhvcNAQcDoIIBijCCAYYCAQAxggEhMIIBHQIBADAFMAACAQEwDQYJKoZIhvcNAQEBBQAEggEAm9Sw3jUCLMOKU0wpQgu7kW4yO/MvoLbQpWMBKKFEssxhJ0Kqc5Q+2cTAk6vo5K7GopVYr5iCaaoxLmCJq3ke1XBR6O182q/2vcvgqTVq3OaaMR3qji1edJQd6NJuqpuV+tIf6RCktt5+9wlIXLxujnaYxmr1vrEMXnb0R6PWunXsTAlDDrCVMC6iXIvbhsP2GF8zhhuTkCXp1LTDuvj3aSsoiloELuCdCGO7iFTXPuPy4nrgXjlaVnGftoDmVukDP8PUzyEBT1a9ZXUjrswSsXzCsTnEGIpPlIe84Nvk43osbVw2sOgwod7Uko7KmdXVFAh8l15BoW5E9uRwy2XahTBcBgkqhkiG9w0BBwEwHQYJYIZIAWUDBAEqBBAIA2FJ1Fo38jwnbHs8V8GOgDAaCmR9jyjK/0f0V2WnRF+nPS21sNoB0qONn1V0GwAQbu0yk7QS5y8q4OTZEGxziGU=]
+> "ENC[PKCS7,MIIBmQYJKoZIhvcNAQcDoIIBijCCAYYCAQAxggEhMIIBHQIBADAFMAACAQEwDQYJKoZIhvcNAQEBBQAEggEAm9Sw3jUCLMOKU0wpQgu7kW4yO/MvoLbQpWMBKKFEssxhJ0Kqc5Q+2cTAk6vo5K7GopVYr5iCaaoxLmCJq3ke1XBR6O182q/2vcvgqTVq3OaaMR3qji1edJQd6NJuqpuV+tIf6RCktt5+9wlIXLxujnaYxmr1vrEMXnb0R6PWunXsTAlDDrCVMC6iXIvbhsP2GF8zhhuTkCXp1LTDuvj3aSsoiloELuCdCGO7iFTXPuPy4nrgXjlaVnGftoDmVukDP8PUzyEBT1a9ZXUjrswSsXzCsTnEGIpPlIe84Nvk43osbVw2sOgwod7Uko7KmdXVFAh8l15BoW5E9uRwy2XahTBcBgkqhkiG9w0BBwEwHQYJYIZIAWUDBAEqBBAIA2FJ1Fo38jwnbHs8V8GOgDAaCmR9jyjK/0f0V2WnRF+nPS21sNoB0qONn1V0GwAQbu0yk7QS5y8q4OTZEGxziGU=]"
 """
 
         # DEBUG
@@ -1285,14 +1285,14 @@ different_secrets: >
   4OTZEGxziGU=]
 """)
         stdout_content = """c same_secret_different_crypt
-< ENC[PKCS7,MIIBygYJKoZIhvcNAQcDoIIBuzCCAbcCAQAxggEhMIIBHQIBADAFMAACAQEw DQYJKoZIhvcNAQEBBQAEggEAYUDg4y4+LXY0IdEDYFgxfxRJ3dfkOPwTSLxl A91x5IQlgQYQpXkgkFEeJj3EXdYwt9K6prtFywokVQoOaWgXWWV+Tf0lF5P0 0sw4LH7MgaszKPpiOHxx9hTmexEIusF+tzvQBOD1zHfDdkZQ0v9R3JLHckub rg/XOLJXzkkyKEoKIFScBT115aedGY60baMtvD1Md9rxi97xCmj6BroatMlM Cm266oFnijrQN9Xsb5ZTnGiPMA9hC2y6X+oJeMaG0S6G64EnTwnjAQytWE6a JM1/YXVKIoE2c/E44/m74kuyO70RwACV9QknSqoLuUbYpcbU4FHU/xICiWAG CaTz9zCBjAYJKoZIhvcNAQcBMB0GCWCGSAFlAwQBKgQQ9kFVNmG9heK0WyWU R1kfyIBgCIJzi+XnQMS9w85Mbq6BaNPpJrU7ZaoHQ6c3Ps9sgJStVDQNmrbL WAP8fEC6S7V07rA7hp4YomvAJRJjDIK7M2AzXDNzupuAh4crF905AR4TF+Jd nNuWarGVGx1Bv+6h]
+< "ENC[PKCS7,MIIBygYJKoZIhvcNAQcDoIIBuzCCAbcCAQAxggEhMIIBHQIBADAFMAACAQEw DQYJKoZIhvcNAQEBBQAEggEAYUDg4y4+LXY0IdEDYFgxfxRJ3dfkOPwTSLxl A91x5IQlgQYQpXkgkFEeJj3EXdYwt9K6prtFywokVQoOaWgXWWV+Tf0lF5P0 0sw4LH7MgaszKPpiOHxx9hTmexEIusF+tzvQBOD1zHfDdkZQ0v9R3JLHckub rg/XOLJXzkkyKEoKIFScBT115aedGY60baMtvD1Md9rxi97xCmj6BroatMlM Cm266oFnijrQN9Xsb5ZTnGiPMA9hC2y6X+oJeMaG0S6G64EnTwnjAQytWE6a JM1/YXVKIoE2c/E44/m74kuyO70RwACV9QknSqoLuUbYpcbU4FHU/xICiWAG CaTz9zCBjAYJKoZIhvcNAQcBMB0GCWCGSAFlAwQBKgQQ9kFVNmG9heK0WyWU R1kfyIBgCIJzi+XnQMS9w85Mbq6BaNPpJrU7ZaoHQ6c3Ps9sgJStVDQNmrbL WAP8fEC6S7V07rA7hp4YomvAJRJjDIK7M2AzXDNzupuAh4crF905AR4TF+Jd nNuWarGVGx1Bv+6h]"
 ---
-> ENC[PKCS7,MIIBygYJKoZIhvcNAQcDoIIBuzCCAbcCAQAxggEhMIIBHQIBADAFMAACAQEw DQYJKoZIhvcNAQEBBQAEggEAV/S/jxC79aiKR1UnPxcrPo7bLpSpsoUqJfdQ znMp0LJrqacIcrq+jFRLqFUv2dDcTRnReP5CZy4HEJw73710Ngb+sJLQeCE9 f8qYvjKAlWyrw0Strpwe5BQT4g7ph5GX3lOqjCBJbqRPE9XfhI9DPljkUzBB IQ8zVZz/zy5TbBCRZm7RKPjbczTMaHRRQb0fEKnK7tTdHIucNRQh0AZ9ZGuJ 8TchxlBhgtwjKU0NxbpQyi/hVyv7Dw8/wSq3Wp5nFYJj1uFxYES0sw6QAsM+ 1LzY2hg+RCzL3gxU724gH0xRCv346tKoyqzVxtO+knLVh/m8HulrXJABKn0/ ZJrBezCBjAYJKoZIhvcNAQcBMB0GCWCGSAFlAwQBKgQQMvmLomzj48fPsA1H DVQiaoBgctgTfmmKEaEoCYJqd4WXpJeb96viMyTXRaa8Pt0rl22mbt92qMUk witfhD7lzteg1k2tunXQx8w37vx60kqY3aEXV8crQb1TQdBUuZIks1RnLFur 14/eAgRAn37NhJli]
+> "ENC[PKCS7,MIIBygYJKoZIhvcNAQcDoIIBuzCCAbcCAQAxggEhMIIBHQIBADAFMAACAQEw DQYJKoZIhvcNAQEBBQAEggEAV/S/jxC79aiKR1UnPxcrPo7bLpSpsoUqJfdQ znMp0LJrqacIcrq+jFRLqFUv2dDcTRnReP5CZy4HEJw73710Ngb+sJLQeCE9 f8qYvjKAlWyrw0Strpwe5BQT4g7ph5GX3lOqjCBJbqRPE9XfhI9DPljkUzBB IQ8zVZz/zy5TbBCRZm7RKPjbczTMaHRRQb0fEKnK7tTdHIucNRQh0AZ9ZGuJ 8TchxlBhgtwjKU0NxbpQyi/hVyv7Dw8/wSq3Wp5nFYJj1uFxYES0sw6QAsM+ 1LzY2hg+RCzL3gxU724gH0xRCv346tKoyqzVxtO+knLVh/m8HulrXJABKn0/ ZJrBezCBjAYJKoZIhvcNAQcBMB0GCWCGSAFlAwQBKgQQMvmLomzj48fPsA1H DVQiaoBgctgTfmmKEaEoCYJqd4WXpJeb96viMyTXRaa8Pt0rl22mbt92qMUk witfhD7lzteg1k2tunXQx8w37vx60kqY3aEXV8crQb1TQdBUuZIks1RnLFur 14/eAgRAn37NhJli]"
 
 c different_secrets
-< ENC[PKCS7,MIIBmQYJKoZIhvcNAQcDoIIBijCCAYYCAQAxggEhMIIBHQIBADAFMAACAQEw DQYJKoZIhvcNAQEBBQAEggEAJRw+urxm+Pyt0Xys5UpJUIaZhA0Tt1JuVsLG 9jiHb9aua+2bBr/kAN8D/+dowOJlVkG6LZ4Uzn+NZboO8Q2JpQeV9CJTqayJ eZnRx02298qSrWOogSQUoS/or0+QWGLeQqJMiNuUx6IHskyWVsROamTmK9p2 gAgL5bAXzD2+1MHIRMrf8ascVmTOV4/JMckWznCseM+uJ7PkR12044mWhuvk aJUjaXFXIEYhA4+jjKWdlOTWJAFkjhKE6HAHqaNZVlcf8X1WuoX4f1iPP53z mATu0eDx8D5XwQnygUMrPWrlCyoIqRIcwU6f5iv+HT1EWEvSI5+i7bByx0hk apUR+TBcBgkqhkiG9w0BBwEwHQYJYIZIAWUDBAEqBBCgVC5h5pznSfACl7+Q ff+mgDBAZPMofXWfguD6OgcXu0/QMz90QHAN4bu+CHHZLZ+8X3qSgKHszijK eEeStAMoq50=]
+< "ENC[PKCS7,MIIBmQYJKoZIhvcNAQcDoIIBijCCAYYCAQAxggEhMIIBHQIBADAFMAACAQEw DQYJKoZIhvcNAQEBBQAEggEAJRw+urxm+Pyt0Xys5UpJUIaZhA0Tt1JuVsLG 9jiHb9aua+2bBr/kAN8D/+dowOJlVkG6LZ4Uzn+NZboO8Q2JpQeV9CJTqayJ eZnRx02298qSrWOogSQUoS/or0+QWGLeQqJMiNuUx6IHskyWVsROamTmK9p2 gAgL5bAXzD2+1MHIRMrf8ascVmTOV4/JMckWznCseM+uJ7PkR12044mWhuvk aJUjaXFXIEYhA4+jjKWdlOTWJAFkjhKE6HAHqaNZVlcf8X1WuoX4f1iPP53z mATu0eDx8D5XwQnygUMrPWrlCyoIqRIcwU6f5iv+HT1EWEvSI5+i7bByx0hk apUR+TBcBgkqhkiG9w0BBwEwHQYJYIZIAWUDBAEqBBCgVC5h5pznSfACl7+Q ff+mgDBAZPMofXWfguD6OgcXu0/QMz90QHAN4bu+CHHZLZ+8X3qSgKHszijK eEeStAMoq50=]"
 ---
-> ENC[PKCS7,MIIBmQYJKoZIhvcNAQcDoIIBijCCAYYCAQAxggEhMIIBHQIBADAFMAACAQEw DQYJKoZIhvcNAQEBBQAEggEAm9Sw3jUCLMOKU0wpQgu7kW4yO/MvoLbQpWMB KKFEssxhJ0Kqc5Q+2cTAk6vo5K7GopVYr5iCaaoxLmCJq3ke1XBR6O182q/2 vcvgqTVq3OaaMR3qji1edJQd6NJuqpuV+tIf6RCktt5+9wlIXLxujnaYxmr1 vrEMXnb0R6PWunXsTAlDDrCVMC6iXIvbhsP2GF8zhhuTkCXp1LTDuvj3aSso iloELuCdCGO7iFTXPuPy4nrgXjlaVnGftoDmVukDP8PUzyEBT1a9ZXUjrswS sXzCsTnEGIpPlIe84Nvk43osbVw2sOgwod7Uko7KmdXVFAh8l15BoW5E9uRw y2XahTBcBgkqhkiG9w0BBwEwHQYJYIZIAWUDBAEqBBAIA2FJ1Fo38jwnbHs8 V8GOgDAaCmR9jyjK/0f0V2WnRF+nPS21sNoB0qONn1V0GwAQbu0yk7QS5y8q 4OTZEGxziGU=]
+> "ENC[PKCS7,MIIBmQYJKoZIhvcNAQcDoIIBijCCAYYCAQAxggEhMIIBHQIBADAFMAACAQEw DQYJKoZIhvcNAQEBBQAEggEAm9Sw3jUCLMOKU0wpQgu7kW4yO/MvoLbQpWMB KKFEssxhJ0Kqc5Q+2cTAk6vo5K7GopVYr5iCaaoxLmCJq3ke1XBR6O182q/2 vcvgqTVq3OaaMR3qji1edJQd6NJuqpuV+tIf6RCktt5+9wlIXLxujnaYxmr1 vrEMXnb0R6PWunXsTAlDDrCVMC6iXIvbhsP2GF8zhhuTkCXp1LTDuvj3aSso iloELuCdCGO7iFTXPuPy4nrgXjlaVnGftoDmVukDP8PUzyEBT1a9ZXUjrswS sXzCsTnEGIpPlIe84Nvk43osbVw2sOgwod7Uko7KmdXVFAh8l15BoW5E9uRw y2XahTBcBgkqhkiG9w0BBwEwHQYJYIZIAWUDBAEqBBAIA2FJ1Fo38jwnbHs8 V8GOgDAaCmR9jyjK/0f0V2WnRF+nPS21sNoB0qONn1V0GwAQbu0yk7QS5y8q 4OTZEGxziGU=]"
 """
 
         # DEBUG
@@ -1366,33 +1366,33 @@ literal_string: |
   characters will be
   preserved.
 """)
-        stdout_content = """c folded_string
-< This is one really long string.  It is presented in YAML "folded" format.  This will cause all of the new-line characters to be replaced with single spaces when this value is read by a YAML parser.
+        stdout_content = r"""c folded_string
+< "This is one really long string.  It is presented in YAML \"folded\" format.  This will cause all of the new-line characters to be replaced with single spaces when this value is read by a YAML parser."
 ---
-> This CHANGED one really long string.  It is presented in YAML "folded" format.  This will cause all of the new-line characters to be replaced with single spaces when this value is read by a YAML parser.
+> "This CHANGED one really long string.  It is presented in YAML \"folded\" format.  This will cause all of the new-line characters to be replaced with single spaces when this value is read by a YAML parser."
 
 c literal_string
-< This is another
+< "This is another
 < really long string.
 < It is presented in
-< YAML "literal"
+< YAML \"literal\"
 < format.  When a
 < YAML parser reads
 < this value, all of
 < these new-line
 < characters will be
-< preserved.
+< preserved."
 ---
-> This is another
+> "This is another
 > really long CHANGED string.
 > It is presented in
-> YAML "literal"
+> YAML \"literal\"
 > format.  When a
 > YAML parser reads
 > this value, all of
 > these new-line
 > characters will be
-> preserved.
+> preserved."
 """
 
         # DEBUG
@@ -1465,33 +1465,33 @@ literal_string: |
   characters will be
   preserved.
 """)
-        stdout_content = """c1.0.0.1.0.0 folded_string
-< This is one really long string.  It is presented in YAML "folded" format.  This will cause all of the new-line characters to be replaced with single spaces when this value is read by a YAML parser.
+        stdout_content = r"""c1.0.0.1.0.0 folded_string
+< "This is one really long string.  It is presented in YAML \"folded\" format.  This will cause all of the new-line characters to be replaced with single spaces when this value is read by a YAML parser."
 ---
-> This CHANGED one really long string.  It is presented in YAML "folded" format.  This will cause all of the new-line characters to be replaced with single spaces when this value is read by a YAML parser.
+> "This CHANGED one really long string.  It is presented in YAML \"folded\" format.  This will cause all of the new-line characters to be replaced with single spaces when this value is read by a YAML parser."
 
 c1.0.1.1.0.1 literal_string
-< This is another
+< "This is another
 < really long string.
 < It is presented in
-< YAML "literal"
+< YAML \"literal\"
 < format.  When a
 < YAML parser reads
 < this value, all of
 < these new-line
 < characters will be
-< preserved.
+< preserved."
 ---
-> This is another
+> "This is another
 > really long CHANGED string.
 > It is presented in
-> YAML "literal"
+> YAML \"literal\"
 > format.  When a
 > YAML parser reads
 > this value, all of
 > these new-line
 > characters will be
-> preserved.
+> preserved."
 """
 
         # DEBUG
@@ -1547,24 +1547,24 @@ c1.0.1.1.0.1 literal_string
         lhs_file = create_temp_yaml_file(tmp_path_factory, self.lhs_array_content)
         rhs_file = create_temp_yaml_file(tmp_path_factory, self.rhs_array_content)
         stdout_content = """a [0]
-> zeta
+> "zeta"
 
 a [5]
-> gamma
+> "gamma"
 
 c [6]
-< delta
+< "delta"
 ---
-> phi
+> "phi"
 
 d [4]
-< delta
+< "delta"
 
 d [8]
-< alpha
+< "alpha"
 
 d [9]
-< theta
+< "theta"
 """
 
         # DEBUG
@@ -1765,3 +1765,271 @@ d [2]
             , rhs_file)
         assert not result.success, result.stderr
         assert stdout_content == result.stdout
+
+    def test_diff_custom_aoh_keyed_elements(self, script_runner, tmp_path_factory):
+        lhs_file = create_temp_yaml_file(tmp_path_factory, """---
+products:
+  - product: doodad
+    sku: 0-000-0001-0
+    availability:
+      start:
+        date: 2020-10-10
+        time: 08:00
+      stop:
+        date: 2020-10-29
+        time: 17:00
+    dimensions:
+      width: 5
+      height: 5
+      depth: 5
+      weight: 10
+  - product: dumdow
+    sku: 0-000-0002-0
+    availability:
+      start:
+        date: 2020-10-23
+        time: 08:00
+      stop:
+        date: 2020-11-23
+        time: 17:00
+    dimensions:
+      width: 3
+      height: 3
+      depth: 3
+      weight: 27
+  - product: doohickey
+    sku: 0-000-0003-0
+    availability:
+      start:
+        date: 2020-08-01
+        time: 10:00
+      stop:
+        date: 2020-09-25
+        time: 10:00
+    dimensions:
+      width: 1
+      height: 2
+      depth: 3
+      weight: 4
+  - product: widget
+    sku: 0-000-0004-0
+    availability:
+      start:
+        date: 2020-01-01
+        time: 12:00
+      stop:
+        date: 2020-01-01
+        time: 16:00
+    dimensions:
+      width: 9
+      height: 10
+      depth: 1
+      weight: 4
+""")
+        rhs_file = create_temp_yaml_file(tmp_path_factory, """---
+products:
+  - sku: 0-000-0001-0
+    availability:
+      start:
+        date: 2020-10-10
+        time: 08:00
+      stop:
+        date: 2020-10-29
+        time: 17:00
+    dimensions:
+      width: 5
+      height: 5
+      depth: 5
+      weight: 10
+  - sku: 0-000-0002-0
+    availability:
+      start:
+        date: 2020-10-23
+        time: 08:00
+      stop:
+        date: 2020-11-23
+        time: 17:00
+    dimensions:
+      width: 4
+      height: 3
+      depth: 3
+      weight: 27
+  - dimensions:
+      width: 9
+      height: 10
+      depth: 1
+      weight: 4
+    sku: 0-000-0004-0
+    availability:
+      start:
+        date: 2020-01-01
+        time: 12:00
+      stop:
+        date: 2020-01-01
+        time: 16:00
+  - product: doohickey
+    availability:
+      stop:
+        date: 2020-09-25
+        time: 10:00
+      start:
+        date: 2020-08-01
+        time: 10:00
+    dimensions:
+      weight: 4
+      width: 1
+      depth: 3
+      height: 2
+""")
+        config_file = create_temp_yaml_file(tmp_path_factory, """[rules]
+/products = key
+
+[keys]
+/products[product=doohickey] = product
+""")
+        stdout_content = """c products[0]
+< {"product": "doodad", "sku": "0-000-0001-0", "availability": {"start": {"date": "2020-10-10", "time": "08:00"}, "stop": {"date": "2020-10-29", "time": "17:00"}}, "dimensions": {"width": 5, "height": 5, "depth": 5, "weight": 10}}
+---
+> {"sku": "0-000-0001-0", "availability": {"start": {"date": "2020-10-10", "time": "08:00"}, "stop": {"date": "2020-10-29", "time": "17:00"}}, "dimensions": {"width": 5, "height": 5, "depth": 5, "weight": 10}}
+
+c products[1]
+< {"product": "dumdow", "sku": "0-000-0002-0", "availability": {"start": {"date": "2020-10-23", "time": "08:00"}, "stop": {"date": "2020-11-23", "time": "17:00"}}, "dimensions": {"width": 3, "height": 3, "depth": 3, "weight": 27}}
+---
+> {"sku": "0-000-0002-0", "availability": {"start": {"date": "2020-10-23", "time": "08:00"}, "stop": {"date": "2020-11-23", "time": "17:00"}}, "dimensions": {"width": 4, "height": 3, "depth": 3, "weight": 27}}
+
+c products[2]
+< {"product": "doohickey", "sku": "0-000-0003-0", "availability": {"start": {"date": "2020-08-01", "time": "10:00"}, "stop": {"date": "2020-09-25", "time": "10:00"}}, "dimensions": {"width": 1, "height": 2, "depth": 3, "weight": 4}}
+---
+> {"product": "doohickey", "availability": {"stop": {"date": "2020-09-25", "time": "10:00"}, "start": {"date": "2020-08-01", "time": "10:00"}}, "dimensions": {"weight": 4, "width": 1, "depth": 3, "height": 2}}
+
+c products[3]
+< {"product": "widget", "sku": "0-000-0004-0", "availability": {"start": {"date": "2020-01-01", "time": "12:00"}, "stop": {"date": "2020-01-01", "time": "16:00"}}, "dimensions": {"width": 9, "height": 10, "depth": 1, "weight": 4}}
+---
+> {"dimensions": {"width": 9, "height": 10, "depth": 1, "weight": 4}, "sku": "0-000-0004-0", "availability": {"start": {"date": "2020-01-01", "time": "12:00"}, "stop": {"date": "2020-01-01", "time": "16:00"}}}
+"""
+
+        # DEBUG
+        # print("LHS File:  {}".format(lhs_file))
+        # print("RHS File:  {}".format(rhs_file))
+        # print("Expected Output:")
+        # print(merged_yaml_content)
+
+        result = script_runner.run(
+            self.command
+            , "--config={}".format(config_file)
+            , lhs_file
+            , rhs_file)
+        assert not result.success, result.stderr
+        assert stdout_content == result.stdout
+
+    def test_comprehensive_tag_diffs(self, script_runner, tmp_path_factory):
+        lhs_file = create_temp_yaml_file(tmp_path_factory, """---
+aliases:
+  - &one One
+  - &two !tag_two Two
+  - &three !tag_three Three
+
+hash_one:
+  key_one: *one
+  key_two: *two
+  key_three: *three
+  *one : *two
+  *two : *one
+  *three : *three
+
+hash_two:
+  key_one: *one
+  key_two: *two
+  *one : *two
+  *two : *one
+  *three : *three
+""")
+        rhs_file = create_temp_yaml_file(tmp_path_factory, """---
+aliases:
+  - &one !tag_one One
+  - &two Two
+  - &three !tag_tres Three
+
+hash_one:
+  key_one: *one
+  key_two: *two
+  key_three: *three
+  *one : *two
+  *two : *one
+  *three : *three
+
+hash_two: !example
+  key_one: *one
+  key_two: *two
+  *one : *two
+  *two : *one
+  *three : *three
+""")
+        stdout_content = """c aliases[0]
+< "One"
+---
+> !tag_one "One"
+
+c aliases[1]
+< !tag_two "Two"
+---
+> "Two"
+
+c aliases[2]
+< !tag_three "Three"
+---
+> !tag_tres "Three"
+
+c hash_one.key_one
+< "One"
+---
+> !tag_one "One"
+
+a hash_one.One !tag_one
+> "Two"
+
+a hash_one.Two
+> !tag_one "One"
+
+a hash_one.Three !tag_tres
+> !tag_tres "Three"
+
+c hash_one.key_two
+< !tag_two "Two"
+---
+> "Two"
+
+c hash_one.key_three
+< !tag_three "Three"
+---
+> !tag_tres "Three"
+
+d hash_one.One
+< !tag_two "Two"
+
+d hash_one.Two !tag_two
+< "One"
+
+d hash_one.Three !tag_three
+< !tag_three "Three"
+
+a hash_two !example
+> {"key_one": "One", "key_two": "Two", "One": "Two", "Two": "One", "Three": "Three"}
+
+d hash_two
+< {"key_one": "One", "key_two": "Two", "One": "Two", "Two": "One", "Three": "Three"}
+"""
+
+        # DEBUG
+        # print("LHS File:  {}".format(lhs_file))
+        # print("RHS File:  {}".format(rhs_file))
+        # print("Expected Output:")
+        # print(merged_yaml_content)
+
+        result = script_runner.run(
+            self.command
+            , lhs_file
+            , rhs_file)
+        assert not result.success, result.stderr
+        assert stdout_content == result.stdout
+

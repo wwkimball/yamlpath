@@ -1,3 +1,125 @@
+3.4.0:
+Bug Fixes:
+* For the yaml-diff command-line tool, custom identity keys for specific
+  records in AoHs of the RHS document were not being considered for comparison.
+  Any identity key set for the whole AoH was being applied to every record in
+  the set.
+
+Enhancements:
+* The yaml-get command-line tool -- and the underlying Processor::get_nodes
+  method -- now retrives nodes with `null` values.  Non-JSON null results from
+  yaml-get are printed using the ASCII NULL control-character (Hexadecimal 00)
+  wherever encountered.  While most terminals and shells won't visibly print
+  this character, it is there and can be picked up by downstream parsers of
+  STDOUT.  When the output is rendered as JSON, the unquoted "null" identifier
+  is used.
+* The yaml-set command-line tool now enables assigning null values using a new
+  --null|-N input option.
+* The yaml-set command-line tool now supports assigning YAML Aliases to target
+  --change|-g nodes, referencing any other node via --aliasof|-A whether it is
+  already Anchored, or not.  Should the Anchor not already exist, a unique name
+  will be automatically assigned.  This automatic name can controlled via
+  --anchor|-H.  Setting --change|-g and --aliasof|-A to the same node along
+  with a new --anchor|-H explicitly renames an existing Anchor and its Aliases.
+  The same is implicitly possible by specifying --change|-g and --anchor|-H
+  without --aliasof|-A.  Using these against non-YAML files merely duplicates
+  the target value to the indicated --change|-g nodes.
+* With a new --tag|-T auxilliary option, the yaml-set command-line tool now
+  supports assigning custom YAML tags (data-type specifiers) to nodes created
+  or updated during the operation.
+* The yaml-merge and yaml-diff command-line tools now also handle YAML tags.
+* The single-star wildcard segment translation was changed from [.!=""] to
+  [.=~/.*/] which enables it to match any key or value (including empty-string
+  and null).
+
+API Changes:
+* The yamlpath.func library is too big and some very useful general code has
+  become attached to special-purpose classes.  As such, it's time for
+  refactoring before this becomes untennable.  New, better-organized static
+  classes were created under a new yamlpath.common namespace.  Since this
+  would be destructive to other Python code which depends on the old
+  organization, this is a heads-up.  Your existing code will continue to work
+  without any changes, but only until 4.x (which is not yet planned).  Until
+  then, you must update your own code to use the new static classes for the
+  following functions and methods so as to avoid fatal errors down the road:
+  - yamlpath.func.append_list_element
+    -> yamlpath.common.Nodes.append_list_element
+
+  - yamlpath.func.build_next_node
+    -> yamlpath.common.Nodes.build_next_node
+
+  - yamlpath.func.clone_node
+    -> yamlpath.common.Nodes.clone_node
+
+  - yamlpath.func.create_searchterms_from_pathattributes
+    -> yamlpath.common.Searches.create_searchterms_from_pathattributes
+
+  - yamlpath.func.ensure_escaped
+    -> yamlpath.YAMLPath.ensure_escaped
+
+  - yamlpath.func.escape_path_section
+    -> yamlpath.YAMLPath.escape_path_section
+
+  - yamlpath.func.get_node_anchor
+    -> yamlpath.common.Anchors.get_node_anchor
+
+  - yamlpath.func.get_yaml_data
+    -> yamlpath.common.Parsers.get_yaml_data
+
+  - yamlpath.func.get_yaml_editor
+    -> yamlpath.common.Parsers.get_yaml_editor
+
+  - yamlpath.func.get_yaml_multidoc_data
+    -> yamlpath.common.Parsers.get_yaml_multidoc_data
+
+  - yamlpath.func.make_float_node
+    -> yamlpath.common.Nodes.make_float_node
+
+  - yamlpath.func.make_new_node
+    -> yamlpath.common.Nodes.make_new_node
+
+  - yamlpath.func.search_anchor
+    -> yamlpath.common.Searches.search_anchor
+
+  - yamlpath.func.search_matches
+    -> yamlpath.common.Searches.search_matches
+
+  - yamlpath.func.stringify_dates
+    -> yamlpath.common.Parsers.stringify_dates
+    NOTE that this method is deprecated and will be eliminated in favor of
+    using its more comprehensive replacement,
+    yamlpath.common.Parsers.jsonify_yaml_data
+
+  - yamlpath.func.unwrap_node_coords
+    -> yamlpath.wrappers.nodecoords.NodeCoords.unwrap_node_coords
+
+  - yamlpath.func.wrap_type
+    -> yamlpath.common.Nodes.wrap_type
+
+  - yamlpath.merger.Merger.combine_merge_anchors
+    -> yamlpath.common.Anchors.combine_merge_anchors
+
+  - yamlpath.merger.Merger.delete_all_comments
+    -> yamlpath.common.Anchors.delete_all_comments
+
+  - yamlpath.merger.Merger.rename_anchor
+    -> yamlpath.common.Anchors.rename_anchor
+
+  - yamlpath.merger.Merger.replace_anchor
+    -> yamlpath.common.Anchors.replace_anchor
+
+  - yamlpath.merger.Merger.scan_for_anchors
+    -> yamlpath.common.Anchors.scan_for_anchors
+
+  - yamlpath.merger.Merger.set_flow_style
+    -> yamlpath.common.Anchors.set_flow_style
+
+  Until you update your code, a deprecation warning will be printed to STDERR
+  every time the yamlpath.func file is imported and the first time one of the
+  relocated Merger static methods is called.  To be rid of the message, update
+  your code to use the new sources of the deprecated functions/methods and
+  remove every import of and from yamlpath.func.
+
 3.3.0:
 Bug Fixes:
 * It was impossible to install yamlpath 3.x without first installing

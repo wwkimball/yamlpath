@@ -944,3 +944,277 @@ key: value
         )
         assert not result.success, result.stderr
         assert "Refusing to delete" in result.stderr
+
+    def test_rename_anchor_explicit(self, script_runner, tmp_path_factory):
+        yamlin = """---
+aliases:
+  - &old_anchor Some string
+key: *old_anchor
+"""
+        yamlout = """---
+aliases:
+  - &new_anchor Some string
+key: *new_anchor
+"""
+        yaml_file = create_temp_yaml_file(tmp_path_factory, yamlin)
+        result = script_runner.run(
+            self.command,
+            "--change=aliases[&old_anchor]",
+            "--aliasof=aliases[&old_anchor]",
+            "--anchor=new_anchor",
+            yaml_file
+        )
+        assert result.success, result.stderr
+
+        with open(yaml_file, 'r') as fhnd:
+            filedat = fhnd.read()
+        assert filedat == yamlout
+
+    def test_rename_anchor_implicit(self, script_runner, tmp_path_factory):
+        yamlin = """---
+aliases:
+  - &old_anchor Some string
+key: *old_anchor
+"""
+        yamlout = """---
+aliases:
+  - &new_anchor Some string
+key: *new_anchor
+"""
+        yaml_file = create_temp_yaml_file(tmp_path_factory, yamlin)
+        result = script_runner.run(
+            self.command,
+            "--change=aliases[&old_anchor]",
+            "--anchor=new_anchor",
+            yaml_file
+        )
+        assert result.success, result.stderr
+
+        with open(yaml_file, 'r') as fhnd:
+            filedat = fhnd.read()
+        assert filedat == yamlout
+
+    def test_auto_anchor(self, script_runner, tmp_path_factory):
+        yamlin = """---
+some_key: its value
+a_hash:
+  a_key: A value
+"""
+        yamlout = """---
+some_key: &some_key its value
+a_hash:
+  a_key: *some_key
+"""
+        yaml_file = create_temp_yaml_file(tmp_path_factory, yamlin)
+        result = script_runner.run(
+            self.command,
+            "--change=a_hash.a_key",
+            "--aliasof=some_key",
+            yaml_file
+        )
+        assert result.success, result.stderr
+
+        with open(yaml_file, 'r') as fhnd:
+            filedat = fhnd.read()
+        assert filedat == yamlout
+
+    def test_too_many_nodes_to_alias(self, script_runner, tmp_path_factory):
+        yamlin = """---
+aliases:
+  - &valid_anchor Has validity
+  - &another_valid_anchor Also has validity
+hash:
+  concete_key: Concrete value
+  aliased_key: *valid_anchor
+"""
+        yaml_file = create_temp_yaml_file(tmp_path_factory, yamlin)
+        result = script_runner.run(
+            self.command,
+            "--change=hash.new_key",
+            "--aliasof=aliases.*",
+            yaml_file
+        )
+        assert not result.success, result.stderr
+        assert "impossible to Alias more than one Anchor at a time" in result.stderr
+
+    def test_auto_anchor_conflicted(self, script_runner, tmp_path_factory):
+        yamlin = """---
+a_key: &name_taken Conflicting anchored value
+another_key: its value
+a_hash:
+  a_key: A value
+"""
+        yaml_file = create_temp_yaml_file(tmp_path_factory, yamlin)
+        result = script_runner.run(
+            self.command,
+            "--change=a_hash.a_key",
+            "--aliasof=another_key",
+            "--anchor=name_taken",
+            yaml_file
+        )
+        assert not result.success, result.stderr
+        assert "Anchor names must be unique within YAML documents" in result.stderr
+
+    def test_auto_anchor_deconflicted(self, script_runner, tmp_path_factory):
+        yamlin = """---
+silly_key: &some_key Conflicting anchored value
+another_silly_key: &some_key001 Yet another conflict
+some_key: its value
+a_hash:
+  a_key: A value
+"""
+        yamlout = """---
+silly_key: &some_key Conflicting anchored value
+another_silly_key: &some_key001 Yet another conflict
+some_key: &some_key002 its value
+a_hash:
+  a_key: *some_key002
+"""
+        yaml_file = create_temp_yaml_file(tmp_path_factory, yamlin)
+        result = script_runner.run(
+            self.command,
+            "--change=a_hash.a_key",
+            "--aliasof=some_key",
+            yaml_file
+        )
+        assert result.success, result.stderr
+
+        with open(yaml_file, 'r') as fhnd:
+            filedat = fhnd.read()
+        assert filedat == yamlout
+
+    def test_reuse_anchor(self, script_runner, tmp_path_factory):
+        yamlin = """---
+some_key: &has_anchor its value
+a_hash:
+  a_key: A value
+"""
+        yamlout = """---
+some_key: &has_anchor its value
+a_hash:
+  a_key: *has_anchor
+"""
+        yaml_file = create_temp_yaml_file(tmp_path_factory, yamlin)
+        result = script_runner.run(
+            self.command,
+            "--change=a_hash.a_key",
+            "--aliasof=some_key",
+            yaml_file
+        )
+        assert result.success, result.stderr
+
+        with open(yaml_file, 'r') as fhnd:
+            filedat = fhnd.read()
+        assert filedat == yamlout
+
+    def test_assign_docroot_tag(self, script_runner, tmp_path_factory):
+        yamlin = """---
+key: value
+"""
+        yamlout = """--- !something
+key: value
+"""
+        yaml_file = create_temp_yaml_file(tmp_path_factory, yamlin)
+        result = script_runner.run(
+            self.command,
+            "--change=/",
+            "--tag=!something",
+            yaml_file
+        )
+        assert result.success, result.stderr
+
+        with open(yaml_file, 'r') as fhnd:
+            filedat = fhnd.read()
+        assert filedat == yamlout
+
+    def test_assign_anchorless_tag(self, script_runner, tmp_path_factory):
+        yamlin = """---
+key: value
+"""
+        yamlout = """---
+key: !something value
+"""
+        yaml_file = create_temp_yaml_file(tmp_path_factory, yamlin)
+        result = script_runner.run(
+            self.command,
+            "--change=key",
+            "--tag=!something",
+            yaml_file
+        )
+        assert result.success, result.stderr
+
+        with open(yaml_file, 'r') as fhnd:
+            filedat = fhnd.read()
+        assert filedat == yamlout
+
+    def test_assign_original_anchored_tag(self, script_runner, tmp_path_factory):
+        yamlin = """---
+aliases:
+  - &anchored_scalar This (scalar) string is Anchored.
+key: *anchored_scalar
+"""
+        yamlout = """---
+aliases:
+  - &anchored_scalar !some_tag This (scalar) string is Anchored.
+key: *anchored_scalar
+"""
+        yaml_file = create_temp_yaml_file(tmp_path_factory, yamlin)
+        result = script_runner.run(
+            self.command,
+            "--change=aliases[&anchored_scalar]",
+            "--tag=!some_tag",
+            yaml_file
+        )
+        assert result.success, result.stderr
+
+        with open(yaml_file, 'r') as fhnd:
+            filedat = fhnd.read()
+        assert filedat == yamlout
+
+    def test_assign_original_aliased_tag(self, script_runner, tmp_path_factory):
+        yamlin = """---
+aliases:
+  - &anchored_scalar This (scalar) string is Anchored.
+key: *anchored_scalar
+"""
+        yamlout = """---
+aliases:
+  - &anchored_scalar !some_tag This (scalar) string is Anchored.
+key: *anchored_scalar
+"""
+        yaml_file = create_temp_yaml_file(tmp_path_factory, yamlin)
+        result = script_runner.run(
+            self.command,
+            "--change=key",
+            "--tag=some_tag",
+            yaml_file
+        )
+        assert result.success, result.stderr
+
+        with open(yaml_file, 'r') as fhnd:
+            filedat = fhnd.read()
+        assert filedat == yamlout
+
+    def test_assign_null(self, script_runner, tmp_path_factory):
+        yamlin = """---
+ingress_key: Preceding value
+concrete_key: Old value
+egress_key: Following value
+"""
+        yamlout = """---
+ingress_key: Preceding value
+concrete_key:
+egress_key: Following value
+"""
+        yaml_file = create_temp_yaml_file(tmp_path_factory, yamlin)
+        result = script_runner.run(
+            self.command,
+            "--change=concrete_key",
+            "--null",
+            yaml_file
+        )
+        assert result.success, result.stderr
+
+        with open(yaml_file, 'r') as fhnd:
+            filedat = fhnd.read()
+        assert filedat == yamlout

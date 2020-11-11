@@ -6,11 +6,11 @@ Copyright 2020 William W. Kimball, Jr. MBA MSIS
 import json
 from typing import Any
 
-from ruamel.yaml.comments import CommentedBase
+from ruamel.yaml.comments import CommentedBase, TaggedScalar
 
+from yamlpath.common import Parsers
 from yamlpath.enums import PathSeperators
 from yamlpath import YAMLPath
-from yamlpath.func import stringify_dates
 from .enums.diffactions import DiffActions
 
 
@@ -26,6 +26,7 @@ class DiffEntry:
         self._path: YAMLPath = path
         self._lhs: Any = lhs
         self._rhs: Any = rhs
+        self._key_tag = kwargs.pop("key_tag", None)
         self._set_index(lhs, rhs, **kwargs)
         self._verbose = False
 
@@ -47,8 +48,11 @@ class DiffEntry:
         """Get the string representation of this object."""
         diffaction = self._action
         path = self._path if self._path else "-"
-        output = "{}{} {}\n".format(
-            diffaction, self._index if self.verbose else "", path)
+        key_tag = ""
+        if self._key_tag:
+            key_tag = " {}".format(self._key_tag)
+        output = "{}{} {}{}\n".format(
+            diffaction, self._index if self.verbose else "", path, key_tag)
         if diffaction is DiffActions.ADD:
             output += DiffEntry._present_data(self._rhs, ">")
         elif diffaction is DiffActions.CHANGE:
@@ -106,13 +110,6 @@ class DiffEntry:
             self._verbose = value
 
     @classmethod
-    def _jsonify_data(cls, data: Any) -> str:
-        """Generate JSON representation of data."""
-        if isinstance(data, (list, dict)):
-            return json.dumps(stringify_dates(data))
-        return str(data)
-
-    @classmethod
     def _get_lc(cls, data: Any) -> str:
         """Get the line.column of a data element."""
         data_lc = "0.0"
@@ -135,7 +132,13 @@ class DiffEntry:
     @classmethod
     def _present_data(cls, data: Any, prefix: str) -> str:
         """Stringify data."""
-        return "{} {}".format(
-            prefix,
-            DiffEntry._jsonify_data(data).strip().replace(
-                "\n", "\n{} ".format(prefix)))
+        json_safe_data = Parsers.jsonify_yaml_data(data)
+        formatted_data = json_safe_data
+        if isinstance(json_safe_data, str):
+            formatted_data = json_safe_data.strip()
+        json_data = json.dumps(formatted_data).replace(
+                               "\\n", "\n{} ".format(prefix))
+        data_tag = ""
+        if isinstance(data, TaggedScalar) and data.tag.value:
+            data_tag = "{} ".format(data.tag.value)
+        return "{} {}{}".format(prefix, data_tag, json_data)

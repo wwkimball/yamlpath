@@ -10,3 +10,4 @@ exclude_paths:
   - '**/*.md'
   - '**/__init__.py'
   - 'README.md'
+  - 'yamlpath/func.py'  # Deprecated; the entire file is just relays

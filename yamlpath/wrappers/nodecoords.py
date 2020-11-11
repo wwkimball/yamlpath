@@ -49,3 +49,24 @@ class NodeCoords:
         return ("{}('{}', '{}', '{}')".format(
             self.__class__.__name__, self.node, self.parent,
             self.parentref))
+
+    @staticmethod
+    def unwrap_node_coords(data: Any) -> Any:
+        """
+        Recursively strips all DOM tracking data off of a NodeCoords wrapper.
+
+        Parameters:
+        1. data (Any) the source data to strip.
+
+        Returns:  (Any) the stripped data.
+        """
+        if isinstance(data, NodeCoords):
+            return NodeCoords.unwrap_node_coords(data.node)
+
+        if isinstance(data, list):
+            stripped_nodes = []
+            for ele in data:
+                stripped_nodes.append(NodeCoords.unwrap_node_coords(ele))
+            return stripped_nodes
+
+        return data

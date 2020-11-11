@@ -15,7 +15,7 @@ from os.path import isfile, exists
 from ruamel.yaml.scalarstring import FoldedScalarString
 
 from yamlpath import __version__ as YAMLPATH_VERSION
-from yamlpath.func import get_yaml_data, get_yaml_editor
+from yamlpath.common import Parsers
 from yamlpath.eyaml.exceptions import EYAMLCommandException
 from yamlpath.eyaml import EYAMLProcessor
 
@@ -107,7 +107,7 @@ def main():
     processor = EYAMLProcessor(log, None, binary=args.eyaml)
 
     # Prep the YAML parser
-    yaml = get_yaml_editor()
+    yaml = Parsers.get_yaml_editor()
 
     # Process the input file(s)
     in_file_count = len(args.yaml_files)
@@ -129,7 +129,7 @@ def main():
             log.info("Processing {}...".format(yaml_file))
 
         # Try to open the file
-        (yaml_data, doc_loaded) = get_yaml_data(yaml, log, yaml_file)
+        (yaml_data, doc_loaded) = Parsers.get_yaml_data(yaml, log, yaml_file)
         if not doc_loaded:
             # An error message has already been logged
             exit_state = 3

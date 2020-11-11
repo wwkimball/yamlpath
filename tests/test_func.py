@@ -8,7 +8,7 @@ from ruamel.yaml.scalarbool import ScalarBoolean
 from ruamel.yaml.scalarfloat import ScalarFloat
 from ruamel.yaml.scalarint import ScalarInt
 
-from yamlpath.enums import PathSearchMethods, YAMLValueFormats
+from yamlpath.enums import AnchorMatches, PathSearchMethods, YAMLValueFormats
 from yamlpath.types import PathAttributes
 from yamlpath.path import SearchTerms
 from yamlpath import YAMLPath
@@ -17,11 +17,16 @@ from yamlpath.func import (
     build_next_node,
     clone_node,
     create_searchterms_from_pathattributes,
+    ensure_escaped,
     escape_path_section,
+    get_node_anchor,
     get_yaml_data,
     get_yaml_editor,
     get_yaml_multidoc_data,
+    make_float_node,
     make_new_node,
+    search_anchor,
+    search_matches,
     stringify_dates,
     wrap_type,
 )
@@ -40,6 +45,14 @@ def force_ruamel_load_keyboardinterrupt(monkeypatch):
     monkeypatch.setattr(break_class, "load_all", fake_load)
 
 class Test_func():
+    ###
+    # build_next_node
+    ###
+    def test_build_next_node(self):
+        yaml_path = YAMLPath("/test/path")
+        next_node = build_next_node(yaml_path, 0)
+        assert isinstance(next_node, dict)
+
     ###
     # get_yaml_editor
     ###
@@ -340,6 +353,13 @@ class Test_func():
 
 
     ###
+    # ensure_escaped
+    ###
+    def test_ensure_escaped(self):
+        assert r"\(\)" == ensure_escaped("()", "(", ")")
+
+
+    ###
     # escape_path_section
     ###
     def test_escape_path_section(self):
@@ -359,10 +379,50 @@ class Test_func():
 
 
     ###
+    # search_anchor
+    ###
+    def test_search_anchor(self):
+        anchor_value = "anchor_name"
+        node = PlainScalarString("anchored value", anchor=anchor_value)
+        terms = SearchTerms(False, PathSearchMethods.CONTAINS, ".", "name")
+        seen_anchors = []
+        search_anchors = True
+        include_aliases = True
+        assert search_anchor(node, terms, seen_anchors, search_anchors=search_anchors, include_aliases=include_aliases) == AnchorMatches.MATCH
+
+
+    ###
+    # search_matches
+    ###
+    def test_search_matches(self):
+        method = PathSearchMethods.CONTAINS
+        needle = "a"
+        haystack = "parents"
+        assert search_matches(method, needle, haystack) == True
+
+
+    ###
     # stringify_dates
     ###
     def test_stringify_dates(self):
         from datetime import date
-        yaml_safe_data = { "string": "Value", "number": 1, "date": date(2020, 10, 19) }
+        yaml_safe_data = CommentedMap({ "string": "Value", "number": 1, "date": date(2020, 10, 19) })
         json_safe_data = { "string": "Value", "number": 1, "date": "2020-10-19" }
         assert stringify_dates(yaml_safe_data) == json_safe_data
+
+
+    ###
+    # make_float_node
+    ###
+    def test_make_float(self):
+        assert isinstance(make_float_node(3.14159265385), ScalarFloat)
+
+
+    ###
+    # get_node_anchor
+    ###
+    def test_get_node_anchor(self):
+        anchor_value = "anchored"
+        node = PlainScalarString("value")
+        node.yaml_set_anchor(anchor_value)
+        assert get_node_anchor(node) == anchor_value

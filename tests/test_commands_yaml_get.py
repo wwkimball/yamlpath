@@ -90,6 +90,20 @@ class Test_yaml_get():
         assert not result.success, result.stderr
         assert "No accessible eyaml command" in result.stderr
 
+    def test_recursive_yaml_anchor(self, script_runner, tmp_path_factory):
+        content = """--- &recursive_this
+hash:
+  recursive_key: *recursive_this
+"""
+        yaml_file = create_temp_yaml_file(tmp_path_factory, content)
+        result = script_runner.run(
+            self.command,
+            "--query=/hash",
+            yaml_file
+        )
+        assert not result.success, result.stderr
+        assert "contains an infinitely recursing" in result.stderr
+
     def test_query_anchor(self, script_runner, tmp_path_factory):
         content = """---
         aliases:
@@ -132,3 +146,31 @@ hash:
 
         assert 0 == result.returncode, result.stderr
         assert "LHS exclusive\n" == result.stdout
+
+    def test_get_every_data_type(self, script_runner, tmp_path_factory):
+        # Contributed by https://github.com/AndydeCleyre
+        content = """---
+intthing: 6
+floatthing: 6.8
+yesthing: yes
+nothing: no
+truething: true
+falsething: false
+nullthing: null
+nothingthing:
+emptystring: ""
+nullstring: "null"
+        """
+
+        # Note that true nulls are translated as "\x00" (hexadecimal NULL
+        # control-characters).
+        results = ["6", "6.8", "yes", "no", "True", "False", "\x00", "\x00", "", "null"]
+
+        yaml_file = create_temp_yaml_file(tmp_path_factory, content)
+        result = script_runner.run(self.command, "--query=*", yaml_file)
+        assert result.success, result.stderr
+
+        match_index = 0
+        for line in result.stdout.splitlines():
+            assert line == results[match_index]
+            match_index += 1
