@@ -383,3 +383,19 @@ class Nodes:
             else:
                 detagged.append(ele)
         return detagged
+
+    @staticmethod
+    def tagless_value(value: Any) -> Any:
+        """Get a value in its true data-type, stripped of any YAML Tag."""
+        evalue = value
+        if isinstance(value, TaggedScalar):
+            evalue = value.value
+
+        try:
+            untagged_value = ast.literal_eval(evalue)
+        except ValueError:
+            untagged_value = value
+        except SyntaxError:
+            untagged_value = value
+
+        return untagged_value

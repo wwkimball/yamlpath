@@ -1469,8 +1469,7 @@ ports:
 
         result = subprocess.run(
             [self.command
-            , "--anchors=right"
-            , "--arrays=unique"
+            , "--aoh=deep"
             , lhs_file]
             , stdout=subprocess.PIPE
             , input=rhs_content

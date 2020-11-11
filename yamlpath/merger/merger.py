@@ -4,6 +4,7 @@ Implement YAML document Merger.
 Copyright 2020 William W. Kimball, Jr. MBA MSIS
 """
 import sys  # For deprecation warnings
+from ast import literal_eval
 from typing import Any, Dict, List, Set, Tuple
 import json
 from io import StringIO
@@ -122,15 +123,15 @@ class Merger:
 
         self.logger.debug(
             "Merging INTO dict with keys: {}:".format(", ".join([
-                    k.value if isinstance(k, TaggedScalar)
-                    else k
+                    str(k.value) if isinstance(k, TaggedScalar)
+                    else str(k)
                     for k in lhs.keys()])),
             data=lhs, prefix="Merger::_merge_dicts:  ",
             header="--------------------")
         self.logger.debug(
             "Merging FROM dict with keys: {}:".format(", ".join([
-                    k.value if isinstance(k, TaggedScalar)
-                    else k
+                    str(k.value) if isinstance(k, TaggedScalar)
+                    else str(k)
                     for k in rhs.keys()])),
             data=rhs, prefix="Merger::_merge_dicts:  ",
             footer="====================")
@@ -361,9 +362,8 @@ class Merger:
                 prefix="Merger::_merge_arrays_of_hashes:  ", data=ele)
 
             if merge_mode is AoHMergeOpts.DEEP:
-                # TODO:  What is the behavior here when the id key is YAML Tagged?
                 if id_key in ele:
-                    id_val = ele[id_key]
+                    id_val = Nodes.tagless_value(ele[id_key])
                 else:
                     raise MergeException(
                         "Mandatory identity key, {}, not present in Hash with"
@@ -373,13 +373,25 @@ class Merger:
                     )
 
                 merged_hash = False
-                # TODO:  What is the behavior here when the id key is YAML Tagged?
-                for lhs_hash in (
-                    lhs_hash for lhs_hash in lhs
-                    if isinstance(lhs_hash, CommentedMap)
-                    and id_key in lhs_hash
-                    and lhs_hash[id_key] == id_val
-                ):
+                for lhs_hash in lhs:
+                    has_id_key = False
+                    raw_identity: Any = None
+                    for raw_key in lhs_hash:
+                        cmp_key = raw_key
+                        if isinstance(raw_key, TaggedScalar):
+                            cmp_key = raw_key.value
+                        if cmp_key != id_key:
+                            continue
+                        has_id_key = True
+                        raw_identity = lhs_hash[raw_key]
+                        break
+                    if not has_id_key:
+                        continue
+
+                    cmp_identity = Nodes.tagless_value(raw_identity)
+                    if not cmp_identity == id_val:
+                        continue
+
                     self._merge_dicts(lhs_hash, ele, path_next)
                     merged_hash = True
 
@@ -390,7 +402,6 @@ class Merger:
                     Nodes.append_list_element(lhs, ele,
                         ele.anchor.value if hasattr(ele, "anchor") else None)
             elif merge_mode is AoHMergeOpts.UNIQUE:
-                # TODO:  What is the behavior of this when YAML Tags are in play?
                 if ele not in lhs:
                     Nodes.append_list_element(
                         lhs, ele,
