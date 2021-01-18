@@ -538,6 +538,7 @@ class Processor:
         term = terms.term
         matches = False
         desc_path = YAMLPath(attr)
+        debug_matched = "NO MATCHES YIELDED"
         if isinstance(data, list):
             if not traverse_lists:
                 self.logger.debug(
@@ -562,6 +563,7 @@ class Processor:
                         break
 
                 if (matches and not invert) or (invert and not matches):
+                    debug_matched = "one list match yielded"
                     self.logger.debug(
                         "Yielding list match at index {}:".format(lstidx),
                         data=ele,
@@ -576,6 +578,7 @@ class Processor:
                 for key, val in data.items():
                     matches = Searches.search_matches(method, term, key)
                     if (matches and not invert) or (invert and not matches):
+                        debug_matched = "one dictionary key name match yielded"
                         self.logger.debug(
                             "Yielding dictionary key name match against '{}':"
                             .format(key),
@@ -590,6 +593,7 @@ class Processor:
                 value = data[attr]
                 matches = Searches.search_matches(method, term, value)
                 if (matches and not invert) or (invert and not matches):
+                    debug_matched = "one dictionary attribute match yielded"
                     self.logger.debug(
                         "Yielding dictionary attribute match against '{}':"
                         .format(attr),
@@ -611,16 +615,29 @@ class Processor:
                     break
 
                 if (matches and not invert) or (invert and not matches):
+                    debug_matched = "one descendant search match yielded"
+                    self.logger.debug(
+                        "Yielding descendant match against '{}':"
+                        .format(attr),
+                        data=data,
+                        prefix="Processor::_get_nodes_by_search:  ")
                     yield NodeCoords(data, parent, parentref, translated_path)
 
         else:
             # Check the passed data itself for a match
             matches = Searches.search_matches(method, term, data)
             if (matches and not invert) or (invert and not matches):
+                debug_matched = "query source data itself yielded"
                 self.logger.debug(
                     "Yielding the queried data itself because it matches.",
                     prefix="Processor::_get_nodes_by_search:  ")
                 yield NodeCoords(data, parent, parentref, translated_path)
+
+        self.logger.debug(
+            "Finished seeking SEARCH nodes matching {} in data with {}:"
+            .format(terms, debug_matched),
+            data=data,
+            prefix="Processor::_get_nodes_by_search:  ")
 
     # pylint: disable=locally-disabled
     def _get_nodes_by_collector(
@@ -1066,6 +1083,8 @@ class Processor:
                     matched_nodes < 1
                     and segment_type is not PathSegmentTypes.SEARCH
             ):
+                at_terminus = len(yaml_path) <= depth + 1
+
                 # Add the missing element
                 self.logger.debug(
                     ("Processor::_get_optional_nodes:  Element <{}>{} is"
@@ -1169,7 +1188,31 @@ class Processor:
                             str(yaml_path),
                             except_segment
                         )
+
+                # elif at_terminus and isinstance(parent, (dict, list)):
+                #     self.logger.debug(
+                #         "Setting a {} terminal value at path {} ({} segments)"
+                #         " at depth {}, to value {}, when:"
+                #         .format(
+                #             str(segment_type), str(yaml_path),
+                #             str(len(yaml_path)), str(depth + 1),
+                #             str(value)),
+                #         prefix="Processor::_get_optional_nodes:  ",
+                #         data={"data": data, "parent": parent,
+                #             "parentref": parentref})
+                #     parent[parentref] = value
+                #     data = value
+                #     yield NodeCoords(data, parent, parentref, translated_path)
+
                 else:
+                    self.logger.debug(
+                        "Assuming data is scalar and cannot receive a {}"
+                        " subreference at {} ({}/{}):".format(
+                            str(segment_type), str(yaml_path), str(depth + 1),
+                            str(len(yaml_path))),
+                        prefix="Processor::_get_optional_nodes:  ",
+                        data={"data": data, "parent": parent,
+                            "parentref": parentref, "(default_)value": value})
                     raise YAMLPathException(
                         "Cannot add {} subreference to scalars".format(
                             str(segment_type)

@@ -1218,3 +1218,62 @@ egress_key: Following value
         with open(yaml_file, 'r') as fhnd:
             filedat = fhnd.read()
         assert filedat == yamlout
+
+    def test_assign_to_nonexistent_and_empty_nodes(self, script_runner, tmp_path_factory):
+        # Inspiration: https://github.com/wwkimball/yamlpath/issues/107
+        # Test: cat testbed.yaml | yaml-set --change='/devices/*/[os!=~/.+/]/os' --value=generic
+        yamlin = """---
+devices:
+  R1:
+    os: ios
+    type: router
+    platform: asr1k
+
+  R2:
+    type: switch
+    platform: cat3k
+
+  R3:
+    type: access-point
+    platform: wrt
+    os:
+
+  R4:
+    type: tablet
+    os: null
+    platform: java
+"""
+        yamlout = """---
+devices:
+  R1:
+    os: ios
+    type: router
+    platform: asr1k
+
+  R2:
+    type: switch
+    platform: cat3k
+
+    os: generic
+  R3:
+    type: access-point
+    platform: wrt
+    os: generic
+
+  R4:
+    type: tablet
+    os: null
+    platform: java
+"""
+        yaml_file = create_temp_yaml_file(tmp_path_factory, yamlin)
+        result = script_runner.run(
+            self.command,
+            "--change=/devices/*/[os!=~/.+/]/os",
+            "--value=generic",
+            yaml_file
+        )
+        assert result.success, result.stderr
+
+        with open(yaml_file, 'r') as fhnd:
+            filedat = fhnd.read()
+        assert filedat == yamlout
