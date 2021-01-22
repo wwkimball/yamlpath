@@ -237,7 +237,7 @@ products_array:
         """
         yaml = YAML()
         processor = Processor(quiet_logger, yaml.load(yamldata))
-        yamlpath = YAMLPath("aliases[&firstAlias]")
+        yamlpath = YAMLPath("aliases[&aliasAnchorOne]")
         for node in processor.get_nodes(yamlpath, pathsep=PathSeperators.FSLASH):
             assert unwrap_node_coords(node) == "Anchored Scalar Value"
 
@@ -756,10 +756,7 @@ emptystring: ""
 nullstring: "null"
         """
 
-        # Note that Python/pytest is translating nothingthing into a string, "null".
-        # This is NOT yamlpath doing this.  In fact, the yaml-get command-line tool
-        # actually translates true nulls into "\x00" (hexadecimal NULL control-characters).
-        results = [6, 6.8, "yes", "no", True, False, "", "null", "", "null"]
+        results = [6, 6.8, "yes", "no", True, False, None, None, "", "null"]
 
         yaml = YAML()
         data = yaml.load(yamldata)
