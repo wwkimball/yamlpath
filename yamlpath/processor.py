@@ -1029,14 +1029,8 @@ class Processor:
         parent = kwargs.pop("parent", None)
         parentref = kwargs.pop("parentref", None)
         translated_path = kwargs.pop("translated_path", YAMLPath(""))
-        # if data is None:
-        #     self.logger.debug(
-        #         "Bailing out on None data at parentref, {}, of parent:"
-        #         .format(parentref),
-        #         prefix="Processor::_get_optional_nodes:  ", data=parent)
-        #     return
-
         segments = yaml_path.escaped
+
         # pylint: disable=locally-disabled,too-many-nested-blocks
         if segments and len(segments) > depth:
             (segment_type, unstripped_attrs) = yaml_path.unescaped[depth]

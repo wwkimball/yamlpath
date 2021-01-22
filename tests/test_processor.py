@@ -756,10 +756,7 @@ emptystring: ""
 nullstring: "null"
         """
 
-        # Note that Python/pytest is translating nothingthing into a string, "null".
-        # This is NOT yamlpath doing this.  In fact, the yaml-get command-line tool
-        # actually translates true nulls into "\x00" (hexadecimal NULL control-characters).
-        results = [6, 6.8, "yes", "no", True, False, "", "null", "", "null"]
+        results = [6, 6.8, "yes", "no", True, False, None, None, "", "null"]
 
         yaml = YAML()
         data = yaml.load(yamldata)
