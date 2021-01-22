@@ -194,7 +194,7 @@ class Processor:
     def delete_nodes(self, yaml_path: Union[YAMLPath, str],
                   **kwargs: Any) -> Generator[NodeCoords, None, None]:
         """
-        Get nodes at YAML Path in data.
+        Delete nodes at YAML Path in data.
 
         Parameters:
         1. yaml_path (Union[YAMLPath, str]) The YAML Path to evaluate
@@ -235,6 +235,15 @@ class Processor:
 
         if len(gathered_nodes) > 0:
             self._delete_nodes(gathered_nodes)
+
+    def delete_gathered_nodes(self, gathered_nodes: List(NodeCoords)) -> None:
+        """
+        Recursively delete pre-gathered nodes.
+
+        Parameters:
+        1. gathered_nodes (List(NodeCoords)) The pre-gathered nodes to delete.
+        """
+        self._delete_nodes(gathered_nodes)
 
     def _delete_nodes(self, delete_nodes: List(NodeCoords)) -> None:
         """
