@@ -225,7 +225,7 @@ class Processor:
         # Nodes must be processed in reverse order while deleting them to avoid
         # corrupting list element indecies, thereby deleting the wrong nodes.
         # As such, the intended nodes must be first gathered into a list.
-        gathered_nodes: List(NodeCoords) = []
+        gathered_nodes: List[NodeCoords] = []
         for node_coords in self._get_required_nodes(self.data, yaml_path):
             self.logger.debug(
                 "Gathered node for deletion:",
@@ -236,21 +236,21 @@ class Processor:
         if len(gathered_nodes) > 0:
             self._delete_nodes(gathered_nodes)
 
-    def delete_gathered_nodes(self, gathered_nodes: List(NodeCoords)) -> None:
+    def delete_gathered_nodes(self, gathered_nodes: List[NodeCoords]) -> None:
         """
         Recursively delete pre-gathered nodes.
 
         Parameters:
-        1. gathered_nodes (List(NodeCoords)) The pre-gathered nodes to delete.
+        1. gathered_nodes (List[NodeCoords]) The pre-gathered nodes to delete.
         """
         self._delete_nodes(gathered_nodes)
 
-    def _delete_nodes(self, delete_nodes: List(NodeCoords)) -> None:
+    def _delete_nodes(self, delete_nodes: List[NodeCoords]) -> None:
         """
         Recursively delete specified nodes.
 
         Parameters:
-        1. delete_nodes (List(NodeCoords)) The nodes to delete.
+        1. delete_nodes (List[NodeCoords]) The nodes to delete.
 
         Raises:
             - `YAMLPathException` when the operation would destroy the entire
@@ -286,7 +286,7 @@ class Processor:
                     "Refusing to delete the entire document!  Ensure the"
                     " source document is YAML, JSON, or compatible and the"
                     " target nodes do not include the document root.",
-                    delete_nc.path
+                    str(delete_nc.path)
                 )
 
     # pylint: disable=locally-disabled,too-many-branches,too-many-locals
