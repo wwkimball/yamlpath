@@ -237,7 +237,7 @@ products_array:
         """
         yaml = YAML()
         processor = Processor(quiet_logger, yaml.load(yamldata))
-        yamlpath = YAMLPath("aliases[&firstAlias]")
+        yamlpath = YAMLPath("aliases[&aliasAnchorOne]")
         for node in processor.get_nodes(yamlpath, pathsep=PathSeperators.FSLASH):
             assert unwrap_node_coords(node) == "Anchored Scalar Value"
 
