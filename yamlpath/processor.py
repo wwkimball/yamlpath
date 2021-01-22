@@ -333,6 +333,10 @@ class Processor:
                 YAMLPath.escape_path_section(
                     str_stripped, translated_path.seperator))
             if stripped_attrs in data:
+                self.logger.debug(
+                    "Processor::_get_nodes_by_key:  FOUND key node by name at"
+                    " {}."
+                    .format(str_stripped))
                 yield NodeCoords(
                     data[stripped_attrs], data, stripped_attrs,
                     next_translated_path)
@@ -350,6 +354,10 @@ class Processor:
                 # Try using the ref as a bare Array index
                 idx = int(str_stripped)
                 if len(data) > idx:
+                    self.logger.debug(
+                        "Processor::_get_nodes_by_key:  FOUND key node as a"
+                        " bare Array index at [{}]."
+                        .format(str_stripped))
                     yield NodeCoords(
                         data[idx], data, idx,
                         translated_path + "[{}]".format(idx))
@@ -369,6 +377,10 @@ class Processor:
                             element, yaml_path, segment_index, parent=data,
                             parentref=eleidx, traverse_lists=traverse_lists,
                             translated_path=next_translated_path):
+                        self.logger.debug(
+                            "Processor::_get_nodes_by_key:  FOUND key node "
+                            " via pass-through Array-of-Hashes search at {}."
+                            .format(next_translated_path))
                         yield node_coord
 
     # pylint: disable=locally-disabled,too-many-locals
@@ -1017,12 +1029,12 @@ class Processor:
         parent = kwargs.pop("parent", None)
         parentref = kwargs.pop("parentref", None)
         translated_path = kwargs.pop("translated_path", YAMLPath(""))
-        if data is None:
-            self.logger.debug(
-                "Bailing out on None data at parentref, {}, of parent:"
-                .format(parentref),
-                prefix="Processor::_get_optional_nodes:  ", data=parent)
-            return
+        # if data is None:
+        #     self.logger.debug(
+        #         "Bailing out on None data at parentref, {}, of parent:"
+        #         .format(parentref),
+        #         prefix="Processor::_get_optional_nodes:  ", data=parent)
+        #     return
 
         segments = yaml_path.escaped
         # pylint: disable=locally-disabled,too-many-nested-blocks
