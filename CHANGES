@@ -1,3 +1,8 @@
+3.4.1:
+Bug Fixes:
+* yaml-set (and the underlying Processor class) were unable to change nodes
+  with a null (None) value to anything else.
+
 3.4.0:
 Bug Fixes:
 * For the yaml-diff command-line tool, custom identity keys for specific
