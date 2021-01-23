@@ -191,6 +191,104 @@ class Processor:
                         .format(value, value_format, str(vex))
                         , str(yaml_path)) from vex
 
+    def delete_nodes(self, yaml_path: Union[YAMLPath, str],
+                     **kwargs: Any) -> Generator[NodeCoords, None, None]:
+        """
+        Delete nodes at YAML Path in data.
+
+        Parameters:
+        1. yaml_path (Union[YAMLPath, str]) The YAML Path to evaluate
+
+        Keyword Parameters:
+        * pathsep (PathSeperators) Forced YAML Path segment seperator; set
+          only when automatic inference fails;
+          default = PathSeperators.AUTO
+
+        Returns:  (Generator) Affected NodeCoords before they are deleted
+
+        Raises:
+            - `YAMLPathException` when YAML Path is invalid
+        """
+        pathsep: PathSeperators = kwargs.pop("pathsep", PathSeperators.AUTO)
+
+        if self.data is None:
+            self.logger.debug(
+                "Refusing to delete nodes from a null document!",
+                prefix="Processor::delete_nodes:  ", data=self.data)
+            return
+
+        if isinstance(yaml_path, str):
+            yaml_path = YAMLPath(yaml_path, pathsep)
+        elif pathsep is not PathSeperators.AUTO:
+            yaml_path.seperator = pathsep
+
+        # Nodes must be processed in reverse order while deleting them to avoid
+        # corrupting list element indecies, thereby deleting the wrong nodes.
+        # As such, the intended nodes must be first gathered into a list.
+        gathered_nodes: List[NodeCoords] = []
+        for node_coords in self._get_required_nodes(self.data, yaml_path):
+            self.logger.debug(
+                "Gathered node for deletion:",
+                prefix="Processor::delete_nodes:  ", data=node_coords)
+            gathered_nodes.append(node_coords)
+            yield node_coords
+
+        if len(gathered_nodes) > 0:
+            self._delete_nodes(gathered_nodes)
+
+    def delete_gathered_nodes(self, gathered_nodes: List[NodeCoords]) -> None:
+        """
+        Recursively delete pre-gathered nodes.
+
+        Parameters:
+        1. gathered_nodes (List[NodeCoords]) The pre-gathered nodes to delete.
+        """
+        self._delete_nodes(gathered_nodes)
+
+    def _delete_nodes(self, delete_nodes: List[NodeCoords]) -> None:
+        """
+        Recursively delete specified nodes.
+
+        Parameters:
+        1. delete_nodes (List[NodeCoords]) The nodes to delete.
+
+        Raises:
+            - `YAMLPathException` when the operation would destroy the entire
+              document
+        """
+        for delete_nc in reversed(delete_nodes):
+            node = delete_nc.node
+            parent = delete_nc.parent
+            parentref = delete_nc.parentref
+            self.logger.debug(
+                "Deleting node:",
+                prefix="yaml_set::delete_nodes:  ",
+                data_header="!" * 80,
+                footer="!" * 80,
+                data=delete_nc)
+
+            # Ensure the reference exists before attempting to delete it
+            if isinstance(node, list) and isinstance(node[0], NodeCoords):
+                self._delete_nodes(node)
+            elif isinstance(node, NodeCoords):
+                self._delete_nodes([node])
+            elif isinstance(parent, dict):
+                if parentref in parent:
+                    del parent[parentref]
+            elif isinstance(parent, list):
+                if len(parent) > parentref:
+                    del parent[parentref]
+            else:
+                # Edge-case:  Attempt to delete from a document which is
+                # entirely one Scalar value OR user is deleting the entire
+                # document.
+                raise YAMLPathException(
+                    "Refusing to delete the entire document!  Ensure the"
+                    " source document is YAML, JSON, or compatible and the"
+                    " target nodes do not include the document root.",
+                    str(delete_nc.path)
+                )
+
     # pylint: disable=locally-disabled,too-many-branches,too-many-locals
     def _get_nodes_by_path_segment(self, data: Any,
                                    yaml_path: YAMLPath, segment_index: int,
