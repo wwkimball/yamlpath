@@ -192,7 +192,7 @@ class Processor:
                         , str(yaml_path)) from vex
 
     def delete_nodes(self, yaml_path: Union[YAMLPath, str],
-                  **kwargs: Any) -> Generator[NodeCoords, None, None]:
+                     **kwargs: Any) -> Generator[NodeCoords, None, None]:
         """
         Delete nodes at YAML Path in data.
 
@@ -214,7 +214,7 @@ class Processor:
         if self.data is None:
             self.logger.debug(
                 "Refusing to delete nodes from a null document!",
-                prefix="Processor::get_nodes:  ", data=self.data)
+                prefix="Processor::delete_nodes:  ", data=self.data)
             return
 
         if isinstance(yaml_path, str):

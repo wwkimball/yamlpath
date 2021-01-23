@@ -1,5 +1,6 @@
 import pytest
 from datetime import date
+from types import SimpleNamespace
 
 from ruamel.yaml import YAML
 
@@ -12,6 +13,7 @@ from yamlpath.enums import (
     YAMLValueFormats,
 )
 from yamlpath.path import SearchTerms
+from yamlpath.wrappers import ConsolePrinter
 from yamlpath import YAMLPath, Processor
 from tests.conftest import quiet_logger
 
@@ -770,11 +772,11 @@ nullstring: "null"
             assert unwrap_node_coords(node) == results[match_index]
             match_index += 1
 
-    @pytest.mark.parametrize("delete_yamlpath,new_flat_data", [
-        ("/**[&alias_number]", [1,1,True,1,1,True,1,1,True,1,"ABC",123,"BCD",987,"CDE","8B8"]),
-        ("/records[1]", [1,1,1,True,1,1,1,True,1,1,1,True,1,1,"CDE","8B8"]),
+    @pytest.mark.parametrize("delete_yamlpath,pathseperator,old_deleted_nodes,new_flat_data", [
+        (YAMLPath("/**[&alias_number]"), PathSeperators.FSLASH, [1, 1, 1], [1,1,True,1,1,True,1,1,True,1,"ABC",123,"BCD",987,"CDE","8B8"]),
+        ("records[1]", PathSeperators.AUTO, ["ABC",123,"BCD",987], [1,1,1,True,1,1,1,True,1,1,1,True,1,1,"CDE","8B8"]),
     ])
-    def test_delete_nodes(self, quiet_logger, delete_yamlpath, new_flat_data):
+    def test_delete_nodes(self, quiet_logger, delete_yamlpath, pathseperator, old_deleted_nodes, new_flat_data):
         yamldata = """---
 aliases:
   - &alias_number 1
@@ -805,6 +807,26 @@ records:
         yaml = YAML()
         data = yaml.load(yamldata)
         processor = Processor(quiet_logger, data)
-        processor.delete_nodes(delete_yamlpath)
+
+        # The return set must be received lest no nodes will be deleted
+        deleted_nodes = []
+        for nc in processor.delete_nodes(delete_yamlpath, pathsep=pathseperator):
+            deleted_nodes.append(nc)
+
+        for (test_value, verify_node_coord) in zip(old_deleted_nodes, deleted_nodes):
+            assert test_value, unwrap_node_coords(verify_node_coord)
+
         for (test_value, verify_node_coord) in zip(new_flat_data, processor.get_nodes("**")):
             assert test_value, unwrap_node_coords(verify_node_coord)
+
+    def test_null_docs_have_nothing_to_delete(self, capsys):
+        args = SimpleNamespace(verbose=False, quiet=False, debug=True)
+        logger = ConsolePrinter(args)
+        processor = Processor(logger, None)
+
+        deleted_nodes = []
+        for nc in processor.delete_nodes("**"):
+            deleted_nodes.append(nc)
+
+        console = capsys.readouterr()
+        assert "Refusing to delete nodes from a null document" in console.out
