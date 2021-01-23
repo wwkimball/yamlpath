@@ -235,6 +235,7 @@ class Processor:
 
         if len(gathered_nodes) > 0:
             self._delete_nodes(gathered_nodes)
+        raise NotImplementedError
 
     def delete_gathered_nodes(self, gathered_nodes: List[NodeCoords]) -> None:
         """
