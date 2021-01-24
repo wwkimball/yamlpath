@@ -1,3 +1,21 @@
+3.4.1:
+Bug Fixes:
+* yaml-set (and the underlying Processor class) were unable to change nodes
+  having a null (None) value to anything else.  This changes how null/None
+  values are handled by the Processor during node retrieval; they are no longer
+  discarded, so you will receive None as the data of any retrieved NodeCoords
+  for appropriate null/None leaf nodes.
+
+Enhancements:
+* The node deletion capability of the yaml-set command is now part of the
+  library.  See Processor::delete_nodes(...) and
+  Processor::delete_gathered_nodes(...) for details.
+* The library now supports loading YAML from String rather than only from file.
+  Simply pass a new `literal=True` keyword parameter to
+  Parsers::get_yaml_data(...) or Parsers::get_yaml_multidoc_data(...) to
+  indicate that `source` is literal serialized (String) YAML data rather than a
+  file-spec.  This mode is implied when reading from STDIN (source is "-").
+
 3.4.0:
 Bug Fixes:
 * For the yaml-diff command-line tool, custom identity keys for specific
