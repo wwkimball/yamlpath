@@ -1,7 +1,16 @@
 3.4.1:
 Bug Fixes:
 * yaml-set (and the underlying Processor class) were unable to change nodes
-  with a null (None) value to anything else.
+  having a null (None) value to anything else.  This changes how null/None
+  values are handled by the Processor during node retrieval; they are no longer
+  discarded, so you will receive None as the data of any retrieved NodeCoords
+  for appropriate null/None leaf nodes.
+
+Enhancements:
+* The node deletion capability of the yaml-set command is now part of the
+  library.  See Processor::delete_nodes(...) and
+  Processor::delete_gathered_nodes(...) for details.
+* The library now supports loading YAML from String rather than only from file.
 
 3.4.0:
 Bug Fixes:
