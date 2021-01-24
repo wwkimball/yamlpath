@@ -104,7 +104,7 @@ class Parsers:
                     yaml_data = parser.load(stdin.read())
                 else:
                     if literal:
-                        yaml_data = parser.laod(source)
+                        yaml_data = parser.load(source)
                     else:
                         with open(source, 'r') as fhnd:
                             yaml_data = parser.load(fhnd)
