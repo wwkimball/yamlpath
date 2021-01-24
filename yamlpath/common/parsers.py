@@ -64,7 +64,7 @@ class Parsers:
         return yaml
 
     @staticmethod
-    # pylint: disable=too-many-branches,too-many-statements
+    # pylint: disable=too-many-branches,too-many-statements,too-many-locals
     def get_yaml_data(
         parser: Any, logger: ConsolePrinter, source: str, **kwargs
     ) -> Tuple[Any, bool]:
