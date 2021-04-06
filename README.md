@@ -773,7 +773,7 @@ exceptions, the most interesting library files include:
   or write data to YAML/Compatible sources.
 * [eyamlprocessor.py](yamlpath/eyaml/eyamlprocessor.py) -- Extends the
   Processor class to support EYAML data encryption and decryption.
-* [merger.py](merger/merger.py) -- The core document merging logic.
+* [merger.py](yamlpath/merger/merger.py) -- The core document merging logic.
 
 ## Basic Usage
 
