@@ -17,18 +17,25 @@ Enhancements:
   file-spec.  This mode is implied when reading from STDIN (source is "-").
 
 Known Issues:
-* Users are advised to avoid ruamel.yaml version 0.17.x until issue
-  https://sourceforge.net/p/ruamel-yaml/tickets/382/ is resolved.  The issue is
-  that ruamel.yaml 0.17.2 parsing error reports now cause further errors in a
-  non-helpful way within ruamel.yaml as compared to version 0.16.12 and
-  earlier.  This effectively hides the source of parsing errors when the
-  original error message attempts to report affected curly-brace symbols like
-  `{` or `}`.  In particular, this affects reporting parsing errors in poorly-
-  formatted JSON, such as when a closing `}` is missing.  Rather than a helpful
-  message which would indicate precisely where within the data file such a
-  symbol is missing or incorrectly present, a Python exception stack dump is
-  generated around a non-helpful ValueError.  This notably breaks the
-  yaml-validate command-line tool.
+* ruamel.yaml version 0.17.x is a major refactoring effort by the project's
+  owner.  As such, only select versions will be marked as compatible with
+  yamlpath.  Such marking occurs in this project's dependencies list via the
+  setup.py file.  This is necessary because I use yamlpath in production
+  environments where stability is paramount; I need the freedom to update
+  yamlpath at-will without incurring any unexpected failures due to
+  incompatible ruamel.yaml changes.  I will try to test some -- but not all --
+  ruamel.yaml releases from time to time and update yamlpath dependency
+  compatibilities accordingly.
+* ruamel.yaml version 0.17.4 somewhat resolves a previously reported issue --
+  https://sourceforge.net/p/ruamel-yaml/tickets/351/ -- wherein certain
+  arrangements of comments or new-lines within YAML files near aliased hash
+  keys would cause a total loss of data when the stream was written to file.
+  Now, the data is no longer entirely lost.  However, the preceding comment or
+  new-line is deleted when the stream is written to file.  This is deemed to be
+  an acceptable compromise, for now, because the alternative is to either lose
+  the entire document or lose all attempted changes to the affected document.
+  Until the issue is properly fixed, an XFAIL test will continue to be in the
+  yamlpath unit test suite.
 
 3.4.0:
 Bug Fixes:
