@@ -1,6 +1,6 @@
 # YAML Path and Command-Line Tools
 
-[![Build Status](https://travis-ci.org/wwkimball/yamlpath.svg?branch=master)](https://travis-ci.org/wwkimball/yamlpath)
+[![Build Status](https://api.travis-ci.com/wwkimball/yamlpath.svg?branch=master)](https://travis-ci.com/github/wwkimball/yamlpath)
 [![Python versions](https://img.shields.io/pypi/pyversions/yamlpath.svg)](https://pypi.org/project/yamlpath/)
 [![PyPI version](https://badge.fury.io/py/yamlpath.svg)](https://pypi.org/project/yamlpath/)
 [![Downloads](https://pepy.tech/badge/yamlpath)](https://pepy.tech/project/yamlpath)
