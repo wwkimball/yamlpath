@@ -10,6 +10,12 @@ Enhancements:
 * The node deletion capability of the yaml-set command is now part of the
   library.  See Processor::delete_nodes(...) and
   Processor::delete_gathered_nodes(...) for details.
+* The node aliasing capability of the yaml-set command is now part of the
+  library.  See Processor::alias_nodes(...) and
+  Processor::alias_gathered_nodes(...) for details.
+* The node tagging capability of the yaml-set command is now part of the
+  library.  See Processor::tag_nodes(...) and
+  Processor::tag_gathered_nodes(...) for details.
 * The library now supports loading YAML from String rather than only from file.
   Simply pass a new `literal=True` keyword parameter to
   Parsers::get_yaml_data(...) or Parsers::get_yaml_multidoc_data(...) to
