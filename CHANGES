@@ -16,6 +16,20 @@ Enhancements:
   indicate that `source` is literal serialized (String) YAML data rather than a
   file-spec.  This mode is implied when reading from STDIN (source is "-").
 
+Known Issues:
+* Users are advised to avoid ruamel.yaml version 0.17.x until issue
+  https://sourceforge.net/p/ruamel-yaml/tickets/382/ is resolved.  The issue is
+  that ruamel.yaml 0.17.2 parsing error reports now cause further errors in a
+  non-helpful way within ruamel.yaml as compared to version 0.16.12 and
+  earlier.  This effectively hides the source of parsing errors when the
+  original error message attempts to report affected curly-brace symbols like
+  `{` or `}`.  In particular, this affects reporting parsing errors in poorly-
+  formatted JSON, such as when a closing `}` is missing.  Rather than a helpful
+  message which would indicate precisely where within the data file such a
+  symbol is missing or incorrectly present, a Python exception stack dump is
+  generated around a non-helpful ValueError.  This notably breaks the
+  yaml-validate command-line tool.
+
 3.4.0:
 Bug Fixes:
 * For the yaml-diff command-line tool, custom identity keys for specific
