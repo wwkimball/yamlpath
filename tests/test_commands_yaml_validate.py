@@ -64,7 +64,6 @@ this:
         )
         assert 0 == result.returncode, result.stderr
 
-    @pytest.mark.xfail(strict=True, reason="https://sourceforge.net/p/ruamel-yaml/tickets/382/")
     def test_invalid_stdin_explicit(self, script_runner, tmp_path_factory):
         import subprocess
         stdin_content = "{this: {is not: valid}]"
@@ -78,7 +77,6 @@ this:
         assert 2 == result.returncode, result.stderr
         assert "  * YAML parsing error in" in result.stdout
 
-    @pytest.mark.xfail(strict=True, reason="https://sourceforge.net/p/ruamel-yaml/tickets/382/")
     def test_invalid_stdin_implicit(self, script_runner, tmp_path_factory):
         import subprocess
         stdin_content = "{this: {is not: valid}]"

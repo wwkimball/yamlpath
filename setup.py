@@ -18,6 +18,7 @@ setup(
         "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
         "Operating System :: OS Independent",
         "Topic :: Software Development :: Libraries :: Python Modules",
     ],
@@ -40,7 +41,7 @@ setup(
     },
     python_requires=">3.6.0",
     install_requires=[
-        "ruamel.yaml>=0.15.96",
+        "ruamel.yaml>=0.15.96,!=0.17.0,!=0.17.1,!=0.17.2,<=0.17.4",
     ],
     tests_require=[
         "pytest",

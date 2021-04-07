@@ -31,7 +31,6 @@ class Test_yaml_paths():
         assert not result.success, result.stderr
         assert "the following arguments are required: -s/--search" in result.stderr
 
-    @pytest.mark.xfail(strict=True, reason="https://sourceforge.net/p/ruamel-yaml/tickets/382/")
     def test_yaml_parsing_error(self, script_runner, imparsible_yaml_file):
         result = script_runner.run(
             self.command, "--search=%abc", imparsible_yaml_file

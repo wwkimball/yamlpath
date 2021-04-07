@@ -90,7 +90,6 @@ class Test_func():
         captured = capsys.readouterr()
         assert -1 < captured.err.find("File not found")
 
-    @pytest.mark.xfail(strict=True, reason="https://sourceforge.net/p/ruamel-yaml/tickets/382/")
     def test_get_yaml_data_parser_error(
         self, capsys, quiet_logger,
         imparsible_yaml_file
@@ -197,7 +196,6 @@ class Test_func():
         captured = capsys.readouterr()
         assert -1 < captured.err.find("File not found")
 
-    @pytest.mark.xfail(strict=True, reason="https://sourceforge.net/p/ruamel-yaml/tickets/382/")
     def test_get_yaml_multidoc_data_parser_error(
         self, capsys, quiet_logger,
         imparsible_yaml_file
