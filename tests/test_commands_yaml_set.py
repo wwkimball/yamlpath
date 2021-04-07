@@ -154,6 +154,7 @@ boolean: false
             filedat = fhnd.read()
         assert re.findall(r"^key:\s+[A-Za-z0-9]{50}$", filedat, re.M), filedat
 
+    @pytest.mark.xfail(strict=True, reason="https://sourceforge.net/p/ruamel-yaml/tickets/382/")
     def test_yaml_parsing_error(self, script_runner, imparsible_yaml_file):
         result = script_runner.run(self.command, "--change=/", "--random=1", imparsible_yaml_file)
         assert not result.success, result.stderr
