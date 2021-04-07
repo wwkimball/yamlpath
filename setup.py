@@ -40,7 +40,7 @@ setup(
     },
     python_requires=">3.6.0",
     install_requires=[
-        "ruamel.yaml>=0.15.96,<0.17",
+        "ruamel.yaml>=0.15.96,!=0.17.0,!=0.17.1,!=0.17.2,<=0.17.4",
     ],
     tests_require=[
         "pytest",

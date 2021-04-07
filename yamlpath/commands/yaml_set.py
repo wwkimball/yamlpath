@@ -301,7 +301,11 @@ def save_to_yaml_file(args, log, yaml_parser, yaml_data, backup_file):
         with open(args.yaml_file, 'w') as yaml_dump:
             try:
                 yaml_parser.dump(yaml_data, yaml_dump)
-            except AssertionError as ex:
+            # Tell pycov to ignore this block because it is impossible to
+            # trigger it for ruamel.yaml versions >0.17.4 yet this project must
+            # continue to support older versions of ruamel.yaml as long as OS
+            # package builders continue to be dependent on them.
+            except AssertionError as ex:    # pragma: no cover
                 yaml_dump.close()
                 tmphnd.seek(0)
                 with open(args.yaml_file, 'wb') as outhnd:
