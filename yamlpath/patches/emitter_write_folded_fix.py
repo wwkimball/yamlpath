@@ -13,7 +13,8 @@ from ruamel.yaml.emitter import (
 )
 
 
-# Stop Emitter.write_folded from injecting unnecessary new-lines
+# Stop Emitter.write_folded from injecting unnecessary new-lines; track to bug
+# ticket:  https://sourceforge.net/p/ruamel-yaml/tickets/383/
 def write_folded_fix(self, text):
     # type: (Emitter, Any) -> None
     """Make pep257 happy..."""
