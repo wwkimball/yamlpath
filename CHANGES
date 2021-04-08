@@ -7,6 +7,8 @@ Bug Fixes:
   for appropriate null/None leaf nodes.
 
 Enhancements:
+* Python 3.9 is now supported (because common testing tools finally work with
+  Python 3.9).
 * The node deletion capability of the yaml-set command is now part of the
   library.  See Processor::delete_nodes(...) and
   Processor::delete_gathered_nodes(...) for details.
