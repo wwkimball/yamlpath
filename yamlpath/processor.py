@@ -191,6 +191,54 @@ class Processor:
                         .format(value, value_format, str(vex))
                         , str(yaml_path)) from vex
 
+    def alias_nodes(self, yaml_path: Union[YAMLPath, str],
+                    anchor_path: Union[YAMLPath, str],
+                    **kwargs: Any) -> Generator[NodeCoords, None, None]:
+        """
+        Gather and assign YAML Aliases to nodes at YAML Path in data.
+
+        Parameters:
+        1. yaml_path (Union[YAMLPath, str]) The YAML Path to all target nodes
+           which will become Aliases to the Anchor node specified via
+           `anchor_path`.
+        2. anchor_path (Union[YAMLPath, str]) The YAML Path to a single source
+           anchor node; specifying any path which points to more than one node
+           will result in a YAMLPathException because YAML does not define
+           Aliases for more than one Anchor.
+
+        Keyword Parameters:
+        * pathsep (PathSeperators) Forced YAML Path segment seperator; set
+          only when automatic inference fails;
+          default = PathSeperators.AUTO
+        * anchor_name (str) Override the Alias name to any non-empty name you
+          set; attempts to re-use an existing Anchor name will result in a
+          YAMLPathException.
+
+        Returns:  (Generator) Affected NodeCoords after they have become
+          Aliases
+
+        Raises:
+            - `YAMLPathException` when YAML Path is invalid
+        """
+        pathsep: PathSeperators = kwargs.pop("pathsep", PathSeperators.AUTO)
+        anchor_name: str = kwargs.pop("anchor_name", "")
+
+        if self.data is None:
+            self.logger.debug(
+                "Refusing to alias nodes in a null document!",
+                prefix="Processor::alias_nodes:  ", data=self.data)
+            return
+
+        if isinstance(yaml_path, str):
+            yaml_path = YAMLPath(yaml_path, pathsep)
+        elif pathsep is not PathSeperators.AUTO:
+            yaml_path.seperator = pathsep
+
+        if isinstance(anchor_path, str):
+            anchor_path = YAMLPath(anchor_path, pathsep)
+        elif pathsep is not PathSeperators.AUTO:
+            anchor_path.seperator = pathsep
+
     def delete_nodes(self, yaml_path: Union[YAMLPath, str],
                      **kwargs: Any) -> Generator[NodeCoords, None, None]:
         """
