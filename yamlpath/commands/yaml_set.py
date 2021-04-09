@@ -29,10 +29,7 @@ from yamlpath.enums import YAMLValueFormats, PathSeperators
 from yamlpath.eyaml.exceptions import EYAMLCommandException
 from yamlpath.eyaml.enums import EYAMLOutputFormats
 from yamlpath.eyaml import EYAMLProcessor
-
-# pylint: disable=locally-disabled,unused-import
-import yamlpath.patches
-from yamlpath.wrappers import ConsolePrinter, NodeCoords
+from yamlpath.wrappers import ConsolePrinter
 
 def processcli():
     """Process command-line arguments."""
