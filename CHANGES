@@ -23,6 +23,10 @@ Enhancements:
   Parsers::get_yaml_data(...) or Parsers::get_yaml_multidoc_data(...) to
   indicate that `source` is literal serialized (String) YAML data rather than a
   file-spec.  This mode is implied when reading from STDIN (source is "-").
+* The emitter_write_folded_fix.py patch file for ruamel.yaml has been removed
+  in favor of an author-supplied solution to the problem --
+  https://sourceforge.net/p/ruamel-yaml/tickets/383/ -- for which the patch was
+  originally written.
 
 Known Issues:
 * ruamel.yaml version 0.17.x is a major refactoring effort by the project's

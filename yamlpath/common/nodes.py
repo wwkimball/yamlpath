@@ -88,6 +88,26 @@ class Nodes:
         elif valform == YAMLValueFormats.FOLDED:
             new_type = FoldedScalarString
             new_value = str(value)
+            preserve_folds = []
+
+            # Scan all except the very last character because if that last
+            # character is a newline, ruamel.yaml will crash when told to fold
+            # there.
+            for index, fold_char in enumerate(new_value[:-1]):
+                if fold_char == "\n":
+                    preserve_folds.append(index)
+
+            # Replace all except the very last character
+            new_value = new_value[:-1].replace("\n", " ") + new_value[-1]
+
+            if hasattr(source_node, "anchor") and source_node.anchor.value:
+                new_node = new_type(new_value, anchor=source_node.anchor.value)
+            else:
+                new_node = new_type(new_value)
+
+            if preserve_folds:
+                new_node.fold_pos = preserve_folds
+
         elif valform == YAMLValueFormats.LITERAL:
             new_type = LiteralScalarString
             new_value = str(value)

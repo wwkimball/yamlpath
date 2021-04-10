@@ -1098,14 +1098,6 @@ and editing with ruamel.yaml.  When you need to process EYAML encrypted data,
 replace `yamlpath.Processor` with `yamlpath.eyaml.EYAMLProcessor` and add error
 handling for `yamlpath.eyaml.EYAMLCommandException`.
 
-Note that `import yamlpath.patches` is entirely optional.  I wrote and use it to
-block ruamel.yaml's Emitter from injecting unnecessary newlines into folded
-values (it improperly converts every single new-line into two for left-flushed
-multi-line values, at the time of this writing).  Since "block" output EYAML
-values are left-flushed multi-line folded strings, this fix is necessary when
-using EYAML features.  At least, until ruamel.yaml has its own fix for this
-issue.
-
 Note also that these examples use `ConsolePrinter` to handle STDOUT and STDERR
 messaging.  You don't have to.  However, some kind of logger must be passed to
 these libraries so they can write messages _somewhere_.  Your custom message
@@ -1121,7 +1113,6 @@ import sys
 from ruamel.yaml import YAML
 from ruamel.yaml.parser import ParserError
 
-import yamlpath.patches
 from yamlpath.func import get_yaml_data, get_yaml_editor
 from yamlpath.wrappers import ConsolePrinter
 from yamlpath import Processor
