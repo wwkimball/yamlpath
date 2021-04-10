@@ -86,8 +86,13 @@ class Nodes:
             new_type = SingleQuotedScalarString
             new_value = str(value)
         elif valform == YAMLValueFormats.FOLDED:
-            new_type = FoldedScalarString
             new_value = str(value)
+            new_type = FoldedScalarString
+            new_node = new_type(new_value)
+            anchor_val = None
+            if hasattr(source_node, "anchor"):
+                anchor_val = source_node.anchor.value
+            Nodes.fold_node(new_node)
         elif valform == YAMLValueFormats.LITERAL:
             new_type = LiteralScalarString
             new_value = str(value)
@@ -399,3 +404,30 @@ class Nodes:
             untagged_value = value
 
         return untagged_value
+
+    @staticmethod
+    def fold_node(fold_node: FoldedScalarString) -> None:
+        """
+        Preserve newline pre-formatting in a FoldedScalarString, when present.
+
+        Due to how ruamel.yaml processes FoldedScalarString, if any newlines
+        are present in the value, they get doubled-up and cause unwanted
+        double-spacing in the resulting YAML.  This method scans for newlines
+        in the value and preempts the ruamel.yaml processor so they don't get
+        doubled-up.
+
+        Parameters:
+        1. fold_node (FoldedScalarString) The FoldedScalarString to process
+
+        Returns:  N/A
+        """
+        if fold_node is None:
+            return
+
+        preserve_folds = []
+        for index, fold_char in enumerate(fold_node):
+            if fold_char == '\n':
+                preserve_folds.append(index-10)
+                preserve_folds.append(index)
+
+        fold_node.fold_pos = preserve_folds
