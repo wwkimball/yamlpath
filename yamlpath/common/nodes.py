@@ -106,7 +106,7 @@ class Nodes:
                 new_node = new_type(new_value)
 
             if preserve_folds:
-                new_node.fold_pos = preserve_folds
+                new_node.fold_pos = preserve_folds  # type: ignore
 
         elif valform == YAMLValueFormats.LITERAL:
             new_type = LiteralScalarString

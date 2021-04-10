@@ -22,7 +22,6 @@ from ruamel.yaml.comments import (
     CommentedSet,
     TaggedScalar
 )
-from ruamel.yaml.scalarstring import FoldedScalarString
 
 from yamlpath.wrappers.nodecoords import NodeCoords
 
@@ -274,7 +273,7 @@ class ConsolePrinter:
             dtype = "{}({})".format(dtype, type(data.value))
 
         # Report fold points, if present
-        if isinstance(data, FoldedScalarString) and hasattr(data, 'fold_pos'):
+        if hasattr(data, "fold_pos"):
             dtype += ",folded@{}".format(data.fold_pos)
 
         print_prefix += anchor_prefix
