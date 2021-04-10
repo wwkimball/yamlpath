@@ -86,13 +86,28 @@ class Nodes:
             new_type = SingleQuotedScalarString
             new_value = str(value)
         elif valform == YAMLValueFormats.FOLDED:
-            new_value = str(value)
             new_type = FoldedScalarString
-            new_node = new_type(new_value)
-            anchor_val = None
-            if hasattr(source_node, "anchor"):
-                anchor_val = source_node.anchor.value
-            Nodes.fold_node(new_node)
+            new_value = str(value)
+            preserve_folds = []
+
+            # Scan all except the very last character because if that last
+            # character is a newline, ruamel.yaml will crash when told to fold
+            # there.
+            for index, fold_char in enumerate(new_value[:-1]):
+                if fold_char == "\n":
+                    preserve_folds.append(index)
+
+            # Replace all except the very last character
+            new_value = new_value[:-1].replace("\n", " ") + new_value[-1]
+
+            if hasattr(source_node, "anchor") and source_node.anchor.value:
+                new_node = new_type(new_value, anchor=source_node.anchor.value)
+            else:
+                new_node = new_type(new_value)
+
+            if preserve_folds:
+                new_node.fold_pos = preserve_folds
+
         elif valform == YAMLValueFormats.LITERAL:
             new_type = LiteralScalarString
             new_value = str(value)
@@ -404,29 +419,3 @@ class Nodes:
             untagged_value = value
 
         return untagged_value
-
-    @staticmethod
-    def fold_node(fold_node: FoldedScalarString) -> None:
-        """
-        Preserve newline pre-formatting in a FoldedScalarString, when present.
-
-        Due to how ruamel.yaml processes FoldedScalarString, if any newlines
-        are present in the value, they get doubled-up and cause unwanted
-        double-spacing in the resulting YAML.  This method scans for newlines
-        in the value and preempts the ruamel.yaml processor so they don't get
-        doubled-up.
-
-        Parameters:
-        1. fold_node (FoldedScalarString) The FoldedScalarString to process
-
-        Returns:  N/A
-        """
-        if fold_node is None:
-            return
-
-        preserve_folds = []
-        for index, fold_char in enumerate(fold_node):
-            if fold_char == '\n':
-                preserve_folds.append(index)
-
-        fold_node.fold_pos = preserve_folds
