@@ -427,7 +427,6 @@ class Nodes:
         preserve_folds = []
         for index, fold_char in enumerate(fold_node):
             if fold_char == '\n':
-                preserve_folds.append(index-10)
                 preserve_folds.append(index)
 
         fold_node.fold_pos = preserve_folds
