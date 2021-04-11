@@ -21,7 +21,7 @@ from shutil import copy2, copyfileobj
 from pathlib import Path
 
 from yamlpath import __version__ as YAMLPATH_VERSION
-from yamlpath.common import Anchors, Nodes, Parsers
+from yamlpath.common import Nodes, Parsers
 from yamlpath import YAMLPath
 from yamlpath.exceptions import YAMLPathException
 from yamlpath.enums import YAMLValueFormats, PathSeperators
@@ -420,20 +420,6 @@ def _alias_nodes(
     except YAMLPathException as ex:
         log.critical(ex, 1)
 
-def _tag_nodes(document, tag, nodes):
-    """Assign a data-type tag to a set of nodes."""
-    for node_coord in nodes:
-        old_node = node_coord.node
-        if node_coord.parent is None:
-            node_coord.node.yaml_set_tag(tag)
-        else:
-            node_coord.parent[node_coord.parentref] = Nodes.apply_yaml_tag(
-                node_coord.node, tag)
-            if Anchors.get_node_anchor(old_node) is not None:
-                Anchors.replace_anchor(
-                    document, old_node,
-                    node_coord.parent[node_coord.parentref])
-
 # pylint: disable=locally-disabled,too-many-locals,too-many-branches,too-many-statements
 def main():
     """Main code."""
@@ -605,7 +591,7 @@ def main():
         except YAMLPathException as ex:
             log.critical(ex, 1)
     elif args.tag:
-        _tag_nodes(processor.data, args.tag, change_node_coordinates)
+        processor.tag_gathered_nodes(change_node_coordinates, args.tag)
 
     # Write out the result
     write_output_document(args, log, yaml, yaml_data)

@@ -364,6 +364,65 @@ class Processor:
                 prefix="yaml_set::_alias_nodes:  ")
             node_coord.parent[node_coord.parentref] = anchor_node
 
+    def tag_nodes(
+        self, yaml_path: Union[YAMLPath, str], tag: str, **kwargs: Any
+    ) -> None:
+        """
+        Gather and assign a data-type tag to nodes at YAML Path in data.
+
+        Parameters:
+        1. yaml_path (Union[YAMLPath, str]) The YAML Path to evaluate
+        2. tag (str) The tag to assign
+
+        Keyword Parameters:
+        * pathsep (PathSeperators) Forced YAML Path segment seperator; set
+          only when automatic inference fails;
+          default = PathSeperators.AUTO
+
+        Returns:  N/A
+
+        Raises:
+            - `YAMLPathException` when YAML Path is invalid
+        """
+        pathsep: PathSeperators = kwargs.pop("pathsep", PathSeperators.AUTO)
+
+        if self.data is None:
+            self.logger.debug(
+                "Refusing to tag nodes from a null document!",
+                prefix="Processor::tag_nodes:  ", data=self.data)
+            return
+
+        if isinstance(yaml_path, str):
+            yaml_path = YAMLPath(yaml_path, pathsep)
+        elif pathsep is not PathSeperators.AUTO:
+            yaml_path.seperator = pathsep
+
+        gathered_nodes: List[NodeCoords] = []
+        for node_coords in self._get_required_nodes(self.data, yaml_path):
+            self.logger.debug(
+                "Gathered node for tagging:",
+                prefix="Processor::tag_nodes:  ", data=node_coords)
+            gathered_nodes.append(node_coords)
+
+        if len(gathered_nodes) > 0:
+            self.tag_gathered_nodes(gathered_nodes, tag)
+
+    def tag_gathered_nodes(
+        self, gathered_nodes: List[NodeCoords], tag: str
+    ) -> None:
+        """Assign a data-type tag to a set of nodes."""
+        for node_coord in gathered_nodes:
+            old_node = node_coord.node
+            if node_coord.parent is None:
+                node_coord.node.yaml_set_tag(tag)
+            else:
+                node_coord.parent[node_coord.parentref] = Nodes.apply_yaml_tag(
+                    node_coord.node, tag)
+                if Anchors.get_node_anchor(old_node) is not None:
+                    Anchors.replace_anchor(
+                        self.data, old_node,
+                        node_coord.parent[node_coord.parentref])
+
     def delete_nodes(self, yaml_path: Union[YAMLPath, str],
                      **kwargs: Any) -> Generator[NodeCoords, None, None]:
         """
