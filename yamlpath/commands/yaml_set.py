@@ -19,7 +19,6 @@ from os import remove, access, R_OK
 from os.path import isfile, exists
 from shutil import copy2, copyfileobj
 from pathlib import Path
-from typing import Any, Dict
 
 from yamlpath import __version__ as YAMLPATH_VERSION
 from yamlpath.common import Anchors, Nodes, Parsers
@@ -415,47 +414,11 @@ def _alias_nodes(
     log, processor, assign_to_nodes, anchor_path, anchor_name
 ):
     """Assign YAML Aliases to the target nodes."""
-    anchor_node_coordinates = _get_nodes(
-        log, processor, anchor_path, must_exist=True)
-    if len(anchor_node_coordinates) > 1:
-        log.critical(
-            "It is impossible to Alias more than one Anchor at a time from {}!"
-            .format(anchor_path), 1)
-
-    anchor_coord = anchor_node_coordinates[0]
-    anchor_node = anchor_coord.node
-    if not hasattr(anchor_node, "anchor"):
-        anchor_coord.parent[anchor_coord.parentref] = Nodes.wrap_type(
-            anchor_node)
-        anchor_node = anchor_coord.parent[anchor_coord.parentref]
-
-    known_anchors: Dict[str, Any] = {}
-    Anchors.scan_for_anchors(processor.data, known_anchors)
-
-    if anchor_name:
-        # Rename any pre-existing anchor or set an original anchor name; the
-        # assigned name must be unique!
-        if anchor_name in known_anchors:
-            log.critical(
-                "Anchor names must be unique within YAML documents.  Anchor"
-                " name, {}, is already used.".format(anchor_name))
-        anchor_node.yaml_set_anchor(anchor_name, always_dump=True)
-    elif anchor_node.anchor.value:
-        # The source node already has an anchor name
-        anchor_name = anchor_node.anchor.value
-    else:
-        # An orignial, unique-to-the-document anchor name must be generated
-        new_anchor = Anchors.generate_unique_anchor_name(
-            processor.data, anchor_coord, known_anchors)
-        anchor_node.yaml_set_anchor(new_anchor, always_dump=True)
-
-    for node_coord in assign_to_nodes:
-        log.debug(
-            "Attempting to set the anchor name for node to {}:"
-            .format(anchor_name),
-            data=node_coord,
-            prefix="yaml_set::_alias_nodes:  ")
-        node_coord.parent[node_coord.parentref] = anchor_node
+    try:
+        processor.alias_gathered_nodes(
+            assign_to_nodes, anchor_path, anchor_name=anchor_name)
+    except YAMLPathException as ex:
+        log.critical(ex, 1)
 
 def _tag_nodes(document, tag, nodes):
     """Assign a data-type tag to a set of nodes."""

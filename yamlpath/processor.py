@@ -4,9 +4,9 @@ YAML Path processor based on ruamel.yaml.
 
 Copyright 2018, 2019, 2020 William W. Kimball, Jr. MBA MSIS
 """
-from typing import Any, Generator, List, Union
+from typing import Any, Dict, Generator, List, Union
 
-from yamlpath.common import Nodes, Searches
+from yamlpath.common import Anchors, Nodes, Searches
 from yamlpath import YAMLPath
 from yamlpath.path import SearchTerms, CollectorTerms
 from yamlpath.wrappers import ConsolePrinter, NodeCoords
@@ -191,9 +191,82 @@ class Processor:
                         .format(value, value_format, str(vex))
                         , str(yaml_path)) from vex
 
-    def alias_nodes(self, yaml_path: Union[YAMLPath, str],
-                    anchor_path: Union[YAMLPath, str],
-                    **kwargs: Any) -> Generator[NodeCoords, None, None]:
+    def _get_anchor_node(
+        self, anchor_path: Union[YAMLPath, str], **kwargs: Any
+    ) -> Any:
+        """
+        Gather the source YAML Anchor node for an Aliasing operation.
+
+        Parameters:
+        1. anchor_path (Union[YAMLPath, str]) The YAML Path to a single source
+           anchor node; specifying any path which points to more than one node
+           will result in a YAMLPathException because YAML does not define
+           Aliases for more than one Anchor.
+
+        Returns: (Any) The source node
+
+        Raises:
+            - `YAMLPathException` when YAML Path is invalid
+        """
+        pathsep: PathSeperators = kwargs.pop("pathsep", PathSeperators.AUTO)
+        anchor_name: str = kwargs.pop("anchor_name", "")
+
+        if self.data is None:
+            self.logger.debug(
+                "Refusing to alias nodes in a null document!",
+                prefix="Processor::alias_nodes:  ", data=self.data)
+            return None
+
+        if isinstance(anchor_path, str):
+            anchor_path = YAMLPath(anchor_path, pathsep)
+        elif pathsep is not PathSeperators.AUTO:
+            anchor_path.seperator = pathsep
+
+        anchor_node_coordinates: List[NodeCoords] = []
+        for node_coords in self._get_required_nodes(self.data, anchor_path):
+            self.logger.debug(
+                "Gathered YAML Anchor node:",
+                prefix="Processor::alias_nodes:  ", data=node_coords)
+            anchor_node_coordinates.append(node_coords)
+        if len(anchor_node_coordinates) > 1:
+            raise YAMLPathException(
+                "It is impossible to Alias more than one Anchor at a time!",
+                str(anchor_path))
+
+        anchor_coord = anchor_node_coordinates[0]
+        anchor_node = anchor_coord.node
+        if not hasattr(anchor_node, "anchor"):
+            anchor_coord.parent[anchor_coord.parentref] = Nodes.wrap_type(
+                anchor_node)
+            anchor_node = anchor_coord.parent[anchor_coord.parentref]
+
+        known_anchors: Dict[str, Any] = {}
+        Anchors.scan_for_anchors(self.data, known_anchors)
+
+        if anchor_name:
+            # Rename any pre-existing anchor or set an original anchor name;
+            # the assigned name must be unique!
+            if anchor_name in known_anchors:
+                raise YAMLPathException(
+                    "Anchor names must be unique within YAML documents."
+                    "  Anchor name, {}, is already used."
+                    .format(anchor_name), str(anchor_path))
+            anchor_node.yaml_set_anchor(anchor_name, always_dump=True)
+        elif anchor_node.anchor.value:
+            # The source node already has an anchor name
+            anchor_name = anchor_node.anchor.value
+        else:
+            # An orignial, unique-to-the-document anchor name must be generated
+            new_anchor = Anchors.generate_unique_anchor_name(
+                self.data, anchor_coord, known_anchors)
+            anchor_node.yaml_set_anchor(new_anchor, always_dump=True)
+
+        return anchor_node
+
+    def alias_nodes(
+        self, yaml_path: Union[YAMLPath, str],
+        anchor_path: Union[YAMLPath, str], **kwargs: Any
+    ) -> None:
         """
         Gather and assign YAML Aliases to nodes at YAML Path in data.
 
@@ -214,8 +287,7 @@ class Processor:
           set; attempts to re-use an existing Anchor name will result in a
           YAMLPathException.
 
-        Returns:  (Generator) Affected NodeCoords after they have become
-          Aliases
+        Returns:  N/A
 
         Raises:
             - `YAMLPathException` when YAML Path is invalid
@@ -234,10 +306,63 @@ class Processor:
         elif pathsep is not PathSeperators.AUTO:
             yaml_path.seperator = pathsep
 
-        if isinstance(anchor_path, str):
-            anchor_path = YAMLPath(anchor_path, pathsep)
-        elif pathsep is not PathSeperators.AUTO:
-            anchor_path.seperator = pathsep
+        anchor_node = self._get_anchor_node(
+            anchor_path, pathsep=pathsep, anchor_name=anchor_name)
+
+        gathered_nodes: List[NodeCoords] = []
+        for node_coords in self._get_required_nodes(self.data, yaml_path):
+            self.logger.debug(
+                "Gathered node for YAML Alias assignment:",
+                prefix="Processor::delete_nodes:  ", data=node_coords)
+            gathered_nodes.append(node_coords)
+
+        if len(gathered_nodes) > 0:
+            self._alias_nodes(gathered_nodes, anchor_node)
+
+    def alias_gathered_nodes(
+        self, gathered_nodes: List[NodeCoords],
+        anchor_path: Union[YAMLPath, str], **kwargs: Any
+    ) -> None:
+        """
+        Assign a YAML Anchor to zero or more YAML Alias nodes.
+
+        Parameters:
+        1. gathered_nodes (List[NodeCoords]) The pre-gathered nodes to assign.
+        """
+        pathsep: PathSeperators = kwargs.pop("pathsep", PathSeperators.AUTO)
+        anchor_name: str = kwargs.pop("anchor_name", "")
+
+        if self.data is None:
+            self.logger.debug(
+                "Refusing to alias nodes in a null document!",
+                prefix="Processor::alias_nodes:  ", data=self.data)
+            return
+
+        anchor_node = self._get_anchor_node(
+            anchor_path, pathsep=pathsep, anchor_name=anchor_name)
+
+        self._alias_nodes(gathered_nodes, anchor_node)
+
+    def _alias_nodes(
+            self, gathered_nodes: List[NodeCoords], anchor_node: Any
+    ) -> None:
+        """
+        Assign a YAML Anchor to its various YAML Alias nodes.
+
+        Parameters:
+        1. gathered_nodes (List[NodeCoords]) The pre-gathered nodes to assign.
+        2. anchor_node (Any) The source YAML Anchor node.
+
+        Returns:  N/A
+        """
+        anchor_name = anchor_node.anchor.value
+        for node_coord in gathered_nodes:
+            self.logger.debug(
+                "Attempting to set the anchor name for node to {}:"
+                .format(anchor_name),
+                data=node_coord,
+                prefix="yaml_set::_alias_nodes:  ")
+            node_coord.parent[node_coord.parentref] = anchor_node
 
     def delete_nodes(self, yaml_path: Union[YAMLPath, str],
                      **kwargs: Any) -> Generator[NodeCoords, None, None]:
