@@ -3,6 +3,7 @@ from datetime import date
 from types import SimpleNamespace
 
 from ruamel.yaml import YAML
+from ruamel.yaml.comments import TaggedScalar
 
 from yamlpath.func import unwrap_node_coords
 from yamlpath.exceptions import YAMLPathException
@@ -830,3 +831,82 @@ records:
 
         console = capsys.readouterr()
         assert "Refusing to delete nodes from a null document" in console.out
+
+    def test_null_docs_have_nothing_to_gather_and_alias(self, capsys):
+        args = SimpleNamespace(verbose=False, quiet=False, debug=True)
+        logger = ConsolePrinter(args)
+        processor = Processor(logger, None)
+
+        processor.alias_nodes("/alias*", "/anchor")
+
+        console = capsys.readouterr()
+        assert "Refusing to alias nodes in a null document" in console.out
+
+    def test_null_docs_have_nothing_to_alias(self, capsys):
+        args = SimpleNamespace(verbose=False, quiet=False, debug=True)
+        logger = ConsolePrinter(args)
+        processor = Processor(logger, None)
+
+        processor.alias_gathered_nodes([], "/anchor")
+
+        console = capsys.readouterr()
+        assert "Refusing to alias nodes in a null document" in console.out
+
+    def test_null_docs_have_nothing_to_tag(self, capsys):
+        args = SimpleNamespace(verbose=False, quiet=False, debug=True)
+        logger = ConsolePrinter(args)
+        processor = Processor(logger, None)
+
+        processor.tag_nodes("/tag_nothing", "tag_this")
+
+        console = capsys.readouterr()
+        assert "Refusing to tag nodes from a null document" in console.out
+
+    @pytest.mark.parametrize("alias_path,anchor_path,anchor_name,pathseperator", [
+        (YAMLPath("/a_hash/a_key"), YAMLPath("/some_key"), "", PathSeperators.FSLASH),
+        ("a_hash.a_key", "some_key", "", PathSeperators.AUTO),
+    ])
+    def test_anchor_nodes(self, quiet_logger, alias_path, anchor_path, anchor_name, pathseperator):
+        anchor_value = "This is the Anchored value!"
+        yamlin = """---
+some_key: {}
+a_hash:
+  a_key: A value
+""".format(anchor_value)
+
+        yaml = YAML()
+        data = yaml.load(yamlin)
+        processor = Processor(quiet_logger, data)
+
+        processor.alias_nodes(
+            alias_path, anchor_path,
+            pathsep=pathseperator, anchor_name=anchor_name)
+
+        match_count = 0
+        for node in processor.get_nodes(
+            alias_path, mustexist=True
+        ):
+            match_count += 1
+            assert unwrap_node_coords(node) == anchor_value
+        assert match_count == 1
+
+    @pytest.mark.parametrize("yaml_path,tag,pathseperator", [
+        (YAMLPath("/key"), "!taggidy", PathSeperators.FSLASH),
+        ("key", "taggidy", PathSeperators.AUTO),
+    ])
+    def test_tag_nodes(self, quiet_logger, yaml_path, tag, pathseperator):
+        yamlin = """---
+key: value
+"""
+
+        yaml = YAML()
+        data = yaml.load(yamlin)
+        processor = Processor(quiet_logger, data)
+
+        processor.tag_nodes(yaml_path, tag, pathsep=pathseperator)
+
+        if tag and not tag[0] == "!":
+            tag = "!{}".format(tag)
+
+        assert isinstance(data['key'], TaggedScalar)
+        assert data['key'].tag.value == tag
