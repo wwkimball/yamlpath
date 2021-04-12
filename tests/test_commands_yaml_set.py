@@ -1277,7 +1277,7 @@ devices:
   R3:
     type: access-point
     platform: wrt
-    os: generic
+    os:
   R4:
     type: tablet
     os: null

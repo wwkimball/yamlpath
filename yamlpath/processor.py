@@ -1393,6 +1393,13 @@ class Processor:
             ] = segments[depth][1]
             except_segment = str(unstripped_attrs)
 
+            prior_was_search = False
+            if depth > 0:
+                prior_was_search = segments[depth - 1][0] in [
+                    PathSegmentTypes.SEARCH,
+                    PathSegmentTypes.TRAVERSE
+                ]
+
             self.logger.debug(
                 "Seeking element <{}>{} in data of type {}:"
                 .format(segment_type, except_segment, type(data)),
@@ -1428,8 +1435,16 @@ class Processor:
                 # Add the missing element
                 self.logger.debug(
                     ("Processor::_get_optional_nodes:  Element <{}>{} is"
-                     + " unknown in the data!  Applying default, <{}>{}."
-                    ).format(segment_type, except_segment, type(value), value)
+                     " unknown in the data!  Applying default, <{}>{} to"
+                     " data:"
+                    ).format(segment_type, except_segment, type(value), value),
+                    data=data
+                )
+                self.logger.debug(
+                    "Processor::_get_optional_nodes:  Considering application"
+                    " of unknown element to parent while at_terminus={}:"
+                    .format(at_terminus),
+                    data=parent
                 )
                 if isinstance(data, list):
                     self.logger.debug(
@@ -1529,20 +1544,20 @@ class Processor:
                             except_segment
                         )
 
-                # elif at_terminus and isinstance(parent, (dict, list)):
-                #     self.logger.debug(
-                #         "Setting a {} terminal value at path {} ({} segments)"
-                #         " at depth {}, to value {}, when:"
-                #         .format(
-                #             str(segment_type), str(yaml_path),
-                #             str(len(yaml_path)), str(depth + 1),
-                #             str(value)),
-                #         prefix="Processor::_get_optional_nodes:  ",
-                #         data={"data": data, "parent": parent,
-                #             "parentref": parentref})
-                #     parent[parentref] = value
-                #     data = value
-                #     yield NodeCoords(data, parent, parentref, translated_path)
+                elif prior_was_search and isinstance(parent, (dict, list)):
+                    self.logger.debug(
+                        "Setting a {} terminal value at path {} ({} segments)"
+                        " at depth {}, to value {}, when:"
+                        .format(
+                            str(segment_type), str(yaml_path),
+                            str(len(yaml_path)), str(depth + 1),
+                            str(value)),
+                        prefix="Processor::_get_optional_nodes:  ",
+                        data={"data": data, "parent": parent,
+                            "parentref": parentref})
+                    parent[parentref] = value
+                    data = value
+                    yield NodeCoords(data, parent, parentref, translated_path)
 
                 else:
                     self.logger.debug(
