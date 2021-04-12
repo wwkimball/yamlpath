@@ -1,6 +1,6 @@
 # YAML Path and Command-Line Tools
 
-[![Build Status](https://travis-ci.org/wwkimball/yamlpath.svg?branch=master)](https://travis-ci.org/wwkimball/yamlpath)
+[![Build Status](https://api.travis-ci.com/wwkimball/yamlpath.svg?branch=master)](https://travis-ci.com/github/wwkimball/yamlpath)
 [![Python versions](https://img.shields.io/pypi/pyversions/yamlpath.svg)](https://pypi.org/project/yamlpath/)
 [![PyPI version](https://badge.fury.io/py/yamlpath.svg)](https://pypi.org/project/yamlpath/)
 [![Downloads](https://pepy.tech/badge/yamlpath)](https://pepy.tech/project/yamlpath)
@@ -21,9 +21,13 @@ for other projects to readily employ YAML Paths.
 
 1. [Introduction](#introduction)
 2. [Illustration](#illustration)
-3. [Installing](#installing)
-4. [Supported YAML Path Segments](#supported-yaml-path-segments)
-5. [Based on ruamel.yaml and Python 3](#based-on-ruamelyaml-and-python-3)
+3. [Supported YAML Path Segments](#supported-yaml-path-segments)
+4. [Installing](#installing)
+   1. [Requirements](#requirements)
+   2. [Using pip](#using-pip)
+      1. [Very Old Versions of pip or its setuptools Dependency](#very-old-versions-of-pip-or-its-setuptools-dependency)
+   3. [Installing EYAML (Optional)](#installing-eyaml-optional)
+5. [Based on ruamel.yaml](#based-on-ruamelyaml)
 6. [The Files of This Project](#the-files-of-this-project)
    1. [Command-Line Tools](#command-line-tools)
    2. [Libraries](#libraries)
@@ -239,34 +243,61 @@ The [project Wiki provides more illustrative details of YAML Path Segments](http
 
 ## Installing
 
-This project requires [Python](https://www.python.org/) 3.  It is tested
-against Pythons 3.6 through 3.8.  Most operating systems and distributions
-have access to Python 3 even if only Python 2 -- or no Python, at all -- came
-pre-installed.  It is generally safe to have more than one version of Python
-on your system at the same time, especially when using
+Some OS distributions offer some versions of yamlpath -- and its dependencies
+-- via packages.  While these versions of yamlpath are often outdated, they can
+be convenient to install using your OS' native package manager (`apt`, `yum`,
+`npm`, and such).  Otherwise, Python's own package manager `pip` will always
+offer the latest version of yamlpath and -- even better -- can be isolated to
+ephemeral or longer-lasting virtual Python environments.
+
+### Requirements
+
+This project requires [Python](https://www.python.org/) 3.  It is rigorously
+tested against Pythons 3.6 through 3.9.  Most operating systems and
+distributions have access to Python 3 even if only Python 2 -- or no Python, at
+all -- came pre-installed.  It is generally safe to have more than one version
+of Python on your system at the same time, especially when using
 [virtual Python environments](https://docs.python.org/3/library/venv.html).
 
-Each published version of this project can be installed from
-[PyPI](https://pypi.org/) using `pip`.  Note that on systems with more than one
-version of Python, you will probably need to use `pip3`, or equivalent (e.g.:
-Cygwin users may need to use `pip3.6`, `pip3.7`, `pip3.8`, or such).
+*yamlpath* depends on *ruamel.yaml* (derived from and greatly extending PyYAML).
+When using OS-native packages or `pip`, you do not need to pre-install
+*ruamel.yaml* except under extraordinary circumstances like using very old
+versions of `pip` or its own dependency, *setuptools*.
+
+### Using pip
+
+Each published version of this project and its dependencies can be installed
+from [PyPI](https://pypi.org/) using `pip`.  Note that on systems with more than
+one version of Python, you will probably need to use `pip3`, or equivalent
+(e.g.: Cygwin users may need to use `pip3.6`, `pip3.9`, or such).
 
 ```shell
 pip3 install yamlpath
 ```
 
-Note that very old versions of Python 3 ship with seriously outdated versions
-of pip and setuptools.  You *must* update to at least **pip** version **18.1**
-and **setuptools** version **46.4.0** to install yamlpath without
-pre-installing its dependencies.  If you cannot update pip or setuptools, you
-can still install yamlpath except you'll first need to install **ruamel.yaml**
-like so:
+#### Very Old Versions of pip or its setuptools Dependency
+
+Very old versions of Python 3 ship with seriously outdated versions of `pip` and
+its *setuptools* dependency.  When using versions of `pip` older than **18.1**
+or *setuptools* older than version **46.4.0**, you may not be able to install
+yamlpath with a single command.  In this case, you have two options:  either
+pre-install *ruamel.yaml* before installing *yamlpath* or update `pip` and/or
+*setuptools* to at least the minimum required versions so `pip` can
+auto-determine and install dependencies.  This issue is not unique to yamlpath
+because Python's ever-growing capabilities simply require periodic updates to
+access.
+
+When you cannot update `pip` or *setuptools*, just pre-install *ruamel.yaml*
+before yamlpath, like so:
 
 ```shell
-# These commands CANNOT be joined, like: pip3.6 install ruamel.yaml yamlpath
+# In this edge-case, these commands CANNOT be joined, like:
+# pip3.6 install ruamel.yaml yamlpath
 pip3.6 install ruamel.yaml
 pip3.6 install yamlpath
 ```
+
+### Installing EYAML (Optional)
 
 EYAML support is entirely optional.  You do not need EYAML to use YAML Path.
 That YAML Path supports EYAML is a service to a substantial audience:  Puppet
@@ -284,7 +315,7 @@ If this puts the `eyaml` command on your system `PATH`, nothing more need be
 done apart from generating or obtaining your encryption keys.  Otherwise, you
 can tell YAML Path library and tools where to find the `eyaml` command.
 
-## Based on ruamel.yaml and Python 3
+## Based on ruamel.yaml
 
 In order to support the best available YAML editing capability (so called,
 round-trip editing with support for comment preservation), this project is based
@@ -659,18 +690,19 @@ https://github.com/wwkimball/yamlpath.
 
 ```text
 usage: yaml-set [-h] [-V] -g YAML_PATH
-                [-a VALUE | -f FILE | -i | -R LENGTH | -D]
+                [-a VALUE | -A ANCHOR | -f FILE | -i | -R LENGTH | -N | -D]
                 [-F {bare,boolean,default,dquote,float,folded,int,literal,squote}]
                 [-c CHECK] [-s YAML_PATH] [-m] [-b]
-                [-t ['.', '/', 'auto', 'dot', 'fslash']] [-M CHARS] [-e]
-                [-x EYAML] [-r PRIVATEKEY] [-u PUBLICKEY] [-S] [-d | -v | -q]
+                [-t ['.', '/', 'auto', 'dot', 'fslash']] [-M CHARS] [-H ANCHOR]
+                [-T TAG] [-e] [-x EYAML] [-r PRIVATEKEY] [-u PUBLICKEY] [-S]
+                [-d | -v | -q]
                 [YAML_FILE]
 
 Changes one or more Scalar values in a YAML/JSON/Compatible document at a
 specified YAML Path. Matched values can be checked before they are replaced to
 mitigate accidental change. When matching singular results, the value can be
-archived to another key before it is replaced. Further, EYAML can be employed
-to encrypt the new values and/or decrypt an old value before checking it.
+archived to another key before it is replaced. Further, EYAML can be employed to
+encrypt the new values and/or decrypt an old value before checking it.
 
 positional arguments:
   YAML_FILE             the YAML file to update; omit or use - to read from
@@ -691,14 +723,20 @@ optional arguments:
   -b, --backup          save a backup YAML_FILE with an extra .bak file-
                         extension
   -t ['.', '/', 'auto', 'dot', 'fslash'], --pathsep ['.', '/', 'auto', 'dot', 'fslash']
-                        indicate which YAML Path seperator to use when
-                        rendering results; default=dot
+                        indicate which YAML Path seperator to use when rendering
+                        results; default=dot
   -M CHARS, --random-from CHARS
                         characters from which to build a value for --random;
-                        default=all upper- and lower-case letters and all
-                        digits
-  -S, --nostdin         Do not implicitly read from STDIN, even when there is
-                        no YAML_FILE with a non-TTY session
+                        default=all upper- and lower-case letters and all digits
+  -H ANCHOR, --anchor ANCHOR
+                        when --aliasof|-A points to a value which is not already
+                        Anchored, a new Anchor with this name is created;
+                        renames an existing Anchor if already set
+  -T TAG, --tag TAG     assign a custom YAML (data-type) tag to the changed
+                        nodes; can be used without other input options to assign
+                        or change a tag
+  -S, --nostdin         Do not implicitly read from STDIN, even when there is no
+                        YAML_FILE with a non-TTY session
   -d, --debug           output debugging details
   -v, --verbose         increase output verbosity
   -q, --quiet           suppress all output except errors
@@ -709,20 +747,24 @@ required settings:
 
 input options:
   -a VALUE, --value VALUE
-                        set the new value from the command-line instead of
-                        STDIN
+                        set the new value from the command-line instead of STDIN
+  -A ANCHOR, --aliasof ANCHOR
+                        set the value as a YAML Alias of an existing Anchor, by
+                        name (merely copies the target value for non-YAML files)
   -f FILE, --file FILE  read the new value from file (discarding any trailing
                         new-lines)
   -i, --stdin           accept the new value from STDIN (best for sensitive
                         data)
   -R LENGTH, --random LENGTH
                         randomly generate a replacement value of a set length
-  -D, --delete          delete rather than change target node(s)
+  -N, --null            sets the value to null
+  -D, --delete          delete rather than change target node(s); implies
+                        --mustexist|-m
 
 EYAML options:
-  Left unset, the EYAML keys will default to your system or user defaults.
-  You do not need to supply a private key unless you enable --check and the
-  old value is encrypted.
+  Left unset, the EYAML keys will default to your system or user defaults. You
+  do not need to supply a private key unless you enable --check and the old
+  value is encrypted.
 
   -e, --eyamlcrypt      encrypt the new value using EYAML
   -x EYAML, --eyaml EYAML
@@ -734,7 +776,9 @@ EYAML options:
 
 When no changes are made, no backup is created, even when -b/--backup is
 specified. For more information about YAML Paths, please visit
-https://github.com/wwkimball/yamlpath.
+https://github.com/wwkimball/yamlpath/wiki. To report issues with this tool or
+to request enhancements, please visit
+https://github.com/wwkimball/yamlpath/issues.
 ```
 
 * [yaml-validate](yamlpath/commands/yaml_validate.py)
@@ -773,7 +817,7 @@ exceptions, the most interesting library files include:
   or write data to YAML/Compatible sources.
 * [eyamlprocessor.py](yamlpath/eyaml/eyamlprocessor.py) -- Extends the
   Processor class to support EYAML data encryption and decryption.
-* [merger.py](merger/merger.py) -- The core document merging logic.
+* [merger.py](yamlpath/merger/merger.py) -- The core document merging logic.
 
 ## Basic Usage
 
@@ -1067,14 +1111,6 @@ and editing with ruamel.yaml.  When you need to process EYAML encrypted data,
 replace `yamlpath.Processor` with `yamlpath.eyaml.EYAMLProcessor` and add error
 handling for `yamlpath.eyaml.EYAMLCommandException`.
 
-Note that `import yamlpath.patches` is entirely optional.  I wrote and use it to
-block ruamel.yaml's Emitter from injecting unnecessary newlines into folded
-values (it improperly converts every single new-line into two for left-flushed
-multi-line values, at the time of this writing).  Since "block" output EYAML
-values are left-flushed multi-line folded strings, this fix is necessary when
-using EYAML features.  At least, until ruamel.yaml has its own fix for this
-issue.
-
 Note also that these examples use `ConsolePrinter` to handle STDOUT and STDERR
 messaging.  You don't have to.  However, some kind of logger must be passed to
 these libraries so they can write messages _somewhere_.  Your custom message
@@ -1090,7 +1126,6 @@ import sys
 from ruamel.yaml import YAML
 from ruamel.yaml.parser import ParserError
 
-import yamlpath.patches
 from yamlpath.func import get_yaml_data, get_yaml_editor
 from yamlpath.wrappers import ConsolePrinter
 from yamlpath import Processor

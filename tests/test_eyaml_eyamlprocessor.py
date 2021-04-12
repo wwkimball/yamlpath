@@ -4,7 +4,6 @@ from subprocess import run, CalledProcessError
 
 from ruamel.yaml import YAML
 
-import yamlpath.patches
 from yamlpath.func import unwrap_node_coords
 from yamlpath.enums import YAMLValueFormats
 from yamlpath.eyaml.enums import EYAMLOutputFormats

@@ -7,14 +7,47 @@ Bug Fixes:
   for appropriate null/None leaf nodes.
 
 Enhancements:
+* Python 3.9 is now supported (because common testing tools finally work with
+  Python 3.9).
 * The node deletion capability of the yaml-set command is now part of the
   library.  See Processor::delete_nodes(...) and
   Processor::delete_gathered_nodes(...) for details.
+* The node aliasing capability of the yaml-set command is now part of the
+  library.  See Processor::alias_nodes(...) and
+  Processor::alias_gathered_nodes(...) for details.
+* The node tagging capability of the yaml-set command is now part of the
+  library.  See Processor::tag_nodes(...) and
+  Processor::tag_gathered_nodes(...) for details.
 * The library now supports loading YAML from String rather than only from file.
   Simply pass a new `literal=True` keyword parameter to
   Parsers::get_yaml_data(...) or Parsers::get_yaml_multidoc_data(...) to
   indicate that `source` is literal serialized (String) YAML data rather than a
   file-spec.  This mode is implied when reading from STDIN (source is "-").
+* The emitter_write_folded_fix.py patch file for ruamel.yaml has been removed
+  in favor of an author-supplied solution to the problem --
+  https://sourceforge.net/p/ruamel-yaml/tickets/383/ -- for which the patch was
+  originally written.
+
+Known Issues:
+* ruamel.yaml version 0.17.x is a major refactoring effort by the project's
+  owner.  As such, only select versions will be marked as compatible with
+  yamlpath.  Such marking occurs in this project's dependencies list via the
+  setup.py file.  This is necessary because I use yamlpath in production
+  environments where stability is paramount; I need the freedom to update
+  yamlpath at-will without incurring any unexpected failures due to
+  incompatible ruamel.yaml changes.  I will try to test some -- but not all --
+  ruamel.yaml releases from time to time and update yamlpath dependency
+  compatibilities accordingly.
+* ruamel.yaml version 0.17.4 somewhat resolves a previously reported issue --
+  https://sourceforge.net/p/ruamel-yaml/tickets/351/ -- wherein certain
+  arrangements of comments or new-lines within YAML files near aliased hash
+  keys would cause a total loss of data when the stream was written to file.
+  Now, the data is no longer entirely lost.  However, the preceding comment or
+  new-line is deleted when the stream is written to file.  This is deemed to be
+  an acceptable compromise, for now, because the alternative is to either lose
+  the entire document or lose all attempted changes to the affected document.
+  Until the issue is properly fixed, an XFAIL test will continue to be in the
+  yamlpath unit test suite.
 
 3.4.0:
 Bug Fixes:
