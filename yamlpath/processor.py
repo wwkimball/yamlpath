@@ -203,19 +203,18 @@ class Processor:
            will result in a YAMLPathException because YAML does not define
            Aliases for more than one Anchor.
 
+        Keyword Parameters:
+        * anchor_name (str) Alternate name to use for the YAML Anchor and its
+          Aliases.
+
         Returns: (Any) The source node
 
         Raises:
-            - `YAMLPathException` when YAML Path is invalid
+            - `YAMLPathException` when YAML Path is invalid or a supplied
+               anchor_name is illegal
         """
         pathsep: PathSeperators = kwargs.pop("pathsep", PathSeperators.AUTO)
         anchor_name: str = kwargs.pop("anchor_name", "")
-
-        if self.data is None:
-            self.logger.debug(
-                "Refusing to alias nodes in a null document!",
-                prefix="Processor::alias_nodes:  ", data=self.data)
-            return None
 
         if isinstance(anchor_path, str):
             anchor_path = YAMLPath(anchor_path, pathsep)
@@ -226,7 +225,7 @@ class Processor:
         for node_coords in self._get_required_nodes(self.data, anchor_path):
             self.logger.debug(
                 "Gathered YAML Anchor node:",
-                prefix="Processor::alias_nodes:  ", data=node_coords)
+                prefix="Processor::_get_anchor_node:  ", data=node_coords)
             anchor_node_coordinates.append(node_coords)
         if len(anchor_node_coordinates) > 1:
             raise YAMLPathException(
@@ -335,13 +334,14 @@ class Processor:
         if self.data is None:
             self.logger.debug(
                 "Refusing to alias nodes in a null document!",
-                prefix="Processor::alias_nodes:  ", data=self.data)
+                prefix="Processor::alias_gathered_nodes:  ", data=self.data)
             return
 
         anchor_node = self._get_anchor_node(
             anchor_path, pathsep=pathsep, anchor_name=anchor_name)
 
-        self._alias_nodes(gathered_nodes, anchor_node)
+        if gathered_nodes:
+            self._alias_nodes(gathered_nodes, anchor_node)
 
     def _alias_nodes(
             self, gathered_nodes: List[NodeCoords], anchor_node: Any
@@ -411,6 +411,10 @@ class Processor:
         self, gathered_nodes: List[NodeCoords], tag: str
     ) -> None:
         """Assign a data-type tag to a set of nodes."""
+        # A YAML tag must be prefixed via at least one bang (!)
+        if tag and not tag[0] == "!":
+            tag = "!{}".format(tag)
+
         for node_coord in gathered_nodes:
             old_node = node_coord.node
             if node_coord.parent is None:
