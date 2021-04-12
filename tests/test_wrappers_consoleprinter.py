@@ -3,7 +3,7 @@ import pytest
 from types import SimpleNamespace
 
 from ruamel.yaml.comments import CommentedMap, CommentedSeq, TaggedScalar
-from ruamel.yaml.scalarstring import PlainScalarString
+from ruamel.yaml.scalarstring import PlainScalarString, FoldedScalarString
 
 from yamlpath.wrappers import NodeCoords
 from yamlpath.wrappers import ConsolePrinter
@@ -57,6 +57,10 @@ class Test_wrappers_ConsolePrinter():
         logger = ConsolePrinter(args)
         anchoredkey = PlainScalarString("TestKey", anchor="KeyAnchor")
         anchoredval = PlainScalarString("TestVal", anchor="Anchor")
+        foldedstr = "123456789 123456789 123456789"
+        foldedstrfolds = [10, 20]
+        foldedval = FoldedScalarString(foldedstr)
+        foldedval.fold_pos = foldedstrfolds
 
         logger.debug(anchoredval)
         console = capsys.readouterr()
@@ -169,6 +173,12 @@ class Test_wrappers_ConsolePrinter():
             "DEBUG:  test_debug_noisy:  (parent)[key]value<class 'str'>",
             "DEBUG:  test_debug_noisy:  (parentref)key",
         ]) + "\n" == console.out
+
+        logger.debug(foldedval)
+        console = capsys.readouterr()
+        assert "\n".join([
+            "DEBUG:  {}<class 'ruamel.yaml.scalarstring.FoldedScalarString'>,folded@{}".format(foldedstr, foldedstrfolds)
+        ])
 
     def test_debug_quiet(self, capsys):
         args = SimpleNamespace(verbose=False, quiet=True, debug=True)

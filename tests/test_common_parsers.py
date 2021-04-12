@@ -10,6 +10,58 @@ class Test_common_parsers():
     """Tests for the Parsers helper class."""
 
     ###
+    # get_yaml_data (literal=True)
+    ###
+    def test_get_yaml_data_literally(self, quiet_logger):
+        serialized_yaml = """---
+hash:
+  key: value
+
+list:
+  - ichi
+  - ni
+  - san
+"""
+        yaml = Parsers.get_yaml_editor()
+        (data, loaded) = Parsers.get_yaml_data(
+            yaml, quiet_logger, serialized_yaml,
+            literal=True)
+        assert loaded == True
+        assert data["hash"]["key"] == "value"
+        assert data["list"][0] == "ichi"
+        assert data["list"][1] == "ni"
+        assert data["list"][2] == "san"
+
+    ###
+    # get_yaml_multidoc_data (literal=True)
+    ###
+    def test_get_yaml_multidoc_data_literally(self, quiet_logger):
+        serialized_yaml = """---
+document: 1st
+has: data
+...
+---
+document: 2nd
+has: different data
+"""
+        yaml = Parsers.get_yaml_editor()
+        doc_id = 0
+        for (data, loaded) in Parsers.get_yaml_multidoc_data(
+                yaml, quiet_logger, serialized_yaml,
+                literal=True):
+            assert loaded == True
+            if doc_id == 0:
+                document = "1st"
+                has = "data"
+            else:
+                document= "2nd"
+                has = "different data"
+            doc_id = doc_id + 1
+
+            assert data["document"] == document
+            assert data["has"] == has
+
+    ###
     # stringify_dates
     ###
     def test_stringify_complex_data_with_dates(self):

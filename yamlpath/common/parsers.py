@@ -64,9 +64,9 @@ class Parsers:
         return yaml
 
     @staticmethod
-    # pylint: disable=too-many-branches,too-many-statements
+    # pylint: disable=too-many-branches,too-many-statements,too-many-locals
     def get_yaml_data(
-        parser: Any, logger: ConsolePrinter, source: str
+        parser: Any, logger: ConsolePrinter, source: str, **kwargs
     ) -> Tuple[Any, bool]:
         """
         Parse YAML/Compatible data and return the ruamel.yaml object result.
@@ -76,8 +76,12 @@ class Parsers:
         Parameters:
         1. parser (ruamel.yaml.YAML) The YAML data parser
         2. logger (ConsolePrinter) The logging facility
-        3. source (str) The source file to load; can be - for reading from
-           STDIN
+        3. source (str) The source file or serialized literal to load; can be -
+           for reading from STDIN (implies literal=True)
+
+        Keyword Parameters:
+        * literal (bool) `source` is literal serialized YAML data rather than a
+          file-spec, so load it directly
 
         Returns:  Tuple[Any, bool] A tuple containing the document and its
         success/fail state.  The first field is the parsed document; will be
@@ -85,6 +89,7 @@ class Parsers:
         The second field will be True when there were no errors during parsing
         and False, otherwise.
         """
+        literal = kwargs.pop("literal", False)
         yaml_data = None
         data_available = True
 
@@ -98,8 +103,11 @@ class Parsers:
                 if source == "-":
                     yaml_data = parser.load(stdin.read())
                 else:
-                    with open(source, 'r') as fhnd:
-                        yaml_data = parser.load(fhnd)
+                    if literal:
+                        yaml_data = parser.load(source)
+                    else:
+                        with open(source, 'r') as fhnd:
+                            yaml_data = parser.load(fhnd)
         except KeyboardInterrupt:
             logger.error("Aborting data load due to keyboard interrupt!")
             data_available = False
@@ -156,7 +164,7 @@ class Parsers:
     @staticmethod
     # pylint: disable=too-many-branches,too-many-statements,too-many-locals
     def get_yaml_multidoc_data(
-        parser: Any, logger: ConsolePrinter, source: str
+        parser: Any, logger: ConsolePrinter, source: str, **kwargs
     ) -> Generator[Tuple[Any, bool], None, None]:
         """
         Parse YAML/Compatible multi-docs and yield each ruamel.yaml object.
@@ -169,12 +177,18 @@ class Parsers:
         3. source (str) The source file to load; can be - for reading from
            STDIN
 
+        Keyword Parameters:
+        * literal (bool) `source` is literal serialized YAML data rather than a
+          file-spec, so load it directly
+
         Returns:  Generator[Tuple[Any, bool], None, None] A tuple for each
         document as it is parsed.  The first field is the parsed document; will
         be None for empty documents and for documents which could not be read.
         The second field will be True when there were no errors during parsing
         and False, otherwise.
         """
+        literal = kwargs.pop("literal", False)
+
         # This code traps errors and warnings from ruamel.yaml, substituting
         # lengthy stack-dumps with specific, meaningful feedback.  Further,
         # some warnings are treated as errors by ruamel.yaml, so these are also
@@ -196,13 +210,18 @@ class Parsers:
                     if not doc_yielded:
                         yield ("", True)
                 else:
-                    with open(source, 'r') as fhnd:
-                        for document in parser.load_all(fhnd):
-                            logger.debug(
-                                "Yielding document from {}:".format(source),
-                                prefix="get_yaml_multidoc_data: ",
-                                data=document)
+                    if literal:
+                        for document in parser.load_all(source):
                             yield (document, True)
+                    else:
+                        with open(source, 'r') as fhnd:
+                            for document in parser.load_all(fhnd):
+                                logger.debug(
+                                    "Yielding document from {}:"
+                                    .format(source),
+                                    prefix="get_yaml_multidoc_data: ",
+                                    data=document)
+                                yield (document, True)
         except KeyboardInterrupt:
             has_error = True
             logger.error("Aborting data load due to keyboard interrupt!")

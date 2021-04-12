@@ -1,7 +1,9 @@
 import pytest
 from datetime import date
+from types import SimpleNamespace
 
 from ruamel.yaml import YAML
+from ruamel.yaml.comments import TaggedScalar
 
 from yamlpath.func import unwrap_node_coords
 from yamlpath.exceptions import YAMLPathException
@@ -12,6 +14,7 @@ from yamlpath.enums import (
     YAMLValueFormats,
 )
 from yamlpath.path import SearchTerms
+from yamlpath.wrappers import ConsolePrinter
 from yamlpath import YAMLPath, Processor
 from tests.conftest import quiet_logger
 
@@ -237,7 +240,7 @@ products_array:
         """
         yaml = YAML()
         processor = Processor(quiet_logger, yaml.load(yamldata))
-        yamlpath = YAMLPath("aliases[&firstAlias]")
+        yamlpath = YAMLPath("aliases[&aliasAnchorOne]")
         for node in processor.get_nodes(yamlpath, pathsep=PathSeperators.FSLASH):
             assert unwrap_node_coords(node) == "Anchored Scalar Value"
 
@@ -311,21 +314,23 @@ products_array:
         ("/top_hash/negative_float", -0.009, 1, True, YAMLValueFormats.FLOAT, PathSeperators.FSLASH),
         ("/top_hash/positive_float", -2.71828, 1, True, YAMLValueFormats.FLOAT, PathSeperators.FSLASH),
         ("/top_hash/negative_float", 5283.4, 1, True, YAMLValueFormats.FLOAT, PathSeperators.FSLASH),
+        ("/null_value", "No longer null", 1, True, YAMLValueFormats.DEFAULT, PathSeperators.FSLASH),
     ])
     def test_set_value(self, quiet_logger, yamlpath, value, tally, mustexist, vformat, pathsep):
         yamldata = """---
-        aliases:
-          - &testAnchor Initial Value
-        top_array:
-          # Comment 1
-          - 1
-          # Comment 2
-          - 2
-        # Comment N
-        top_scalar: Top-level plain scalar string
-        top_hash:
-          positive_float: 3.14159265358
-          negative_float: -11.034
+aliases:
+  - &testAnchor Initial Value
+top_array:
+  # Comment 1
+  - 1
+  # Comment 2
+  - 2
+# Comment N
+top_scalar: Top-level plain scalar string
+top_hash:
+  positive_float: 3.14159265358
+  negative_float: -11.034
+null_value:
         """
         yaml = YAML()
         data = yaml.load(yamldata)
@@ -756,10 +761,7 @@ emptystring: ""
 nullstring: "null"
         """
 
-        # Note that Python/pytest is translating nothingthing into a string, "null".
-        # This is NOT yamlpath doing this.  In fact, the yaml-get command-line tool
-        # actually translates true nulls into "\x00" (hexadecimal NULL control-characters).
-        results = [6, 6.8, "yes", "no", True, False, "", "null", "", "null"]
+        results = [6, 6.8, "yes", "no", True, False, None, None, "", "null"]
 
         yaml = YAML()
         data = yaml.load(yamldata)
@@ -770,3 +772,141 @@ nullstring: "null"
         for node in processor.get_nodes(yamlpath):
             assert unwrap_node_coords(node) == results[match_index]
             match_index += 1
+
+    @pytest.mark.parametrize("delete_yamlpath,pathseperator,old_deleted_nodes,new_flat_data", [
+        (YAMLPath("/**[&alias_number]"), PathSeperators.FSLASH, [1, 1, 1], [1,1,True,1,1,True,1,1,True,1,"ABC",123,"BCD",987,"CDE","8B8"]),
+        ("records[1]", PathSeperators.AUTO, ["ABC",123,"BCD",987], [1,1,1,True,1,1,1,True,1,1,1,True,1,1,"CDE","8B8"]),
+    ])
+    def test_delete_nodes(self, quiet_logger, delete_yamlpath, pathseperator, old_deleted_nodes, new_flat_data):
+        yamldata = """---
+aliases:
+  - &alias_number 1
+  - &alias_bool true
+number: 1
+bool: true
+alias_number: *alias_number
+alias_bool: *alias_bool
+hash:
+  number: 1
+  bool: true
+  alias_number: *alias_number
+  alias_bool: *alias_bool
+complex:
+  hash:
+    number: 1
+    bool: true
+    alias_number: *alias_number
+    alias_bool: *alias_bool
+records:
+  - id: ABC
+    data: 123
+  - id: BCD
+    data: 987
+  - id: CDE
+    data: 8B8
+"""
+        yaml = YAML()
+        data = yaml.load(yamldata)
+        processor = Processor(quiet_logger, data)
+
+        # The return set must be received lest no nodes will be deleted
+        deleted_nodes = []
+        for nc in processor.delete_nodes(delete_yamlpath, pathsep=pathseperator):
+            deleted_nodes.append(nc)
+
+        for (test_value, verify_node_coord) in zip(old_deleted_nodes, deleted_nodes):
+            assert test_value, unwrap_node_coords(verify_node_coord)
+
+        for (test_value, verify_node_coord) in zip(new_flat_data, processor.get_nodes("**")):
+            assert test_value, unwrap_node_coords(verify_node_coord)
+
+    def test_null_docs_have_nothing_to_delete(self, capsys):
+        args = SimpleNamespace(verbose=False, quiet=False, debug=True)
+        logger = ConsolePrinter(args)
+        processor = Processor(logger, None)
+
+        deleted_nodes = []
+        for nc in processor.delete_nodes("**"):
+            deleted_nodes.append(nc)
+
+        console = capsys.readouterr()
+        assert "Refusing to delete nodes from a null document" in console.out
+
+    def test_null_docs_have_nothing_to_gather_and_alias(self, capsys):
+        args = SimpleNamespace(verbose=False, quiet=False, debug=True)
+        logger = ConsolePrinter(args)
+        processor = Processor(logger, None)
+
+        processor.alias_nodes("/alias*", "/anchor")
+
+        console = capsys.readouterr()
+        assert "Refusing to alias nodes in a null document" in console.out
+
+    def test_null_docs_have_nothing_to_alias(self, capsys):
+        args = SimpleNamespace(verbose=False, quiet=False, debug=True)
+        logger = ConsolePrinter(args)
+        processor = Processor(logger, None)
+
+        processor.alias_gathered_nodes([], "/anchor")
+
+        console = capsys.readouterr()
+        assert "Refusing to alias nodes in a null document" in console.out
+
+    def test_null_docs_have_nothing_to_tag(self, capsys):
+        args = SimpleNamespace(verbose=False, quiet=False, debug=True)
+        logger = ConsolePrinter(args)
+        processor = Processor(logger, None)
+
+        processor.tag_nodes("/tag_nothing", "tag_this")
+
+        console = capsys.readouterr()
+        assert "Refusing to tag nodes from a null document" in console.out
+
+    @pytest.mark.parametrize("alias_path,anchor_path,anchor_name,pathseperator", [
+        (YAMLPath("/a_hash/a_key"), YAMLPath("/some_key"), "", PathSeperators.FSLASH),
+        ("a_hash.a_key", "some_key", "", PathSeperators.AUTO),
+    ])
+    def test_anchor_nodes(self, quiet_logger, alias_path, anchor_path, anchor_name, pathseperator):
+        anchor_value = "This is the Anchored value!"
+        yamlin = """---
+some_key: {}
+a_hash:
+  a_key: A value
+""".format(anchor_value)
+
+        yaml = YAML()
+        data = yaml.load(yamlin)
+        processor = Processor(quiet_logger, data)
+
+        processor.alias_nodes(
+            alias_path, anchor_path,
+            pathsep=pathseperator, anchor_name=anchor_name)
+
+        match_count = 0
+        for node in processor.get_nodes(
+            alias_path, mustexist=True
+        ):
+            match_count += 1
+            assert unwrap_node_coords(node) == anchor_value
+        assert match_count == 1
+
+    @pytest.mark.parametrize("yaml_path,tag,pathseperator", [
+        (YAMLPath("/key"), "!taggidy", PathSeperators.FSLASH),
+        ("key", "taggidy", PathSeperators.AUTO),
+    ])
+    def test_tag_nodes(self, quiet_logger, yaml_path, tag, pathseperator):
+        yamlin = """---
+key: value
+"""
+
+        yaml = YAML()
+        data = yaml.load(yamlin)
+        processor = Processor(quiet_logger, data)
+
+        processor.tag_nodes(yaml_path, tag, pathsep=pathseperator)
+
+        if tag and not tag[0] == "!":
+            tag = "!{}".format(tag)
+
+        assert isinstance(data['key'], TaggedScalar)
+        assert data['key'].tag.value == tag

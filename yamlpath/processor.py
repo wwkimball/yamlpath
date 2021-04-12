@@ -4,9 +4,9 @@ YAML Path processor based on ruamel.yaml.
 
 Copyright 2018, 2019, 2020 William W. Kimball, Jr. MBA MSIS
 """
-from typing import Any, Generator, List, Union
+from typing import Any, Dict, Generator, List, Union
 
-from yamlpath.common import Nodes, Searches
+from yamlpath.common import Anchors, Nodes, Searches
 from yamlpath import YAMLPath
 from yamlpath.path import SearchTerms, CollectorTerms
 from yamlpath.wrappers import ConsolePrinter, NodeCoords
@@ -191,6 +191,340 @@ class Processor:
                         .format(value, value_format, str(vex))
                         , str(yaml_path)) from vex
 
+    def _get_anchor_node(
+        self, anchor_path: Union[YAMLPath, str], **kwargs: Any
+    ) -> Any:
+        """
+        Gather the source YAML Anchor node for an Aliasing operation.
+
+        Parameters:
+        1. anchor_path (Union[YAMLPath, str]) The YAML Path to a single source
+           anchor node; specifying any path which points to more than one node
+           will result in a YAMLPathException because YAML does not define
+           Aliases for more than one Anchor.
+
+        Keyword Parameters:
+        * anchor_name (str) Alternate name to use for the YAML Anchor and its
+          Aliases.
+
+        Returns: (Any) The source node
+
+        Raises:
+            - `YAMLPathException` when YAML Path is invalid or a supplied
+               anchor_name is illegal
+        """
+        pathsep: PathSeperators = kwargs.pop("pathsep", PathSeperators.AUTO)
+        anchor_name: str = kwargs.pop("anchor_name", "")
+
+        if isinstance(anchor_path, str):
+            anchor_path = YAMLPath(anchor_path, pathsep)
+        elif pathsep is not PathSeperators.AUTO:
+            anchor_path.seperator = pathsep
+
+        anchor_node_coordinates: List[NodeCoords] = []
+        for node_coords in self._get_required_nodes(self.data, anchor_path):
+            self.logger.debug(
+                "Gathered YAML Anchor node:",
+                prefix="Processor::_get_anchor_node:  ", data=node_coords)
+            anchor_node_coordinates.append(node_coords)
+        if len(anchor_node_coordinates) > 1:
+            raise YAMLPathException(
+                "It is impossible to Alias more than one Anchor at a time!",
+                str(anchor_path))
+
+        anchor_coord = anchor_node_coordinates[0]
+        anchor_node = anchor_coord.node
+        if not hasattr(anchor_node, "anchor"):
+            anchor_coord.parent[anchor_coord.parentref] = Nodes.wrap_type(
+                anchor_node)
+            anchor_node = anchor_coord.parent[anchor_coord.parentref]
+
+        known_anchors: Dict[str, Any] = {}
+        Anchors.scan_for_anchors(self.data, known_anchors)
+
+        if anchor_name:
+            # Rename any pre-existing anchor or set an original anchor name;
+            # the assigned name must be unique!
+            if anchor_name in known_anchors:
+                raise YAMLPathException(
+                    "Anchor names must be unique within YAML documents."
+                    "  Anchor name, {}, is already used."
+                    .format(anchor_name), str(anchor_path))
+            anchor_node.yaml_set_anchor(anchor_name, always_dump=True)
+        elif anchor_node.anchor.value:
+            # The source node already has an anchor name
+            anchor_name = anchor_node.anchor.value
+        else:
+            # An orignial, unique-to-the-document anchor name must be generated
+            new_anchor = Anchors.generate_unique_anchor_name(
+                self.data, anchor_coord, known_anchors)
+            anchor_node.yaml_set_anchor(new_anchor, always_dump=True)
+
+        return anchor_node
+
+    def alias_nodes(
+        self, yaml_path: Union[YAMLPath, str],
+        anchor_path: Union[YAMLPath, str], **kwargs: Any
+    ) -> None:
+        """
+        Gather and assign YAML Aliases to nodes at YAML Path in data.
+
+        Parameters:
+        1. yaml_path (Union[YAMLPath, str]) The YAML Path to all target nodes
+           which will become Aliases to the Anchor node specified via
+           `anchor_path`.
+        2. anchor_path (Union[YAMLPath, str]) The YAML Path to a single source
+           anchor node; specifying any path which points to more than one node
+           will result in a YAMLPathException because YAML does not define
+           Aliases for more than one Anchor.
+
+        Keyword Parameters:
+        * pathsep (PathSeperators) Forced YAML Path segment seperator; set
+          only when automatic inference fails;
+          default = PathSeperators.AUTO
+        * anchor_name (str) Override the Alias name to any non-empty name you
+          set; attempts to re-use an existing Anchor name will result in a
+          YAMLPathException.
+
+        Returns:  N/A
+
+        Raises:
+            - `YAMLPathException` when YAML Path is invalid
+        """
+        pathsep: PathSeperators = kwargs.pop("pathsep", PathSeperators.AUTO)
+        anchor_name: str = kwargs.pop("anchor_name", "")
+
+        if self.data is None:
+            self.logger.debug(
+                "Refusing to alias nodes in a null document!",
+                prefix="Processor::alias_nodes:  ", data=self.data)
+            return
+
+        if isinstance(yaml_path, str):
+            yaml_path = YAMLPath(yaml_path, pathsep)
+        elif pathsep is not PathSeperators.AUTO:
+            yaml_path.seperator = pathsep
+
+        anchor_node = self._get_anchor_node(
+            anchor_path, pathsep=pathsep, anchor_name=anchor_name)
+
+        gathered_nodes: List[NodeCoords] = []
+        for node_coords in self._get_required_nodes(self.data, yaml_path):
+            self.logger.debug(
+                "Gathered node for YAML Alias assignment:",
+                prefix="Processor::delete_nodes:  ", data=node_coords)
+            gathered_nodes.append(node_coords)
+
+        if len(gathered_nodes) > 0:
+            self._alias_nodes(gathered_nodes, anchor_node)
+
+    def alias_gathered_nodes(
+        self, gathered_nodes: List[NodeCoords],
+        anchor_path: Union[YAMLPath, str], **kwargs: Any
+    ) -> None:
+        """
+        Assign a YAML Anchor to zero or more YAML Alias nodes.
+
+        Parameters:
+        1. gathered_nodes (List[NodeCoords]) The pre-gathered nodes to assign.
+        """
+        pathsep: PathSeperators = kwargs.pop("pathsep", PathSeperators.AUTO)
+        anchor_name: str = kwargs.pop("anchor_name", "")
+
+        if self.data is None:
+            self.logger.debug(
+                "Refusing to alias nodes in a null document!",
+                prefix="Processor::alias_gathered_nodes:  ", data=self.data)
+            return
+
+        anchor_node = self._get_anchor_node(
+            anchor_path, pathsep=pathsep, anchor_name=anchor_name)
+
+        if gathered_nodes:
+            self._alias_nodes(gathered_nodes, anchor_node)
+
+    def _alias_nodes(
+            self, gathered_nodes: List[NodeCoords], anchor_node: Any
+    ) -> None:
+        """
+        Assign a YAML Anchor to its various YAML Alias nodes.
+
+        Parameters:
+        1. gathered_nodes (List[NodeCoords]) The pre-gathered nodes to assign.
+        2. anchor_node (Any) The source YAML Anchor node.
+
+        Returns:  N/A
+        """
+        anchor_name = anchor_node.anchor.value
+        for node_coord in gathered_nodes:
+            self.logger.debug(
+                "Attempting to set the anchor name for node to {}:"
+                .format(anchor_name),
+                data=node_coord,
+                prefix="yaml_set::_alias_nodes:  ")
+            node_coord.parent[node_coord.parentref] = anchor_node
+
+    def tag_nodes(
+        self, yaml_path: Union[YAMLPath, str], tag: str, **kwargs: Any
+    ) -> None:
+        """
+        Gather and assign a data-type tag to nodes at YAML Path in data.
+
+        Parameters:
+        1. yaml_path (Union[YAMLPath, str]) The YAML Path to evaluate
+        2. tag (str) The tag to assign
+
+        Keyword Parameters:
+        * pathsep (PathSeperators) Forced YAML Path segment seperator; set
+          only when automatic inference fails;
+          default = PathSeperators.AUTO
+
+        Returns:  N/A
+
+        Raises:
+            - `YAMLPathException` when YAML Path is invalid
+        """
+        pathsep: PathSeperators = kwargs.pop("pathsep", PathSeperators.AUTO)
+
+        if self.data is None:
+            self.logger.debug(
+                "Refusing to tag nodes from a null document!",
+                prefix="Processor::tag_nodes:  ", data=self.data)
+            return
+
+        if isinstance(yaml_path, str):
+            yaml_path = YAMLPath(yaml_path, pathsep)
+        elif pathsep is not PathSeperators.AUTO:
+            yaml_path.seperator = pathsep
+
+        gathered_nodes: List[NodeCoords] = []
+        for node_coords in self._get_required_nodes(self.data, yaml_path):
+            self.logger.debug(
+                "Gathered node for tagging:",
+                prefix="Processor::tag_nodes:  ", data=node_coords)
+            gathered_nodes.append(node_coords)
+
+        if len(gathered_nodes) > 0:
+            self.tag_gathered_nodes(gathered_nodes, tag)
+
+    def tag_gathered_nodes(
+        self, gathered_nodes: List[NodeCoords], tag: str
+    ) -> None:
+        """Assign a data-type tag to a set of nodes."""
+        # A YAML tag must be prefixed via at least one bang (!)
+        if tag and not tag[0] == "!":
+            tag = "!{}".format(tag)
+
+        for node_coord in gathered_nodes:
+            old_node = node_coord.node
+            if node_coord.parent is None:
+                node_coord.node.yaml_set_tag(tag)
+            else:
+                node_coord.parent[node_coord.parentref] = Nodes.apply_yaml_tag(
+                    node_coord.node, tag)
+                if Anchors.get_node_anchor(old_node) is not None:
+                    Anchors.replace_anchor(
+                        self.data, old_node,
+                        node_coord.parent[node_coord.parentref])
+
+    def delete_nodes(self, yaml_path: Union[YAMLPath, str],
+                     **kwargs: Any) -> Generator[NodeCoords, None, None]:
+        """
+        Gather and delete nodes at YAML Path in data.
+
+        Parameters:
+        1. yaml_path (Union[YAMLPath, str]) The YAML Path to evaluate
+
+        Keyword Parameters:
+        * pathsep (PathSeperators) Forced YAML Path segment seperator; set
+          only when automatic inference fails;
+          default = PathSeperators.AUTO
+
+        Returns:  (Generator) Affected NodeCoords before they are deleted
+
+        Raises:
+            - `YAMLPathException` when YAML Path is invalid
+        """
+        pathsep: PathSeperators = kwargs.pop("pathsep", PathSeperators.AUTO)
+
+        if self.data is None:
+            self.logger.debug(
+                "Refusing to delete nodes from a null document!",
+                prefix="Processor::delete_nodes:  ", data=self.data)
+            return
+
+        if isinstance(yaml_path, str):
+            yaml_path = YAMLPath(yaml_path, pathsep)
+        elif pathsep is not PathSeperators.AUTO:
+            yaml_path.seperator = pathsep
+
+        # Nodes must be processed in reverse order while deleting them to avoid
+        # corrupting list element indecies, thereby deleting the wrong nodes.
+        # As such, the intended nodes must be first gathered into a list.
+        gathered_nodes: List[NodeCoords] = []
+        for node_coords in self._get_required_nodes(self.data, yaml_path):
+            self.logger.debug(
+                "Gathered node for deletion:",
+                prefix="Processor::delete_nodes:  ", data=node_coords)
+            gathered_nodes.append(node_coords)
+            yield node_coords
+
+        if len(gathered_nodes) > 0:
+            self._delete_nodes(gathered_nodes)
+
+    def delete_gathered_nodes(self, gathered_nodes: List[NodeCoords]) -> None:
+        """
+        Delete pre-gathered nodes.
+
+        Parameters:
+        1. gathered_nodes (List[NodeCoords]) The pre-gathered nodes to delete.
+        """
+        self._delete_nodes(gathered_nodes)
+
+    def _delete_nodes(self, delete_nodes: List[NodeCoords]) -> None:
+        """
+        Recursively delete specified nodes.
+
+        Parameters:
+        1. delete_nodes (List[NodeCoords]) The nodes to delete.
+
+        Raises:
+            - `YAMLPathException` when the operation would destroy the entire
+              document
+        """
+        for delete_nc in reversed(delete_nodes):
+            node = delete_nc.node
+            parent = delete_nc.parent
+            parentref = delete_nc.parentref
+            self.logger.debug(
+                "Deleting node:",
+                prefix="yaml_set::delete_nodes:  ",
+                data_header="!" * 80,
+                footer="!" * 80,
+                data=delete_nc)
+
+            # Ensure the reference exists before attempting to delete it
+            if isinstance(node, list) and isinstance(node[0], NodeCoords):
+                self._delete_nodes(node)
+            elif isinstance(node, NodeCoords):
+                self._delete_nodes([node])
+            elif isinstance(parent, dict):
+                if parentref in parent:
+                    del parent[parentref]
+            elif isinstance(parent, list):
+                if len(parent) > parentref:
+                    del parent[parentref]
+            else:
+                # Edge-case:  Attempt to delete from a document which is
+                # entirely one Scalar value OR user is deleting the entire
+                # document.
+                raise YAMLPathException(
+                    "Refusing to delete the entire document!  Ensure the"
+                    " source document is YAML, JSON, or compatible and the"
+                    " target nodes do not include the document root.",
+                    str(delete_nc.path)
+                )
+
     # pylint: disable=locally-disabled,too-many-branches,too-many-locals
     def _get_nodes_by_path_segment(self, data: Any,
                                    yaml_path: YAMLPath, segment_index: int,
@@ -333,6 +667,10 @@ class Processor:
                 YAMLPath.escape_path_section(
                     str_stripped, translated_path.seperator))
             if stripped_attrs in data:
+                self.logger.debug(
+                    "Processor::_get_nodes_by_key:  FOUND key node by name at"
+                    " {}."
+                    .format(str_stripped))
                 yield NodeCoords(
                     data[stripped_attrs], data, stripped_attrs,
                     next_translated_path)
@@ -350,6 +688,10 @@ class Processor:
                 # Try using the ref as a bare Array index
                 idx = int(str_stripped)
                 if len(data) > idx:
+                    self.logger.debug(
+                        "Processor::_get_nodes_by_key:  FOUND key node as a"
+                        " bare Array index at [{}]."
+                        .format(str_stripped))
                     yield NodeCoords(
                         data[idx], data, idx,
                         translated_path + "[{}]".format(idx))
@@ -369,6 +711,10 @@ class Processor:
                             element, yaml_path, segment_index, parent=data,
                             parentref=eleidx, traverse_lists=traverse_lists,
                             translated_path=next_translated_path):
+                        self.logger.debug(
+                            "Processor::_get_nodes_by_key:  FOUND key node "
+                            " via pass-through Array-of-Hashes search at {}."
+                            .format(next_translated_path))
                         yield node_coord
 
     # pylint: disable=locally-disabled,too-many-locals
@@ -1034,14 +1380,8 @@ class Processor:
         parent = kwargs.pop("parent", None)
         parentref = kwargs.pop("parentref", None)
         translated_path = kwargs.pop("translated_path", YAMLPath(""))
-        if data is None:
-            self.logger.debug(
-                "Bailing out on None data at parentref, {}, of parent:"
-                .format(parentref),
-                prefix="Processor::_get_optional_nodes:  ", data=parent)
-            return
-
         segments = yaml_path.escaped
+
         # pylint: disable=locally-disabled,too-many-nested-blocks
         if segments and len(segments) > depth:
             (segment_type, unstripped_attrs) = yaml_path.unescaped[depth]

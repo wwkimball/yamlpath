@@ -251,7 +251,7 @@ class ConsolePrinter:
         print_anchor = kwargs.pop("print_anchor", True)
         print_tag = kwargs.pop("print_tag", True)
         print_type = kwargs.pop("print_type", False)
-        dtype = type(data) if print_type else ""
+        dtype: str = str(type(data)) if print_type else ""
         anchor_prefix = ""
         print_prefix = prefix
 
@@ -271,6 +271,10 @@ class ConsolePrinter:
         # The "true" type of the value is nested in TaggedScalar.value
         if isinstance(data, TaggedScalar):
             dtype = "{}({})".format(dtype, type(data.value))
+
+        # Report fold points, if present
+        if hasattr(data, "fold_pos"):
+            dtype += ",folded@{}".format(data.fold_pos)
 
         print_prefix += anchor_prefix
         return ConsolePrinter._debug_prefix_lines(

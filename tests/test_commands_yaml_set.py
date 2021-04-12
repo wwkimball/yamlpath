@@ -1219,6 +1219,30 @@ egress_key: Following value
             filedat = fhnd.read()
         assert filedat == yamlout
 
+    def test_change_null(self, script_runner, tmp_path_factory):
+        yamlin = """---
+ingress_key: Preceding value
+concrete_key:
+egress_key: Following value
+"""
+        yamlout = """---
+ingress_key: Preceding value
+concrete_key: Now not null
+egress_key: Following value
+"""
+        yaml_file = create_temp_yaml_file(tmp_path_factory, yamlin)
+        result = script_runner.run(
+            self.command,
+            "--change=concrete_key",
+            "--value=Now not null",
+            yaml_file
+        )
+        assert result.success, result.stderr
+
+        with open(yaml_file, 'r') as fhnd:
+            filedat = fhnd.read()
+        assert filedat == yamlout
+
     def test_assign_to_nonexistent_and_empty_nodes(self, script_runner, tmp_path_factory):
         # Inspiration: https://github.com/wwkimball/yamlpath/issues/107
         # Test: cat testbed.yaml | yaml-set --change='/devices/*/[os!=~/.+/]/os' --value=generic
@@ -1228,16 +1252,13 @@ devices:
     os: ios
     type: router
     platform: asr1k
-
   R2:
     type: switch
     platform: cat3k
-
   R3:
     type: access-point
     platform: wrt
     os:
-
   R4:
     type: tablet
     os: null
@@ -1249,17 +1270,14 @@ devices:
     os: ios
     type: router
     platform: asr1k
-
   R2:
     type: switch
     platform: cat3k
-
     os: generic
   R3:
     type: access-point
     platform: wrt
     os: generic
-
   R4:
     type: tablet
     os: null

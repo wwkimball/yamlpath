@@ -18,9 +18,6 @@ from yamlpath import __version__ as YAMLPATH_VERSION
 from yamlpath.common import Parsers
 from yamlpath.eyaml.exceptions import EYAMLCommandException
 from yamlpath.eyaml import EYAMLProcessor
-
-# pylint: disable=locally-disabled,unused-import
-import yamlpath.patches
 from yamlpath.wrappers import ConsolePrinter
 
 def processcli():

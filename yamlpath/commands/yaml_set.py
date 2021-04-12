@@ -19,20 +19,16 @@ from os import remove, access, R_OK
 from os.path import isfile, exists
 from shutil import copy2, copyfileobj
 from pathlib import Path
-from typing import Any, Dict
 
 from yamlpath import __version__ as YAMLPATH_VERSION
-from yamlpath.common import Anchors, Nodes, Parsers
+from yamlpath.common import Nodes, Parsers
 from yamlpath import YAMLPath
 from yamlpath.exceptions import YAMLPathException
 from yamlpath.enums import YAMLValueFormats, PathSeperators
 from yamlpath.eyaml.exceptions import EYAMLCommandException
 from yamlpath.eyaml.enums import EYAMLOutputFormats
 from yamlpath.eyaml import EYAMLProcessor
-
-# pylint: disable=locally-disabled,unused-import
-import yamlpath.patches
-from yamlpath.wrappers import ConsolePrinter, NodeCoords
+from yamlpath.wrappers import ConsolePrinter
 
 def processcli():
     """Process command-line arguments."""
@@ -301,7 +297,11 @@ def save_to_yaml_file(args, log, yaml_parser, yaml_data, backup_file):
         with open(args.yaml_file, 'w') as yaml_dump:
             try:
                 yaml_parser.dump(yaml_data, yaml_dump)
-            except AssertionError as ex:
+            # Tell pycov to ignore this block because it is impossible to
+            # trigger it for ruamel.yaml versions >0.17.4 yet this project must
+            # continue to support older versions of ruamel.yaml as long as OS
+            # package builders continue to be dependent on them.
+            except AssertionError as ex:    # pragma: no cover
                 yaml_dump.close()
                 tmphnd.seek(0)
                 with open(args.yaml_file, 'wb') as outhnd:
@@ -376,34 +376,12 @@ def _try_load_input_file(args, log, yaml, change_path, new_value):
         yaml_data = Nodes.build_next_node(change_path, 0, new_value)
     return yaml_data
 
-def _delete_nodes(log, delete_nodes) -> None:
+def _delete_nodes(log, processor, delete_nodes) -> None:
     """Recursively delete specified nodes."""
-    for delete_nc in reversed(delete_nodes):
-        node = delete_nc.node
-        parent = delete_nc.parent
-        parentref = delete_nc.parentref
-        log.debug(
-            "Deleting node:",
-            prefix="yaml_set::delete_nodes:  ",
-            data_header="!" * 80,
-            footer="!" * 80,
-            data=delete_nc)
-
-        # Ensure the reference exists before attempting to delete it
-        if isinstance(node, list) and isinstance(node[0], NodeCoords):
-            _delete_nodes(log, node)
-        elif isinstance(node, NodeCoords):
-            _delete_nodes(log, [node])
-        elif isinstance(parent, dict):
-            if parentref in parent:
-                del parent[parentref]
-        elif isinstance(parent, list):
-            if len(parent) > parentref:
-                del parent[parentref]
-        else:
-            # Edge-case:  Attempt to delete from a document which is
-            # entirely one Scalar value OR user is deleting the entire
-            # document.
+    try:
+        processor.delete_gathered_nodes(delete_nodes)
+    except YAMLPathException as ex:
+        if "delete the entire document" in ex.user_message:
             log.critical(
                 "Refusing to delete the entire document!  Ensure the source"
                 " document is YAML, JSON, or compatible and --change|-g is"
@@ -436,61 +414,11 @@ def _alias_nodes(
     log, processor, assign_to_nodes, anchor_path, anchor_name
 ):
     """Assign YAML Aliases to the target nodes."""
-    anchor_node_coordinates = _get_nodes(
-        log, processor, anchor_path, must_exist=True)
-    if len(anchor_node_coordinates) > 1:
-        log.critical(
-            "It is impossible to Alias more than one Anchor at a time from {}!"
-            .format(anchor_path), 1)
-
-    anchor_coord = anchor_node_coordinates[0]
-    anchor_node = anchor_coord.node
-    if not hasattr(anchor_node, "anchor"):
-        anchor_coord.parent[anchor_coord.parentref] = Nodes.wrap_type(
-            anchor_node)
-        anchor_node = anchor_coord.parent[anchor_coord.parentref]
-
-    known_anchors: Dict[str, Any] = {}
-    Anchors.scan_for_anchors(processor.data, known_anchors)
-
-    if anchor_name:
-        # Rename any pre-existing anchor or set an original anchor name; the
-        # assigned name must be unique!
-        if anchor_name in known_anchors:
-            log.critical(
-                "Anchor names must be unique within YAML documents.  Anchor"
-                " name, {}, is already used.".format(anchor_name))
-        anchor_node.yaml_set_anchor(anchor_name, always_dump=True)
-    elif anchor_node.anchor.value:
-        # The source node already has an anchor name
-        anchor_name = anchor_node.anchor.value
-    else:
-        # An orignial, unique-to-the-document anchor name must be generated
-        new_anchor = Anchors.generate_unique_anchor_name(
-            processor.data, anchor_coord, known_anchors)
-        anchor_node.yaml_set_anchor(new_anchor, always_dump=True)
-
-    for node_coord in assign_to_nodes:
-        log.debug(
-            "Attempting to set the anchor name for node to {}:"
-            .format(anchor_name),
-            data=node_coord,
-            prefix="yaml_set::_alias_nodes:  ")
-        node_coord.parent[node_coord.parentref] = anchor_node
-
-def _tag_nodes(document, tag, nodes):
-    """Assign a data-type tag to a set of nodes."""
-    for node_coord in nodes:
-        old_node = node_coord.node
-        if node_coord.parent is None:
-            node_coord.node.yaml_set_tag(tag)
-        else:
-            node_coord.parent[node_coord.parentref] = Nodes.apply_yaml_tag(
-                node_coord.node, tag)
-            if Anchors.get_node_anchor(old_node) is not None:
-                Anchors.replace_anchor(
-                    document, old_node,
-                    node_coord.parent[node_coord.parentref])
+    try:
+        processor.alias_gathered_nodes(
+            assign_to_nodes, anchor_path, anchor_name=anchor_name)
+    except YAMLPathException as ex:
+        log.critical(ex, 1)
 
 # pylint: disable=locally-disabled,too-many-locals,too-many-branches,too-many-statements
 def main():
@@ -634,7 +562,7 @@ def main():
         # Destroy the collected nodes (from their parents) in the reverse order
         # they were discovered.  This is necessary lest Array elements be
         # improperly handled, leading to unwanted data loss.
-        _delete_nodes(log, change_node_coordinates)
+        _delete_nodes(log, processor, change_node_coordinates)
     elif args.aliasof:
         # Assign the change nodes as Aliases of whatever --aliasof points to
         _alias_nodes(
@@ -663,7 +591,7 @@ def main():
         except YAMLPathException as ex:
             log.critical(ex, 1)
     elif args.tag:
-        _tag_nodes(processor.data, args.tag, change_node_coordinates)
+        processor.tag_gathered_nodes(change_node_coordinates, args.tag)
 
     # Write out the result
     write_output_document(args, log, yaml, yaml_data)
