@@ -690,18 +690,19 @@ https://github.com/wwkimball/yamlpath.
 
 ```text
 usage: yaml-set [-h] [-V] -g YAML_PATH
-                [-a VALUE | -f FILE | -i | -R LENGTH | -D]
+                [-a VALUE | -A ANCHOR | -f FILE | -i | -R LENGTH | -N | -D]
                 [-F {bare,boolean,default,dquote,float,folded,int,literal,squote}]
                 [-c CHECK] [-s YAML_PATH] [-m] [-b]
-                [-t ['.', '/', 'auto', 'dot', 'fslash']] [-M CHARS] [-e]
-                [-x EYAML] [-r PRIVATEKEY] [-u PUBLICKEY] [-S] [-d | -v | -q]
+                [-t ['.', '/', 'auto', 'dot', 'fslash']] [-M CHARS] [-H ANCHOR]
+                [-T TAG] [-e] [-x EYAML] [-r PRIVATEKEY] [-u PUBLICKEY] [-S]
+                [-d | -v | -q]
                 [YAML_FILE]
 
 Changes one or more Scalar values in a YAML/JSON/Compatible document at a
 specified YAML Path. Matched values can be checked before they are replaced to
 mitigate accidental change. When matching singular results, the value can be
-archived to another key before it is replaced. Further, EYAML can be employed
-to encrypt the new values and/or decrypt an old value before checking it.
+archived to another key before it is replaced. Further, EYAML can be employed to
+encrypt the new values and/or decrypt an old value before checking it.
 
 positional arguments:
   YAML_FILE             the YAML file to update; omit or use - to read from
@@ -722,14 +723,20 @@ optional arguments:
   -b, --backup          save a backup YAML_FILE with an extra .bak file-
                         extension
   -t ['.', '/', 'auto', 'dot', 'fslash'], --pathsep ['.', '/', 'auto', 'dot', 'fslash']
-                        indicate which YAML Path seperator to use when
-                        rendering results; default=dot
+                        indicate which YAML Path seperator to use when rendering
+                        results; default=dot
   -M CHARS, --random-from CHARS
                         characters from which to build a value for --random;
-                        default=all upper- and lower-case letters and all
-                        digits
-  -S, --nostdin         Do not implicitly read from STDIN, even when there is
-                        no YAML_FILE with a non-TTY session
+                        default=all upper- and lower-case letters and all digits
+  -H ANCHOR, --anchor ANCHOR
+                        when --aliasof|-A points to a value which is not already
+                        Anchored, a new Anchor with this name is created;
+                        renames an existing Anchor if already set
+  -T TAG, --tag TAG     assign a custom YAML (data-type) tag to the changed
+                        nodes; can be used without other input options to assign
+                        or change a tag
+  -S, --nostdin         Do not implicitly read from STDIN, even when there is no
+                        YAML_FILE with a non-TTY session
   -d, --debug           output debugging details
   -v, --verbose         increase output verbosity
   -q, --quiet           suppress all output except errors
@@ -740,20 +747,24 @@ required settings:
 
 input options:
   -a VALUE, --value VALUE
-                        set the new value from the command-line instead of
-                        STDIN
+                        set the new value from the command-line instead of STDIN
+  -A ANCHOR, --aliasof ANCHOR
+                        set the value as a YAML Alias of an existing Anchor, by
+                        name (merely copies the target value for non-YAML files)
   -f FILE, --file FILE  read the new value from file (discarding any trailing
                         new-lines)
   -i, --stdin           accept the new value from STDIN (best for sensitive
                         data)
   -R LENGTH, --random LENGTH
                         randomly generate a replacement value of a set length
-  -D, --delete          delete rather than change target node(s)
+  -N, --null            sets the value to null
+  -D, --delete          delete rather than change target node(s); implies
+                        --mustexist|-m
 
 EYAML options:
-  Left unset, the EYAML keys will default to your system or user defaults.
-  You do not need to supply a private key unless you enable --check and the
-  old value is encrypted.
+  Left unset, the EYAML keys will default to your system or user defaults. You
+  do not need to supply a private key unless you enable --check and the old
+  value is encrypted.
 
   -e, --eyamlcrypt      encrypt the new value using EYAML
   -x EYAML, --eyaml EYAML
@@ -765,7 +776,9 @@ EYAML options:
 
 When no changes are made, no backup is created, even when -b/--backup is
 specified. For more information about YAML Paths, please visit
-https://github.com/wwkimball/yamlpath.
+https://github.com/wwkimball/yamlpath/wiki. To report issues with this tool or
+to request enhancements, please visit
+https://github.com/wwkimball/yamlpath/issues.
 ```
 
 * [yaml-validate](yamlpath/commands/yaml_validate.py)
