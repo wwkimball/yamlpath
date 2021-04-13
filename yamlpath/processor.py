@@ -1430,8 +1430,6 @@ class Processor:
                     matched_nodes < 1
                     and segment_type is not PathSegmentTypes.SEARCH
             ):
-                at_terminus = len(yaml_path) <= depth + 1
-
                 # Add the missing element
                 self.logger.debug(
                     ("Processor::_get_optional_nodes:  Element <{}>{} is"
@@ -1439,12 +1437,6 @@ class Processor:
                      " data:"
                     ).format(segment_type, except_segment, type(value), value),
                     data=data
-                )
-                self.logger.debug(
-                    "Processor::_get_optional_nodes:  Considering application"
-                    " of unknown element to parent while at_terminus={}:"
-                    .format(at_terminus),
-                    data=parent
                 )
                 if isinstance(data, list):
                     self.logger.debug(
@@ -1546,8 +1538,8 @@ class Processor:
 
                 elif prior_was_search and isinstance(parent, (dict, list)):
                     self.logger.debug(
-                        "Setting a {} terminal value at path {} ({} segments)"
-                        " at depth {}, to value {}, when:"
+                        ("Setting a post-search {} value at path {} ({}"
+                         " segments) at depth {}, to value {}, when:")
                         .format(
                             str(segment_type), str(yaml_path),
                             str(len(yaml_path)), str(depth + 1),
