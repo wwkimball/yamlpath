@@ -9,7 +9,7 @@ from typing import List
 
 class PathSearchMethods(Enum):
     """
-    Supported selfs for searching YAML Path segments.
+    Supported methods for searching YAML Path segments.
 
     These include:
 
@@ -77,7 +77,7 @@ class PathSearchMethods(Enum):
 
     @staticmethod
     def get_operators() -> List[str]:
-        """Return the full list of suppoerted symbolic search operators."""
+        """Return the full list of supported symbolic search operators."""
         return [str(o) for o in PathSearchMethods]
 
     @staticmethod

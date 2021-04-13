@@ -8,11 +8,12 @@ from typing import Any, Dict, Generator, List, Union
 
 from yamlpath.common import Anchors, Nodes, Searches
 from yamlpath import YAMLPath
-from yamlpath.path import SearchTerms, CollectorTerms
+from yamlpath.path import SearchKeywordTerms, SearchTerms, CollectorTerms
 from yamlpath.wrappers import ConsolePrinter, NodeCoords
 from yamlpath.exceptions import YAMLPathException
 from yamlpath.enums import (
     YAMLValueFormats,
+    PathSearchKeywords,
     PathSegmentTypes,
     CollectorOperators,
     PathSeperators,
@@ -605,6 +606,13 @@ class Processor:
                 data, yaml_path, segment_index,
                 translated_path=translated_path)
         elif (
+                segment_type == PathSegmentTypes.KEYWORD_SEARCH
+                and isinstance(stripped_attrs, SearchKeywordTerms)
+        ):
+            node_coords = self._get_nodes_by_keyword_search(
+                data, stripped_attrs, parent=parent, parentref=parentref,
+                traverse_lists=traverse_lists, translated_path=translated_path)
+        elif (
                 segment_type == PathSegmentTypes.SEARCH
                 and isinstance(stripped_attrs, SearchTerms)
         ):
@@ -842,6 +850,77 @@ class Processor:
                 elif (hasattr(val, "anchor")
                       and stripped_attrs == val.anchor.value):
                     yield NodeCoords(val, data, key, next_translated_path)
+
+    def _get_nodes_by_keyword_search(
+            self, data: Any, terms: SearchKeywordTerms, **kwargs: Any
+    ) -> Generator[NodeCoords, None, None]:
+        """
+        Perform a search identified by a keyword and its parameters.
+
+        Parameters:
+        1. data (Any) The parsed YAML data to process
+        2. terms (SearchKeywordTerms) The search terms
+
+        Keyword Arguments:
+        * parent (ruamel.yaml node) The parent node from which this query
+          originates
+        * parentref (Any) The Index or Key of data within parent
+        * traverse_lists (Boolean) Indicate whether searches against lists are
+          permitted to automatically traverse into the list; Default=True
+
+        Returns:  (Generator[NodeCoords, None, None]) Each NodeCoords as they
+        are matched
+
+        Raises:  N/A
+        """
+        self.logger.debug(
+            "Seeking KEYWORD_SEARCH nodes matching {} in data:".format(terms),
+            data=data,
+            prefix="Processor::_get_nodes_by_keyword_search:  ")
+
+        parent = kwargs.pop("parent", None)
+        parentref = kwargs.pop("parentref", None)
+        traverse_lists = kwargs.pop("traverse_lists", True)
+        translated_path = kwargs.pop("translated_path", YAMLPath(""))
+        invert = terms.inverted
+        keyword = terms.keyword
+        parameters = terms.parameters
+        matches = False
+
+        if keyword is PathSearchKeywords.HAS_CHILD:
+            # Against a map, this will return nodes which have an immediate
+            # child key exactly named as per parameters.  When inverted, only
+            # parents with no such key are yielded.
+            if isinstance(data, dict):
+                child_present = parameters in data
+                if (
+                    (invert and not child_present) or
+                    (child_present and not invert)
+                ):
+                    self.logger.debug(
+                        "Yielding dictionary with child keyword-matched"
+                        " against '{}':".format(parameters),
+                        data=data,
+                        prefix="Processor::_get_nodes_by_search:  ")
+                    yield NodeCoords(
+                        data, parent, parentref,
+                        translated_path)
+
+            # Against a list, this will merely require an exact match between
+            # parameters and any list elements.  When inverted, every
+            # non-matching element is yielded.
+            elif isinstance(data, list):
+                if not traverse_lists:
+                    self.logger.debug(
+                        "Processor::_get_nodes_by_keyword_search:  Refusing to"
+                        " traverse a list.")
+                    return
+
+            # Against an AoH, this will scan each element's immediate children,
+            # treating and yielding as if this search were performed directly
+            # against each map in the list.
+        else:
+            raise NotImplementedError
 
     # pylint: disable=too-many-statements
     def _get_nodes_by_search(

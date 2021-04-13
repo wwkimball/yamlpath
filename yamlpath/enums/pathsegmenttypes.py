@@ -23,6 +23,9 @@ class PathSegmentTypes(Enum):
     `INDEX`
         A list element index.
 
+    `KEYWORD_SEARCH`
+        A search based on PathSearchKeywords.
+
     `KEY`
         A dictionary key name.
 
@@ -41,3 +44,4 @@ class PathSegmentTypes(Enum):
     KEY = auto()
     SEARCH = auto()
     TRAVERSE = auto()
+    KEYWORD_SEARCH = auto()

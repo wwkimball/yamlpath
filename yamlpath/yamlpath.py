@@ -10,11 +10,12 @@ from yamlpath.types import PathSegment
 from yamlpath.exceptions import YAMLPathException
 from yamlpath.enums import (
     PathSegmentTypes,
+    PathSearchKeywords,
     PathSearchMethods,
     PathSeperators,
     CollectorOperators,
 )
-from yamlpath.path import SearchTerms, CollectorTerms
+from yamlpath.path import SearchKeywordTerms, SearchTerms, CollectorTerms
 
 
 class YAMLPath:
@@ -268,6 +269,7 @@ class YAMLPath:
         search_inverted: bool = False
         search_method: Optional[PathSearchMethods] = None
         search_attr: str = ""
+        search_keyword: Optional[PathSearchKeywords] = None
         seeking_regex_delim: bool = False
         capturing_regex: bool = False
         pathsep: str = str(self.seperator)
@@ -384,6 +386,25 @@ class YAMLPath:
                     continue
 
             elif char == "(":
+                if demarc_count > 0 and demarc_stack[-1] == "[" and segment_id:
+                    if PathSearchKeywords.is_keyword(segment_id):
+                        demarc_stack.append(char)
+                        demarc_count += 1
+                        segment_type = PathSegmentTypes.KEYWORD_SEARCH
+                        search_keyword = PathSearchKeywords[segment_id.upper()]
+                        segment_id = ""
+                        continue
+
+                    raise YAMLPathException(
+                        ("Unknown search keyword, {}; allowed: {}."
+                         "  Encountered in YAML Path")
+                        .format(
+                            segment_id,
+                            ','.join(PathSearchKeywords.get_keywords())
+                        )
+                        , yaml_path
+                    )
+
                 seeking_collector_operator = False
                 collector_level += 1
                 demarc_stack.append(char)
@@ -394,12 +415,12 @@ class YAMLPath:
                 if collector_level == 1:
                     continue
 
-            elif collector_level > 0:
-                if (
-                        demarc_count > 0
-                        and char == ")"
-                        and demarc_stack[-1] == "("
-                ):
+            if (
+                    demarc_count > 0
+                    and char == ")"
+                    and demarc_stack[-1] == "("
+            ):
+                if collector_level > 0:
                     collector_level -= 1
                     demarc_count -= 1
                     demarc_stack.pop()
@@ -412,6 +433,19 @@ class YAMLPath:
                         collector_operator = CollectorOperators.NONE
                         seeking_collector_operator = True
                         continue
+
+                if segment_type is PathSegmentTypes.KEYWORD_SEARCH:
+                    demarc_count -= 1
+                    demarc_stack.pop()
+                    path_segments.append((
+                        segment_type,
+                        SearchKeywordTerms(search_inverted, search_keyword,
+                                           segment_id)
+                    ))
+                    search_inverted = False
+                    search_keyword = None
+                    segment_id = ""
+                    continue
 
             elif demarc_count == 0 and char == "[":
                 # Array INDEX/SLICE or SEARCH
