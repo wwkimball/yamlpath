@@ -746,7 +746,7 @@ class Processor:
 
         Parameters:
         1. data (Any) The parsed YAML data to process
-        2. yaml_path (Path) The YAML Path being processed
+        2. yaml_path (YAMLPath) The YAML Path being processed
         3. segment_index (int) Segment index of the YAML Path to process
 
         Returns:  (Generator[NodeCoords, None, None]) Each NodeCoords as they
@@ -827,7 +827,7 @@ class Processor:
 
         Parameters:
         1. data (Any) The parsed YAML data to process
-        2. yaml_path (Path) The YAML Path being processed
+        2. yaml_path (YAMLPath) The YAML Path being processed
         3. segment_index (int) Segment index of the YAML Path to process
 
         Returns:  (Generator[NodeCoords, None, None]) Each NodeCoords as they
@@ -868,7 +868,7 @@ class Processor:
 
         Parameters:
         1. data (Any) The parsed YAML data to process
-        2. yaml_path (Path) The YAML Path being processed
+        2. yaml_path (YAMLPath) The YAML Path being processed
         3. terms (SearchKeywordTerms) The keyword search terms
 
         Keyword Arguments:
@@ -903,7 +903,7 @@ class Processor:
                 raise YAMLPathException(
                     ("Invalid parameter count to {}; {} required, got {} in"
                      " YAML Path").format(keyword, 1, param_count),
-                     yaml_path)
+                     str(yaml_path))
             match_key = parameters[0]
 
             # Against a map, this will return nodes which have an immediate
@@ -919,7 +919,7 @@ class Processor:
                         "Yielding dictionary with child keyword-matched"
                         " against '{}':".format(match_key),
                         data=data,
-                        prefix="Processor::_get_nodes_by_search:  ")
+                        prefix="Processor::_get_nodes_by_keyword_search:  ")
                     yield NodeCoords(
                         data, parent, parentref,
                         translated_path)
@@ -933,10 +933,13 @@ class Processor:
                         "Processor::_get_nodes_by_keyword_search:  Refusing to"
                         " traverse a list.")
                     return
+                raise NotImplementedError
 
             # Against an AoH, this will scan each element's immediate children,
             # treating and yielding as if this search were performed directly
             # against each map in the list.
+            else:
+                raise NotImplementedError
         else:
             raise NotImplementedError
 
@@ -1096,7 +1099,7 @@ class Processor:
 
         Parameters:
         1. data (ruamel.yaml data) The parsed YAML data to process
-        2. yaml_path (Path) The YAML Path being processed
+        2. yaml_path (YAMLPath) The YAML Path being processed
         3. segment_index (int) Segment index of the YAML Path to process
         4. terms (CollectorTerms) The collector terms
 
@@ -1356,7 +1359,7 @@ class Processor:
 
         Parameters:
         1. data (Any) The parsed YAML data to process
-        2. yaml_path (Path) The pre-parsed YAML Path to follow
+        2. yaml_path (YAMLPath) The pre-parsed YAML Path to follow
         3. depth (int) Index within yaml_path to process; default=0
         4. parent (ruamel.yaml node) The parent node from which this query
            originates
@@ -1462,7 +1465,7 @@ class Processor:
 
         Parameters:
         1. data (Any) The parsed YAML data to process
-        2. yaml_path (Path) The pre-parsed YAML Path to follow
+        2. yaml_path (YAMLPath) The pre-parsed YAML Path to follow
         3. value (Any) The value to assign to the element
         4. depth (int) For recursion, this identifies which segment of
            yaml_path to evaluate; default=0
@@ -1498,6 +1501,7 @@ class Processor:
             prior_was_search = False
             if depth > 0:
                 prior_was_search = segments[depth - 1][0] in [
+                    PathSegmentTypes.KEYWORD_SEARCH,
                     PathSegmentTypes.SEARCH,
                     PathSegmentTypes.TRAVERSE
                 ]
@@ -1531,6 +1535,7 @@ class Processor:
             if (
                     matched_nodes < 1
                     and segment_type is not PathSegmentTypes.SEARCH
+                    and segment_type is not PathSegmentTypes.KEYWORD_SEARCH
             ):
                 # Add the missing element
                 self.logger.debug(

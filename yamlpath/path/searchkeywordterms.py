@@ -12,7 +12,7 @@ class SearchKeywordTerms:
     """YAML path Keyword Search segment terms."""
 
     def __init__(self, inverted: bool, keyword: PathSearchKeywords,
-                 parameters: List[str]) -> None:
+                 parameters: str) -> None:
         """
         Instantiate a Keyword Search Term segment.
 
@@ -60,10 +60,8 @@ class SearchKeywordTerms:
         return self._keyword
 
     @property
-    def parameters(self) -> str:
-        """
-        Accessor for the parameters being fed to the search operation.
-        """
+    def parameters(self) -> List[str]:
+        """Accessor for the parameters being fed to the search operation."""
         if self._parameters_parsed:
             return self._lparameters
 

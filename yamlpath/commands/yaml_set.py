@@ -28,7 +28,7 @@ from yamlpath.enums import YAMLValueFormats, PathSeperators
 from yamlpath.eyaml.exceptions import EYAMLCommandException
 from yamlpath.eyaml.enums import EYAMLOutputFormats
 from yamlpath.eyaml import EYAMLProcessor
-from yamlpath.wrappers import ConsolePrinter
+from yamlpath.wrappers import ConsolePrinter, NodeCoords
 
 def processcli():
     """Process command-line arguments."""
@@ -584,12 +584,9 @@ def main():
         except EYAMLCommandException as ex:
             log.critical(ex, 2)
     elif has_new_value:
-        try:
-            processor.set_value(
-                change_path, new_value, value_format=args.format,
-                mustexist=must_exist, tag=args.tag)
-        except YAMLPathException as ex:
-            log.critical(ex, 1)
+        change_node: NodeCoords = None
+        for change_node in change_node_coordinates:
+            change_node.parent[change_node.parentref] = new_value
     elif args.tag:
         processor.tag_gathered_nodes(change_node_coordinates, args.tag)
 
