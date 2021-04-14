@@ -77,6 +77,13 @@ class Processor:
         elif pathsep is not PathSeperators.AUTO:
             yaml_path.seperator = pathsep
 
+        self.logger.debug(
+            "Processing YAML Path:",
+            prefix="Processor::get_nodes:  ", data={
+                'path': yaml_path,
+                'segments': yaml_path.escaped
+            })
+
         if mustexist:
             matched_nodes: int = 0
             for node_coords in self._get_required_nodes(self.data, yaml_path):

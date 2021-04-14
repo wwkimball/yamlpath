@@ -276,6 +276,7 @@ class YAMLPath:
         collector_level: int = 0
         collector_operator: CollectorOperators = CollectorOperators.NONE
         seeking_collector_operator: bool = False
+        next_char_must_be = None
 
         # Empty paths yield empty queues
         if not yaml_path:
@@ -291,6 +292,8 @@ class YAMLPath:
         # pylint: disable=locally-disabled,too-many-nested-blocks
         for char in yaml_path:
             demarc_count = len(demarc_stack)
+            if next_char_must_be and char == next_char_must_be:
+                next_char_must_be = None
 
             if escape_next:
                 # Pass-through; capture this escaped character
@@ -350,6 +353,11 @@ class YAMLPath:
                 elif char == '-':
                     collector_operator = CollectorOperators.SUBTRACTION
                 continue
+
+            elif next_char_must_be and char != next_char_must_be:
+                raise YAMLPathException(
+                    "Invalid YAML Path at {}, which must be {} in YAML Path"
+                    .format(char, next_char_must_be), yaml_path)
 
             elif char in ['"', "'"]:
                 # Found a string demarcation mark
@@ -437,15 +445,7 @@ class YAMLPath:
                 if segment_type is PathSegmentTypes.KEYWORD_SEARCH:
                     demarc_count -= 1
                     demarc_stack.pop()
-                    path_segments.append((
-                        segment_type,
-                        SearchKeywordTerms(search_inverted, search_keyword,
-                                           segment_id)
-                    ))
-                    search_inverted = False
-                    search_keyword = None
-                    segment_id = ""
-                    segment_type = None
+                    next_char_must_be = "]"
                     continue
 
             elif demarc_count == 0 and char == "[":
@@ -592,7 +592,7 @@ class YAMLPath:
                     and char == "]"
                     and demarc_stack[-1] == "["
             ):
-                # Store the INDEX, SLICE, or SEARCH parameters
+                # Store the INDEX, SLICE, SEARCH, or KEYWORD_SEARCH parameters
                 if (
                         segment_type is PathSegmentTypes.INDEX
                         and ':' not in segment_id
@@ -621,6 +621,15 @@ class YAMLPath:
                         SearchTerms(search_inverted, search_method,
                                     search_attr, segment_id)
                     ))
+                elif (
+                    segment_type is PathSegmentTypes.KEYWORD_SEARCH
+                    and search_keyword
+                ):
+                    path_segments.append((
+                        segment_type,
+                        SearchKeywordTerms(search_inverted, search_keyword,
+                                           segment_id)
+                    ))
                 else:
                     path_segments.append((segment_type, segment_id))
 
@@ -629,6 +638,8 @@ class YAMLPath:
                 demarc_stack.pop()
                 demarc_count -= 1
                 search_method = None
+                search_inverted = False
+                search_keyword = None
                 continue
 
             elif demarc_count < 1 and char == pathsep:
@@ -792,8 +803,19 @@ class YAMLPath:
                     ppath += "&{}".format(segment_attrs)
             elif segment_type == PathSegmentTypes.KEYWORD_SEARCH:
                 ppath += str(segment_attrs)
-            elif segment_type == PathSegmentTypes.SEARCH:
-                ppath += str(segment_attrs)
+            elif (segment_type == PathSegmentTypes.SEARCH
+                  and isinstance(segment_attrs, SearchTerms)):
+                terms: SearchTerms = segment_attrs
+                if (terms.method == PathSearchMethods.REGEX
+                    and terms.attribute == "."
+                    and terms.term == ".*"
+                    and not terms.inverted
+                ):
+                    if add_sep:
+                        ppath += pathsep
+                    ppath += "*"
+                else:
+                    ppath += str(segment_attrs)
             elif segment_type == PathSegmentTypes.COLLECTOR:
                 ppath += str(segment_attrs)
             elif segment_type == PathSegmentTypes.TRAVERSE:

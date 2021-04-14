@@ -14,6 +14,7 @@ Requires an object on init which has the following properties:
 Copyright 2018, 2019, 2020 William W. Kimball, Jr. MBA MSIS
 """
 import sys
+from collections import deque
 from typing import Any, Dict, Generator, List, Set, Tuple, Union
 
 from ruamel.yaml.comments import (
@@ -231,7 +232,7 @@ class ConsolePrinter:
                 data, prefix=prefix, **kwargs
             ):
                 yield line
-        elif isinstance(data, (list, set, tuple)):
+        elif isinstance(data, (list, set, tuple, deque)):
             for line in ConsolePrinter._debug_list(
                 data, prefix=prefix, **kwargs
             ):
