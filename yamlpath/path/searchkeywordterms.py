@@ -24,17 +24,13 @@ class SearchKeywordTerms:
         self._inverted: bool = inverted
         self._keyword: PathSearchKeywords = keyword
         self._parameters: str = parameters
+        self._lparameters: List[str] = []
+        self._parameters_parsed: bool = False
 
     def __str__(self) -> str:
         """Get a String representation of this Keyword Search Term."""
         # Replace unescaped spaces with escaped spaces
-        safe_parameters = ", ".join(
-            r"\ ".join(
-                list(map(
-                    lambda ele: ele.replace(" ", r"\ ")
-                    , self.parameters.split(r"\ ")
-                ))
-            ).replace(",", "\\,"))
+        safe_parameters = ", ".join(self.parameters)
 
         return (
             "["
@@ -68,4 +64,31 @@ class SearchKeywordTerms:
         """
         Accessor for the parameters being fed to the search operation.
         """
-        return self._parameters
+        if self._parameters_parsed:
+            return self._lparameters
+
+        param = ""
+        params = []
+        escape_next = False
+        for char in self._parameters:
+            if escape_next:
+                escape_next = False
+
+            elif char == "\\":
+                escape_next = True
+                continue
+
+            elif char == ",":
+                params.append(param)
+                param = ""
+                continue
+
+            param = param + char
+
+        # Add the last parameter, if there is one
+        if param:
+            params.append(param)
+
+        self._lparameters = params
+        self._parameters_parsed = True
+        return self._lparameters

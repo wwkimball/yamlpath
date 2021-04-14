@@ -610,8 +610,9 @@ class Processor:
                 and isinstance(stripped_attrs, SearchKeywordTerms)
         ):
             node_coords = self._get_nodes_by_keyword_search(
-                data, stripped_attrs, parent=parent, parentref=parentref,
-                traverse_lists=traverse_lists, translated_path=translated_path)
+                data, yaml_path, stripped_attrs, parent=parent,
+                parentref=parentref, traverse_lists=traverse_lists,
+                translated_path=translated_path)
         elif (
                 segment_type == PathSegmentTypes.SEARCH
                 and isinstance(stripped_attrs, SearchTerms)
@@ -852,14 +853,16 @@ class Processor:
                     yield NodeCoords(val, data, key, next_translated_path)
 
     def _get_nodes_by_keyword_search(
-            self, data: Any, terms: SearchKeywordTerms, **kwargs: Any
+            self, data: Any, yaml_path: YAMLPath, terms: SearchKeywordTerms,
+            **kwargs: Any
     ) -> Generator[NodeCoords, None, None]:
         """
         Perform a search identified by a keyword and its parameters.
 
         Parameters:
         1. data (Any) The parsed YAML data to process
-        2. terms (SearchKeywordTerms) The search terms
+        2. yaml_path (Path) The YAML Path being processed
+        3. terms (SearchKeywordTerms) The keyword search terms
 
         Keyword Arguments:
         * parent (ruamel.yaml node) The parent node from which this query
@@ -885,21 +888,29 @@ class Processor:
         invert = terms.inverted
         keyword = terms.keyword
         parameters = terms.parameters
-        matches = False
 
         if keyword is PathSearchKeywords.HAS_CHILD:
+            # There must be exactly one parameter
+            param_count = len(parameters)
+            if param_count != 1:
+                raise YAMLPathException(
+                    ("Invalid parameter count to {}; {} required, got {} in"
+                     " YAML Path").format(keyword, 1, param_count),
+                     yaml_path)
+            match_key = parameters[0]
+
             # Against a map, this will return nodes which have an immediate
             # child key exactly named as per parameters.  When inverted, only
             # parents with no such key are yielded.
             if isinstance(data, dict):
-                child_present = parameters in data
+                child_present = match_key in data
                 if (
                     (invert and not child_present) or
                     (child_present and not invert)
                 ):
                     self.logger.debug(
                         "Yielding dictionary with child keyword-matched"
-                        " against '{}':".format(parameters),
+                        " against '{}':".format(match_key),
                         data=data,
                         prefix="Processor::_get_nodes_by_search:  ")
                     yield NodeCoords(
@@ -1376,8 +1387,7 @@ class Processor:
                 translated_path=translated_path
             ):
                 self.logger.debug(
-                    "Found node of type {} at <{}>{} in the data and recursing"
-                    " into it..."
+                    "Got data of type {} at <{}>{} in the data."
                     .format(
                         type(segment_node_coords.node
                              if hasattr(segment_node_coords, "node")
@@ -1400,11 +1410,17 @@ class Processor:
                     # such, it must be treated as a virtual DOM element that
                     # cannot itself be parented to the real DOM, though each
                     # of its elements has a real parent.
+                    self.logger.debug(
+                        "Processor::_get_required_nodes:  Got a list:",
+                        data=segment_node_coords)
                     for subnode_coord in self._get_required_nodes(
                             segment_node_coords, yaml_path, depth + 1,
                             translated_path=translated_path):
                         yield subnode_coord
                 else:
+                    self.logger.debug(
+                        "Recursing into the retrieved data...",
+                        prefix="Processor::_get_required_nodes:  ")
                     for subnode_coord in self._get_required_nodes(
                             segment_node_coords.node, yaml_path, depth + 1,
                             parent=segment_node_coords.parent,

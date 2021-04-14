@@ -445,6 +445,7 @@ class YAMLPath:
                     search_inverted = False
                     search_keyword = None
                     segment_id = ""
+                    segment_type = None
                     continue
 
             elif demarc_count == 0 and char == "[":
@@ -789,6 +790,8 @@ class YAMLPath:
                     ppath += "[&{}]".format(segment_attrs)
                 else:
                     ppath += "&{}".format(segment_attrs)
+            elif segment_type == PathSegmentTypes.KEYWORD_SEARCH:
+                ppath += str(segment_attrs)
             elif segment_type == PathSegmentTypes.SEARCH:
                 ppath += str(segment_attrs)
             elif segment_type == PathSegmentTypes.COLLECTOR:
