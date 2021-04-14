@@ -178,12 +178,12 @@ boolean: false
         # Explicit --mustexist
         result = script_runner.run(self.command, "--change=key2", "--random=1", "--mustexist", yaml_file)
         assert not result.success, result.stderr
-        assert "Required YAML Path does not match any nodes" in result.stderr
+        assert "No nodes matched required YAML Path" in result.stderr
 
         # Implicit --mustexist via --saveto
         result = script_runner.run(self.command, "--change=key3", "--random=1", "--saveto=save_here", yaml_file)
         assert not result.success, result.stderr
-        assert "Required YAML Path does not match any nodes" in result.stderr
+        assert "No nodes matched required YAML Path" in result.stderr
 
     def test_checked_replace(self, script_runner, tmp_path_factory):
         content = """---
