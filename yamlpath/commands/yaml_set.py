@@ -391,6 +391,7 @@ def _get_nodes(log, processor, yaml_path, **kwargs):
     """Gather requested nodes."""
     must_exist = kwargs.pop("must_exist", False)
     default_value = kwargs.pop("default_value", " ")
+    ignore_fail = kwargs.pop("ignore_fail", False)
     gathered_nodes = []
 
     try:
@@ -402,6 +403,11 @@ def _get_nodes(log, processor, yaml_path, **kwargs):
                 data=node_coordinate, prefix="yaml_set::_get_nodes:  ")
             gathered_nodes.append(node_coordinate)
     except YAMLPathException as ex:
+        if ignore_fail:
+            log.debug(
+                "Ignoring failure to gather nodes due to:  {}".format(ex),
+                prefix="yaml_set::_get_nodes:  ")
+            return []
         log.critical(ex, 1)
 
     log.debug(
@@ -478,7 +484,7 @@ def main():
         log, yaml_data, binary=args.eyaml,
         publickey=args.publickey, privatekey=args.privatekey)
     change_node_coordinates = _get_nodes(
-        log, processor, change_path, must_exist=must_exist,
+        log, processor, change_path, must_exist=True, ignore_fail=True,
         default_value=("" if new_value else " "))
 
     old_format = YAMLValueFormats.DEFAULT
