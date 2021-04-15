@@ -1262,6 +1262,10 @@ devices:
     type: tablet
     os: null
     platform: java
+  R5:
+    type: tablet
+    os: ""
+    platform: objective-c
 """
         yamlout = """---
 devices:
@@ -1279,8 +1283,12 @@ devices:
     os:
   R4:
     type: tablet
-    os: null
+    os:
     platform: java
+  R5:
+    type: tablet
+    os: ""
+    platform: objective-c
 """
         yaml_file = create_temp_yaml_file(tmp_path_factory, yamlin)
         result = script_runner.run(
