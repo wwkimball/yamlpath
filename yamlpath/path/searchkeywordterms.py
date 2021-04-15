@@ -29,15 +29,12 @@ class SearchKeywordTerms:
 
     def __str__(self) -> str:
         """Get a String representation of this Keyword Search Term."""
-        # Replace unescaped spaces with escaped spaces
-        safe_parameters = ", ".join(self.parameters)
-
         return (
             "["
-            + ("!" if self.inverted else "")
-            + str(self.keyword)
+            + ("!" if self._inverted else "")
+            + str(self._keyword)
             + "("
-            + safe_parameters
+            + self._parameters
             + ")]"
         )
 
@@ -66,6 +63,11 @@ class SearchKeywordTerms:
         if self._parameters_parsed:
             return self._lparameters
 
+        if self._parameters is None:
+            self._parameters_parsed = True
+            self._lparameters = []
+            return self._lparameters
+
         param: str = ""
         params: List[str] = []
         escape_next: bool = False
@@ -76,6 +78,7 @@ class SearchKeywordTerms:
             demarc_count = len(demarc_stack)
 
             if escape_next:
+                # Pass-through; capture this escaped character
                 escape_next = False
 
             elif char == "\\":
@@ -84,8 +87,7 @@ class SearchKeywordTerms:
 
             elif (
                     char == " "
-                    and (demarc_count < 1
-                         or demarc_stack[-1] not in ["'", '"'])
+                    and (demarc_count < 1)
             ):
                 # Ignore unescaped, non-demarcated whitespace
                 continue
@@ -98,11 +100,15 @@ class SearchKeywordTerms:
                         # Close a matching pair
                         demarc_stack.pop()
                         demarc_count -= 1
-                        continue
 
-                    # Embed a nested, demarcated component
-                    demarc_stack.append(char)
-                    demarc_count += 1
+                        if demarc_count < 1:
+                            # Final close; seek the next delimiter
+                            continue
+
+                    else:
+                        # Embed a nested, demarcated component
+                        demarc_stack.append(char)
+                        demarc_count += 1
                 else:
                     # Fresh demarcated value
                     demarc_stack.append(char)
