@@ -60,15 +60,21 @@ class SearchKeywordTerms:
         return self._keyword
 
     @property
+    # pylint: disable=locally-disabled,too-many-branches
     def parameters(self) -> List[str]:
         """Accessor for the parameters being fed to the search operation."""
         if self._parameters_parsed:
             return self._lparameters
 
-        param = ""
-        params = []
-        escape_next = False
+        param: str = ""
+        params: List[str] = []
+        escape_next: bool = False
+        demarc_stack: List[str] = []
+
+        # pylint: disable=locally-disabled,too-many-nested-blocks
         for char in self._parameters:
+            demarc_count = len(demarc_stack)
+
             if escape_next:
                 escape_next = False
 
@@ -76,12 +82,45 @@ class SearchKeywordTerms:
                 escape_next = True
                 continue
 
-            elif char == ",":
+            elif (
+                    char == " "
+                    and (demarc_count < 1
+                         or demarc_stack[-1] not in ["'", '"'])
+            ):
+                # Ignore unescaped, non-demarcated whitespace
+                continue
+
+            elif char in ['"', "'"]:
+                # Found a string demarcation mark
+                if demarc_count > 0:
+                    # Already appending to an ongoing demarcated value
+                    if char == demarc_stack[-1]:
+                        # Close a matching pair
+                        demarc_stack.pop()
+                        demarc_count -= 1
+                        continue
+
+                    # Embed a nested, demarcated component
+                    demarc_stack.append(char)
+                    demarc_count += 1
+                else:
+                    # Fresh demarcated value
+                    demarc_stack.append(char)
+                    demarc_count += 1
+                    continue
+
+            elif demarc_count < 1 and char == ",":
                 params.append(param)
                 param = ""
                 continue
 
             param = param + char
+
+        # Check for mismatched demarcations
+        if demarc_count > 0:
+            raise ValueError(
+                "Keyword search parameters contain one or more unmatched"
+                " demarcation symbol(s): {}".format(" ".join(demarc_stack)))
 
         # Add the last parameter, if there is one
         if param:
