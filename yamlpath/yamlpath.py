@@ -420,7 +420,7 @@ class YAMLPath:
                 if collector_level == 1:
                     continue
 
-            if (
+            elif (
                     demarc_count > 0
                     and char == ")"
                     and demarc_stack[-1] == "("
