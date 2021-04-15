@@ -483,8 +483,9 @@ def main():
     processor = EYAMLProcessor(
         log, yaml_data, binary=args.eyaml,
         publickey=args.publickey, privatekey=args.privatekey)
+    ignore_fail = not must_exist
     change_node_coordinates = _get_nodes(
-        log, processor, change_path, must_exist=True, ignore_fail=True,
+        log, processor, change_path, must_exist=True, ignore_fail=ignore_fail,
         default_value=("" if new_value else " "))
 
     old_format = YAMLValueFormats.DEFAULT
