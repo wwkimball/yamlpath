@@ -178,12 +178,12 @@ boolean: false
         # Explicit --mustexist
         result = script_runner.run(self.command, "--change=key2", "--random=1", "--mustexist", yaml_file)
         assert not result.success, result.stderr
-        assert "No nodes matched required YAML Path" in result.stderr
+        assert "Required YAML Path does not match any nodes" in result.stderr
 
         # Implicit --mustexist via --saveto
         result = script_runner.run(self.command, "--change=key3", "--random=1", "--saveto=save_here", yaml_file)
         assert not result.success, result.stderr
-        assert "No nodes matched required YAML Path" in result.stderr
+        assert "Required YAML Path does not match any nodes" in result.stderr
 
     def test_checked_replace(self, script_runner, tmp_path_factory):
         content = """---
@@ -1243,9 +1243,8 @@ egress_key: Following value
             filedat = fhnd.read()
         assert filedat == yamlout
 
-    def test_assign_to_nonexistent_and_empty_nodes(self, script_runner, tmp_path_factory):
+    def test_assign_to_nonexistent_nodes(self, script_runner, tmp_path_factory):
         # Inspiration: https://github.com/wwkimball/yamlpath/issues/107
-        # Test: cat testbed.yaml | yaml-set --change='/devices/*/[os!=~/.+/]/os' --value=generic
         yamlin = """---
 devices:
   R1:
@@ -1286,7 +1285,7 @@ devices:
         yaml_file = create_temp_yaml_file(tmp_path_factory, yamlin)
         result = script_runner.run(
             self.command,
-            "--change=/devices/*/[os!=~/.+/]/os",
+            "--change=/devices/*/[!has_child(os)]/os",
             "--value=generic",
             yaml_file
         )
