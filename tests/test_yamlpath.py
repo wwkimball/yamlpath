@@ -4,7 +4,7 @@ from yamlpath.exceptions import YAMLPathException
 from yamlpath.enums import PathSegmentTypes, PathSeperators
 from yamlpath import YAMLPath
 
-class Test_path_Path():
+class Test_YAMLPath():
     """Tests for the Path class."""
 
     @pytest.mark.parametrize("yamlpath,pathsep,output", [
@@ -32,8 +32,8 @@ class Test_path_Path():
         ("a*f", PathSeperators.AUTO, "[.=~/^a.*f$/]"),
         ("a*f*z", PathSeperators.AUTO, "[.=~/^a.*f.*z$/]"),
         ("a*f*z*", PathSeperators.AUTO, "[.=~/^a.*f.*z.*$/]"),
-        ("*", PathSeperators.AUTO, "[.=~/.*/]"),
-        ("*.*", PathSeperators.AUTO, "[.=~/.*/][.=~/.*/]"),
+        ("*", PathSeperators.AUTO, "*"),
+        ("*.*", PathSeperators.AUTO, "*.*"),
         ("**", PathSeperators.AUTO, "**"),
         ("/**/def", PathSeperators.AUTO, "/**/def"),
         ("abc.**.def", PathSeperators.AUTO, "abc.**.def"),
