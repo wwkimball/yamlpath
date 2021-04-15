@@ -276,7 +276,7 @@ class YAMLPath:
         collector_level: int = 0
         collector_operator: CollectorOperators = CollectorOperators.NONE
         seeking_collector_operator: bool = False
-        next_char_must_be = None
+        next_char_must_be: Optional[str] = None
 
         # Empty paths yield empty queues
         if not yaml_path:
@@ -300,20 +300,17 @@ class YAMLPath:
                 escape_next = False
 
             elif capturing_regex:
-                if char == demarc_stack[-1]:
-                    # Stop the RegEx capture
-                    capturing_regex = False
-                    demarc_stack.pop()
-                    continue
-
                 # Pass-through; capture everything that isn't the present
                 # RegEx delimiter.  This deliberately means users cannot
                 # escape the RegEx delimiter itself should it occur within
                 # the RegEx; thus, users must select a delimiter that won't
                 # appear within the RegEx (which is exactly why the user
                 # gets to choose the delimiter).
-                # pylint: disable=unnecessary-pass
-                pass  # pragma: no cover
+                if char == demarc_stack[-1]:
+                    # Stop the RegEx capture
+                    capturing_regex = False
+                    demarc_stack.pop()
+                    continue
 
             # The escape test MUST come AFTER the RegEx capture test so users
             # won't be forced into "The Backslash Plague".
