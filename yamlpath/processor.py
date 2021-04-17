@@ -6,14 +6,13 @@ Copyright 2018, 2019, 2020 William W. Kimball, Jr. MBA MSIS
 """
 from typing import Any, Dict, Generator, List, Union
 
-from yamlpath.common import Anchors, Nodes, Searches
+from yamlpath.common import Anchors, KeywordSearches, Nodes, Searches
 from yamlpath import YAMLPath
 from yamlpath.path import SearchKeywordTerms, SearchTerms, CollectorTerms
 from yamlpath.wrappers import ConsolePrinter, NodeCoords
 from yamlpath.exceptions import YAMLPathException
 from yamlpath.enums import (
     YAMLValueFormats,
-    PathSearchKeywords,
     PathSegmentTypes,
     CollectorOperators,
     PathSeperators,
@@ -888,60 +887,10 @@ class Processor:
             data=data,
             prefix="Processor::_get_nodes_by_keyword_search:  ")
 
-        parent = kwargs.pop("parent", None)
-        parentref = kwargs.pop("parentref", None)
-        traverse_lists = kwargs.pop("traverse_lists", True)
-        translated_path = kwargs.pop("translated_path", YAMLPath(""))
-        invert = terms.inverted
-        keyword = terms.keyword
-        parameters = terms.parameters
-
-        if keyword is PathSearchKeywords.HAS_CHILD:
-            # There must be exactly one parameter
-            param_count = len(parameters)
-            if param_count != 1:
-                raise YAMLPathException(
-                    ("Invalid parameter count to {}; {} required, got {} in"
-                     " YAML Path").format(keyword, 1, param_count),
-                     str(yaml_path))
-            match_key = parameters[0]
-
-            # Against a map, this will return nodes which have an immediate
-            # child key exactly named as per parameters.  When inverted, only
-            # parents with no such key are yielded.
-            if isinstance(data, dict):
-                child_present = match_key in data
-                if (
-                    (invert and not child_present) or
-                    (child_present and not invert)
-                ):
-                    self.logger.debug(
-                        "Yielding dictionary with child keyword-matched"
-                        " against '{}':".format(match_key),
-                        data=data,
-                        prefix="Processor::_get_nodes_by_keyword_search:  ")
-                    yield NodeCoords(
-                        data, parent, parentref,
-                        translated_path)
-
-            # Against a list, this will merely require an exact match between
-            # parameters and any list elements.  When inverted, every
-            # non-matching element is yielded.
-            elif isinstance(data, list):
-                if not traverse_lists:
-                    self.logger.debug(
-                        "Processor::_get_nodes_by_keyword_search:  Refusing to"
-                        " traverse a list.")
-                    return
-                raise NotImplementedError
-
-            # Against an AoH, this will scan each element's immediate children,
-            # treating and yielding as if this search were performed directly
-            # against each map in the list.
-            else:
-                raise NotImplementedError
-        else:
-            raise NotImplementedError
+        for res_nc in KeywordSearches.search_matches(
+            terms, data, yaml_path, **kwargs
+        ):
+            yield res_nc
 
     # pylint: disable=too-many-statements
     def _get_nodes_by_search(
