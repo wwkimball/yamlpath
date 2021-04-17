@@ -1447,14 +1447,6 @@ class Processor:
             ] = segments[depth][1]
             except_segment = str(unstripped_attrs)
 
-            prior_was_search = False
-            if depth > 0:
-                prior_was_search = segments[depth - 1][0] in [
-                    PathSegmentTypes.KEYWORD_SEARCH,
-                    PathSegmentTypes.SEARCH,
-                    PathSegmentTypes.TRAVERSE
-                ]
-
             self.logger.debug(
                 "Seeking element <{}>{} in data of type {}:"
                 .format(segment_type, except_segment, type(data)),
@@ -1591,21 +1583,6 @@ class Processor:
                             str(yaml_path),
                             except_segment
                         )
-
-                elif prior_was_search and isinstance(parent, (dict, list)):
-                    self.logger.debug(
-                        ("Setting a post-search {} value at path {} ({}"
-                         " segments) at depth {}, to value {}, when:")
-                        .format(
-                            str(segment_type), str(yaml_path),
-                            str(len(yaml_path)), str(depth + 1),
-                            str(value)),
-                        prefix="Processor::_get_optional_nodes:  ",
-                        data={"data": data, "parent": parent,
-                            "parentref": parentref})
-                    parent[parentref] = value
-                    data = value
-                    yield NodeCoords(data, parent, parentref, translated_path)
 
                 else:
                     self.logger.debug(
