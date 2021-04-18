@@ -842,12 +842,38 @@ class YAMLPath:
         if str(prefix) == "/":
             return path
 
-        prefix.seperator = PathSeperators.FSLASH
         path.seperator = PathSeperators.FSLASH
         prefix_str = str(prefix)
         path_str = str(path)
         if path_str.startswith(prefix_str):
             path_str = path_str[len(prefix_str):]
+            return YAMLPath(path_str)
+
+        return path
+
+    @staticmethod
+    def strip_path_suffix(path: "YAMLPath", suffix: "YAMLPath") -> "YAMLPath":
+        """
+        Remove a suffix from a YAML Path.
+
+        Parameters:
+        1. path (YAMLPath) The path from which to remove the suffix.
+        2. suffix (YAMLPath) The suffix to remove.
+
+        Returns:  (YAMLPath) The trimmed YAML Path.
+        """
+        if suffix is None:
+            return path
+
+        suffix.seperator = PathSeperators.FSLASH
+        if str(suffix) == "/":
+            return path
+
+        path.seperator = PathSeperators.FSLASH
+        suffix_str = str(suffix)
+        path_str = str(path)
+        if path_str.endswith(suffix_str):
+            path_str = path_str[:len(path_str) - len(suffix_str)]
             return YAMLPath(path_str)
 
         return path
