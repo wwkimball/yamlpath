@@ -259,7 +259,10 @@ class Nodes:
         wrapped_value = value
 
         try:
-            ast_value = ast.literal_eval(value)
+            cased_value = value
+            if str(value).lower() in ("true", "false"):
+                cased_value = str(value).title()
+            ast_value = ast.literal_eval(cased_value)
         except ValueError:
             ast_value = value
         except SyntaxError:

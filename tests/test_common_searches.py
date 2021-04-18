@@ -12,12 +12,33 @@ class Test_common_searches():
     ###
     # search_matches
     ###
-    def test_search_matches(self):
-        method = PathSearchMethods.CONTAINS
-        needle = "a"
-        haystack = "parents"
-        assert Searches.search_matches(method, needle, haystack) == True
-
+    @pytest.mark.parametrize("match, method, needle, haystack", [
+        (True, PathSearchMethods.CONTAINS, "a", "parents"),
+        (True, PathSearchMethods.ENDS_WITH, "ts", "parents"),
+        (True, PathSearchMethods.EQUALS, "parents", "parents"),
+        (True, PathSearchMethods.EQUALS, 42, 42),
+        (True, PathSearchMethods.EQUALS, "42", 42),
+        (True, PathSearchMethods.EQUALS, 3.14159265385, 3.14159265385),
+        (True, PathSearchMethods.EQUALS, "3.14159265385", 3.14159265385),
+        (True, PathSearchMethods.EQUALS, True, True),
+        (True, PathSearchMethods.EQUALS, "True", True),
+        (True, PathSearchMethods.EQUALS, "true", True),
+        (True, PathSearchMethods.EQUALS, False, False),
+        (True, PathSearchMethods.EQUALS, "False", False),
+        (True, PathSearchMethods.EQUALS, "false", False),
+        (True, PathSearchMethods.GREATER_THAN, 2, 4),
+        (True, PathSearchMethods.GREATER_THAN, "2", 4),
+        (True, PathSearchMethods.GREATER_THAN_OR_EQUAL, 2, 4),
+        (True, PathSearchMethods.GREATER_THAN_OR_EQUAL, "2", 4),
+        (True, PathSearchMethods.LESS_THAN, 4, 2),
+        (True, PathSearchMethods.LESS_THAN, "4", 2),
+        (True, PathSearchMethods.LESS_THAN_OR_EQUAL, 4, 2),
+        (True, PathSearchMethods.LESS_THAN_OR_EQUAL, "4", 2),
+        (True, PathSearchMethods.REGEX, ".+", "a"),
+        (True, PathSearchMethods.STARTS_WITH, "p", "parents")
+    ])
+    def test_search_matches(self, match, method, needle, haystack):
+        assert match == Searches.search_matches(method, needle, haystack)
 
     ###
     # search_anchor
