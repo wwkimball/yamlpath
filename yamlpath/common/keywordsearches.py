@@ -13,6 +13,7 @@ from yamlpath.path import SearchKeywordTerms
 from yamlpath.exceptions import YAMLPathException
 from yamlpath.wrappers import NodeCoords
 from yamlpath import YAMLPath
+import yamlpath.common
 
 class KeywordSearches:
     """Helper methods for common data searching operations."""
@@ -45,10 +46,10 @@ class KeywordSearches:
         **kwargs: Any
     ) -> Generator[NodeCoords, None, None]:
         """Indicate whether data has a named child."""
-        parent = kwargs.pop("parent", None)
-        parentref = kwargs.pop("parentref", None)
-        traverse_lists = kwargs.pop("traverse_lists", True)
-        translated_path = kwargs.pop("translated_path", YAMLPath(""))
+        parent: Any = kwargs.pop("parent", None)
+        parentref: Any = kwargs.pop("parentref", None)
+        traverse_lists: bool = kwargs.pop("traverse_lists", True)
+        translated_path: YAMLPath = kwargs.pop("translated_path", YAMLPath(""))
 
         # There must be exactly one parameter
         param_count = len(parameters)
@@ -83,6 +84,16 @@ class KeywordSearches:
             # Against an AoH, this will scan each element's immediate children,
             # treating and yielding as if this search were performed directly
             # against each map in the list.
+            if yamlpath.common.Nodes.node_is_aoh(data):
+                for idx, ele in enumerate(data):
+                    next_path = translated_path.append("[{}]".format(str(idx)))
+                    for aoh_match in KeywordSearches.has_child(
+                        ele, invert, parameters, yaml_path,
+                        parent=data, parentref=idx, translated_path=next_path,
+                        traverse_lists=traverse_lists
+                    ):
+                        yield aoh_match
+                return
 
             child_present = match_key in data
             if (

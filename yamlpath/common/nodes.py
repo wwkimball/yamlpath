@@ -397,6 +397,21 @@ class Nodes:
         return not isinstance(node, (dict, list, set))
 
     @staticmethod
+    def node_is_aoh(node: Any) -> bool:
+        """Indicate whether a node is an Array-of-Hashes (List of Dicts)."""
+        if node is None:
+            return False
+
+        if not isinstance(node, (list, set)):
+            return False
+
+        for ele in node:
+            if not isinstance(ele, dict):
+                return False
+
+        return True
+
+    @staticmethod
     def tagless_elements(data: list) -> list:
         """Get a copy of a list with all elements stripped of YAML Tags."""
         detagged = []
