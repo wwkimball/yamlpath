@@ -186,3 +186,13 @@ class Test_YAMLPath():
         with pytest.raises(YAMLPathException) as ex:
             str(YAMLPath("abc**"))
         assert -1 < str(ex.value).find("The ** traversal operator has no meaning when combined with other characters")
+
+    def test_parse_bad_following_char(self):
+        with pytest.raises(YAMLPathException) as ex:
+            str(YAMLPath("abc[has_child(def)ghi]"))
+        assert -1 < str(ex.value).find("Invalid YAML Path at g, which must be ]")
+
+    def test_parse_unknown_search_keyword(self):
+        with pytest.raises(YAMLPathException) as ex:
+            str(YAMLPath("abc[unknown_keyword()]"))
+        assert -1 < str(ex.value).find("Unknown search keyword, unknown_keyword")

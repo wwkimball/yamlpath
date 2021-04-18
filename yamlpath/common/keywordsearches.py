@@ -32,7 +32,9 @@ class KeywordSearches:
             nc_matches = KeywordSearches.has_child(
                 haystack, invert, parameters, yaml_path, **kwargs)
         else:
-            raise NotImplementedError
+            raise YAMLPathException(
+                "Unsupported search keyword {} in".format(keyword),
+                str(yaml_path))
 
         for nc_match in nc_matches:
             yield nc_match
@@ -78,6 +80,10 @@ class KeywordSearches:
             if not traverse_lists:
                 return
 
+            # Against an AoH, this will scan each element's immediate children,
+            # treating and yielding as if this search were performed directly
+            # against each map in the list.
+
             child_present = match_key in data
             if (
                 (invert and not child_present) or
@@ -87,9 +93,6 @@ class KeywordSearches:
                     data, parent, parentref,
                     translated_path)
 
-        # Against an AoH, this will scan each element's immediate children,
-        # treating and yielding as if this search were performed directly
-        # against each map in the list.
         else:
             raise YAMLPathException(
                 ("{} data has no child nodes in YAML Path").format(type(data)),

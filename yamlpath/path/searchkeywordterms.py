@@ -72,6 +72,7 @@ class SearchKeywordTerms:
         params: List[str] = []
         escape_next: bool = False
         demarc_stack: List[str] = []
+        demarc_count: int = 0
 
         # pylint: disable=locally-disabled,too-many-nested-blocks
         for char in self._parameters:

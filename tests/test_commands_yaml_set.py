@@ -1293,7 +1293,7 @@ devices:
         yaml_file = create_temp_yaml_file(tmp_path_factory, yamlin)
         result = script_runner.run(
             self.command,
-            "--change=/devices/*/[!has_child(os)]/os",
+            "--change=/devices/*[!has_child(os)]/os",
             "--value=generic",
             yaml_file
         )
