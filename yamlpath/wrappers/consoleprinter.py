@@ -14,7 +14,8 @@ Requires an object on init which has the following properties:
 Copyright 2018, 2019, 2020 William W. Kimball, Jr. MBA MSIS
 """
 import sys
-from typing import Any, Dict, Generator, List, Set, Tuple, Union
+from collections import deque
+from typing import Any, Deque, Dict, Generator, List, Set, Tuple, Union
 
 from ruamel.yaml.comments import (
     CommentedBase,
@@ -231,7 +232,7 @@ class ConsolePrinter:
                 data, prefix=prefix, **kwargs
             ):
                 yield line
-        elif isinstance(data, (list, set, tuple)):
+        elif isinstance(data, (list, set, tuple, deque)):
             for line in ConsolePrinter._debug_list(
                 data, prefix=prefix, **kwargs
             ):
@@ -309,7 +310,7 @@ class ConsolePrinter:
 
     @staticmethod
     def _debug_list(
-        data: Union[List[Any], Tuple[Any, ...], Set[Any]], **kwargs
+        data: Union[List[Any], Set[Any], Tuple[Any, ...], Deque[Any]], **kwargs
     ) -> Generator[str, None, None]:
         """Helper for debug."""
         prefix = kwargs.pop("prefix", "")

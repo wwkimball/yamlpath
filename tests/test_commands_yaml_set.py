@@ -1243,9 +1243,8 @@ egress_key: Following value
             filedat = fhnd.read()
         assert filedat == yamlout
 
-    def test_assign_to_nonexistent_and_empty_nodes(self, script_runner, tmp_path_factory):
-        # Inspiration: https://github.com/wwkimball/yamlpath/issues/107
-        # Test: cat testbed.yaml | yaml-set --change='/devices/*/[os!=~/.+/]/os' --value=generic
+    def test_assign_to_nonexistent_nodes(self, script_runner, tmp_path_factory):
+        # Contributed By:  https://github.com/dwapstra
         yamlin = """---
 devices:
   R1:
@@ -1263,6 +1262,10 @@ devices:
     type: tablet
     os: null
     platform: java
+  R5:
+    type: tablet
+    os: ""
+    platform: objective-c
 """
         yamlout = """---
 devices:
@@ -1280,13 +1283,17 @@ devices:
     os:
   R4:
     type: tablet
-    os: null
+    os:
     platform: java
+  R5:
+    type: tablet
+    os: ""
+    platform: objective-c
 """
         yaml_file = create_temp_yaml_file(tmp_path_factory, yamlin)
         result = script_runner.run(
             self.command,
-            "--change=/devices/*/[os!=~/.+/]/os",
+            "--change=/devices/*[!has_child(os)]/os",
             "--value=generic",
             yaml_file
         )
