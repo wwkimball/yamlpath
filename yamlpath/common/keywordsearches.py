@@ -22,11 +22,11 @@ class KeywordSearches:
         terms: SearchKeywordTerms, haystack: Any, yaml_path: YAMLPath,
         **kwargs: Any
     ) -> Generator[NodeCoords, None, None]:
-        """Performs a keyword search."""
+        """Perform a keyword search."""
         invert: bool = terms.inverted
         keyword: PathSearchKeywords = terms.keyword
         parameters: List[str] = terms.parameters
-        nc_matches: Generator[NodeCoords, None, None] = False
+        nc_matches: Generator[NodeCoords, None, None]
 
         if keyword is PathSearchKeywords.HAS_CHILD:
             nc_matches = KeywordSearches.has_child(
@@ -77,10 +77,20 @@ class KeywordSearches:
         elif isinstance(data, list):
             if not traverse_lists:
                 return
-            raise NotImplementedError
+
+            child_present = match_key in data
+            if (
+                (invert and not child_present) or
+                (child_present and not invert)
+            ):
+                yield NodeCoords(
+                    data, parent, parentref,
+                    translated_path)
 
         # Against an AoH, this will scan each element's immediate children,
         # treating and yielding as if this search were performed directly
         # against each map in the list.
         else:
-            raise NotImplementedError
+            raise YAMLPathException(
+                ("{} data has no child nodes in YAML Path").format(type(data)),
+                str(yaml_path))
