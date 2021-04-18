@@ -4,6 +4,7 @@ Implement Searches, a static library of generally-useful code for searching.
 Copyright 2020 William W. Kimball, Jr. MBA MSIS
 """
 import re
+from ast import literal_eval
 from typing import Any, List
 
 from yamlpath.enums import (
@@ -24,21 +25,28 @@ class Searches:
         method: PathSearchMethods, needle: str, haystack: Any
     ) -> bool:
         """Perform a search."""
+        try:
+            cased_needle = needle
+            lower_needle = str(needle).lower()
+            if lower_needle in ("true", "false"):
+                cased_needle = str(needle).title()
+            typed_needle = literal_eval(cased_needle)
+        except ValueError:
+            typed_needle = needle
+        except SyntaxError:
+            typed_needle = needle
+        needle_type = type(typed_needle)
         matches: bool = False
 
         if method is PathSearchMethods.EQUALS:
-            if isinstance(haystack, int):
-                try:
-                    matches = haystack == int(needle)
-                except ValueError:
-                    matches = False
-            elif isinstance(haystack, float):
-                try:
-                    matches = haystack == float(needle)
-                except ValueError:
-                    matches = False
+            if isinstance(haystack, bool) and needle_type is bool:
+                matches = haystack == typed_needle
+            elif isinstance(haystack, int) and needle_type is int:
+                matches = haystack == typed_needle
+            elif isinstance(haystack, float) and needle_type is float:
+                matches = haystack == typed_needle
             else:
-                matches = haystack == needle
+                matches = str(haystack) == str(needle)
         elif method is PathSearchMethods.STARTS_WITH:
             matches = str(haystack).startswith(needle)
         elif method is PathSearchMethods.ENDS_WITH:

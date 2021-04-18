@@ -6,9 +6,9 @@ Copyright 2018, 2019, 2020 William W. Kimball, Jr. MBA MSIS
 """
 from typing import Any, Dict, Generator, List, Union
 
-from yamlpath.common import Anchors, Nodes, Searches
+from yamlpath.common import Anchors, KeywordSearches, Nodes, Searches
 from yamlpath import YAMLPath
-from yamlpath.path import SearchTerms, CollectorTerms
+from yamlpath.path import SearchKeywordTerms, SearchTerms, CollectorTerms
 from yamlpath.wrappers import ConsolePrinter, NodeCoords
 from yamlpath.exceptions import YAMLPathException
 from yamlpath.enums import (
@@ -75,6 +75,13 @@ class Processor:
             yaml_path = YAMLPath(yaml_path, pathsep)
         elif pathsep is not PathSeperators.AUTO:
             yaml_path.seperator = pathsep
+
+        self.logger.debug(
+            "Processing YAML Path:",
+            prefix="Processor::get_nodes:  ", data={
+                'path': yaml_path,
+                'segments': yaml_path.escaped
+            })
 
         if mustexist:
             matched_nodes: int = 0
@@ -605,6 +612,14 @@ class Processor:
                 data, yaml_path, segment_index,
                 translated_path=translated_path)
         elif (
+                segment_type == PathSegmentTypes.KEYWORD_SEARCH
+                and isinstance(stripped_attrs, SearchKeywordTerms)
+        ):
+            node_coords = self._get_nodes_by_keyword_search(
+                data, yaml_path, stripped_attrs, parent=parent,
+                parentref=parentref, traverse_lists=traverse_lists,
+                translated_path=translated_path)
+        elif (
                 segment_type == PathSegmentTypes.SEARCH
                 and isinstance(stripped_attrs, SearchTerms)
         ):
@@ -730,7 +745,7 @@ class Processor:
 
         Parameters:
         1. data (Any) The parsed YAML data to process
-        2. yaml_path (Path) The YAML Path being processed
+        2. yaml_path (YAMLPath) The YAML Path being processed
         3. segment_index (int) Segment index of the YAML Path to process
 
         Returns:  (Generator[NodeCoords, None, None]) Each NodeCoords as they
@@ -811,7 +826,7 @@ class Processor:
 
         Parameters:
         1. data (Any) The parsed YAML data to process
-        2. yaml_path (Path) The YAML Path being processed
+        2. yaml_path (YAMLPath) The YAML Path being processed
         3. segment_index (int) Segment index of the YAML Path to process
 
         Returns:  (Generator[NodeCoords, None, None]) Each NodeCoords as they
@@ -842,6 +857,40 @@ class Processor:
                 elif (hasattr(val, "anchor")
                       and stripped_attrs == val.anchor.value):
                     yield NodeCoords(val, data, key, next_translated_path)
+
+    def _get_nodes_by_keyword_search(
+            self, data: Any, yaml_path: YAMLPath, terms: SearchKeywordTerms,
+            **kwargs: Any
+    ) -> Generator[NodeCoords, None, None]:
+        """
+        Perform a search identified by a keyword and its parameters.
+
+        Parameters:
+        1. data (Any) The parsed YAML data to process
+        2. yaml_path (YAMLPath) The YAML Path being processed
+        3. terms (SearchKeywordTerms) The keyword search terms
+
+        Keyword Arguments:
+        * parent (ruamel.yaml node) The parent node from which this query
+          originates
+        * parentref (Any) The Index or Key of data within parent
+        * traverse_lists (Boolean) Indicate whether searches against lists are
+          permitted to automatically traverse into the list; Default=True
+
+        Returns:  (Generator[NodeCoords, None, None]) Each NodeCoords as they
+        are matched
+
+        Raises:  N/A
+        """
+        self.logger.debug(
+            "Seeking KEYWORD_SEARCH nodes matching {} in data:".format(terms),
+            data=data,
+            prefix="Processor::_get_nodes_by_keyword_search:  ")
+
+        for res_nc in KeywordSearches.search_matches(
+            terms, data, yaml_path, **kwargs
+        ):
+            yield res_nc
 
     # pylint: disable=too-many-statements
     def _get_nodes_by_search(
@@ -884,6 +933,7 @@ class Processor:
         term = terms.term
         matches = False
         desc_path = YAMLPath(attr)
+        debug_matched = "NO MATCHES YIELDED"
         if isinstance(data, list):
             if not traverse_lists:
                 self.logger.debug(
@@ -908,6 +958,7 @@ class Processor:
                         break
 
                 if (matches and not invert) or (invert and not matches):
+                    debug_matched = "one list match yielded"
                     self.logger.debug(
                         "Yielding list match at index {}:".format(lstidx),
                         data=ele,
@@ -922,6 +973,7 @@ class Processor:
                 for key, val in data.items():
                     matches = Searches.search_matches(method, term, key)
                     if (matches and not invert) or (invert and not matches):
+                        debug_matched = "one dictionary key name match yielded"
                         self.logger.debug(
                             "Yielding dictionary key name match against '{}':"
                             .format(key),
@@ -936,6 +988,7 @@ class Processor:
                 value = data[attr]
                 matches = Searches.search_matches(method, term, value)
                 if (matches and not invert) or (invert and not matches):
+                    debug_matched = "one dictionary attribute match yielded"
                     self.logger.debug(
                         "Yielding dictionary attribute match against '{}':"
                         .format(attr),
@@ -957,16 +1010,29 @@ class Processor:
                     break
 
                 if (matches and not invert) or (invert and not matches):
+                    debug_matched = "one descendant search match yielded"
+                    self.logger.debug(
+                        "Yielding descendant match against '{}':"
+                        .format(attr),
+                        data=data,
+                        prefix="Processor::_get_nodes_by_search:  ")
                     yield NodeCoords(data, parent, parentref, translated_path)
 
         else:
             # Check the passed data itself for a match
             matches = Searches.search_matches(method, term, data)
             if (matches and not invert) or (invert and not matches):
+                debug_matched = "query source data itself yielded"
                 self.logger.debug(
                     "Yielding the queried data itself because it matches.",
                     prefix="Processor::_get_nodes_by_search:  ")
                 yield NodeCoords(data, parent, parentref, translated_path)
+
+        self.logger.debug(
+            "Finished seeking SEARCH nodes matching {} in data with {}:"
+            .format(terms, debug_matched),
+            data=data,
+            prefix="Processor::_get_nodes_by_search:  ")
 
     # pylint: disable=locally-disabled
     def _get_nodes_by_collector(
@@ -982,7 +1048,7 @@ class Processor:
 
         Parameters:
         1. data (ruamel.yaml data) The parsed YAML data to process
-        2. yaml_path (Path) The YAML Path being processed
+        2. yaml_path (YAMLPath) The YAML Path being processed
         3. segment_index (int) Segment index of the YAML Path to process
         4. terms (CollectorTerms) The collector terms
 
@@ -1242,7 +1308,7 @@ class Processor:
 
         Parameters:
         1. data (Any) The parsed YAML data to process
-        2. yaml_path (Path) The pre-parsed YAML Path to follow
+        2. yaml_path (YAMLPath) The pre-parsed YAML Path to follow
         3. depth (int) Index within yaml_path to process; default=0
         4. parent (ruamel.yaml node) The parent node from which this query
            originates
@@ -1280,8 +1346,7 @@ class Processor:
                 translated_path=translated_path
             ):
                 self.logger.debug(
-                    "Found node of type {} at <{}>{} in the data and recursing"
-                    " into it..."
+                    "Got data of type {} at <{}>{} in the data."
                     .format(
                         type(segment_node_coords.node
                              if hasattr(segment_node_coords, "node")
@@ -1304,11 +1369,17 @@ class Processor:
                     # such, it must be treated as a virtual DOM element that
                     # cannot itself be parented to the real DOM, though each
                     # of its elements has a real parent.
+                    self.logger.debug(
+                        "Processor::_get_required_nodes:  Got a list:",
+                        data=segment_node_coords)
                     for subnode_coord in self._get_required_nodes(
                             segment_node_coords, yaml_path, depth + 1,
                             translated_path=translated_path):
                         yield subnode_coord
                 else:
+                    self.logger.debug(
+                        "Recursing into the retrieved data...",
+                        prefix="Processor::_get_required_nodes:  ")
                     for subnode_coord in self._get_required_nodes(
                             segment_node_coords.node, yaml_path, depth + 1,
                             parent=segment_node_coords.parent,
@@ -1343,7 +1414,7 @@ class Processor:
 
         Parameters:
         1. data (Any) The parsed YAML data to process
-        2. yaml_path (Path) The pre-parsed YAML Path to follow
+        2. yaml_path (YAMLPath) The pre-parsed YAML Path to follow
         3. value (Any) The value to assign to the element
         4. depth (int) For recursion, this identifies which segment of
            yaml_path to evaluate; default=0
@@ -1405,12 +1476,15 @@ class Processor:
             if (
                     matched_nodes < 1
                     and segment_type is not PathSegmentTypes.SEARCH
+                    and segment_type is not PathSegmentTypes.KEYWORD_SEARCH
             ):
                 # Add the missing element
                 self.logger.debug(
                     ("Processor::_get_optional_nodes:  Element <{}>{} is"
-                     + " unknown in the data!  Applying default, <{}>{}."
-                    ).format(segment_type, except_segment, type(value), value)
+                     " unknown in the data!  Applying default, <{}>{} to"
+                     " data:"
+                    ).format(segment_type, except_segment, type(value), value),
+                    data=data
                 )
                 if isinstance(data, list):
                     self.logger.debug(
@@ -1509,7 +1583,16 @@ class Processor:
                             str(yaml_path),
                             except_segment
                         )
+
                 else:
+                    self.logger.debug(
+                        "Assuming data is scalar and cannot receive a {}"
+                        " subreference at {} ({}/{}):".format(
+                            str(segment_type), str(yaml_path), str(depth + 1),
+                            str(len(yaml_path))),
+                        prefix="Processor::_get_optional_nodes:  ",
+                        data={"data": data, "parent": parent,
+                            "parentref": parentref, "(default_)value": value})
                     raise YAMLPathException(
                         "Cannot add {} subreference to scalars".format(
                             str(segment_type)

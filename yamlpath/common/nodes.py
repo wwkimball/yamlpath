@@ -259,7 +259,10 @@ class Nodes:
         wrapped_value = value
 
         try:
-            ast_value = ast.literal_eval(value)
+            cased_value = value
+            if str(value).lower() in ("true", "false"):
+                cased_value = str(value).title()
+            ast_value = ast.literal_eval(cased_value)
         except ValueError:
             ast_value = value
         except SyntaxError:
@@ -392,6 +395,21 @@ class Nodes:
     def node_is_leaf(node: Any) -> bool:
         """Indicate whether a node is a leaf (Scalar data)."""
         return not isinstance(node, (dict, list, set))
+
+    @staticmethod
+    def node_is_aoh(node: Any) -> bool:
+        """Indicate whether a node is an Array-of-Hashes (List of Dicts)."""
+        if node is None:
+            return False
+
+        if not isinstance(node, (list, set)):
+            return False
+
+        for ele in node:
+            if not isinstance(ele, dict):
+                return False
+
+        return True
 
     @staticmethod
     def tagless_elements(data: list) -> list:

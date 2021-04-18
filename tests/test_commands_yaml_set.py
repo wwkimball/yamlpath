@@ -1242,3 +1242,63 @@ egress_key: Following value
         with open(yaml_file, 'r') as fhnd:
             filedat = fhnd.read()
         assert filedat == yamlout
+
+    def test_assign_to_nonexistent_nodes(self, script_runner, tmp_path_factory):
+        # Contributed By:  https://github.com/dwapstra
+        yamlin = """---
+devices:
+  R1:
+    os: ios
+    type: router
+    platform: asr1k
+  R2:
+    type: switch
+    platform: cat3k
+  R3:
+    type: access-point
+    platform: wrt
+    os:
+  R4:
+    type: tablet
+    os: null
+    platform: java
+  R5:
+    type: tablet
+    os: ""
+    platform: objective-c
+"""
+        yamlout = """---
+devices:
+  R1:
+    os: ios
+    type: router
+    platform: asr1k
+  R2:
+    type: switch
+    platform: cat3k
+    os: generic
+  R3:
+    type: access-point
+    platform: wrt
+    os:
+  R4:
+    type: tablet
+    os:
+    platform: java
+  R5:
+    type: tablet
+    os: ""
+    platform: objective-c
+"""
+        yaml_file = create_temp_yaml_file(tmp_path_factory, yamlin)
+        result = script_runner.run(
+            self.command,
+            "--change=/devices/*[!has_child(os)]/os",
+            "--value=generic",
+            yaml_file
+        )
+        assert result.success, result.stderr
+
+        with open(yaml_file, 'r') as fhnd:
+            filedat = fhnd.read()
+        assert filedat == yamlout
