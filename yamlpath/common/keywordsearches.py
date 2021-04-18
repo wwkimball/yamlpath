@@ -41,6 +41,7 @@ class KeywordSearches:
             yield nc_match
 
     @staticmethod
+    # pylint: disable=locally-disabled,too-many-locals
     def has_child(
         data: Any, invert: bool, parameters: List[str], yaml_path: YAMLPath,
         **kwargs: Any

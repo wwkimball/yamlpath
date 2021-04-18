@@ -1244,7 +1244,7 @@ egress_key: Following value
         assert filedat == yamlout
 
     def test_assign_to_nonexistent_nodes(self, script_runner, tmp_path_factory):
-        # Inspiration: https://github.com/wwkimball/yamlpath/issues/107
+        # Contributed By:  https://github.com/dwapstra
         yamlin = """---
 devices:
   R1:

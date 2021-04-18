@@ -174,3 +174,82 @@ nullstring: "null"
         for line in result.stdout.splitlines():
             assert line == results[match_index]
             match_index += 1
+
+    def test_get_only_aoh_nodes_without_named_child(self, script_runner, tmp_path_factory):
+        content = """---
+items:
+  - - alpha
+    - bravo
+    - charlie
+  - - alpha
+    - charlie
+    - delta
+  - - alpha
+    - bravo
+    - delta
+  - - bravo
+    - charlie
+    - delta
+"""
+        results = [
+            "alpha",
+            "charlie",
+            "delta"
+        ]
+
+        yaml_file = create_temp_yaml_file(tmp_path_factory, content)
+        result = script_runner.run(self.command, "--query=/items/*[!has_child(bravo)]*", yaml_file)
+        assert result.success, result.stderr
+
+        match_index = 0
+        for line in result.stdout.splitlines():
+            assert line == results[match_index]
+            match_index += 1
+
+    def test_get_only_aoh_nodes_with_named_child(self, script_runner, tmp_path_factory):
+        content = """---
+products:
+  - name: something
+    price: 0.99
+    weight: 0.75
+    recalled: false
+  - name: other
+    price: 9.99
+    weight: 2.25
+    dimensions:
+      width: 1
+      height: 1
+      depth: 1
+  - name: moar
+    weight: 100
+    dimensions:
+      width: 100
+      height: 100
+      depth: 100
+  - name: less
+    price: 5
+    dimensions:
+      width: 5
+      height: 5
+  - name: bad
+    price: 0
+    weight: 4
+    dimensions:
+      width: 13
+      height: 4
+      depth: 7
+    recalled: true
+"""
+        results = [
+            "something",
+            "bad",
+        ]
+
+        yaml_file = create_temp_yaml_file(tmp_path_factory, content)
+        result = script_runner.run(self.command, "--query=/products[has_child(recalled)]/name", yaml_file)
+        assert result.success, result.stderr
+
+        match_index = 0
+        for line in result.stdout.splitlines():
+            assert line == results[match_index]
+            match_index += 1

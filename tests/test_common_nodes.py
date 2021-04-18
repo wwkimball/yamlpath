@@ -57,3 +57,19 @@ class Test_common_nodes():
     ###
     def test_tagless_value_syntax_error(self):
         assert "[abc" == Nodes.tagless_value("[abc")
+
+
+    ###
+    # node_is_aoh
+    ###
+    def test_aoh_node_is_none(self):
+        assert False == Nodes.node_is_aoh(None)
+
+    def test_aoh_node_is_not_list(self):
+        assert False == Nodes.node_is_aoh({"key": "value"})
+
+    def test_aoh_is_inconsistent(self):
+        assert False == Nodes.node_is_aoh([
+            {"key": "value"},
+            None
+        ])
