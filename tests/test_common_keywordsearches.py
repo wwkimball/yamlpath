@@ -33,3 +33,12 @@ class Test_common_keywordsearches():
                 {},
                 YAMLPath("/")
             ))
+
+    def test_has_child_invalid_node(self):
+        with pytest.raises(YAMLPathException) as ex:
+            nodes = list(KeywordSearches.has_child(
+                "abc: xyz",
+                False,
+                ["wwk"],
+                YAMLPath("")
+            ))

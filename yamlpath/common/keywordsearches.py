@@ -79,9 +79,6 @@ class KeywordSearches:
         # parameters and any list elements.  When inverted, every
         # non-matching element is yielded.
         elif isinstance(data, list):
-            if not traverse_lists:
-                return
-
             # Against an AoH, this will scan each element's immediate children,
             # treating and yielding as if this search were performed directly
             # against each map in the list.
