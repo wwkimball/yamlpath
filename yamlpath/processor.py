@@ -914,6 +914,10 @@ class Processor:
         for res_nc in KeywordSearches.search_matches(
             terms, data, yaml_path, **kwargs
         ):
+            self.logger.debug(
+                "Yielding keyword search match:",
+                data=res_nc,
+                prefix="Processor::_get_nodes_by_keyword_search:  ")
             yield res_nc
 
     # pylint: disable=too-many-statements

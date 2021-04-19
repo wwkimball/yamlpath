@@ -114,6 +114,7 @@ class KeywordSearches:
         **kwargs: Any
     ) -> Generator[NodeCoords, None, None]:
         """Climb back up N parent levels in the data hierarchy."""
+
         parent: Any = kwargs.pop("parent", None)
         parentref: Any = kwargs.pop("parentref", None)
         translated_path: YAMLPath = kwargs.pop("translated_path", YAMLPath(""))
@@ -123,20 +124,20 @@ class KeywordSearches:
         param_count = len(parameters)
         if param_count > 1:
             raise YAMLPathException((
-                "Invalid parameter count to {}; up to {} permitted, got {} in"
-                " YAML Path"
+                "Invalid parameter count to {}([STEPS]); up to {} permitted, "
+                " got {} in YAML Path"
                 ).format(PathSearchKeywords.PARENT, 1, param_count),
                 str(yaml_path))
 
         if invert:
             raise YAMLPathException((
-                "Inversion is meaningless to {}"
+                "Inversion is meaningless to {}([STEPS])"
                 ).format(PathSearchKeywords.PARENT),
                 str(yaml_path))
 
         parent_levels: int = 1
         ancestry_len: int = len(ancestry)
-        steps_max = ancestry_len - 1
+        steps_max = ancestry_len
         if param_count > 0:
             try:
                 parent_levels = int(parameters[0])
@@ -144,15 +145,15 @@ class KeywordSearches:
                 raise YAMLPathException((
                     "Invalid parameter passed to {}([STEPS]), {}; must be"
                     " unset or an integer number indicating how may parent"
-                    " STEPS to climb in"
+                    " STEPS to climb in YAML Path"
                     ).format(PathSearchKeywords.PARENT, parameters[0]),
                     str(yaml_path)) from ex
 
         if parent_levels > steps_max:
             raise YAMLPathException((
-                "Too many STEPS passed to {}([STEPS]) keyword search; only {}"
-                " available in"
-                ).format(PathSearchKeywords.PARENT, steps_max),
+                "Cannot {}([STEPS]) higher than the document root.  {} steps"
+                " requested when {} available in YAML Path"
+                ).format(PathSearchKeywords.PARENT, parent_levels, steps_max),
                 str(yaml_path))
 
         if parent_levels < 1:
@@ -160,10 +161,15 @@ class KeywordSearches:
             yield NodeCoords(
                 data, parent, parentref, translated_path, ancestry)
         else:
-            for _ in range(parent_levels + 1):
+            for _ in range(parent_levels):
                 translated_path.pop()
-                (parent, parentref) = ancestry.pop()
-                data = parent[parentref]
+                (data, _) = ancestry.pop()
+                ancestry_len -= 1
 
-            yield NodeCoords(
+            parentref = ancestry[-1][1] if ancestry_len > 1 else None
+            parent = ancestry[-1][0] if ancestry_len > 1 else None
+
+            parent_nc = NodeCoords(
                 data, parent, parentref, translated_path, ancestry)
+
+            yield parent_nc
