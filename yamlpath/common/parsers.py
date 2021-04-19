@@ -307,7 +307,7 @@ class Parsers:
         support for certain YAML extensions -- like tags -- and some otherwise
         native data-types, like dates.
         """
-        if isinstance(data, CommentedMap):
+        if isinstance(data, (dict, CommentedMap)):
             for i, k in [
                 (idx, key) for idx, key in enumerate(data.keys())
                 if isinstance(key, TaggedScalar)
@@ -317,7 +317,7 @@ class Parsers:
 
             for key, val in data.items():
                 data[key] = Parsers.jsonify_yaml_data(val)
-        elif isinstance(data, CommentedSeq):
+        elif isinstance(data, (list, CommentedSeq)):
             for idx, ele in enumerate(data):
                 data[idx] = Parsers.jsonify_yaml_data(ele)
         elif isinstance(data, TaggedScalar):
