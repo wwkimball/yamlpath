@@ -53,6 +53,7 @@ class KeywordSearches:
         parent: Any = kwargs.pop("parent", None)
         parentref: Any = kwargs.pop("parentref", None)
         translated_path: YAMLPath = kwargs.pop("translated_path", YAMLPath(""))
+        ancestry: List[tuple] = kwargs.pop("ancestry", [])
 
         # There must be exactly one parameter
         param_count = len(parameters)
@@ -74,8 +75,7 @@ class KeywordSearches:
                 (child_present and not invert)
             ):
                 yield NodeCoords(
-                    data, parent, parentref,
-                    translated_path)
+                    data, parent, parentref, translated_path, ancestry)
 
         # Against a list, this will merely require an exact match between
         # parameters and any list elements.  When inverted, every
@@ -100,8 +100,7 @@ class KeywordSearches:
                 (child_present and not invert)
             ):
                 yield NodeCoords(
-                    data, parent, parentref,
-                    translated_path)
+                    data, parent, parentref, translated_path, ancestry)
 
         else:
             raise YAMLPathException(
@@ -109,6 +108,7 @@ class KeywordSearches:
                 str(yaml_path))
 
     @staticmethod
+    # pylint: disable=locally-disabled,too-many-locals
     def parent(
         data: Any, invert: bool, parameters: List[str], yaml_path: YAMLPath,
         **kwargs: Any
@@ -135,39 +135,35 @@ class KeywordSearches:
                 str(yaml_path))
 
         parent_levels: int = 1
-        try:
-            parent_levels = int(parameters[0])
-        except ValueError as ex:
-            raise YAMLPathException((
-                "Invalid parameter passed to {}, {}; must be unset or an"
-                " integer number indicating how may parent levels to climb in"
-                ).format(PathSearchKeywords.PARENT, parameters[0]),
-                str(yaml_path)) from ex
+        ancestry_len: int = len(ancestry)
+        steps_max = ancestry_len - 1
+        if param_count > 0:
+            try:
+                parent_levels = int(parameters[0])
+            except ValueError as ex:
+                raise YAMLPathException((
+                    "Invalid parameter passed to {}([STEPS]), {}; must be"
+                    " unset or an integer number indicating how may parent"
+                    " STEPS to climb in"
+                    ).format(PathSearchKeywords.PARENT, parameters[0]),
+                    str(yaml_path)) from ex
 
-        if parent_levels > len(ancestry):
+        if parent_levels > steps_max:
             raise YAMLPathException((
-                "Invalid parent levels passed to {}; only {} are available in"
-                ).format(PathSearchKeywords.PARENT, len(ancestry)),
-                str(yaml_path)) from ex
+                "Too many STEPS passed to {}([STEPS]) keyword search; only {}"
+                " available in"
+                ).format(PathSearchKeywords.PARENT, steps_max),
+                str(yaml_path))
 
         if parent_levels < 1:
             # parent(0) is the present node
             yield NodeCoords(
-                data, parent, parentref,
-                translated_path)
+                data, parent, parentref, translated_path, ancestry)
         else:
-            ancestor: tuple = ancestry[-parent_levels - 1]
+            for _ in range(parent_levels + 1):
+                translated_path.pop()
+                (parent, parentref) = ancestry.pop()
+                data = parent[parentref]
 
-            if parent_levels == len(ancestry):
-                parent = None
-                parentref = None
-            else:
-                predecessor = ancestry[-parent_levels - 2]
-                parent = predecessor[0]
-                parentref = predecessor[1]
-
-            parent_path = translated_path
-            for _ in range(parent_levels):
-                parent_path = YAMLPath.strip_path_suffix(
-                    parent_path, YAMLPath(parent_path.unescaped[-1][1]))
-            yield NodeCoords(ancestor[0], parent, parentref, parent_path)
+            yield NodeCoords(
+                data, parent, parentref, translated_path, ancestry)

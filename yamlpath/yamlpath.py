@@ -127,6 +127,51 @@ class YAMLPath:
             self.original += "{}{}".format(seperator, segment)
         return self
 
+    def pop(self) -> PathSegment:
+        """
+        Pop the last segment off this YAML Path.
+
+        This mutates the YAML Path and returns the removed segment tuple.
+
+        Returns:  (PathSegment) The removed segment
+        """
+        segments: Deque[PathSegment] = self.unescaped
+        if len(segments) < 1:
+            raise YAMLPathException(
+                "Cannot pop when there are no segments to pop from",
+                str(self))
+
+        popped_queue = deque()
+        popped_segment: PathSegment = segments.pop()
+        popped_queue.append(popped_segment)
+        removable_segment = YAMLPath._stringify_yamlpath_segments(
+            popped_queue, self.seperator)
+        prefixed_segment = "{}{}".format(self.seperator, removable_segment)
+        path_now = self.original
+
+        if path_now.endswith(prefixed_segment):
+            self.original = path_now[0:len(path_now) - len(prefixed_segment)]
+        elif path_now.endswith(removable_segment):
+            self.original = path_now[0:len(path_now) - len(removable_segment)]
+        elif (
+            self.seperator == PathSeperators.FSLASH
+            and path_now.endswith(prefixed_segment[1:])
+        ):
+            self.original = path_now[
+                0:len(path_now) - len(prefixed_segment) + 1]
+        elif (
+            self.seperator == PathSeperators.FSLASH
+            and path_now.endswith(removable_segment[1:])
+        ):
+            self.original = path_now[
+                0:len(path_now) - len(removable_segment) + 1]
+        else:
+            raise YAMLPathException(
+                "Unable to pop unmatchable segment, {}"
+                .format(removable_segment), str(self))
+
+        return popped_segment
+
     @property
     def original(self) -> str:
         """
@@ -152,11 +197,13 @@ class YAMLPath:
 
         Raises:  N/A
         """
-        # Check for empty paths
-        if not str(value).strip():
-            value = ""
+        str_val = str(value)
 
-        self._original = value
+        # Check for empty paths
+        if not str_val.strip():
+            str_val = ""
+
+        self._original = str_val
         self._seperator = PathSeperators.AUTO
         self._unescaped = deque()
         self._escaped = deque()
