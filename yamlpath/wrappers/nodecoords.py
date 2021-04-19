@@ -1,5 +1,5 @@
 """Wrap a node along with its relative coordinates within its DOM."""
-from typing import Any
+from typing import Any, List
 
 from yamlpath import YAMLPath
 
@@ -14,7 +14,8 @@ class NodeCoords:
     """
 
     def __init__(
-        self, node: Any, parent: Any, parentref: Any, path: YAMLPath = None
+        self, node: Any, parent: Any, parentref: Any, path: YAMLPath = None,
+        ancestry: List[tuple] = None
     ) -> None:
         """
         Initialize a new NodeCoords.
@@ -26,6 +27,8 @@ class NodeCoords:
            within `parent` the `node` is located
         4. path (YAMLPath) The YAML Path for this node, as reported by its
            creator process
+        5. ancestry (List[tuple]) Tuples in (parent,parentref) form tracking
+           the hierarchical ancestry of this node through its parent document
 
         Returns: N/A
 
@@ -35,6 +38,7 @@ class NodeCoords:
         self.parent = parent
         self.parentref = parentref
         self.path = path
+        self.ancestry: List[tuple] = [] if ancestry is None else ancestry
 
     def __str__(self) -> str:
         """Get a String representation of this object."""

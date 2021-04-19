@@ -32,6 +32,9 @@ class KeywordSearches:
         if keyword is PathSearchKeywords.HAS_CHILD:
             nc_matches = KeywordSearches.has_child(
                 haystack, invert, parameters, yaml_path, **kwargs)
+        elif keyword is PathSearchKeywords.PARENT:
+            nc_matches = KeywordSearches.parent(
+                haystack, invert, parameters, yaml_path, **kwargs)
         else:
             raise YAMLPathException(
                 "Unsupported search keyword {} in".format(keyword),
@@ -49,7 +52,6 @@ class KeywordSearches:
         """Indicate whether data has a named child."""
         parent: Any = kwargs.pop("parent", None)
         parentref: Any = kwargs.pop("parentref", None)
-        traverse_lists: bool = kwargs.pop("traverse_lists", True)
         translated_path: YAMLPath = kwargs.pop("translated_path", YAMLPath(""))
 
         # There must be exactly one parameter
@@ -87,8 +89,7 @@ class KeywordSearches:
                     next_path = translated_path.append("[{}]".format(str(idx)))
                     for aoh_match in KeywordSearches.has_child(
                         ele, invert, parameters, yaml_path,
-                        parent=data, parentref=idx, translated_path=next_path,
-                        traverse_lists=traverse_lists
+                        parent=data, parentref=idx, translated_path=next_path
                     ):
                         yield aoh_match
                 return
@@ -106,3 +107,67 @@ class KeywordSearches:
             raise YAMLPathException(
                 ("{} data has no child nodes in YAML Path").format(type(data)),
                 str(yaml_path))
+
+    @staticmethod
+    def parent(
+        data: Any, invert: bool, parameters: List[str], yaml_path: YAMLPath,
+        **kwargs: Any
+    ) -> Generator[NodeCoords, None, None]:
+        """Climb back up N parent levels in the data hierarchy."""
+        parent: Any = kwargs.pop("parent", None)
+        parentref: Any = kwargs.pop("parentref", None)
+        translated_path: YAMLPath = kwargs.pop("translated_path", YAMLPath(""))
+        ancestry: List[tuple] = kwargs.pop("ancestry", [])
+
+        # There may be 0 or 1 parameters
+        param_count = len(parameters)
+        if param_count > 1:
+            raise YAMLPathException((
+                "Invalid parameter count to {}; up to {} permitted, got {} in"
+                " YAML Path"
+                ).format(PathSearchKeywords.PARENT, 1, param_count),
+                str(yaml_path))
+
+        if invert:
+            raise YAMLPathException((
+                "Inversion is meaningless to {}"
+                ).format(PathSearchKeywords.PARENT),
+                str(yaml_path))
+
+        parent_levels: int = 1
+        try:
+            parent_levels = int(parameters[0])
+        except ValueError as ex:
+            raise YAMLPathException((
+                "Invalid parameter passed to {}, {}; must be unset or an"
+                " integer number indicating how may parent levels to climb in"
+                ).format(PathSearchKeywords.PARENT, parameters[0]),
+                str(yaml_path)) from ex
+
+        if parent_levels > len(ancestry):
+            raise YAMLPathException((
+                "Invalid parent levels passed to {}; only {} are available in"
+                ).format(PathSearchKeywords.PARENT, len(ancestry)),
+                str(yaml_path)) from ex
+
+        if parent_levels < 1:
+            # parent(0) is the present node
+            yield NodeCoords(
+                data, parent, parentref,
+                translated_path)
+        else:
+            ancestor: tuple = ancestry[-parent_levels - 1]
+
+            if parent_levels == len(ancestry):
+                parent = None
+                parentref = None
+            else:
+                predecessor = ancestry[-parent_levels - 2]
+                parent = predecessor[0]
+                parentref = predecessor[1]
+
+            parent_path = translated_path
+            for _ in range(parent_levels):
+                parent_path = YAMLPath.strip_path_suffix(
+                    parent_path, YAMLPath(parent_path.unescaped[-1][1]))
+            yield NodeCoords(ancestor[0], parent, parentref, parent_path)

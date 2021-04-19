@@ -554,6 +554,7 @@ class Processor:
         * parentref (Any) The Index or Key of data within parent
         * traverse_lists (Boolean) Indicate whether KEY searches against lists
           are permitted to automatically traverse into the list; Default=True
+        * ancestry (List[tuple])
 
         Returns:  (Generator[Any, None, None]) Each node coordinate or list of
         node coordinates as they are matched.  You must check with isinstance()
@@ -564,10 +565,11 @@ class Processor:
             - `NotImplementedError` when the segment indicates an unknown
               PathSegmentTypes value.
         """
-        parent = kwargs.pop("parent", None)
-        parentref = kwargs.pop("parentref", None)
-        traverse_lists = kwargs.pop("traverse_lists", True)
-        translated_path = kwargs.pop("translated_path", YAMLPath(""))
+        parent: Any = kwargs.pop("parent", None)
+        parentref: Any = kwargs.pop("parentref", None)
+        traverse_lists: bool = kwargs.pop("traverse_lists", True)
+        translated_path: YAMLPath = kwargs.pop("translated_path", YAMLPath(""))
+        ancestry: List[tuple] = kwargs.pop("ancestry", [])
         if data is None:
             self.logger.debug(
                 "Bailing out on None data at parentref, {}, of parent:"
@@ -602,15 +604,15 @@ class Processor:
         if segment_type == PathSegmentTypes.KEY:
             node_coords = self._get_nodes_by_key(
                 data, yaml_path, segment_index, traverse_lists=traverse_lists,
-                translated_path=translated_path)
+                translated_path=translated_path, ancestry=ancestry)
         elif segment_type == PathSegmentTypes.INDEX:
             node_coords = self._get_nodes_by_index(
                 data, yaml_path, segment_index,
-                translated_path=translated_path)
+                translated_path=translated_path, ancestry=ancestry)
         elif segment_type == PathSegmentTypes.ANCHOR:
             node_coords = self._get_nodes_by_anchor(
                 data, yaml_path, segment_index,
-                translated_path=translated_path)
+                translated_path=translated_path, ancestry=ancestry)
         elif (
                 segment_type == PathSegmentTypes.KEYWORD_SEARCH
                 and isinstance(stripped_attrs, SearchKeywordTerms)
@@ -618,25 +620,28 @@ class Processor:
             node_coords = self._get_nodes_by_keyword_search(
                 data, yaml_path, stripped_attrs, parent=parent,
                 parentref=parentref, traverse_lists=traverse_lists,
-                translated_path=translated_path)
+                translated_path=translated_path, ancestry=ancestry)
         elif (
                 segment_type == PathSegmentTypes.SEARCH
                 and isinstance(stripped_attrs, SearchTerms)
         ):
             node_coords = self._get_nodes_by_search(
                 data, stripped_attrs, parent=parent, parentref=parentref,
-                traverse_lists=traverse_lists, translated_path=translated_path)
+                traverse_lists=traverse_lists, translated_path=translated_path,
+                ancestry=ancestry)
         elif (
                 unesc_type == PathSegmentTypes.COLLECTOR
                 and isinstance(unesc_attrs, CollectorTerms)
         ):
             node_coords = self._get_nodes_by_collector(
                 data, yaml_path, segment_index, unesc_attrs, parent=parent,
-                parentref=parentref, translated_path=translated_path)
+                parentref=parentref, translated_path=translated_path,
+                ancestry=ancestry)
         elif segment_type == PathSegmentTypes.TRAVERSE:
             node_coords = self._get_nodes_by_traversal(
                 data, yaml_path, segment_index, parent=parent,
-                parentref=parentref, translated_path=translated_path)
+                parentref=parentref, translated_path=translated_path,
+                ancestry=ancestry)
         else:
             raise NotImplementedError
 
@@ -667,8 +672,9 @@ class Processor:
 
         Raises:  N/A
         """
-        traverse_lists = kwargs.pop("traverse_lists", True)
-        translated_path = kwargs.pop("translated_path", YAMLPath(""))
+        traverse_lists: bool = kwargs.pop("traverse_lists", True)
+        translated_path: YAMLPath = kwargs.pop("translated_path", YAMLPath(""))
+        ancestry: List[tuple] = kwargs.pop("ancestry", [])
 
         (_, stripped_attrs) = yaml_path.escaped[segment_index]
         str_stripped = str(stripped_attrs)
@@ -681,6 +687,7 @@ class Processor:
             next_translated_path = (translated_path +
                 YAMLPath.escape_path_section(
                     str_stripped, translated_path.seperator))
+            next_ancestry = ancestry + [(data, stripped_attrs)]
             if stripped_attrs in data:
                 self.logger.debug(
                     "Processor::_get_nodes_by_key:  FOUND key node by name at"
@@ -688,14 +695,15 @@ class Processor:
                     .format(str_stripped))
                 yield NodeCoords(
                     data[stripped_attrs], data, stripped_attrs,
-                    next_translated_path)
+                    next_translated_path, next_ancestry)
             else:
                 # Check for a string/int type mismatch
                 try:
                     intkey = int(str_stripped)
                     if intkey in data:
                         yield NodeCoords(
-                            data[intkey], data, intkey, next_translated_path)
+                            data[intkey], data, intkey, next_translated_path,
+                            ancestry + [(data, intkey)])
                 except ValueError:
                     pass
         elif isinstance(data, list):
@@ -709,7 +717,8 @@ class Processor:
                         .format(str_stripped))
                     yield NodeCoords(
                         data[idx], data, idx,
-                        translated_path + "[{}]".format(idx))
+                        translated_path + "[{}]".format(idx),
+                        ancestry + [(data, idx)])
             except ValueError:
                 # Pass-through search against possible Array-of-Hashes, if
                 # allowed.
@@ -722,10 +731,12 @@ class Processor:
                 for eleidx, element in enumerate(data):
                     next_translated_path = translated_path + "[{}]".format(
                         eleidx)
+                    next_ancestry = ancestry + [(data, stripped_attrs)]
                     for node_coord in self._get_nodes_by_path_segment(
                             element, yaml_path, segment_index, parent=data,
                             parentref=eleidx, traverse_lists=traverse_lists,
-                            translated_path=next_translated_path):
+                            translated_path=next_translated_path,
+                            ancestry=next_ancestry):
                         self.logger.debug(
                             "Processor::_get_nodes_by_key:  FOUND key node "
                             " via pass-through Array-of-Hashes search at {}."
@@ -756,7 +767,8 @@ class Processor:
         (_, stripped_attrs) = yaml_path.escaped[segment_index]
         (_, unstripped_attrs) = yaml_path.unescaped[segment_index]
         str_stripped = str(stripped_attrs)
-        translated_path = kwargs.pop("translated_path", YAMLPath(""))
+        translated_path: YAMLPath = kwargs.pop("translated_path", YAMLPath(""))
+        ancestry: List[tuple] = kwargs.pop("ancestry", [])
 
         self.logger.debug(
             "Processor::_get_nodes_by_index:  Seeking INDEX node at {}."
@@ -782,16 +794,19 @@ class Processor:
                 if intmin == intmax and len(data) > intmin:
                     yield NodeCoords(
                         [data[intmin]], data, intmin,
-                        translated_path + "[{}]".format(intmin))
+                        translated_path + "[{}]".format(intmin),
+                        ancestry + [(data, intmin)])
                 else:
                     sliced_elements = []
                     for slice_index in range(intmin, intmax):
                         sliced_elements.append(NodeCoords(
                             data[slice_index], data, intmin,
-                            translated_path + "[{}]".format(slice_index)))
+                            translated_path + "[{}]".format(slice_index),
+                            ancestry + [(data, slice_index)]))
                     yield NodeCoords(
                         sliced_elements, data, intmin,
-                        translated_path + "[{}:{}]".format(intmin, intmax))
+                        translated_path + "[{}:{}]".format(intmin, intmax),
+                        ancestry + [(data, intmin)])
 
             elif isinstance(data, dict):
                 for key, val in data.items():
@@ -799,7 +814,8 @@ class Processor:
                         yield NodeCoords(
                             val, data, key,
                             translated_path + YAMLPath.escape_path_section(
-                                key, translated_path.seperator))
+                                key, translated_path.seperator),
+                            ancestry + [(data, key)])
         else:
             try:
                 idx: int = int(str_stripped)
@@ -813,7 +829,8 @@ class Processor:
 
             if isinstance(data, list) and len(data) > idx:
                 yield NodeCoords(
-                    data[idx], data, idx, translated_path + "[{}]".format(idx))
+                    data[idx], data, idx, translated_path + "[{}]".format(idx),
+                    ancestry + [(data, idx)])
 
     def _get_nodes_by_anchor(
             self, data: Any, yaml_path: YAMLPath, segment_index: int, **kwargs
@@ -835,7 +852,8 @@ class Processor:
         Raises:  N/A
         """
         (_, stripped_attrs) = yaml_path.escaped[segment_index]
-        translated_path = kwargs.pop("translated_path", YAMLPath(""))
+        translated_path: YAMLPath = kwargs.pop("translated_path", YAMLPath(""))
+        ancestry: List[tuple] = kwargs.pop("ancestry", [])
         next_translated_path = translated_path + "[&{}]".format(
             YAMLPath.escape_path_section(
                 str(stripped_attrs), translated_path.seperator))
@@ -848,15 +866,21 @@ class Processor:
             for lstidx, ele in enumerate(data):
                 if (hasattr(ele, "anchor")
                         and stripped_attrs == ele.anchor.value):
-                    yield NodeCoords(ele, data, lstidx, next_translated_path)
+                    yield NodeCoords(ele, data, lstidx, next_translated_path,
+                        ancestry + [(data, lstidx)])
         elif isinstance(data, dict):
             for key, val in data.items():
+                next_ancestry = ancestry + [(data, key)]
                 if (hasattr(key, "anchor")
                         and stripped_attrs == key.anchor.value):
-                    yield NodeCoords(val, data, key, next_translated_path)
+                    yield NodeCoords(
+                        val, data, key, next_translated_path,
+                        next_ancestry)
                 elif (hasattr(val, "anchor")
                       and stripped_attrs == val.anchor.value):
-                    yield NodeCoords(val, data, key, next_translated_path)
+                    yield NodeCoords(
+                        val, data, key, next_translated_path,
+                        next_ancestry)
 
     def _get_nodes_by_keyword_search(
             self, data: Any, yaml_path: YAMLPath, terms: SearchKeywordTerms,
@@ -923,10 +947,11 @@ class Processor:
             data=data,
             prefix="Processor::_get_nodes_by_search:  ")
 
-        parent = kwargs.pop("parent", None)
-        parentref = kwargs.pop("parentref", None)
-        traverse_lists = kwargs.pop("traverse_lists", True)
-        translated_path = kwargs.pop("translated_path", YAMLPath(""))
+        parent: Any = kwargs.pop("parent", None)
+        parentref: Any = kwargs.pop("parentref", None)
+        traverse_lists: bool = kwargs.pop("traverse_lists", True)
+        translated_path: YAMLPath = kwargs.pop("translated_path", YAMLPath(""))
+        ancestry: List[tuple] = kwargs.pop("ancestry", [])
         invert = terms.inverted
         method = terms.method
         attr = terms.attribute
@@ -950,8 +975,11 @@ class Processor:
                     # Attempt a descendant search
                     next_translated_path = translated_path + "[{}]".format(
                         lstidx)
+                    next_ancestry = ancestry + [(data, lstidx)]
                     for desc_node in self._get_required_nodes(
-                        ele, desc_path, 0, translated_path=next_translated_path
+                        ele, desc_path, 0,
+                        translated_path=next_translated_path,
+                        ancestry=next_ancestry
                     ):
                         matches = Searches.search_matches(
                             method, term, desc_node.node)
@@ -965,7 +993,8 @@ class Processor:
                         prefix="Processor::_get_nodes_by_search:  ")
                     yield NodeCoords(
                         ele, data, lstidx,
-                        translated_path + "[{}]".format(lstidx))
+                        translated_path + "[{}]".format(lstidx),
+                        ancestry + [(data, lstidx)])
 
         elif isinstance(data, dict):
             # Allow . to mean "each key's name"
@@ -982,7 +1011,8 @@ class Processor:
                         yield NodeCoords(
                             val, data, key,
                             translated_path + YAMLPath.escape_path_section(
-                                key, translated_path.seperator))
+                                key, translated_path.seperator),
+                            ancestry + [(data, key)])
 
             elif attr in data:
                 value = data[attr]
@@ -997,13 +1027,14 @@ class Processor:
                     yield NodeCoords(
                         value, data, attr,
                         translated_path + YAMLPath.escape_path_section(
-                            attr, translated_path.seperator))
+                            attr, translated_path.seperator),
+                        ancestry + [(data, attr)])
 
             else:
                 # Attempt a descendant search
                 for desc_node in self._get_required_nodes(
                     data, desc_path, 0, parent=parent, parentref=parentref,
-                    translated_path=translated_path
+                    translated_path=translated_path, ancestry=ancestry
                 ):
                     matches = Searches.search_matches(
                         method, term, desc_node.node)
@@ -1016,7 +1047,8 @@ class Processor:
                         .format(attr),
                         data=data,
                         prefix="Processor::_get_nodes_by_search:  ")
-                    yield NodeCoords(data, parent, parentref, translated_path)
+                    yield NodeCoords(
+                        data, parent, parentref, translated_path, ancestry)
 
         else:
             # Check the passed data itself for a match
@@ -1026,7 +1058,8 @@ class Processor:
                 self.logger.debug(
                     "Yielding the queried data itself because it matches.",
                     prefix="Processor::_get_nodes_by_search:  ")
-                yield NodeCoords(data, parent, parentref, translated_path)
+                yield NodeCoords(
+                    data, parent, parentref, translated_path, ancestry)
 
         self.logger.debug(
             "Finished seeking SEARCH nodes matching {} in data with {}:"
@@ -1066,16 +1099,18 @@ class Processor:
             yield data
             return
 
-        parent = kwargs.pop("parent", None)
-        parentref = kwargs.pop("parentref", None)
-        translated_path = kwargs.pop("translated_path", YAMLPath(""))
+        parent: Any = kwargs.pop("parent", None)
+        parentref: Any = kwargs.pop("parentref", None)
+        translated_path: YAMLPath = kwargs.pop("translated_path", YAMLPath(""))
+        ancestry: List[tuple] = kwargs.pop("ancestry", [])
         node_coords = []    # A list of NodeCoords
         self.logger.debug(
             "Processor::_get_nodes_by_collector:  Getting required nodes"
             " matching search expression:  {}".format(terms.expression))
         for node_coord in self._get_required_nodes(
                 data, YAMLPath(terms.expression), 0, parent=parent,
-                parentref=parentref, translated_path=translated_path):
+                parentref=parentref, translated_path=translated_path,
+                ancestry=ancestry):
             node_coords.append(node_coord)
 
         # This may end up being a bad idea for some cases, but this method will
@@ -1096,7 +1131,7 @@ class Processor:
                 flat_nodes.append(
                     NodeCoords(
                         flatten_node, node_coord.parent, flatten_idx,
-                        node_coord.path))
+                        node_coord.path, node_coord.ancestry))
             node_coords = flat_nodes
 
         # As long as each next segment is an ADDITION or SUBTRACTION
@@ -1116,7 +1151,8 @@ class Processor:
                     for node_coord in self._get_required_nodes(
                             data, peek_path, 0, parent=parent,
                             parentref=parentref,
-                            translated_path=translated_path):
+                            translated_path=translated_path,
+                            ancestry=ancestry):
                         if (isinstance(node_coord, NodeCoords)
                                 and isinstance(node_coord.node, list)):
                             for coord_idx, coord in enumerate(node_coord.node):
@@ -1126,9 +1162,12 @@ class Processor:
                                         next_translated_path = (
                                             next_translated_path +
                                             "[{}]".format(coord_idx))
+                                    next_ancestry = ancestry + [(
+                                        node_coord.data, coord_idx)]
                                     coord = NodeCoords(
                                         coord, node_coord.node, coord_idx,
-                                        next_translated_path)
+                                        next_translated_path,
+                                        next_ancestry)
                                 node_coords.append(coord)
                         else:
                             node_coords.append(node_coord)
@@ -1137,7 +1176,8 @@ class Processor:
                     for node_coord in self._get_required_nodes(
                             data, peek_path, 0, parent=parent,
                             parentref=parentref,
-                            translated_path=translated_path):
+                            translated_path=translated_path,
+                            ancestry=ancestry):
                         unwrapped_data = NodeCoords.unwrap_node_coords(
                             node_coord)
                         if isinstance(unwrapped_data, list):
@@ -1185,9 +1225,10 @@ class Processor:
         Returns:  (Generator[Any, None, None]) Each node coordinate as they are
         matched.
         """
-        parent = kwargs.pop("parent", None)
-        parentref = kwargs.pop("parentref", None)
-        translated_path = kwargs.pop("translated_path", YAMLPath(""))
+        parent: Any = kwargs.pop("parent", None)
+        parentref: Any = kwargs.pop("parentref", None)
+        translated_path: YAMLPath = kwargs.pop("translated_path", YAMLPath(""))
+        ancestry: List[tuple] = kwargs.pop("ancestry", [])
 
         self.logger.debug(
             "TRAVERSING the tree at parentref:",
@@ -1208,10 +1249,12 @@ class Processor:
                     next_translated_path = (
                         translated_path + YAMLPath.escape_path_section(
                             key, translated_path.seperator))
+                    next_ancestry = ancestry + [(data, key)]
                     for node_coord in self._get_nodes_by_traversal(
                         val, yaml_path, segment_index,
                         parent=data, parentref=key,
-                        translated_path=next_translated_path
+                        translated_path=next_translated_path,
+                        ancestry=next_ancestry
                     ):
                         self.logger.debug(
                             "Yielding unfiltered Hash value:",
@@ -1235,7 +1278,8 @@ class Processor:
                 self.logger.debug(
                     "Yielding unfiltered Scalar value:",
                     prefix="Processor::_get_nodes_by_traversal:  ", data=data)
-                yield NodeCoords(data, parent, parentref, translated_path)
+                yield NodeCoords(
+                    data, parent, parentref, translated_path, ancestry)
         else:
             # There is a filter in the next segment; recurse data, comparing
             # every child against the following segment until there are no more
@@ -1251,14 +1295,15 @@ class Processor:
             for node_coord in self._get_nodes_by_path_segment(
                 data, yaml_path, segment_index + 1, parent=parent,
                 parentref=parentref, traverse_lists=False,
-                translated_path=translated_path
+                translated_path=translated_path, ancestry=ancestry
             ):
                 self.logger.debug(
                     "Yielding filtered DIRECT node at parentref {} of coord:"
                     .format(parentref),
                     prefix="Processor::_get_nodes_by_traversal:  ",
                     data=node_coord)
-                yield NodeCoords(data, parent, parentref, translated_path)
+                yield NodeCoords(
+                    data, parent, parentref, translated_path, ancestry)
 
             # Then, recurse into each child to perform the same test.
             if isinstance(data, dict):
@@ -1270,10 +1315,12 @@ class Processor:
                     next_translated_path = (
                         translated_path + YAMLPath.escape_path_section(
                             key, translated_path.seperator))
+                    next_ancestry = ancestry + [(data, key)]
                     for node_coord in self._get_nodes_by_traversal(
                         val, yaml_path, segment_index,
                         parent=data, parentref=key,
-                        translated_path=next_translated_path
+                        translated_path=next_translated_path,
+                        ancestry=next_ancestry
                     ):
                         self.logger.debug(
                             "Yielding filtered indirect Hash value from KEY"
@@ -1288,10 +1335,12 @@ class Processor:
                         " INDEX '{}' at ref '{}' for next-segment matches..."
                         .format(idx, parentref))
                     next_translated_path = translated_path + "[{}]".format(idx)
+                    next_ancestry = ancestry + [(data, idx)]
                     for node_coord in self._get_nodes_by_traversal(
                         ele, yaml_path, segment_index,
                         parent=data, parentref=idx,
-                        translated_path=next_translated_path
+                        translated_path=next_translated_path,
+                        ancestry=next_ancestry
                     ):
                         self.logger.debug(
                             "Yielding filtered indirect Array value from INDEX"
@@ -1319,9 +1368,10 @@ class Processor:
 
         Raises:  N/A
         """
-        parent = kwargs.pop("parent", None)
-        parentref = kwargs.pop("parentref", None)
-        translated_path = kwargs.pop("translated_path", YAMLPath(""))
+        parent: Any = kwargs.pop("parent", None)
+        parentref: Any = kwargs.pop("parentref", None)
+        translated_path: YAMLPath = kwargs.pop("translated_path", YAMLPath(""))
+        ancestry: List[tuple] = kwargs.pop("ancestry", [])
 
         if data is None:
             self.logger.debug(
@@ -1343,7 +1393,7 @@ class Processor:
 
             for segment_node_coords in self._get_nodes_by_path_segment(
                 data, yaml_path, depth, parent=parent, parentref=parentref,
-                translated_path=translated_path
+                translated_path=translated_path, ancestry=ancestry
             ):
                 self.logger.debug(
                     "Got data of type {} at <{}>{} in the data."
@@ -1374,7 +1424,8 @@ class Processor:
                         data=segment_node_coords)
                     for subnode_coord in self._get_required_nodes(
                             segment_node_coords, yaml_path, depth + 1,
-                            translated_path=translated_path):
+                            translated_path=translated_path,
+                            ancestry=ancestry):
                         yield subnode_coord
                 else:
                     self.logger.debug(
@@ -1384,7 +1435,8 @@ class Processor:
                             segment_node_coords.node, yaml_path, depth + 1,
                             parent=segment_node_coords.parent,
                             parentref=segment_node_coords.parentref,
-                            translated_path=segment_node_coords.path):
+                            translated_path=segment_node_coords.path,
+                            ancestry=segment_node_coords.ancestry):
                         self.logger.debug(
                             "Finally returning segment data of type {} at"
                             " parentref {}:"
@@ -1399,7 +1451,8 @@ class Processor:
                 .format(type(data), parentref),
                 prefix="Processor::_get_required_nodes:  ",
                 data=data, footer=" ")
-            yield NodeCoords(data, parent, parentref, translated_path)
+            yield NodeCoords(
+                data, parent, parentref, translated_path, ancestry)
 
     # pylint: disable=locally-disabled,too-many-statements
     def _get_optional_nodes(
@@ -1431,9 +1484,10 @@ class Processor:
           an element that does not exist in data and this code isn't
           yet prepared to add it.
         """
-        parent = kwargs.pop("parent", None)
-        parentref = kwargs.pop("parentref", None)
-        translated_path = kwargs.pop("translated_path", YAMLPath(""))
+        parent: Any = kwargs.pop("parent", None)
+        parentref: Any = kwargs.pop("parentref", None)
+        translated_path: YAMLPath = kwargs.pop("translated_path", YAMLPath(""))
+        ancestry: List[tuple] = kwargs.pop("ancestry", [])
         segments = yaml_path.escaped
 
         # pylint: disable=locally-disabled,too-many-nested-blocks
@@ -1457,7 +1511,7 @@ class Processor:
             matched_nodes = 0
             for next_coord in self._get_nodes_by_path_segment(
                 data, yaml_path, depth, parent=parent, parentref=parentref,
-                translated_path=translated_path
+                translated_path=translated_path, ancestry=ancestry
             ):
                 matched_nodes += 1
                 self.logger.debug(
@@ -1469,7 +1523,8 @@ class Processor:
                         next_coord.node, yaml_path, value, depth + 1,
                         parent=next_coord.parent,
                         parentref=next_coord.parentref,
-                        translated_path=next_coord.path
+                        translated_path=next_coord.path,
+                        ancestry=next_coord.ancestry
                 ):
                     yield node_coord
 
@@ -1503,10 +1558,12 @@ class Processor:
                         new_idx = len(data) - 1
                         next_translated_path = translated_path + "[{}]".format(
                             new_idx)
+                        next_ancestry = ancestry + [(data, new_idx)]
                         for node_coord in self._get_optional_nodes(
                                 new_ele, yaml_path, value, depth + 1,
                                 parent=data, parentref=new_idx,
-                                translated_path=next_translated_path
+                                translated_path=next_translated_path,
+                                ancestry=next_ancestry
                         ):
                             matched_nodes += 1
                             yield node_coord
@@ -1535,10 +1592,12 @@ class Processor:
                             Nodes.append_list_element(data, next_node)
                         next_translated_path = translated_path + "[{}]".format(
                             newidx)
+                        next_ancestry = ancestry + [(data, newidx)]
                         for node_coord in self._get_optional_nodes(
                                 data[newidx], yaml_path, value,
                                 depth + 1, parent=data, parentref=newidx,
-                                translated_path=next_translated_path
+                                translated_path=next_translated_path,
+                                ancestry=next_ancestry
                         ):
                             matched_nodes += 1
                             yield node_coord
@@ -1568,11 +1627,13 @@ class Processor:
                             translated_path + YAMLPath.escape_path_section(
                                 str(stripped_attrs),
                                 translated_path.seperator))
+                        next_ancestry = ancestry + [(data, stripped_attrs)]
                         for node_coord in self._get_optional_nodes(
                                 data[stripped_attrs], yaml_path, value,
                                 depth + 1, parent=data,
                                 parentref=stripped_attrs,
-                                translated_path=next_translated_path
+                                translated_path=next_translated_path,
+                                ancestry=next_ancestry
                         ):
                             matched_nodes += 1
                             yield node_coord
@@ -1606,7 +1667,8 @@ class Processor:
                 "Finally returning data of type {}:"
                 .format(type(data)),
                 prefix="Processor::_get_optional_nodes:  ", data=data)
-            yield NodeCoords(data, parent, parentref, translated_path)
+            yield NodeCoords(
+                data, parent, parentref, translated_path, ancestry)
 
     # pylint: disable=too-many-arguments
     def _update_node(
