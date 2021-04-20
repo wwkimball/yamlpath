@@ -1167,7 +1167,7 @@ class Processor:
                                             next_translated_path +
                                             "[{}]".format(coord_idx))
                                     next_ancestry = ancestry + [(
-                                        node_coord.data, coord_idx)]
+                                        node_coord.node, coord_idx)]
                                     coord = NodeCoords(
                                         coord, node_coord.node, coord_idx,
                                         next_translated_path,
