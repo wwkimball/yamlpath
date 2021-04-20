@@ -253,3 +253,34 @@ products:
         for line in result.stdout.splitlines():
             assert line == results[match_index]
             match_index += 1
+
+    @pytest.mark.parametrize("query,output", [
+        ("/items/*[!has_child(bravo)][2][parent(0)]", ['delta']),
+        ("/items/*[!has_child(bravo)][2][parent()]", ['["alpha", "charlie", "delta"]']),
+        ("/items/*[!has_child(bravo)][2][parent(2)]", ['[["alpha", "bravo", "charlie"], ["alpha", "charlie", "delta"], ["alpha", "bravo", "delta"], ["bravo", "charlie", "delta"]]']),
+    ])
+    def test_get_parent_nodes(self, script_runner, tmp_path_factory, query, output):
+        content = """---
+items:
+  - - alpha
+    - bravo
+    - charlie
+  - - alpha
+    - charlie
+    - delta
+  - - alpha
+    - bravo
+    - delta
+  - - bravo
+    - charlie
+    - delta
+"""
+
+        yaml_file = create_temp_yaml_file(tmp_path_factory, content)
+        result = script_runner.run(self.command, "--query={}".format(query), yaml_file)
+        assert result.success, result.stderr
+
+        match_index = 0
+        for line in result.stdout.splitlines():
+            assert line == output[match_index]
+            match_index += 1

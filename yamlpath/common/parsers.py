@@ -318,13 +318,6 @@ class Parsers:
             for key, val in data.items():
                 data[key] = Parsers.jsonify_yaml_data(val)
         elif isinstance(data, dict):
-            for i, k in [
-                (idx, key) for idx, key in enumerate(data.keys())
-                if isinstance(key, TaggedScalar)
-            ]:
-                unwrapped_key = Parsers.jsonify_yaml_data(k)
-                data[unwrapped_key] = data.pop(k)
-
             for key, val in data.items():
                 data[key] = Parsers.jsonify_yaml_data(val)
         elif isinstance(data, (list, CommentedSeq)):

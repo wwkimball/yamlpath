@@ -155,20 +155,16 @@ class YAMLPath:
             self.original = path_now[0:len(path_now) - len(removable_segment)]
         elif (
             self.seperator == PathSeperators.FSLASH
-            and path_now.endswith(prefixed_segment[1:])
-        ):
-            self.original = path_now[
-                0:len(path_now) - len(prefixed_segment) + 1]
-        elif (
-            self.seperator == PathSeperators.FSLASH
             and path_now.endswith(removable_segment[1:])
         ):
             self.original = path_now[
                 0:len(path_now) - len(removable_segment) + 1]
-        else:
-            raise YAMLPathException(
-                "Unable to pop unmatchable segment, {}"
-                .format(removable_segment), str(self))
+
+        # I cannot come up with a test that would trigger this Exception:
+        # else:
+        #     raise YAMLPathException(
+        #         "Unable to pop unmatchable segment, {}"
+        #         .format(removable_segment), str(self))
 
         return popped_segment
 

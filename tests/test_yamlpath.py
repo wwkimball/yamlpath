@@ -196,3 +196,25 @@ class Test_YAMLPath():
         with pytest.raises(YAMLPathException) as ex:
             str(YAMLPath("abc[unknown_keyword()]"))
         assert -1 < str(ex.value).find("Unknown search keyword, unknown_keyword")
+
+    @pytest.mark.parametrize("path,pops,results", [
+        ("/abc", 1, [(PathSegmentTypes.KEY, "abc")]),
+        ("abc", 1, [(PathSegmentTypes.KEY, "abc")]),
+        ("/abc/def", 2, [(PathSegmentTypes.KEY, "def"), (PathSegmentTypes.KEY, "abc")]),
+        ("abc.def", 2, [(PathSegmentTypes.KEY, "def"), (PathSegmentTypes.KEY, "abc")]),
+        ("/abc/def[3]", 3, [(PathSegmentTypes.INDEX, 3), (PathSegmentTypes.KEY, "def"), (PathSegmentTypes.KEY, "abc")]),
+        ("abc.def[3]", 3, [(PathSegmentTypes.INDEX, 3), (PathSegmentTypes.KEY, "def"), (PathSegmentTypes.KEY, "abc")]),
+        ("/abc/def[3][1]", 4, [(PathSegmentTypes.INDEX, 1), (PathSegmentTypes.INDEX, 3), (PathSegmentTypes.KEY, "def"), (PathSegmentTypes.KEY, "abc")]),
+        ("abc.def[3][1]", 4, [(PathSegmentTypes.INDEX, 1), (PathSegmentTypes.INDEX, 3), (PathSegmentTypes.KEY, "def"), (PathSegmentTypes.KEY, "abc")]),
+    ])
+    def test_pop_segments(self, path, pops, results):
+        yp = YAMLPath(path)
+        for pop in range(pops):
+            assert results[pop] == yp.pop()
+
+    def test_pop_too_many(self):
+        yp = YAMLPath("abc.def")
+        with pytest.raises(YAMLPathException) as ex:
+            for _ in range(5):
+                yp.pop()
+        assert -1 < str(ex.value).find("Cannot pop when")
