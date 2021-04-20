@@ -141,7 +141,7 @@ class YAMLPath:
                 "Cannot pop when there are no segments to pop from",
                 str(self))
 
-        popped_queue = deque()
+        popped_queue: Deque = deque()
         popped_segment: PathSegment = segments.pop()
         popped_queue.append(popped_segment)
         removable_segment = YAMLPath._stringify_yamlpath_segments(
