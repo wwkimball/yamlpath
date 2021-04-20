@@ -13,6 +13,7 @@ class NodeCoords:
     3. Index-or-Key-of-the-Node-Within-Its-Immediate-Parent
     """
 
+    # pylint: disable=locally-disabled,too-many-arguments
     def __init__(
         self, node: Any, parent: Any, parentref: Any, path: YAMLPath = None,
         ancestry: List[tuple] = None
