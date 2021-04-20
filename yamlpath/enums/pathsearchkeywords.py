@@ -15,15 +15,20 @@ class PathSearchKeywords(Enum):
 
     `HAS_CHILD`
         Matches when the node has a direct child with a given name.
+    `PARENT`
+        Access the parent of the present node.
     """
 
     HAS_CHILD = auto()
+    PARENT = auto()
 
     def __str__(self) -> str:
         """Get a String representation of an employed value of this enum."""
         keyword = ''
         if self is PathSearchKeywords.HAS_CHILD:
             keyword = 'has_child'
+        elif self is PathSearchKeywords.PARENT:
+            keyword = 'parent'
 
         return keyword
 

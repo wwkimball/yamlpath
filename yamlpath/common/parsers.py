@@ -317,7 +317,10 @@ class Parsers:
 
             for key, val in data.items():
                 data[key] = Parsers.jsonify_yaml_data(val)
-        elif isinstance(data, CommentedSeq):
+        elif isinstance(data, dict):
+            for key, val in data.items():
+                data[key] = Parsers.jsonify_yaml_data(val)
+        elif isinstance(data, (list, CommentedSeq)):
             for idx, ele in enumerate(data):
                 data[idx] = Parsers.jsonify_yaml_data(ele)
         elif isinstance(data, TaggedScalar):

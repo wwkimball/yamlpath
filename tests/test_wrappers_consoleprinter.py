@@ -162,16 +162,25 @@ class Test_wrappers_ConsolePrinter():
             "DEBUG:  [tagged_array]<!raz>[1]b<class 'str'>",
         ])
 
-        nc = NodeCoords("value", dict(key="value"), "key", YAMLPath("key"))
+        nc = NodeCoords(
+            "value", dict(key="value"), "key", YAMLPath("doc_root.key"),
+            [
+                (dict(doc_root=dict(key="value")), "doc_root"),
+                (dict(key="value"), "key"),
+            ])
         logger.debug(
             "A node coordinate:", prefix="test_debug_noisy:  ", data=nc)
         console = capsys.readouterr()
         assert "\n".join([
             "DEBUG:  test_debug_noisy:  A node coordinate:",
-            "DEBUG:  test_debug_noisy:  (path)key",
+            "DEBUG:  test_debug_noisy:  (path)doc_root.key",
             "DEBUG:  test_debug_noisy:  (node)value",
             "DEBUG:  test_debug_noisy:  (parent)[key]value<class 'str'>",
             "DEBUG:  test_debug_noisy:  (parentref)key",
+            "DEBUG:  test_debug_noisy:  (ancestry)[0][0][doc_root][key]value<class 'str'>",
+            "DEBUG:  test_debug_noisy:  (ancestry)[0][1]doc_root<class 'str'>",
+            "DEBUG:  test_debug_noisy:  (ancestry)[1][0][key]value<class 'str'>",
+            "DEBUG:  test_debug_noisy:  (ancestry)[1][1]key<class 'str'>",
         ]) + "\n" == console.out
 
         logger.debug(foldedval)

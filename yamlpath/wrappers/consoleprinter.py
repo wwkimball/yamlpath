@@ -291,6 +291,7 @@ class ConsolePrinter:
         node_prefix = "{}(node)".format(prefix)
         parent_prefix = "{}(parent)".format(prefix)
         parentref_prefix = "{}(parentref)".format(prefix)
+        ancestry_prefix = "{}(ancestry)".format(prefix)
 
         for line in ConsolePrinter._debug_dump(data.path, prefix=path_prefix):
             yield line
@@ -305,6 +306,11 @@ class ConsolePrinter:
 
         for line in ConsolePrinter._debug_dump(
             data.parentref, prefix=parentref_prefix
+        ):
+            yield line
+
+        for line in ConsolePrinter._debug_dump(
+            data.ancestry, prefix=ancestry_prefix
         ):
             yield line
 

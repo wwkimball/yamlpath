@@ -32,6 +32,9 @@ class KeywordSearches:
         if keyword is PathSearchKeywords.HAS_CHILD:
             nc_matches = KeywordSearches.has_child(
                 haystack, invert, parameters, yaml_path, **kwargs)
+        elif keyword is PathSearchKeywords.PARENT:
+            nc_matches = KeywordSearches.parent(
+                haystack, invert, parameters, yaml_path, **kwargs)
         else:
             raise YAMLPathException(
                 "Unsupported search keyword {} in".format(keyword),
@@ -49,8 +52,8 @@ class KeywordSearches:
         """Indicate whether data has a named child."""
         parent: Any = kwargs.pop("parent", None)
         parentref: Any = kwargs.pop("parentref", None)
-        traverse_lists: bool = kwargs.pop("traverse_lists", True)
         translated_path: YAMLPath = kwargs.pop("translated_path", YAMLPath(""))
+        ancestry: List[tuple] = kwargs.pop("ancestry", [])
 
         # There must be exactly one parameter
         param_count = len(parameters)
@@ -72,8 +75,7 @@ class KeywordSearches:
                 (child_present and not invert)
             ):
                 yield NodeCoords(
-                    data, parent, parentref,
-                    translated_path)
+                    data, parent, parentref, translated_path, ancestry)
 
         # Against a list, this will merely require an exact match between
         # parameters and any list elements.  When inverted, every
@@ -87,8 +89,7 @@ class KeywordSearches:
                     next_path = translated_path.append("[{}]".format(str(idx)))
                     for aoh_match in KeywordSearches.has_child(
                         ele, invert, parameters, yaml_path,
-                        parent=data, parentref=idx, translated_path=next_path,
-                        traverse_lists=traverse_lists
+                        parent=data, parentref=idx, translated_path=next_path
                     ):
                         yield aoh_match
                 return
@@ -99,10 +100,75 @@ class KeywordSearches:
                 (child_present and not invert)
             ):
                 yield NodeCoords(
-                    data, parent, parentref,
-                    translated_path)
+                    data, parent, parentref, translated_path, ancestry)
 
         else:
             raise YAMLPathException(
                 ("{} data has no child nodes in YAML Path").format(type(data)),
                 str(yaml_path))
+
+    @staticmethod
+    # pylint: disable=locally-disabled,too-many-locals
+    def parent(
+        data: Any, invert: bool, parameters: List[str], yaml_path: YAMLPath,
+        **kwargs: Any
+    ) -> Generator[NodeCoords, None, None]:
+        """Climb back up N parent levels in the data hierarchy."""
+        parent: Any = kwargs.pop("parent", None)
+        parentref: Any = kwargs.pop("parentref", None)
+        translated_path: YAMLPath = kwargs.pop("translated_path", YAMLPath(""))
+        ancestry: List[tuple] = kwargs.pop("ancestry", [])
+
+        # There may be 0 or 1 parameters
+        param_count = len(parameters)
+        if param_count > 1:
+            raise YAMLPathException((
+                "Invalid parameter count to {}([STEPS]); up to {} permitted, "
+                " got {} in YAML Path"
+                ).format(PathSearchKeywords.PARENT, 1, param_count),
+                str(yaml_path))
+
+        if invert:
+            raise YAMLPathException((
+                "Inversion is meaningless to {}([STEPS])"
+                ).format(PathSearchKeywords.PARENT),
+                str(yaml_path))
+
+        parent_levels: int = 1
+        ancestry_len: int = len(ancestry)
+        steps_max = ancestry_len
+        if param_count > 0:
+            try:
+                parent_levels = int(parameters[0])
+            except ValueError as ex:
+                raise YAMLPathException((
+                    "Invalid parameter passed to {}([STEPS]), {}; must be"
+                    " unset or an integer number indicating how may parent"
+                    " STEPS to climb in YAML Path"
+                    ).format(PathSearchKeywords.PARENT, parameters[0]),
+                    str(yaml_path)) from ex
+
+        if parent_levels > steps_max:
+            raise YAMLPathException((
+                "Cannot {}([STEPS]) higher than the document root.  {} steps"
+                " requested when {} available in YAML Path"
+                ).format(PathSearchKeywords.PARENT, parent_levels, steps_max),
+                str(yaml_path))
+
+        if parent_levels < 1:
+            # parent(0) is the present node
+            yield NodeCoords(
+                data, parent, parentref, translated_path, ancestry)
+        else:
+            for _ in range(parent_levels):
+                translated_path.pop()
+                (data, _) = ancestry.pop()
+                ancestry_len -= 1
+
+            parentref = ancestry[-1][1] if ancestry_len > 1 else None
+            parent = ancestry[-1][0] if ancestry_len > 1 else None
+
+            parent_nc = NodeCoords(
+                data, parent, parentref, translated_path, ancestry)
+
+            yield parent_nc

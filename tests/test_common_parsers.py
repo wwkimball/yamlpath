@@ -78,7 +78,7 @@ has: different data
     ###
     # jsonify_yaml_data
     ###
-    def test_jsonify_complex_data(self):
+    def test_jsonify_complex_ruamel_data(self):
         tagged_tag = "!tagged"
         tagged_value = "tagged value"
         tagged_scalar = ry.scalarstring.PlainScalarString(tagged_value)
@@ -99,5 +99,16 @@ has: different data
         jdata = Parsers.jsonify_yaml_data(cdata)
         assert jdata["tagged"] == tagged_value
         assert jdata["null"] == null_value
+        assert jdata["dates"][0] == "2020-10-31"
+        assert jdata["dates"][1] == "2020-11-03"
+
+    def test_jsonify_complex_python_data(self):
+        cdata = {
+            "dates": [
+                dt.date(2020, 10, 31),
+                dt.date(2020, 11, 3)
+            ]
+        }
+        jdata = Parsers.jsonify_yaml_data(cdata)
         assert jdata["dates"][0] == "2020-10-31"
         assert jdata["dates"][1] == "2020-11-03"

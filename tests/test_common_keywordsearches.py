@@ -29,7 +29,7 @@ class Test_common_keywordsearches():
     def test_has_child_invalid_param_count(self):
         with pytest.raises(YAMLPathException) as ex:
             nodes = list(KeywordSearches.search_matches(
-                SearchKeywordTerms(False, PathSearchKeywords.HAS_CHILD, ""),
+                SearchKeywordTerms(False, PathSearchKeywords.HAS_CHILD, []),
                 {},
                 YAMLPath("/")
             ))
@@ -42,3 +42,47 @@ class Test_common_keywordsearches():
                 ["wwk"],
                 YAMLPath("")
             ))
+
+
+    ###
+    # parent
+    ###
+    def test_parent_invalid_param_count(self):
+        with pytest.raises(YAMLPathException) as ex:
+            nodes = list(KeywordSearches.parent(
+                {},
+                False,
+                ["1", "2"],
+                YAMLPath("/")
+            ))
+        assert -1 < str(ex.value).find("Invalid parameter count to ")
+
+    def test_parent_invalid_inversion(self):
+        with pytest.raises(YAMLPathException) as ex:
+            nodes = list(KeywordSearches.parent(
+                {},
+                True,
+                [],
+                YAMLPath("/")
+            ))
+        assert -1 < str(ex.value).find("Inversion is meaningless to ")
+
+    def test_parent_invalid_parameter(self):
+        with pytest.raises(YAMLPathException) as ex:
+            nodes = list(KeywordSearches.parent(
+                {},
+                False,
+                ["abc"],
+                YAMLPath("/")
+            ))
+        assert -1 < str(ex.value).find("Invalid parameter passed to ")
+
+    def test_parent_invalid_step_count(self):
+        with pytest.raises(YAMLPathException) as ex:
+            nodes = list(KeywordSearches.parent(
+                {},
+                False,
+                ["5"],
+                YAMLPath("/")
+            ))
+        assert -1 < str(ex.value).find("higher than the document root")
