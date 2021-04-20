@@ -114,7 +114,6 @@ class KeywordSearches:
         **kwargs: Any
     ) -> Generator[NodeCoords, None, None]:
         """Climb back up N parent levels in the data hierarchy."""
-
         parent: Any = kwargs.pop("parent", None)
         parentref: Any = kwargs.pop("parentref", None)
         translated_path: YAMLPath = kwargs.pop("translated_path", YAMLPath(""))
