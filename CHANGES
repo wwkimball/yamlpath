@@ -1,21 +1,32 @@
 3.5.0:
 Bug Fixes:
+* Search expressions against Boolean values, [key=True] and [key=False], were
+  impossible.  Now, they are working and are not case-sensitive, so [key=True],
+  [key=true], [key=TRUE], and such all work as expected.
+* Descendent searches were considering only the first child of the search
+  ancestor.  Now, ANY matching descendent node will correctly yield the
+  ancestor.
 * Some Python-generated complex data types were escaping JSONification,
   leading to unexpected stack-dumps when writing out JSON data for data types
   like date and datetime.
 
 Enhancements:
 * An entirely new segment type has been added to YAML Path and is now supported
-  by the reference implementation command-line tools:  Keyword Searches.
-  Similar to programming language keywords, these reserved Keywords work much
-  like functions, accepting parameters and performing algorythmic operations or
-  returning data not otherwise accessible to other YAML Path segment types.
-  These new capabilities -- explored on the project Wiki -- include:
+  by the library and reference implementation command-line tools:  Keyword
+  Searches.  Similar to programming language keywords, these reserved Keywords
+  work much like functions, accepting parameters and performing algorythmic
+  operations or returning data not otherwise accessible to other YAML Path
+  segment types.  These new capabilities -- explored on the project Wiki --
+  include:
   * [has_child(NAME)]
   * [name()]
   * [max(NAME)]
   * [min(NAME)]
   * [parent([STEPS])]
+* When stringified, YAML Paths with a solitary * wildcard segment were printed
+  using their internal RegEx variant, [.=~/.*/].  They are now printed as they
+  are entered, using a solitary *.  As a consequence, any deliberate RegEx of
+  [.=~/.*/] is also printed as its equivalent solitary *.
 
 3.4.1:
 Bug Fixes:

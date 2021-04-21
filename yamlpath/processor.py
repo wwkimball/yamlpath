@@ -1003,6 +1003,9 @@ class Processor:
         elif isinstance(data, dict):
             # Allow . to mean "each key's name"
             if attr == '.':
+                self.logger.debug(
+                    "Scanning every key's name...",
+                    prefix="Processor::_get_nodes_by_search:  ")
                 for key, val in data.items():
                     matches = Searches.search_matches(method, term, key)
                     if (matches and not invert) or (invert and not matches):
@@ -1021,6 +1024,10 @@ class Processor:
             elif attr in data:
                 value = data[attr]
                 matches = Searches.search_matches(method, term, value)
+                self.logger.debug(
+                    "Scanning for an attribute match against {}, which {}."
+                    .format(attr, "matches" if matches else "does not match"),
+                    prefix="Processor::_get_nodes_by_search:  ")
                 if (matches and not invert) or (invert and not matches):
                     debug_matched = "one dictionary attribute match yielded"
                     self.logger.debug(
@@ -1035,14 +1042,31 @@ class Processor:
                         ancestry + [(data, attr)])
 
             else:
-                # Attempt a descendant search
+                # Attempt a descendant search; return every node which has ANY
+                # descendent matching the search expression.
+                self.logger.debug((
+                    "Attempting a descendant search against data at"
+                    " desc_path={}, translated_path={}:"
+                    ).format(desc_path, translated_path),
+                    prefix="Processor::_get_nodes_by_search:  ",
+                    data=data)
                 for desc_node in self._get_required_nodes(
                     data, desc_path, 0, parent=parent, parentref=parentref,
                     translated_path=translated_path, ancestry=ancestry
                 ):
                     matches = Searches.search_matches(
                         method, term, desc_node.node)
-                    break
+
+                    if (matches and not invert) or (invert and not matches):
+                        # Search no further because the parent node of this
+                        # search has at least one matching descendent.
+                        self.logger.debug((
+                            "BREAKING OUT of descendent search with matches={}"
+                            " and invert={}").format(
+                                "matching" if matches else "NOT matching",
+                                "yes" if invert else "no"),
+                            prefix="Processor::_get_nodes_by_search:  ")
+                        break
 
                 if (matches and not invert) or (invert and not matches):
                     debug_matched = "one descendant search match yielded"
