@@ -284,3 +284,35 @@ items:
         for line in result.stdout.splitlines():
             assert line == output[match_index]
             match_index += 1
+
+    @pytest.mark.parametrize("query,output", [
+        ("svcs.*[name()]", ['coolserver', 'logsender']),
+        ("svcs.*[enabled=false][parent()][name()]", ['logsender']),
+        ("svcs[name()]", ['svcs']),
+        ("indexes[.^Item][name()]", ['0', '1', '3']),
+    ])
+    def test_get_node_names(self, script_runner, tmp_path_factory, query, output):
+        # Contributed by https://github.com/AndydeCleyre
+        content = """---
+svcs:
+  coolserver:
+    enabled: true
+    exec: ./coolserver.py
+  logsender:
+    enabled: false
+    exec: remote_syslog -D
+indexes:
+  - Item 1
+  - Item 2
+  - Disabled 3
+  - Item 4
+"""
+
+        yaml_file = create_temp_yaml_file(tmp_path_factory, content)
+        result = script_runner.run(self.command, "--query={}".format(query), yaml_file)
+        assert result.success, result.stderr
+
+        match_index = 0
+        for line in result.stdout.splitlines():
+            assert line == output[match_index]
+            match_index += 1
