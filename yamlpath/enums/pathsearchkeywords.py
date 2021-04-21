@@ -15,11 +15,16 @@ class PathSearchKeywords(Enum):
 
     `HAS_CHILD`
         Matches when the node has a direct child with a given name.
+    `NAME`
+        Matches only the key-name of the present node, discarding any and all
+        child node data.  Can be used to rename the matched key as long as the
+        new name is unique within the parent.
     `PARENT`
-        Access the parent of the present node.
+        Access the parent(s) of the present node.
     """
 
     HAS_CHILD = auto()
+    NAME = ()
     PARENT = auto()
 
     def __str__(self) -> str:
@@ -27,6 +32,8 @@ class PathSearchKeywords(Enum):
         keyword = ''
         if self is PathSearchKeywords.HAS_CHILD:
             keyword = 'has_child'
+        elif self is PathSearchKeywords.NAME:
+            keyword = 'name'
         elif self is PathSearchKeywords.PARENT:
             keyword = 'parent'
 

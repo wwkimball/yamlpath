@@ -32,6 +32,9 @@ class KeywordSearches:
         if keyword is PathSearchKeywords.HAS_CHILD:
             nc_matches = KeywordSearches.has_child(
                 haystack, invert, parameters, yaml_path, **kwargs)
+        elif keyword is PathSearchKeywords.NAME:
+            nc_matches = KeywordSearches.name(
+                haystack, invert, parameters, yaml_path, **kwargs)
         elif keyword is PathSearchKeywords.PARENT:
             nc_matches = KeywordSearches.parent(
                 haystack, invert, parameters, yaml_path, **kwargs)
@@ -106,6 +109,39 @@ class KeywordSearches:
             raise YAMLPathException(
                 ("{} data has no child nodes in YAML Path").format(type(data)),
                 str(yaml_path))
+
+    @staticmethod
+    # pylint: disable=locally-disabled,too-many-locals
+    def name(
+        data: Any, invert: bool, parameters: List[str], yaml_path: YAMLPath,
+        **kwargs: Any
+    ) -> Generator[NodeCoords, None, None]:
+        """Match only the key-name of the present node."""
+        parent: Any = kwargs.pop("parent", None)
+        parentref: Any = kwargs.pop("parentref", None)
+        translated_path: YAMLPath = kwargs.pop("translated_path", YAMLPath(""))
+        ancestry: List[tuple] = kwargs.pop("ancestry", [])
+
+        # There are no parameters
+        param_count = len(parameters)
+        if param_count > 1:
+            raise YAMLPathException((
+                "Invalid parameter count to {}(); {} are permitted, "
+                " got {} in YAML Path"
+                ).format(PathSearchKeywords.NAME, 0, param_count),
+                str(yaml_path))
+
+        if invert:
+            raise YAMLPathException((
+                "Inversion is meaningless to {}()"
+                ).format(PathSearchKeywords.NAME),
+                str(yaml_path))
+
+        # parent_node = KeywordSearches.parent(
+        #     data, False, [], yaml_path, **kwargs)
+
+        yield NodeCoords(
+            parentref, parent, parentref, translated_path, ancestry)
 
     @staticmethod
     # pylint: disable=locally-disabled,too-many-locals
