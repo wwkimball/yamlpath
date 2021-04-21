@@ -137,9 +137,6 @@ class KeywordSearches:
                 ).format(PathSearchKeywords.NAME),
                 str(yaml_path))
 
-        # parent_node = KeywordSearches.parent(
-        #     data, False, [], yaml_path, **kwargs)
-
         yield NodeCoords(
             parentref, parent, parentref, translated_path, ancestry)
 
@@ -201,8 +198,8 @@ class KeywordSearches:
                 (data, _) = ancestry.pop()
                 ancestry_len -= 1
 
-            parentref = ancestry[-1][1] if ancestry_len > 1 else None
-            parent = ancestry[-1][0] if ancestry_len > 1 else None
+            parentref = ancestry[-1][1] if ancestry_len > 0 else None
+            parent = ancestry[-1][0] if ancestry_len > 0 else None
 
             parent_nc = NodeCoords(
                 data, parent, parentref, translated_path, ancestry)
