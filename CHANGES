@@ -12,11 +12,12 @@ Bug Fixes:
 
 Enhancements:
 * An entirely new segment type has been added to YAML Path and is now supported
-  by the reference implementation command-line tools:  Keyword Searches.
-  Similar to programming language keywords, these reserved Keywords work much
-  like functions, accepting parameters and performing algorythmic operations or
-  returning data not otherwise accessible to other YAML Path segment types.
-  These new capabilities -- explored on the project Wiki -- include:
+  by the library and reference implementation command-line tools:  Keyword
+  Searches.  Similar to programming language keywords, these reserved Keywords
+  work much like functions, accepting parameters and performing algorythmic
+  operations or returning data not otherwise accessible to other YAML Path
+  segment types.  These new capabilities -- explored on the project Wiki --
+  include:
   * [has_child(NAME)]
   * [name()]
   * [max(NAME)]
