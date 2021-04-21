@@ -34,7 +34,7 @@ class KeywordSearches:
                 haystack, invert, parameters, yaml_path, **kwargs)
         elif keyword is PathSearchKeywords.NAME:
             nc_matches = KeywordSearches.name(
-                haystack, invert, parameters, yaml_path, **kwargs)
+                invert, parameters, yaml_path, **kwargs)
         elif keyword is PathSearchKeywords.PARENT:
             nc_matches = KeywordSearches.parent(
                 haystack, invert, parameters, yaml_path, **kwargs)
@@ -113,7 +113,7 @@ class KeywordSearches:
     @staticmethod
     # pylint: disable=locally-disabled,too-many-locals
     def name(
-        data: Any, invert: bool, parameters: List[str], yaml_path: YAMLPath,
+        invert: bool, parameters: List[str], yaml_path: YAMLPath,
         **kwargs: Any
     ) -> Generator[NodeCoords, None, None]:
         """Match only the key-name of the present node."""
