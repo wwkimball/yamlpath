@@ -288,12 +288,18 @@ class ConsolePrinter:
         """Helper method for debug."""
         prefix = kwargs.pop("prefix", "")
         path_prefix = "{}(path)".format(prefix)
+        segment_prefix = "{}(segment)".format(prefix)
         node_prefix = "{}(node)".format(prefix)
         parent_prefix = "{}(parent)".format(prefix)
         parentref_prefix = "{}(parentref)".format(prefix)
         ancestry_prefix = "{}(ancestry)".format(prefix)
 
         for line in ConsolePrinter._debug_dump(data.path, prefix=path_prefix):
+            yield line
+
+        for line in ConsolePrinter._debug_dump(
+            data.path_segment, prefix=segment_prefix
+        ):
             yield line
 
         for line in ConsolePrinter._debug_dump(data.node, prefix=node_prefix):

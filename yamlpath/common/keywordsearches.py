@@ -8,6 +8,7 @@ Copyright 2020 William W. Kimball, Jr. MBA MSIS
 """
 from typing import Any, Generator, List
 
+from yamlpath.types import PathSegment
 from yamlpath.enums import PathSearchKeywords
 from yamlpath.path import SearchKeywordTerms
 from yamlpath.exceptions import YAMLPathException
@@ -57,6 +58,7 @@ class KeywordSearches:
         parentref: Any = kwargs.pop("parentref", None)
         translated_path: YAMLPath = kwargs.pop("translated_path", YAMLPath(""))
         ancestry: List[tuple] = kwargs.pop("ancestry", [])
+        relay_segment: PathSegment = kwargs.pop("relay_segment", None)
 
         # There must be exactly one parameter
         param_count = len(parameters)
@@ -78,7 +80,8 @@ class KeywordSearches:
                 (child_present and not invert)
             ):
                 yield NodeCoords(
-                    data, parent, parentref, translated_path, ancestry)
+                    data, parent, parentref, translated_path, ancestry,
+                    relay_segment)
 
         # Against a list, this will merely require an exact match between
         # parameters and any list elements.  When inverted, every
@@ -103,7 +106,8 @@ class KeywordSearches:
                 (child_present and not invert)
             ):
                 yield NodeCoords(
-                    data, parent, parentref, translated_path, ancestry)
+                    data, parent, parentref, translated_path, ancestry,
+                    relay_segment)
 
         else:
             raise YAMLPathException(
@@ -121,6 +125,7 @@ class KeywordSearches:
         parentref: Any = kwargs.pop("parentref", None)
         translated_path: YAMLPath = kwargs.pop("translated_path", YAMLPath(""))
         ancestry: List[tuple] = kwargs.pop("ancestry", [])
+        relay_segment: PathSegment = kwargs.pop("relay_segment", None)
 
         # There are no parameters
         param_count = len(parameters)
@@ -138,7 +143,8 @@ class KeywordSearches:
                 str(yaml_path))
 
         yield NodeCoords(
-            parentref, parent, parentref, translated_path, ancestry)
+            parentref, parent, parentref, translated_path, ancestry,
+            relay_segment)
 
     @staticmethod
     # pylint: disable=locally-disabled,too-many-locals
@@ -151,6 +157,7 @@ class KeywordSearches:
         parentref: Any = kwargs.pop("parentref", None)
         translated_path: YAMLPath = kwargs.pop("translated_path", YAMLPath(""))
         ancestry: List[tuple] = kwargs.pop("ancestry", [])
+        relay_segment: PathSegment = kwargs.pop("relay_segment", None)
 
         # There may be 0 or 1 parameters
         param_count = len(parameters)
@@ -191,7 +198,8 @@ class KeywordSearches:
         if parent_levels < 1:
             # parent(0) is the present node
             yield NodeCoords(
-                data, parent, parentref, translated_path, ancestry)
+                data, parent, parentref, translated_path, ancestry,
+                relay_segment)
         else:
             for _ in range(parent_levels):
                 translated_path.pop()
@@ -200,8 +208,6 @@ class KeywordSearches:
 
             parentref = ancestry[-1][1] if ancestry_len > 0 else None
             parent = ancestry[-1][0] if ancestry_len > 0 else None
-
-            parent_nc = NodeCoords(
-                data, parent, parentref, translated_path, ancestry)
-
-            yield parent_nc
+            yield NodeCoords(
+                data, parent, parentref, translated_path, ancestry,
+                relay_segment)
