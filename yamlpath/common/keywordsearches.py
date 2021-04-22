@@ -225,32 +225,43 @@ class KeywordSearches:
                     str(yaml_path))
 
             for key, val in data.items():
-                print("Looking at key[{}] and val[{}]".format(key, val))
-                if val is not None and scan_node in val:
-                    eval_val = val[scan_node]
-                    next_path = (
-                        translated_path + YAMLPath.escape_path_section(
-                            key, translated_path.seperator))
-                    next_ancestry = ancestry + [(data, key)]
-                    if match_value is None or eval_val > match_value:
-                        match_value = eval_val
-                        discard_nodes.extend(match_nodes)
-                        match_nodes = [
-                            NodeCoords(
+                if isinstance(val, dict):
+                    if val is not None and scan_node in val:
+                        eval_val = val[scan_node]
+                        next_path = (
+                            translated_path + YAMLPath.escape_path_section(
+                                key, translated_path.seperator))
+                        next_ancestry = ancestry + [(data, key)]
+                        if match_value is None or eval_val > match_value:
+                            match_value = eval_val
+                            discard_nodes.extend(match_nodes)
+                            match_nodes = [
+                                NodeCoords(
+                                    val, data, key, next_path, next_ancestry,
+                                    relay_segment)
+                            ]
+                            continue
+
+                        if eval_val == match_value:
+                            match_nodes.append(NodeCoords(
                                 val, data, key, next_path, next_ancestry,
-                                relay_segment)
-                        ]
-                        continue
+                                relay_segment))
+                            continue
 
-                    if eval_val == match_value:
-                        match_nodes.append(NodeCoords(
-                            val, data, key, next_path, next_ancestry,
-                            relay_segment))
-                        continue
+                    discard_nodes.append(NodeCoords(
+                        val, data, key, next_path, next_ancestry,
+                        relay_segment))
 
-                discard_nodes.append(NodeCoords(
-                    val, data, key, next_path, next_ancestry,
-                    relay_segment))
+                elif scan_node in data:
+                    # The user probably meant to operate against the parent
+                    raise YAMLPathException((
+                        "The {}([NAME]) Search Keyword operates against"
+                        " collections of data which share a common attribute"
+                        " yet there is only a single node to consider.  Did"
+                        " you mean to evaluate the parent of the selected"
+                        " node?  Please review your YAML Path"
+                        ).format(PathSearchKeywords.MAX),
+                        str(yaml_path))
 
         elif isinstance(data, list):
             # A named child node is useless
@@ -265,7 +276,9 @@ class KeywordSearches:
             for idx, ele in enumerate(data):
                 next_path = translated_path + "[{}]".format(idx)
                 next_ancestry = ancestry + [(data, idx)]
-                if match_value is None or ele > match_value:
+                if (ele is not None
+                    and (match_value is None or ele > match_value)
+                ):
                     match_value = ele
                     discard_nodes.extend(match_nodes)
                     match_nodes = [
@@ -275,7 +288,7 @@ class KeywordSearches:
                     ]
                     continue
 
-                if ele == match_value:
+                if ele is not None and ele == match_value:
                     match_nodes.append(NodeCoords(
                         ele, data, idx, next_path, next_ancestry,
                         relay_segment))

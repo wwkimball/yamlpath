@@ -70,6 +70,59 @@ class Test_common_keywordsearches():
 
 
     ###
+    # max
+    ###
+    def test_max_invalid_param_count(self):
+        with pytest.raises(YAMLPathException) as ex:
+            nodes = list(KeywordSearches.max(
+                {},
+                False,
+                ["1", "2"],
+                YAMLPath("/")
+            ))
+        assert -1 < str(ex.value).find("Invalid parameter count to ")
+
+    def test_max_missing_aoh_param(self):
+        with pytest.raises(YAMLPathException) as ex:
+            nodes = list(KeywordSearches.max(
+                [{'a': 1},{'a': 2}],
+                False,
+                [],
+                YAMLPath("/")
+            ))
+        assert -1 < str(ex.value).find("when evaluating an Array-of-Hashes")
+
+    def test_max_missing_hash_param(self):
+        with pytest.raises(YAMLPathException) as ex:
+            nodes = list(KeywordSearches.max(
+                {'a': {'b': 1}, 'c': {'d': 2}},
+                False,
+                [],
+                YAMLPath("/")
+            ))
+        assert -1 < str(ex.value).find("when comparing Hash/map/dict children")
+
+    def test_max_invalid_array_param(self):
+        with pytest.raises(YAMLPathException) as ex:
+            nodes = list(KeywordSearches.max(
+                [1, 2, 3],
+                False,
+                ['3'],
+                YAMLPath("/")
+            ))
+        assert -1 < str(ex.value).find("when comparing Array/sequence/list elements to one another")
+
+    def test_max_incorrect_node(self):
+        with pytest.raises(YAMLPathException) as ex:
+            nodes = list(KeywordSearches.max(
+                {'b': 2},
+                False,
+                ['b'],
+                YAMLPath("/*[max(b)]")
+            ))
+        assert -1 < str(ex.value).find("operates against collections of data")
+
+    ###
     # parent
     ###
     def test_parent_invalid_param_count(self):
