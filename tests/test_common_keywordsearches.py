@@ -21,6 +21,7 @@ class Test_common_keywordsearches():
                 {},
                 YAMLPath("/")
             ))
+        assert -1 < str(ex.value).find("Unsupported search keyword")
 
 
     ###
@@ -33,6 +34,7 @@ class Test_common_keywordsearches():
                 {},
                 YAMLPath("/")
             ))
+        assert -1 < str(ex.value).find("Invalid parameter count to ")
 
     def test_has_child_invalid_node(self):
         with pytest.raises(YAMLPathException) as ex:
@@ -42,6 +44,29 @@ class Test_common_keywordsearches():
                 ["wwk"],
                 YAMLPath("")
             ))
+        assert -1 < str(ex.value).find("has no child nodes")
+
+
+    ###
+    # name
+    ###
+    def test_name_invalid_param_count(self):
+        with pytest.raises(YAMLPathException) as ex:
+            nodes = list(KeywordSearches.name(
+                False,
+                ["1", "2"],
+                YAMLPath("/")
+            ))
+        assert -1 < str(ex.value).find("Invalid parameter count to ")
+
+    def test_name_invalid_inversion(self):
+        with pytest.raises(YAMLPathException) as ex:
+            nodes = list(KeywordSearches.name(
+                True,
+                [],
+                YAMLPath("/")
+            ))
+        assert -1 < str(ex.value).find("Inversion is meaningless to ")
 
 
     ###

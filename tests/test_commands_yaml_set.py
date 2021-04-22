@@ -1302,3 +1302,40 @@ devices:
         with open(yaml_file, 'r') as fhnd:
             filedat = fhnd.read()
         assert filedat == yamlout
+
+    def test_change_key_name_good(self, script_runner, tmp_path_factory):
+        yamlin = """---
+key:  value
+"""
+        yamlout = """---
+renamed_key: value
+"""
+        yaml_file = create_temp_yaml_file(tmp_path_factory, yamlin)
+        result = script_runner.run(
+            self.command,
+            "--change=/key[name()]",
+            "--value=renamed_key",
+            yaml_file
+        )
+        assert result.success, result.stderr
+
+        with open(yaml_file, 'r') as fhnd:
+            filedat = fhnd.read()
+        assert filedat == yamlout
+
+    def test_change_key_name_bad(self, script_runner, tmp_path_factory):
+        yamlin = """---
+items:
+  - one
+  - two
+"""
+
+        yaml_file = create_temp_yaml_file(tmp_path_factory, yamlin)
+        result = script_runner.run(
+            self.command,
+            "--change=/items[0][name()]",
+            "--value=2",
+            yaml_file
+        )
+        assert not result.success, result.stdout
+        assert "Keys can be renamed only in Hash/map/dict" in result.stderr

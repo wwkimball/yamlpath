@@ -6,6 +6,9 @@ Copyright 2018, 2019, 2020 William W. Kimball, Jr. MBA MSIS
 """
 from typing import Any, Dict, Generator, List, Union
 
+from ruamel.yaml.comments import CommentedMap
+
+from yamlpath.types import PathSegment
 from yamlpath.common import Anchors, KeywordSearches, Nodes, Searches
 from yamlpath import YAMLPath
 from yamlpath.path import SearchKeywordTerms, SearchTerms, CollectorTerms
@@ -14,6 +17,7 @@ from yamlpath.exceptions import YAMLPathException
 from yamlpath.enums import (
     YAMLValueFormats,
     PathSegmentTypes,
+    PathSearchKeywords,
     CollectorOperators,
     PathSeperators,
 )
@@ -180,23 +184,63 @@ class Processor:
             for node_coord in self._get_optional_nodes(
                 self.data, yaml_path, value
             ):
-                self.logger.debug(
-                    "Matched optional node coordinate:"
-                    , data=node_coord
-                    , prefix="Processor::set_value:  ")
-                self.logger.debug(
-                    "Setting its value with format {} to:".format(value_format)
-                    , data=value
-                    , prefix="Processor::set_value:  ")
-                try:
-                    self._update_node(
-                        node_coord.parent, node_coord.parentref, value,
-                        value_format, tag)
-                except ValueError as vex:
-                    raise YAMLPathException(
-                        "Impossible to write '{}' as {}.  The error was:  {}"
-                        .format(value, value_format, str(vex))
-                        , str(yaml_path)) from vex
+                self._apply_change(yaml_path, node_coord, value,
+                    value_format=value_format, tag=tag)
+
+    def _apply_change(
+        self, yaml_path: YAMLPath, node_coord: NodeCoords, value: Any,
+        **kwargs: Any
+    ):
+        """Helper for set_value."""
+        value_format: YAMLValueFormats = kwargs.pop("value_format",
+                                                    YAMLValueFormats.DEFAULT)
+        tag: str = kwargs.pop("tag", None)
+
+        self.logger.debug(
+            "Matched optional node coordinate:"
+            , data=node_coord
+            , prefix="Processor::_apply_change:  ")
+        self.logger.debug(
+            "Setting its value with format {} to:".format(value_format)
+            , data=value
+            , prefix="Processor::_apply_change:  ")
+
+        last_segment = node_coord.path_segment
+        if last_segment is not None:
+            (_, segment_value) = last_segment
+            if (
+                isinstance(segment_value, SearchKeywordTerms)
+                and segment_value.keyword is PathSearchKeywords.NAME
+            ):
+                # Rename a key
+                parent = node_coord.parent
+                parentref = node_coord.parentref
+                if isinstance(parent, CommentedMap):
+                    for i, k in [
+                        (idx, key) for idx, key
+                        in enumerate(parent.keys())
+                        if key == parentref
+                    ]:
+                        parent.insert(i, value, parent.pop(k))
+                elif isinstance(parent, dict):
+                    parent[value] = parent[parentref]
+                    del parent[parentref]
+                else:
+                    raise YAMLPathException((
+                        "Keys can be renamed only in Hash/map/dict"
+                        " data; got a {}, instead."
+                        ).format(type(parent)), str(yaml_path))
+                return
+
+        try:
+            self._update_node(
+                node_coord.parent, node_coord.parentref, value,
+                value_format, tag)
+        except ValueError as vex:
+            raise YAMLPathException(
+                "Impossible to write '{}' as {}.  The error was:  {}"
+                .format(value, value_format, str(vex))
+                , str(yaml_path)) from vex
 
     def _get_anchor_node(
         self, anchor_path: Union[YAMLPath, str], **kwargs: Any
@@ -587,8 +631,9 @@ class Processor:
                 data=segments)
             return
 
+        pathseg: PathSegment = yaml_path.unescaped[segment_index]
+        (unesc_type, unesc_attrs) = pathseg
         (segment_type, stripped_attrs) = segments[segment_index]
-        (unesc_type, unesc_attrs) = yaml_path.unescaped[segment_index]
 
         # Disallow traversal recursion (because it creates a denial-of-service)
         if segment_index > 0 and segment_type == PathSegmentTypes.TRAVERSE:
@@ -620,7 +665,8 @@ class Processor:
             node_coords = self._get_nodes_by_keyword_search(
                 data, yaml_path, stripped_attrs, parent=parent,
                 parentref=parentref, traverse_lists=traverse_lists,
-                translated_path=translated_path, ancestry=ancestry)
+                translated_path=translated_path, ancestry=ancestry,
+                relay_segment=pathseg)
         elif (
                 segment_type == PathSegmentTypes.SEARCH
                 and isinstance(stripped_attrs, SearchTerms)
@@ -676,7 +722,8 @@ class Processor:
         translated_path: YAMLPath = kwargs.pop("translated_path", YAMLPath(""))
         ancestry: List[tuple] = kwargs.pop("ancestry", [])
 
-        (_, stripped_attrs) = yaml_path.escaped[segment_index]
+        pathseg: PathSegment = yaml_path.escaped[segment_index]
+        (_, stripped_attrs) = pathseg
         str_stripped = str(stripped_attrs)
 
         self.logger.debug(
@@ -695,7 +742,7 @@ class Processor:
                     .format(str_stripped))
                 yield NodeCoords(
                     data[stripped_attrs], data, stripped_attrs,
-                    next_translated_path, next_ancestry)
+                    next_translated_path, next_ancestry, pathseg)
             else:
                 # Check for a string/int type mismatch
                 try:
@@ -703,7 +750,7 @@ class Processor:
                     if intkey in data:
                         yield NodeCoords(
                             data[intkey], data, intkey, next_translated_path,
-                            ancestry + [(data, intkey)])
+                            ancestry + [(data, intkey)], pathseg)
                 except ValueError:
                     pass
         elif isinstance(data, list):
@@ -718,7 +765,7 @@ class Processor:
                     yield NodeCoords(
                         data[idx], data, idx,
                         translated_path + "[{}]".format(idx),
-                        ancestry + [(data, idx)])
+                        ancestry + [(data, idx)], pathseg)
             except ValueError:
                 # Pass-through search against possible Array-of-Hashes, if
                 # allowed.
@@ -764,7 +811,8 @@ class Processor:
 
         Raises:  N/A
         """
-        (_, stripped_attrs) = yaml_path.escaped[segment_index]
+        pathseg: PathSegment = yaml_path.escaped[segment_index]
+        (_, stripped_attrs) = pathseg
         (_, unstripped_attrs) = yaml_path.unescaped[segment_index]
         str_stripped = str(stripped_attrs)
         translated_path: YAMLPath = kwargs.pop("translated_path", YAMLPath(""))
@@ -795,18 +843,18 @@ class Processor:
                     yield NodeCoords(
                         [data[intmin]], data, intmin,
                         translated_path + "[{}]".format(intmin),
-                        ancestry + [(data, intmin)])
+                        ancestry + [(data, intmin)], pathseg)
                 else:
                     sliced_elements = []
                     for slice_index in range(intmin, intmax):
                         sliced_elements.append(NodeCoords(
                             data[slice_index], data, intmin,
                             translated_path + "[{}]".format(slice_index),
-                            ancestry + [(data, slice_index)]))
+                            ancestry + [(data, slice_index)], pathseg))
                     yield NodeCoords(
                         sliced_elements, data, intmin,
                         translated_path + "[{}:{}]".format(intmin, intmax),
-                        ancestry + [(data, intmin)])
+                        ancestry + [(data, intmin)], pathseg)
 
             elif isinstance(data, dict):
                 for key, val in data.items():
@@ -815,7 +863,7 @@ class Processor:
                             val, data, key,
                             translated_path + YAMLPath.escape_path_section(
                                 key, translated_path.seperator),
-                            ancestry + [(data, key)])
+                            ancestry + [(data, key)], pathseg)
         else:
             try:
                 idx: int = int(str_stripped)
@@ -830,7 +878,7 @@ class Processor:
             if isinstance(data, list) and len(data) > idx:
                 yield NodeCoords(
                     data[idx], data, idx, translated_path + "[{}]".format(idx),
-                    ancestry + [(data, idx)])
+                    ancestry + [(data, idx)], pathseg)
 
     def _get_nodes_by_anchor(
             self, data: Any, yaml_path: YAMLPath, segment_index: int, **kwargs
@@ -851,7 +899,8 @@ class Processor:
 
         Raises:  N/A
         """
-        (_, stripped_attrs) = yaml_path.escaped[segment_index]
+        pathseg: PathSegment = yaml_path.escaped[segment_index]
+        (_, stripped_attrs) = pathseg
         translated_path: YAMLPath = kwargs.pop("translated_path", YAMLPath(""))
         ancestry: List[tuple] = kwargs.pop("ancestry", [])
         next_translated_path = translated_path + "[&{}]".format(
@@ -867,7 +916,7 @@ class Processor:
                 if (hasattr(ele, "anchor")
                         and stripped_attrs == ele.anchor.value):
                     yield NodeCoords(ele, data, lstidx, next_translated_path,
-                        ancestry + [(data, lstidx)])
+                        ancestry + [(data, lstidx)], pathseg)
         elif isinstance(data, dict):
             for key, val in data.items():
                 next_ancestry = ancestry + [(data, key)]
@@ -875,12 +924,12 @@ class Processor:
                         and stripped_attrs == key.anchor.value):
                     yield NodeCoords(
                         val, data, key, next_translated_path,
-                        next_ancestry)
+                        next_ancestry, pathseg)
                 elif (hasattr(val, "anchor")
                       and stripped_attrs == val.anchor.value):
                     yield NodeCoords(
                         val, data, key, next_translated_path,
-                        next_ancestry)
+                        next_ancestry, pathseg)
 
     def _get_nodes_by_keyword_search(
             self, data: Any, yaml_path: YAMLPath, terms: SearchKeywordTerms,
@@ -955,6 +1004,7 @@ class Processor:
         parentref: Any = kwargs.pop("parentref", None)
         traverse_lists: bool = kwargs.pop("traverse_lists", True)
         translated_path: YAMLPath = kwargs.pop("translated_path", YAMLPath(""))
+        pathseg: PathSegment = (PathSegmentTypes.SEARCH, terms)
         ancestry: List[tuple] = kwargs.pop("ancestry", [])
         invert = terms.inverted
         method = terms.method
@@ -983,7 +1033,7 @@ class Processor:
                     for desc_node in self._get_required_nodes(
                         ele, desc_path, 0,
                         translated_path=next_translated_path,
-                        ancestry=next_ancestry
+                        ancestry=next_ancestry, relay_segment=pathseg
                     ):
                         matches = Searches.search_matches(
                             method, term, desc_node.node)
@@ -998,7 +1048,7 @@ class Processor:
                     yield NodeCoords(
                         ele, data, lstidx,
                         translated_path + "[{}]".format(lstidx),
-                        ancestry + [(data, lstidx)])
+                        ancestry + [(data, lstidx)], pathseg)
 
         elif isinstance(data, dict):
             # Allow . to mean "each key's name"
@@ -1019,7 +1069,7 @@ class Processor:
                             val, data, key,
                             translated_path + YAMLPath.escape_path_section(
                                 key, translated_path.seperator),
-                            ancestry + [(data, key)])
+                            ancestry + [(data, key)], pathseg)
 
             elif attr in data:
                 value = data[attr]
@@ -1039,7 +1089,7 @@ class Processor:
                         value, data, attr,
                         translated_path + YAMLPath.escape_path_section(
                             attr, translated_path.seperator),
-                        ancestry + [(data, attr)])
+                        ancestry + [(data, attr)], pathseg)
 
             else:
                 # Attempt a descendant search; return every node which has ANY
@@ -1052,7 +1102,8 @@ class Processor:
                     data=data)
                 for desc_node in self._get_required_nodes(
                     data, desc_path, 0, parent=parent, parentref=parentref,
-                    translated_path=translated_path, ancestry=ancestry
+                    translated_path=translated_path, ancestry=ancestry,
+                    relay_segment=pathseg
                 ):
                     matches = Searches.search_matches(
                         method, term, desc_node.node)
@@ -1076,7 +1127,8 @@ class Processor:
                         data=data,
                         prefix="Processor::_get_nodes_by_search:  ")
                     yield NodeCoords(
-                        data, parent, parentref, translated_path, ancestry)
+                        data, parent, parentref, translated_path, ancestry,
+                        pathseg)
 
         else:
             # Check the passed data itself for a match
@@ -1087,7 +1139,8 @@ class Processor:
                     "Yielding the queried data itself because it matches.",
                     prefix="Processor::_get_nodes_by_search:  ")
                 yield NodeCoords(
-                    data, parent, parentref, translated_path, ancestry)
+                    data, parent, parentref, translated_path, ancestry,
+                    pathseg)
 
         self.logger.debug(
             "Finished seeking SEARCH nodes matching {} in data with {}:"
@@ -1131,14 +1184,18 @@ class Processor:
         parentref: Any = kwargs.pop("parentref", None)
         translated_path: YAMLPath = kwargs.pop("translated_path", YAMLPath(""))
         ancestry: List[tuple] = kwargs.pop("ancestry", [])
-        node_coords = []    # A list of NodeCoords
+        node_coords: List[NodeCoords] = []
+        segments = yaml_path.escaped
+        next_segment_idx = segment_index + 1
+        pathseg: PathSegment = segments[segment_index]
+
         self.logger.debug(
             "Processor::_get_nodes_by_collector:  Getting required nodes"
             " matching search expression:  {}".format(terms.expression))
         for node_coord in self._get_required_nodes(
                 data, YAMLPath(terms.expression), 0, parent=parent,
                 parentref=parentref, translated_path=translated_path,
-                ancestry=ancestry):
+                ancestry=ancestry, relay_segment=pathseg):
             node_coords.append(node_coord)
 
         # This may end up being a bad idea for some cases, but this method will
@@ -1159,17 +1216,15 @@ class Processor:
                 flat_nodes.append(
                     NodeCoords(
                         flatten_node, node_coord.parent, flatten_idx,
-                        node_coord.path, node_coord.ancestry))
+                        node_coord.path, node_coord.ancestry, pathseg))
             node_coords = flat_nodes
 
         # As long as each next segment is an ADDITION or SUBTRACTION
         # COLLECTOR, keep combining the results.
-        segments = yaml_path.escaped
-        next_segment_idx = segment_index + 1
-
         # pylint: disable=too-many-nested-blocks
         while next_segment_idx < len(segments):
-            (peek_type, peek_attrs) = segments[next_segment_idx]
+            peekseg: PathSegment = segments[next_segment_idx]
+            (peek_type, peek_attrs) = peekseg
             if (
                     peek_type is PathSegmentTypes.COLLECTOR
                     and isinstance(peek_attrs, CollectorTerms)
@@ -1180,7 +1235,7 @@ class Processor:
                             data, peek_path, 0, parent=parent,
                             parentref=parentref,
                             translated_path=translated_path,
-                            ancestry=ancestry):
+                            ancestry=ancestry, relay_segment=peekseg):
                         if (isinstance(node_coord, NodeCoords)
                                 and isinstance(node_coord.node, list)):
                             for coord_idx, coord in enumerate(node_coord.node):
@@ -1195,7 +1250,7 @@ class Processor:
                                     coord = NodeCoords(
                                         coord, node_coord.node, coord_idx,
                                         next_translated_path,
-                                        next_ancestry)
+                                        next_ancestry, peekseg)
                                 node_coords.append(coord)
                         else:
                             node_coords.append(node_coord)
@@ -1205,7 +1260,7 @@ class Processor:
                             data, peek_path, 0, parent=parent,
                             parentref=parentref,
                             translated_path=translated_path,
-                            ancestry=ancestry):
+                            ancestry=ancestry, relay_segment=peekseg):
                         unwrapped_data = NodeCoords.unwrap_node_coords(
                             node_coord)
                         if isinstance(unwrapped_data, list):
@@ -1257,6 +1312,9 @@ class Processor:
         parentref: Any = kwargs.pop("parentref", None)
         translated_path: YAMLPath = kwargs.pop("translated_path", YAMLPath(""))
         ancestry: List[tuple] = kwargs.pop("ancestry", [])
+        segments = yaml_path.escaped
+        pathseg: PathSegment = segments[segment_index]
+        next_segment_idx: int = segment_index + 1
 
         self.logger.debug(
             "TRAVERSING the tree at parentref:",
@@ -1265,12 +1323,12 @@ class Processor:
         if data is None:
             self.logger.debug(
                 "Processor::_get_nodes_by_traversal:  Yielding a None node.")
-            yield NodeCoords(None, parent, parentref)
+            yield NodeCoords(None, parent, parentref, translated_path,
+                ancestry, pathseg)
             return
 
         # Is there a next segment?
-        segments = yaml_path.escaped
-        if segment_index + 1 == len(segments):
+        if next_segment_idx == len(segments):
             # This traversal is gathering every leaf node
             if isinstance(data, dict):
                 for key, val in data.items():
@@ -1307,7 +1365,8 @@ class Processor:
                     "Yielding unfiltered Scalar value:",
                     prefix="Processor::_get_nodes_by_traversal:  ", data=data)
                 yield NodeCoords(
-                    data, parent, parentref, translated_path, ancestry)
+                    data, parent, parentref, translated_path, ancestry,
+                    pathseg)
         else:
             # There is a filter in the next segment; recurse data, comparing
             # every child against the following segment until there are no more
@@ -1320,8 +1379,10 @@ class Processor:
             self.logger.debug(
                 "Processor::_get_nodes_by_traversal:  Checking the DIRECT node"
                 " for a next-segment match at {}...".format(parentref))
+
+            peekseg: PathSegment = segments[next_segment_idx]
             for node_coord in self._get_nodes_by_path_segment(
-                data, yaml_path, segment_index + 1, parent=parent,
+                data, yaml_path, next_segment_idx, parent=parent,
                 parentref=parentref, traverse_lists=False,
                 translated_path=translated_path, ancestry=ancestry
             ):
@@ -1331,7 +1392,8 @@ class Processor:
                     prefix="Processor::_get_nodes_by_traversal:  ",
                     data=node_coord)
                 yield NodeCoords(
-                    data, parent, parentref, translated_path, ancestry)
+                    data, parent, parentref, translated_path, ancestry,
+                    peekseg)
 
             # Then, recurse into each child to perform the same test.
             if isinstance(data, dict):
@@ -1400,6 +1462,7 @@ class Processor:
         parentref: Any = kwargs.pop("parentref", None)
         translated_path: YAMLPath = kwargs.pop("translated_path", YAMLPath(""))
         ancestry: List[tuple] = kwargs.pop("ancestry", [])
+        relay_segment: PathSegment = kwargs.pop("relay_segment", None)
 
         if data is None:
             self.logger.debug(
@@ -1411,7 +1474,8 @@ class Processor:
 
         segments = yaml_path.escaped
         if segments and len(segments) > depth:
-            (segment_type, unstripped_attrs) = yaml_path.unescaped[depth]
+            pathseg: PathSegment = yaml_path.unescaped[depth]
+            (segment_type, unstripped_attrs) = pathseg
             except_segment = str(unstripped_attrs)
             self.logger.debug(
                 "Seeking segment <{}>{} in data of type {}:"
@@ -1453,7 +1517,7 @@ class Processor:
                     for subnode_coord in self._get_required_nodes(
                             segment_node_coords, yaml_path, depth + 1,
                             translated_path=translated_path,
-                            ancestry=ancestry):
+                            ancestry=ancestry, relay_segment=pathseg):
                         yield subnode_coord
                 else:
                     self.logger.debug(
@@ -1464,7 +1528,8 @@ class Processor:
                             parent=segment_node_coords.parent,
                             parentref=segment_node_coords.parentref,
                             translated_path=segment_node_coords.path,
-                            ancestry=segment_node_coords.ancestry):
+                            ancestry=segment_node_coords.ancestry,
+                            relay_segment=pathseg):
                         self.logger.debug(
                             "Finally returning segment data of type {} at"
                             " parentref {}:"
@@ -1480,7 +1545,8 @@ class Processor:
                 prefix="Processor::_get_required_nodes:  ",
                 data=data, footer=" ")
             yield NodeCoords(
-                data, parent, parentref, translated_path, ancestry)
+                data, parent, parentref, translated_path, ancestry,
+                relay_segment)
 
     # pylint: disable=locally-disabled,too-many-statements
     def _get_optional_nodes(
@@ -1516,11 +1582,13 @@ class Processor:
         parentref: Any = kwargs.pop("parentref", None)
         translated_path: YAMLPath = kwargs.pop("translated_path", YAMLPath(""))
         ancestry: List[tuple] = kwargs.pop("ancestry", [])
+        relay_segment: PathSegment = kwargs.pop("relay_segment", None)
         segments = yaml_path.escaped
 
         # pylint: disable=locally-disabled,too-many-nested-blocks
         if segments and len(segments) > depth:
-            (segment_type, unstripped_attrs) = yaml_path.unescaped[depth]
+            pathseg: PathSegment = yaml_path.unescaped[depth]
+            (segment_type, unstripped_attrs) = pathseg
             stripped_attrs: Union[
                 str,
                 int,
@@ -1552,7 +1620,8 @@ class Processor:
                         parent=next_coord.parent,
                         parentref=next_coord.parentref,
                         translated_path=next_coord.path,
-                        ancestry=next_coord.ancestry
+                        ancestry=next_coord.ancestry,
+                        relay_segment=pathseg
                 ):
                     yield node_coord
 
@@ -1591,7 +1660,7 @@ class Processor:
                                 new_ele, yaml_path, value, depth + 1,
                                 parent=data, parentref=new_idx,
                                 translated_path=next_translated_path,
-                                ancestry=next_ancestry
+                                ancestry=next_ancestry, relay_segment=pathseg
                         ):
                             matched_nodes += 1
                             yield node_coord
@@ -1625,7 +1694,7 @@ class Processor:
                                 data[newidx], yaml_path, value,
                                 depth + 1, parent=data, parentref=newidx,
                                 translated_path=next_translated_path,
-                                ancestry=next_ancestry
+                                ancestry=next_ancestry, relay_segment=pathseg
                         ):
                             matched_nodes += 1
                             yield node_coord
@@ -1661,7 +1730,7 @@ class Processor:
                                 depth + 1, parent=data,
                                 parentref=stripped_attrs,
                                 translated_path=next_translated_path,
-                                ancestry=next_ancestry
+                                ancestry=next_ancestry, relay_segment=pathseg
                         ):
                             matched_nodes += 1
                             yield node_coord
@@ -1696,7 +1765,8 @@ class Processor:
                 .format(type(data)),
                 prefix="Processor::_get_optional_nodes:  ", data=data)
             yield NodeCoords(
-                data, parent, parentref, translated_path, ancestry)
+                data, parent, parentref, translated_path, ancestry,
+                relay_segment)
 
     # pylint: disable=too-many-arguments
     def _update_node(

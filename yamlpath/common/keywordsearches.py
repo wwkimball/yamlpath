@@ -8,6 +8,7 @@ Copyright 2020 William W. Kimball, Jr. MBA MSIS
 """
 from typing import Any, Generator, List
 
+from yamlpath.types import PathSegment
 from yamlpath.enums import PathSearchKeywords
 from yamlpath.path import SearchKeywordTerms
 from yamlpath.exceptions import YAMLPathException
@@ -32,6 +33,9 @@ class KeywordSearches:
         if keyword is PathSearchKeywords.HAS_CHILD:
             nc_matches = KeywordSearches.has_child(
                 haystack, invert, parameters, yaml_path, **kwargs)
+        elif keyword is PathSearchKeywords.NAME:
+            nc_matches = KeywordSearches.name(
+                invert, parameters, yaml_path, **kwargs)
         elif keyword is PathSearchKeywords.PARENT:
             nc_matches = KeywordSearches.parent(
                 haystack, invert, parameters, yaml_path, **kwargs)
@@ -54,6 +58,7 @@ class KeywordSearches:
         parentref: Any = kwargs.pop("parentref", None)
         translated_path: YAMLPath = kwargs.pop("translated_path", YAMLPath(""))
         ancestry: List[tuple] = kwargs.pop("ancestry", [])
+        relay_segment: PathSegment = kwargs.pop("relay_segment", None)
 
         # There must be exactly one parameter
         param_count = len(parameters)
@@ -75,7 +80,8 @@ class KeywordSearches:
                 (child_present and not invert)
             ):
                 yield NodeCoords(
-                    data, parent, parentref, translated_path, ancestry)
+                    data, parent, parentref, translated_path, ancestry,
+                    relay_segment)
 
         # Against a list, this will merely require an exact match between
         # parameters and any list elements.  When inverted, every
@@ -100,12 +106,45 @@ class KeywordSearches:
                 (child_present and not invert)
             ):
                 yield NodeCoords(
-                    data, parent, parentref, translated_path, ancestry)
+                    data, parent, parentref, translated_path, ancestry,
+                    relay_segment)
 
         else:
             raise YAMLPathException(
                 ("{} data has no child nodes in YAML Path").format(type(data)),
                 str(yaml_path))
+
+    @staticmethod
+    # pylint: disable=locally-disabled,too-many-locals
+    def name(
+        invert: bool, parameters: List[str], yaml_path: YAMLPath,
+        **kwargs: Any
+    ) -> Generator[NodeCoords, None, None]:
+        """Match only the key-name of the present node."""
+        parent: Any = kwargs.pop("parent", None)
+        parentref: Any = kwargs.pop("parentref", None)
+        translated_path: YAMLPath = kwargs.pop("translated_path", YAMLPath(""))
+        ancestry: List[tuple] = kwargs.pop("ancestry", [])
+        relay_segment: PathSegment = kwargs.pop("relay_segment", None)
+
+        # There are no parameters
+        param_count = len(parameters)
+        if param_count > 1:
+            raise YAMLPathException((
+                "Invalid parameter count to {}(); {} are permitted, "
+                " got {} in YAML Path"
+                ).format(PathSearchKeywords.NAME, 0, param_count),
+                str(yaml_path))
+
+        if invert:
+            raise YAMLPathException((
+                "Inversion is meaningless to {}()"
+                ).format(PathSearchKeywords.NAME),
+                str(yaml_path))
+
+        yield NodeCoords(
+            parentref, parent, parentref, translated_path, ancestry,
+            relay_segment)
 
     @staticmethod
     # pylint: disable=locally-disabled,too-many-locals
@@ -118,6 +157,7 @@ class KeywordSearches:
         parentref: Any = kwargs.pop("parentref", None)
         translated_path: YAMLPath = kwargs.pop("translated_path", YAMLPath(""))
         ancestry: List[tuple] = kwargs.pop("ancestry", [])
+        relay_segment: PathSegment = kwargs.pop("relay_segment", None)
 
         # There may be 0 or 1 parameters
         param_count = len(parameters)
@@ -158,17 +198,16 @@ class KeywordSearches:
         if parent_levels < 1:
             # parent(0) is the present node
             yield NodeCoords(
-                data, parent, parentref, translated_path, ancestry)
+                data, parent, parentref, translated_path, ancestry,
+                relay_segment)
         else:
             for _ in range(parent_levels):
                 translated_path.pop()
                 (data, _) = ancestry.pop()
                 ancestry_len -= 1
 
-            parentref = ancestry[-1][1] if ancestry_len > 1 else None
-            parent = ancestry[-1][0] if ancestry_len > 1 else None
-
-            parent_nc = NodeCoords(
-                data, parent, parentref, translated_path, ancestry)
-
-            yield parent_nc
+            parentref = ancestry[-1][1] if ancestry_len > 0 else None
+            parent = ancestry[-1][0] if ancestry_len > 0 else None
+            yield NodeCoords(
+                data, parent, parentref, translated_path, ancestry,
+                relay_segment)

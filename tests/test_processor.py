@@ -910,3 +910,10 @@ key: value
 
         assert isinstance(data['key'], TaggedScalar)
         assert data['key'].tag.value == tag
+
+    @pytest.mark.parametrize("yaml_path,value,old_data,new_data", [
+        (YAMLPath("/key[name()]"), "renamed_key", {'key': 'value'}, {'renamed_key': 'value'}),
+    ])
+    def test_rename_dict_key(self, quiet_logger, yaml_path, value, old_data, new_data):
+        processor = Processor(quiet_logger, old_data)
+        processor.set_value(yaml_path, value)

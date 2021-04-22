@@ -1,6 +1,7 @@
 """Wrap a node along with its relative coordinates within its DOM."""
-from typing import Any, List
+from typing import Any, List, Optional
 
+from yamlpath.types import PathSegment
 from yamlpath import YAMLPath
 
 class NodeCoords:
@@ -16,7 +17,7 @@ class NodeCoords:
     # pylint: disable=locally-disabled,too-many-arguments
     def __init__(
         self, node: Any, parent: Any, parentref: Any, path: YAMLPath = None,
-        ancestry: List[tuple] = None
+        ancestry: List[tuple] = None, path_segment: PathSegment = None
     ) -> None:
         """
         Initialize a new NodeCoords.
@@ -35,11 +36,12 @@ class NodeCoords:
 
         Raises:  N/A
         """
-        self.node = node
-        self.parent = parent
-        self.parentref = parentref
-        self.path = path
+        self.node: Any = node
+        self.parent: Any = parent
+        self.parentref: Any = parentref
+        self.path: Optional[YAMLPath] = path
         self.ancestry: List[tuple] = [] if ancestry is None else ancestry
+        self.path_segment: Optional[PathSegment] = path_segment
 
     def __str__(self) -> str:
         """Get a String representation of this object."""
