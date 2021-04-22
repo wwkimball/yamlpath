@@ -161,15 +161,8 @@ class Processor:
             found_nodes: int = 0
             for req_node in self._get_required_nodes(self.data, yaml_path):
                 found_nodes += 1
-                try:
-                    self._update_node(
-                        req_node.parent, req_node.parentref, value,
-                        value_format, tag)
-                except ValueError as vex:
-                    raise YAMLPathException(
-                        "Impossible to write '{}' as {}.  The error was:  {}"
-                        .format(value, value_format, str(vex))
-                        , str(yaml_path)) from vex
+                self._apply_change(yaml_path, req_node, value,
+                    value_format=value_format, tag=tag)
 
             if found_nodes < 1:
                 raise YAMLPathException(
