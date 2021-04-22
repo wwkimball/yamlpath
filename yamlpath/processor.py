@@ -1603,11 +1603,23 @@ class Processor:
                 translated_path=translated_path, ancestry=ancestry
             ):
                 matched_nodes += 1
-                self.logger.debug(
-                    ("Processor::_get_optional_nodes:  Found element <{}>{} in"
-                     + " the data; recursing into it..."
-                    ).format(segment_type, except_segment)
+                if next_coord.node is None:
+                    self.logger.debug((
+                        "Relaying a None element <{}>{} from the data."
+                        ).format(segment_type, except_segment),
+                        prefix="Processor::_get_optional_nodes:  ",
+                        data=next_coord
+                    )
+                    yield next_coord
+                    continue
+
+                self.logger.debug((
+                    "Found element <{}>{} in the data; recursing into it..."
+                    ).format(segment_type, except_segment),
+                    prefix="Processor::_get_optional_nodes:  ",
+                    data=next_coord
                 )
+
                 for node_coord in self._get_optional_nodes(
                         next_coord.node, yaml_path, value, depth + 1,
                         parent=next_coord.parent,
