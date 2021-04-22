@@ -36,6 +36,9 @@ class KeywordSearches:
         elif keyword is PathSearchKeywords.NAME:
             nc_matches = KeywordSearches.name(
                 invert, parameters, yaml_path, **kwargs)
+        elif keyword is PathSearchKeywords.MAX:
+            nc_matches = KeywordSearches.max(
+                haystack, invert, parameters, yaml_path, **kwargs)
         elif keyword is PathSearchKeywords.PARENT:
             nc_matches = KeywordSearches.parent(
                 haystack, invert, parameters, yaml_path, **kwargs)
@@ -145,6 +148,145 @@ class KeywordSearches:
         yield NodeCoords(
             parentref, parent, parentref, translated_path, ancestry,
             relay_segment)
+
+    @staticmethod
+    # pylint: disable=locally-disabled,too-many-locals,too-many-branches
+    def max(
+        data: Any, invert: bool, parameters: List[str], yaml_path: YAMLPath,
+        **kwargs: Any
+    ) -> Generator[NodeCoords, None, None]:
+        """Find whichever nodes/elements have a maximum value."""
+        parent: Any = kwargs.pop("parent", None)
+        parentref: Any = kwargs.pop("parentref", None)
+        translated_path: YAMLPath = kwargs.pop("translated_path", YAMLPath(""))
+        ancestry: List[tuple] = kwargs.pop("ancestry", [])
+        relay_segment: PathSegment = kwargs.pop("relay_segment", None)
+
+        # There may be 0 or 1 parameters
+        param_count = len(parameters)
+        if param_count > 1:
+            raise YAMLPathException((
+                "Invalid parameter count to {}([NAME]); up to {} permitted, "
+                " got {} in YAML Path"
+                ).format(PathSearchKeywords.MAX, 1, param_count),
+                str(yaml_path))
+
+        scan_node = parameters[0] if param_count > 0 else None
+        match_value: Any = None
+        match_nodes: List[NodeCoords] = []
+        discard_nodes: List[NodeCoords] = []
+        if yamlpath.common.Nodes.node_is_aoh(data):
+            # A named child node is mandatory
+            if scan_node is None:
+                raise YAMLPathException((
+                    "The {}([NAME]) Search Keyword requires a key name to scan"
+                    " when evaluating an Array-of-Hashes."
+                    ).format(PathSearchKeywords.MAX),
+                    str(yaml_path))
+
+            for idx, ele in enumerate(data):
+                next_path = translated_path + "[{}]".format(idx)
+                next_ancestry = ancestry + [(data, idx)]
+                if hasattr(ele, scan_node):
+                    eval_val = ele[scan_node]
+                    if match_value is None or eval_val > match_value:
+                        match_value = eval_val
+                        match_nodes = [
+                            NodeCoords(
+                                ele, data, idx, next_path, next_ancestry,
+                                relay_segment)
+                        ]
+                        continue
+
+                    if eval_val == match_value:
+                        match_nodes.append(NodeCoords(
+                            ele, data, idx, next_path, next_ancestry,
+                            relay_segment))
+                        continue
+
+                discard_nodes.append(NodeCoords(
+                    ele, data, idx, next_path, next_ancestry,
+                    relay_segment))
+
+        elif isinstance(data, dict):
+            # A named child node is mandatory
+            if scan_node is None:
+                raise YAMLPathException((
+                    "The {}([NAME]) Search Keyword requires a key name to scan"
+                    " when comparing Hash/map/dict children."
+                    ).format(PathSearchKeywords.MAX),
+                    str(yaml_path))
+
+            for key, val in data.items():
+                if hasattr(val, scan_node):
+                    eval_val = val[scan_node]
+                    next_path = (
+                        translated_path + YAMLPath.escape_path_section(
+                            key, translated_path.seperator))
+                    next_ancestry = ancestry + [(data, key)]
+                    if match_value is None or eval_val > match_value:
+                        match_value = eval_val
+                        match_nodes = [
+                            NodeCoords(
+                                val, data, key, next_path, next_ancestry,
+                                relay_segment)
+                        ]
+                        continue
+
+                    if eval_val == match_value:
+                        match_nodes.append(NodeCoords(
+                            val, data, key, next_path, next_ancestry,
+                            relay_segment))
+                        continue
+
+                discard_nodes.append(NodeCoords(
+                    val, data, key, next_path, next_ancestry,
+                    relay_segment))
+
+        elif isinstance(data, list):
+            # A named child node is useless
+            if scan_node is not None:
+                raise YAMLPathException((
+                    "The {}([NAME]) Search Keyword cannot utilize a key name"
+                    " when comparing Array/sequence/list elements to one"
+                    " another."
+                    ).format(PathSearchKeywords.MAX),
+                    str(yaml_path))
+
+            for idx, ele in enumerate(data):
+                next_path = translated_path + "[{}]".format(idx)
+                next_ancestry = ancestry + [(data, idx)]
+                if match_value is None or ele > match_value:
+                    match_value = ele
+                    match_nodes = [
+                        NodeCoords(
+                            ele, data, idx, next_path, next_ancestry,
+                            relay_segment)
+                    ]
+                    continue
+
+                if ele == match_value:
+                    match_nodes.append(NodeCoords(
+                        ele, data, idx, next_path, next_ancestry,
+                        relay_segment))
+                    continue
+
+                discard_nodes.append(NodeCoords(
+                    ele, data, idx, next_path, next_ancestry,
+                    relay_segment))
+
+        else:
+            # Non-complex data is always its own maximum and does not invert
+            match_value = data
+            match_nodes = [
+                NodeCoords(
+                    data, parent, parentref, translated_path, ancestry,
+                    relay_segment)
+            ]
+
+        yield_nodes = discard_nodes if invert else match_nodes
+        for node_coord in yield_nodes:
+            yield node_coord
 
     @staticmethod
     # pylint: disable=locally-disabled,too-many-locals

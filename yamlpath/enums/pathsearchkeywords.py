@@ -16,15 +16,21 @@ class PathSearchKeywords(Enum):
     `HAS_CHILD`
         Matches when the node has a direct child with a given name.
     `NAME`
-        Matches only the key-name of the present node, discarding any and all
-        child node data.  Can be used to rename the matched key as long as the
-        new name is unique within the parent.
+        Matches only the key-name or element-index of the present node,
+        discarding any and all child node data.  Can be used to rename the
+        matched key as long as the new name is unique within the parent, lest
+        the preexisting node be overwritten.  Cannot be used to reassign an
+        Array/sequence/list element to another position.
+    `MAX`
+        Matches whichever node(s) has/have the maximum value for a named child
+        key or the maximum value within an Array/sequence/list.
     `PARENT`
         Access the parent(s) of the present node.
     """
 
     HAS_CHILD = auto()
     NAME = ()
+    MAX = ()
     PARENT = auto()
 
     def __str__(self) -> str:
@@ -34,6 +40,8 @@ class PathSearchKeywords(Enum):
             keyword = 'has_child'
         elif self is PathSearchKeywords.NAME:
             keyword = 'name'
+        elif self is PathSearchKeywords.MAX:
+            keyword = 'max'
         elif self is PathSearchKeywords.PARENT:
             keyword = 'parent'
 
