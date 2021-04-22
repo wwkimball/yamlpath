@@ -5,8 +5,8 @@ from types import SimpleNamespace
 from ruamel.yaml.comments import CommentedMap, CommentedSeq, TaggedScalar
 from ruamel.yaml.scalarstring import PlainScalarString, FoldedScalarString
 
-from yamlpath.wrappers import NodeCoords
-from yamlpath.wrappers import ConsolePrinter
+from yamlpath.enums import PathSegmentTypes
+from yamlpath.wrappers import NodeCoords, ConsolePrinter
 from yamlpath import YAMLPath
 
 class Test_wrappers_ConsolePrinter():
@@ -163,17 +163,22 @@ class Test_wrappers_ConsolePrinter():
         ])
 
         nc = NodeCoords(
-            "value", dict(key="value"), "key", YAMLPath("doc_root.key"),
-            [
-                (dict(doc_root=dict(key="value")), "doc_root"),
-                (dict(key="value"), "key"),
-            ])
+            "value",
+            dict(key="value"),
+            "key",
+            YAMLPath("doc_root.key"),
+            [   (dict(doc_root=dict(key="value")), "doc_root"),
+                (dict(key="value"), "key")],
+            (PathSegmentTypes.KEY, "key")
+        )
         logger.debug(
             "A node coordinate:", prefix="test_debug_noisy:  ", data=nc)
         console = capsys.readouterr()
         assert "\n".join([
             "DEBUG:  test_debug_noisy:  A node coordinate:",
             "DEBUG:  test_debug_noisy:  (path)doc_root.key",
+            "DEBUG:  test_debug_noisy:  (segment)[0]PathSegmentTypes.KEY<enum 'PathSegmentTypes'>",
+            "DEBUG:  test_debug_noisy:  (segment)[1]key<class 'str'>",
             "DEBUG:  test_debug_noisy:  (node)value",
             "DEBUG:  test_debug_noisy:  (parent)[key]value<class 'str'>",
             "DEBUG:  test_debug_noisy:  (parentref)key",
