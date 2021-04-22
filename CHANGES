@@ -37,6 +37,8 @@ Enhancements:
   tracking was necessary to enable Hash/map/dict key renaming via the [name()]
   Search Keyword.  These must be set when the NodeCoords is generated; it is
   not automatic.
+* [API] YAMLPath instances now have a pop() method.  This mutates the YAMLPath
+  by popping off its last segment, returning that segment.
 
 3.4.1:
 Bug Fixes:
