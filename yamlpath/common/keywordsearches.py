@@ -77,7 +77,7 @@ class KeywordSearches:
         # child key exactly named as per parameters.  When inverted, only
         # parents with no such key are yielded.
         if isinstance(data, dict):
-            child_present = match_key in data
+            child_present = data is not None and match_key in data
             if (
                 (invert and not child_present) or
                 (child_present and not invert)
@@ -108,6 +108,12 @@ class KeywordSearches:
                 (invert and not child_present) or
                 (child_present and not invert)
             ):
+                yield NodeCoords(
+                    data, parent, parentref, translated_path, ancestry,
+                    relay_segment)
+
+        elif data is None:
+            if invert:
                 yield NodeCoords(
                     data, parent, parentref, translated_path, ancestry,
                     relay_segment)
@@ -187,7 +193,7 @@ class KeywordSearches:
             for idx, ele in enumerate(data):
                 next_path = translated_path + "[{}]".format(idx)
                 next_ancestry = ancestry + [(data, idx)]
-                if hasattr(ele, scan_node):
+                if scan_node in ele:
                     eval_val = ele[scan_node]
                     if match_value is None or eval_val > match_value:
                         match_value = eval_val
@@ -219,7 +225,8 @@ class KeywordSearches:
                     str(yaml_path))
 
             for key, val in data.items():
-                if hasattr(val, scan_node):
+                print("Looking at key[{}] and val[{}]".format(key, val))
+                if val is not None and scan_node in val:
                     eval_val = val[scan_node]
                     next_path = (
                         translated_path + YAMLPath.escape_path_section(
