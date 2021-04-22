@@ -3,6 +3,10 @@ Bug Fixes:
 * Search expressions against Boolean values, [key=True] and [key=False], were
   impossible.  Now, they are working and are not case-sensitive, so [key=True],
   [key=true], [key=TRUE], and such all work as expected.
+* When null values were present, Deep Traversal (**) segments would always
+  return every node with a null value even when they would not match filter
+  conditions after the ** segment.  When mustexist=False, this would also cause
+  a YAMLPathException.
 * Descendent searches were considering only the first child of the search
   ancestor.  Now, ANY matching descendent node will correctly yield the
   ancestor.
