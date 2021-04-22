@@ -184,48 +184,63 @@ class Processor:
             for node_coord in self._get_optional_nodes(
                 self.data, yaml_path, value
             ):
-                self.logger.debug(
-                    "Matched optional node coordinate:"
-                    , data=node_coord
-                    , prefix="Processor::set_value:  ")
-                self.logger.debug(
-                    "Setting its value with format {} to:".format(value_format)
-                    , data=value
-                    , prefix="Processor::set_value:  ")
+                self._apply_change(yaml_path, node_coord, value,
+                    value_format=value_format, tag=tag)
 
-                last_segment = node_coord.path_segment
-                if last_segment is not None:
-                    (_, segment_value) = last_segment
-                    if (
-                        isinstance(segment_value, SearchKeywordTerms)
-                        and segment_value.keyword is PathSearchKeywords.NAME
-                    ):
-                        # Rename a key
-                        parent = node_coord.parent
-                        parentref = node_coord.parentref
-                        if isinstance(parent, CommentedMap):
-                            for i, k in [
-                                (idx, key) for idx, key
-                                in enumerate(parent.keys())
-                                if key == parentref
-                            ]:
-                                parent.insert(i, value, parent.pop(k))
-                        else:
-                            raise YAMLPathException((
-                                "Keys can be renamed only in Hash/map/dict"
-                                " data; got a {}, instead."
-                                ).format(type(parent)), str(yaml_path))
-                        return
+    def _apply_change(
+        self, yaml_path: YAMLPath, node_coord: NodeCoords, value: Any,
+        **kwargs: Any
+    ):
+        """Helper for set_value."""
+        value_format: YAMLValueFormats = kwargs.pop("value_format",
+                                                    YAMLValueFormats.DEFAULT)
+        tag: str = kwargs.pop("tag", None)
 
-                try:
-                    self._update_node(
-                        node_coord.parent, node_coord.parentref, value,
-                        value_format, tag)
-                except ValueError as vex:
-                    raise YAMLPathException(
-                        "Impossible to write '{}' as {}.  The error was:  {}"
-                        .format(value, value_format, str(vex))
-                        , str(yaml_path)) from vex
+        self.logger.debug(
+            "Matched optional node coordinate:"
+            , data=node_coord
+            , prefix="Processor::_apply_change:  ")
+        self.logger.debug(
+            "Setting its value with format {} to:".format(value_format)
+            , data=value
+            , prefix="Processor::_apply_change:  ")
+
+        last_segment = node_coord.path_segment
+        if last_segment is not None:
+            (_, segment_value) = last_segment
+            if (
+                isinstance(segment_value, SearchKeywordTerms)
+                and segment_value.keyword is PathSearchKeywords.NAME
+            ):
+                # Rename a key
+                parent = node_coord.parent
+                parentref = node_coord.parentref
+                if isinstance(parent, CommentedMap):
+                    for i, k in [
+                        (idx, key) for idx, key
+                        in enumerate(parent.keys())
+                        if key == parentref
+                    ]:
+                        parent.insert(i, value, parent.pop(k))
+                elif isinstance(parent, dict):
+                    parent[value] = parent[parentref]
+                    del parent[parentref]
+                else:
+                    raise YAMLPathException((
+                        "Keys can be renamed only in Hash/map/dict"
+                        " data; got a {}, instead."
+                        ).format(type(parent)), str(yaml_path))
+                return
+
+        try:
+            self._update_node(
+                node_coord.parent, node_coord.parentref, value,
+                value_format, tag)
+        except ValueError as vex:
+            raise YAMLPathException(
+                "Impossible to write '{}' as {}.  The error was:  {}"
+                .format(value, value_format, str(vex))
+                , str(yaml_path)) from vex
 
     def _get_anchor_node(
         self, anchor_path: Union[YAMLPath, str], **kwargs: Any
@@ -1308,7 +1323,8 @@ class Processor:
         if data is None:
             self.logger.debug(
                 "Processor::_get_nodes_by_traversal:  Yielding a None node.")
-            yield NodeCoords(None, parent, parentref, pathseg)
+            yield NodeCoords(None, parent, parentref, translated_path,
+                ancestry, pathseg)
             return
 
         # Is there a next segment?

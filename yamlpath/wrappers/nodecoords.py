@@ -1,5 +1,5 @@
 """Wrap a node along with its relative coordinates within its DOM."""
-from typing import Any, List
+from typing import Any, List, Optional
 
 from yamlpath.types import PathSegment
 from yamlpath import YAMLPath
@@ -39,9 +39,9 @@ class NodeCoords:
         self.node: Any = node
         self.parent: Any = parent
         self.parentref: Any = parentref
-        self.path: YAMLPath = path
+        self.path: Optional[YAMLPath] = path
         self.ancestry: List[tuple] = [] if ancestry is None else ancestry
-        self.path_segment: PathSegment = path_segment
+        self.path_segment: Optional[PathSegment] = path_segment
 
     def __str__(self) -> str:
         """Get a String representation of this object."""
