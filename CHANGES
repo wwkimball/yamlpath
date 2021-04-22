@@ -31,6 +31,12 @@ Enhancements:
   using their internal RegEx variant, [.=~/.*/].  They are now printed as they
   are entered, using a solitary *.  As a consequence, any deliberate RegEx of
   [.=~/.*/] is also printed as its equivalent solitary *.
+* [API] The NodeCoords class now tracks ancestry and the last YAML Path segment
+  responsible for triggering its generation.  The ancestry stack was necessary
+  to support the [parent()] Search Keyword.  The responsible YAML Path segment
+  tracking was necessary to enable Hash/map/dict key renaming via the [name()]
+  Search Keyword.  These must be set when the NodeCoords is generated; it is
+  not automatic.
 
 3.4.1:
 Bug Fixes:
