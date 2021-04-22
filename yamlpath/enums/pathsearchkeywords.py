@@ -29,8 +29,8 @@ class PathSearchKeywords(Enum):
     """
 
     HAS_CHILD = auto()
-    NAME = ()
-    MAX = ()
+    NAME = auto()
+    MAX = auto()
     PARENT = auto()
 
     def __str__(self) -> str:

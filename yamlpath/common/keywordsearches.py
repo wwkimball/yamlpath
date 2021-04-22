@@ -150,7 +150,7 @@ class KeywordSearches:
             relay_segment)
 
     @staticmethod
-    # pylint: disable=locally-disabled,too-many-locals,too-many-branches
+    # pylint: disable=locally-disabled,too-many-locals,too-many-branches,too-many-statements
     def max(
         data: Any, invert: bool, parameters: List[str], yaml_path: YAMLPath,
         **kwargs: Any
@@ -180,7 +180,7 @@ class KeywordSearches:
             if scan_node is None:
                 raise YAMLPathException((
                     "The {}([NAME]) Search Keyword requires a key name to scan"
-                    " when evaluating an Array-of-Hashes."
+                    " when evaluating an Array-of-Hashes in YAML Path"
                     ).format(PathSearchKeywords.MAX),
                     str(yaml_path))
 
@@ -191,6 +191,7 @@ class KeywordSearches:
                     eval_val = ele[scan_node]
                     if match_value is None or eval_val > match_value:
                         match_value = eval_val
+                        discard_nodes.extend(match_nodes)
                         match_nodes = [
                             NodeCoords(
                                 ele, data, idx, next_path, next_ancestry,
@@ -213,7 +214,7 @@ class KeywordSearches:
             if scan_node is None:
                 raise YAMLPathException((
                     "The {}([NAME]) Search Keyword requires a key name to scan"
-                    " when comparing Hash/map/dict children."
+                    " when comparing Hash/map/dict children in YAML Path"
                     ).format(PathSearchKeywords.MAX),
                     str(yaml_path))
 
@@ -226,6 +227,7 @@ class KeywordSearches:
                     next_ancestry = ancestry + [(data, key)]
                     if match_value is None or eval_val > match_value:
                         match_value = eval_val
+                        discard_nodes.extend(match_nodes)
                         match_nodes = [
                             NodeCoords(
                                 val, data, key, next_path, next_ancestry,
@@ -249,7 +251,7 @@ class KeywordSearches:
                 raise YAMLPathException((
                     "The {}([NAME]) Search Keyword cannot utilize a key name"
                     " when comparing Array/sequence/list elements to one"
-                    " another."
+                    " another in YAML Path"
                     ).format(PathSearchKeywords.MAX),
                     str(yaml_path))
 
@@ -258,6 +260,7 @@ class KeywordSearches:
                 next_ancestry = ancestry + [(data, idx)]
                 if match_value is None or ele > match_value:
                     match_value = ele
+                    discard_nodes.extend(match_nodes)
                     match_nodes = [
                         NodeCoords(
                             ele, data, idx, next_path, next_ancestry,
