@@ -1313,16 +1313,17 @@ class Processor:
             "TRAVERSING the tree at parentref:",
             prefix="Processor::_get_nodes_by_traversal:  ", data=parentref)
 
-        if data is None:
-            self.logger.debug(
-                "Processor::_get_nodes_by_traversal:  Yielding a None node.")
-            yield NodeCoords(None, parent, parentref, translated_path,
-                ancestry, pathseg)
-            return
-
         # Is there a next segment?
         if next_segment_idx == len(segments):
             # This traversal is gathering every leaf node
+            if data is None:
+                self.logger.debug((
+                    "Yielding a None node."),
+                    prefix="Processor::_get_nodes_by_traversal:  ")
+                yield NodeCoords(None, parent, parentref, translated_path,
+                    ancestry, pathseg)
+                return
+
             if isinstance(data, dict):
                 for key, val in data.items():
                     next_translated_path = (
