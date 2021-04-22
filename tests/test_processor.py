@@ -917,3 +917,29 @@ key: value
     def test_rename_dict_key(self, quiet_logger, yaml_path, value, old_data, new_data):
         processor = Processor(quiet_logger, old_data)
         processor.set_value(yaml_path, value)
+
+    def test_traverse_with_null(self, quiet_logger):
+        # Contributed by https://github.com/rbordelo
+        yamldata = """---
+Things:
+  - name: first thing
+    rank: 42
+  - name: second thing
+    rank: 5
+  - name: third thing
+    rank: null
+  - name: fourth thing
+    rank: 1
+"""
+
+        results = ["first thing", "second thing", "third thing", "fourth thing"]
+
+        yaml = YAML()
+        data = yaml.load(yamldata)
+        processor = Processor(quiet_logger, data)
+        yamlpath = YAMLPath("/**/name")
+
+        match_index = 0
+        for node in processor.get_nodes(yamlpath):
+            assert unwrap_node_coords(node) == results[match_index]
+            match_index += 1
