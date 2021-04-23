@@ -346,8 +346,26 @@ indexes:
         ("(/bad_prices_hash/*/price)[!max()]", ["4.99", "9.95", "True"]),
         ("bad_prices_array[max()]", ["not set"]),
         ("bad_prices_array[!max()]", ["4.99", "9.95", "0.98", "\x00"]),
+
+        ("prices_aoh[min(price)].product", ["widget"]),
+        ("prices_aoh[!min(price)].price", ["9.95", "4.99", "4.99"]),
+        ("/prices_hash[min(price)][name()]", ["widget"]),
+        ("/prices_hash[!min(price)][name()]", ["whatchamacallit", "doohickey", "fob", "unknown"]),
+        ("(prices_hash.*.price)[min()]", ["0.98"]),
+        ("(prices_hash.*.price)[!min()]", ["9.95", "4.99", "4.99"]),
+        ("/prices_array[min()]", ["0.98"]),
+        ("/prices_array[!min()]", ["9.95", "4.99", "4.99", "\x00"]),
+        ("bare[min()]", ["value"]),
+        ("/bad_prices_aoh[min(price)]/product", ["widget"]),
+        ("/bad_prices_aoh[!min(price)]/price", ["not set", "9.95", "4.99"]),
+        ("bad_prices_hash[min(price)][name()]", ["widget"]),
+        ("bad_prices_hash[!min(price)][name()]", ["fob", "whatchamacallit", "doohickey", "unknown"]),
+        ("(/bad_prices_hash/*/price)[min()]", ["4.99"]),
+        ("(/bad_prices_hash/*/price)[!min()]", ["not set", "9.95", "True"]),
+        ("bad_prices_array[min()]", ["0.98"]),
+        ("bad_prices_array[!min()]", ["not set", "9.95", "4.99", "\x00"]),
     ])
-    def test_get_max_nodes(self, script_runner, tmp_path_factory, query, output):
+    def test_get_min_max_nodes(self, script_runner, tmp_path_factory, query, output):
         content = """---
 # Consistent Data Types
 prices_aoh:
