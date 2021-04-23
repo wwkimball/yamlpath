@@ -180,7 +180,7 @@ class Processor:
                 self._apply_change(yaml_path, node_coord, value,
                     value_format=value_format, tag=tag)
 
-    # pylint: disable=locally-disabled,too-many-locals
+    # pylint: disable=locally-disabled,too-many-locals,too-many-branches
     def _apply_change(
         self, yaml_path: YAMLPath, node_coord: NodeCoords, value: Any,
         **kwargs: Any
