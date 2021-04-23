@@ -65,7 +65,7 @@ class Searches:
                 except ValueError:
                     matches = False
             else:
-                matches = haystack > needle
+                matches = str(haystack) > str(needle)
         elif method is PathSearchMethods.LESS_THAN:
             if isinstance(haystack, int):
                 try:
@@ -78,7 +78,7 @@ class Searches:
                 except ValueError:
                     matches = False
             else:
-                matches = haystack < needle
+                matches = str(haystack) < str(needle)
         elif method is PathSearchMethods.GREATER_THAN_OR_EQUAL:
             if isinstance(haystack, int):
                 try:
@@ -91,7 +91,7 @@ class Searches:
                 except ValueError:
                     matches = False
             else:
-                matches = haystack >= needle
+                matches = str(haystack) >= str(needle)
         elif method is PathSearchMethods.LESS_THAN_OR_EQUAL:
             if isinstance(haystack, int):
                 try:
@@ -104,7 +104,7 @@ class Searches:
                 except ValueError:
                     matches = False
             else:
-                matches = haystack <= needle
+                matches = str(haystack) <= str(needle)
         elif method == PathSearchMethods.REGEX:
             matcher = re.compile(needle)
             matches = matcher.search(str(haystack)) is not None
