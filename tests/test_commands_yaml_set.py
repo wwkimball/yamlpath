@@ -1323,7 +1323,7 @@ renamed_key: value
             filedat = fhnd.read()
         assert filedat == yamlout
 
-    def test_change_key_name_bad(self, script_runner, tmp_path_factory):
+    def test_change_key_name_maps_only(self, script_runner, tmp_path_factory):
         yamlin = """---
 items:
   - one
@@ -1339,3 +1339,19 @@ items:
         )
         assert not result.success, result.stdout
         assert "Keys can be renamed only in Hash/map/dict" in result.stderr
+
+    def test_change_key_name_unique_only(self, script_runner, tmp_path_factory):
+        yamlin = """---
+key: value
+another_key: value
+"""
+
+        yaml_file = create_temp_yaml_file(tmp_path_factory, yamlin)
+        result = script_runner.run(
+            self.command,
+            "--change=another_key[name()]",
+            "--value=key",
+            yaml_file
+        )
+        assert not result.success, result.stdout
+        assert "already exists at the same document level" in result.stderr

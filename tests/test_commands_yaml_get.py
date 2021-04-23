@@ -379,7 +379,7 @@ prices_array:
   - 0.98
   - null
 
-# TODO: Inconsistent Data Types
+# Inconsistent Data Types
 bare: value
 
 bad_prices_aoh:

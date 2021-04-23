@@ -210,13 +210,26 @@ class Processor:
                 parent = node_coord.parent
                 parentref = node_coord.parentref
                 if isinstance(parent, CommentedMap):
+                    if value in parent:
+                        raise YAMLPathException((
+                            "Key, {}, already exists at the same document"
+                            " level in YAML Path"
+                            ).format(value), str(yaml_path))
+
                     for i, k in [
                         (idx, key) for idx, key
                         in enumerate(parent.keys())
                         if key == parentref
                     ]:
                         parent.insert(i, value, parent.pop(k))
+                        break
                 elif isinstance(parent, dict):
+                    if value in parent:
+                        raise YAMLPathException((
+                            "Key, {}, already exists at the same document"
+                            " level in YAML Path"
+                            ).format(value), str(yaml_path))
+
                     parent[value] = parent[parentref]
                     del parent[parentref]
                 else:

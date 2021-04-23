@@ -917,6 +917,16 @@ key: value
     def test_rename_dict_key(self, quiet_logger, yaml_path, value, old_data, new_data):
         processor = Processor(quiet_logger, old_data)
         processor.set_value(yaml_path, value)
+        assert new_data == old_data
+
+    @pytest.mark.parametrize("yaml_path,value,old_data", [
+        (YAMLPath("/key[name()]"), "renamed_key", {'key': 'value', 'renamed_key': 'value'}),
+    ])
+    def test_rename_dict_key_cannot_overwrite(self, quiet_logger, yaml_path, value, old_data):
+        processor = Processor(quiet_logger, old_data)
+        with pytest.raises(YAMLPathException) as ex:
+            processor.set_value(yaml_path, value)
+        assert -1 < str(ex.value).find("already exists at the same document level")
 
     def test_traverse_with_null(self, quiet_logger):
         # Contributed by https://github.com/rbordelo
