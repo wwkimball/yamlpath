@@ -190,7 +190,7 @@ class Processor:
         tag: str = kwargs.pop("tag", None)
 
         self.logger.debug(
-            "Matched optional node coordinate:"
+            "Matched node coordinate:"
             , data=node_coord
             , prefix="Processor::_apply_change:  ")
         self.logger.debug(
@@ -205,7 +205,8 @@ class Processor:
                 isinstance(segment_value, SearchKeywordTerms)
                 and segment_value.keyword is PathSearchKeywords.NAME
             ):
-                # Rename a key
+                # Rename a key; the new name must not already exist in its
+                # parent.
                 parent = node_coord.parent
                 parentref = node_coord.parentref
                 if isinstance(parent, CommentedMap):
