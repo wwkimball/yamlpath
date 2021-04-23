@@ -333,11 +333,19 @@ indexes:
         ("prices_aoh[!max(price)].price", ["4.99", "4.99", "0.98"]),
         ("/prices_hash[max(price)][name()]", ["whatchamacallit"]),
         ("/prices_hash[!max(price)][name()]", ["doohickey", "fob", "widget", "unknown"]),
-        ("(/prices_hash/*/price)[max()]", ["9.95"]),
-        ("(/prices_hash/*/price)[!max()]", ["4.99", "4.99", "0.98"]),
+        ("(prices_hash.*.price)[max()]", ["9.95"]),
+        ("(prices_hash.*.price)[!max()]", ["4.99", "4.99", "0.98"]),
         ("/prices_array[max()]", ["9.95"]),
         ("/prices_array[!max()]", ["4.99", "4.99", "0.98", "\x00"]),
-        ("/bare[max()]", ["value"]),
+        ("bare[max()]", ["value"]),
+        ("/bad_prices_aoh[max(price)]/product", ["fob"]),
+        ("/bad_prices_aoh[!max(price)]/price", ["4.99", "9.95", "True"]),
+        ("bad_prices_hash[max(price)][name()]", ["fob"]),
+        ("bad_prices_hash[!max(price)][name()]", ["doohickey", "whatchamacallit", "widget", "unknown"]),
+        ("(/bad_prices_hash/*/price)[max()]", ["not set"]),
+        ("(/bad_prices_hash/*/price)[!max()]", ["4.99", "9.95", "True"]),
+        ("bad_prices_array[max()]", ["not set"]),
+        ("bad_prices_array[!max()]", ["4.99", "9.95", "0.98", "\x00"]),
     ])
     def test_get_max_nodes(self, script_runner, tmp_path_factory, query, output):
         content = """---
@@ -371,9 +379,37 @@ prices_array:
   - 0.98
   - null
 
+# TODO: Inconsistent Data Types
 bare: value
 
-# TODO: Inconsistent Data Types
+bad_prices_aoh:
+  - product: doohickey
+    price: 4.99
+  - product: fob
+    price: not set
+  - product: whatchamacallit
+    price: 9.95
+  - product: widget
+    price: true
+  - product: unknown
+
+bad_prices_hash:
+  doohickey:
+    price: 4.99
+  fob:
+    price: not set
+  whatchamacallit:
+    price: 9.95
+  widget:
+    price: true
+  unknown:
+
+bad_prices_array:
+  - 4.99
+  - not set
+  - 9.95
+  - 0.98
+  - null
 """
 
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
