@@ -9,7 +9,7 @@ Copyright 2020 William W. Kimball, Jr. MBA MSIS
 from typing import Any, Generator, List
 
 from yamlpath.types import PathSegment
-from yamlpath.enums import PathSearchKeywords
+from yamlpath.enums import PathSearchKeywords, PathSearchMethods
 from yamlpath.path import SearchKeywordTerms
 from yamlpath.exceptions import YAMLPathException
 from yamlpath.wrappers import NodeCoords
@@ -36,6 +36,9 @@ class KeywordSearches:
         elif keyword is PathSearchKeywords.NAME:
             nc_matches = KeywordSearches.name(
                 invert, parameters, yaml_path, **kwargs)
+        elif keyword is PathSearchKeywords.MAX:
+            nc_matches = KeywordSearches.max(
+                haystack, invert, parameters, yaml_path, **kwargs)
         elif keyword is PathSearchKeywords.PARENT:
             nc_matches = KeywordSearches.parent(
                 haystack, invert, parameters, yaml_path, **kwargs)
@@ -74,7 +77,7 @@ class KeywordSearches:
         # child key exactly named as per parameters.  When inverted, only
         # parents with no such key are yielded.
         if isinstance(data, dict):
-            child_present = match_key in data
+            child_present = data is not None and match_key in data
             if (
                 (invert and not child_present) or
                 (child_present and not invert)
@@ -105,6 +108,12 @@ class KeywordSearches:
                 (invert and not child_present) or
                 (child_present and not invert)
             ):
+                yield NodeCoords(
+                    data, parent, parentref, translated_path, ancestry,
+                    relay_segment)
+
+        elif data is None:
+            if invert:
                 yield NodeCoords(
                     data, parent, parentref, translated_path, ancestry,
                     relay_segment)
@@ -145,6 +154,186 @@ class KeywordSearches:
         yield NodeCoords(
             parentref, parent, parentref, translated_path, ancestry,
             relay_segment)
+
+    @staticmethod
+    # pylint: disable=locally-disabled,too-many-locals,too-many-branches,too-many-statements
+    def max(
+        data: Any, invert: bool, parameters: List[str], yaml_path: YAMLPath,
+        **kwargs: Any
+    ) -> Generator[NodeCoords, None, None]:
+        """Find whichever nodes/elements have a maximum value."""
+        parent: Any = kwargs.pop("parent", None)
+        parentref: Any = kwargs.pop("parentref", None)
+        translated_path: YAMLPath = kwargs.pop("translated_path", YAMLPath(""))
+        ancestry: List[tuple] = kwargs.pop("ancestry", [])
+        relay_segment: PathSegment = kwargs.pop("relay_segment", None)
+
+        # There may be 0 or 1 parameters
+        param_count = len(parameters)
+        if param_count > 1:
+            raise YAMLPathException((
+                "Invalid parameter count to {}([NAME]); up to {} permitted, "
+                " got {} in YAML Path"
+                ).format(PathSearchKeywords.MAX, 1, param_count),
+                str(yaml_path))
+
+        scan_node = parameters[0] if param_count > 0 else None
+        match_value: Any = None
+        match_nodes: List[NodeCoords] = []
+        discard_nodes: List[NodeCoords] = []
+        if yamlpath.common.Nodes.node_is_aoh(data):
+            # A named child node is mandatory
+            if scan_node is None:
+                raise YAMLPathException((
+                    "The {}([NAME]) Search Keyword requires a key name to scan"
+                    " when evaluating an Array-of-Hashes in YAML Path"
+                    ).format(PathSearchKeywords.MAX),
+                    str(yaml_path))
+
+            for idx, ele in enumerate(data):
+                next_path = translated_path + "[{}]".format(idx)
+                next_ancestry = ancestry + [(data, idx)]
+                if scan_node in ele:
+                    eval_val = ele[scan_node]
+                    if (match_value is None
+                        or yamlpath.common.Searches.search_matches(
+                            PathSearchMethods.GREATER_THAN, match_value,
+                            eval_val)
+                    ):
+                        match_value = eval_val
+                        discard_nodes.extend(match_nodes)
+                        match_nodes = [
+                            NodeCoords(
+                                ele, data, idx, next_path, next_ancestry,
+                                relay_segment)
+                        ]
+                        continue
+
+                    if (match_value is None
+                        or yamlpath.common.Searches.search_matches(
+                            PathSearchMethods.EQUALS, match_value,
+                            eval_val)
+                    ):
+                        match_nodes.append(NodeCoords(
+                            ele, data, idx, next_path, next_ancestry,
+                            relay_segment))
+                        continue
+
+                discard_nodes.append(NodeCoords(
+                    ele, data, idx, next_path, next_ancestry,
+                    relay_segment))
+
+        elif isinstance(data, dict):
+            # A named child node is mandatory
+            if scan_node is None:
+                raise YAMLPathException((
+                    "The {}([NAME]) Search Keyword requires a key name to scan"
+                    " when comparing Hash/map/dict children in YAML Path"
+                    ).format(PathSearchKeywords.MAX),
+                    str(yaml_path))
+
+            for key, val in data.items():
+                if isinstance(val, dict):
+                    if val is not None and scan_node in val:
+                        eval_val = val[scan_node]
+                        next_path = (
+                            translated_path + YAMLPath.escape_path_section(
+                                key, translated_path.seperator))
+                        next_ancestry = ancestry + [(data, key)]
+                        if (match_value is None
+                            or yamlpath.common.Searches.search_matches(
+                                PathSearchMethods.GREATER_THAN, match_value,
+                                eval_val)
+                        ):
+                            match_value = eval_val
+                            discard_nodes.extend(match_nodes)
+                            match_nodes = [
+                                NodeCoords(
+                                    val, data, key, next_path, next_ancestry,
+                                    relay_segment)
+                            ]
+                            continue
+
+                        if (match_value is None
+                            or yamlpath.common.Searches.search_matches(
+                                PathSearchMethods.EQUALS, match_value,
+                                eval_val)
+                        ):
+                            match_nodes.append(NodeCoords(
+                                val, data, key, next_path, next_ancestry,
+                                relay_segment))
+                            continue
+
+                elif scan_node in data:
+                    # The user probably meant to operate against the parent
+                    raise YAMLPathException((
+                        "The {}([NAME]) Search Keyword operates against"
+                        " collections of data which share a common attribute"
+                        " yet there is only a single node to consider.  Did"
+                        " you mean to evaluate the parent of the selected"
+                        " node?  Please review your YAML Path"
+                        ).format(PathSearchKeywords.MAX),
+                        str(yaml_path))
+
+                discard_nodes.append(NodeCoords(
+                    val, data, key, next_path, next_ancestry,
+                    relay_segment))
+
+        elif isinstance(data, list):
+            # A named child node is useless
+            if scan_node is not None:
+                raise YAMLPathException((
+                    "The {}([NAME]) Search Keyword cannot utilize a key name"
+                    " when comparing Array/sequence/list elements to one"
+                    " another in YAML Path"
+                    ).format(PathSearchKeywords.MAX),
+                    str(yaml_path))
+
+            for idx, ele in enumerate(data):
+                next_path = translated_path + "[{}]".format(idx)
+                next_ancestry = ancestry + [(data, idx)]
+                if (ele is not None
+                    and (
+                        match_value is None or
+                        yamlpath.common.Searches.search_matches(
+                            PathSearchMethods.GREATER_THAN, match_value,
+                            ele)
+                )):
+                    match_value = ele
+                    discard_nodes.extend(match_nodes)
+                    match_nodes = [
+                        NodeCoords(
+                            ele, data, idx, next_path, next_ancestry,
+                            relay_segment)
+                    ]
+                    continue
+
+                if (ele is not None
+                    and yamlpath.common.Searches.search_matches(
+                        PathSearchMethods.EQUALS, match_value,
+                        ele)
+                ):
+                    match_nodes.append(NodeCoords(
+                        ele, data, idx, next_path, next_ancestry,
+                        relay_segment))
+                    continue
+
+                discard_nodes.append(NodeCoords(
+                    ele, data, idx, next_path, next_ancestry,
+                    relay_segment))
+
+        else:
+            # Non-complex data is always its own maximum and does not invert
+            match_value = data
+            match_nodes = [
+                NodeCoords(
+                    data, parent, parentref, translated_path, ancestry,
+                    relay_segment)
+            ]
+
+        yield_nodes = discard_nodes if invert else match_nodes
+        for node_coord in yield_nodes:
+            yield node_coord
 
     @staticmethod
     # pylint: disable=locally-disabled,too-many-locals

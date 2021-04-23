@@ -448,7 +448,7 @@ class YAMLPath:
                          "  Encountered in YAML Path")
                         .format(
                             segment_id,
-                            ','.join(PathSearchKeywords.get_keywords())
+                            ', '.join(PathSearchKeywords.get_keywords())
                         )
                         , yaml_path
                     )

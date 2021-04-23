@@ -607,14 +607,6 @@ class Processor:
         traverse_lists: bool = kwargs.pop("traverse_lists", True)
         translated_path: YAMLPath = kwargs.pop("translated_path", YAMLPath(""))
         ancestry: List[tuple] = kwargs.pop("ancestry", [])
-        if data is None:
-            self.logger.debug(
-                "Bailing out on None data at parentref, {}, of parent:"
-                .format(parentref),
-                prefix="Processor::_get_nodes_by_path_segment:  ",
-                data=parent)
-            return
-
         segments = yaml_path.escaped
         if not (segments and len(segments) > segment_index):
             self.logger.debug(
@@ -1457,15 +1449,6 @@ class Processor:
         translated_path: YAMLPath = kwargs.pop("translated_path", YAMLPath(""))
         ancestry: List[tuple] = kwargs.pop("ancestry", [])
         relay_segment: PathSegment = kwargs.pop("relay_segment", None)
-
-        if data is None:
-            self.logger.debug(
-                "Bailing out on None data at parentref, {}, of parent:"
-                .format(parentref),
-                prefix="Processor::_get_required_nodes:  ",
-                data=parent)
-            return
-
         segments = yaml_path.escaped
         if segments and len(segments) > depth:
             pathseg: PathSegment = yaml_path.unescaped[depth]
@@ -1492,14 +1475,7 @@ class Processor:
                     prefix="Processor::_get_required_nodes:  ",
                     data=segment_node_coords)
 
-                if (segment_node_coords is None
-                    or (hasattr(segment_node_coords, "node")
-                        and segment_node_coords.node is None)
-                ):
-                    self.logger.debug(
-                        "Processor::_get_required_nodes:  Yielding null.")
-                    yield segment_node_coords
-                elif isinstance(segment_node_coords, list):
+                if isinstance(segment_node_coords, list):
                     # Most likely the output of a Collector, this list will be
                     # of NodeCoords rather than an actual DOM reference.  As
                     # such, it must be treated as a virtual DOM element that

@@ -57,6 +57,18 @@ class NodeCoords:
             self.__class__.__name__, self.node, self.parent,
             self.parentref))
 
+    def __gt__(self, rhs: "NodeCoords") -> Any:
+        """Indicate whether this node's data is greater-than another's."""
+        if self.node is None or rhs.node is None:
+            return False
+        return self.node > rhs.node
+
+    def __lt__(self, rhs: "NodeCoords") -> Any:
+        """Indicate whether this node's data is less-than another's."""
+        if self.node is None or rhs.node is None:
+            return False
+        return self.node < rhs.node
+
     @staticmethod
     def unwrap_node_coords(data: Any) -> Any:
         """

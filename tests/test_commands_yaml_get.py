@@ -258,6 +258,8 @@ products:
         ("/items/*[!has_child(bravo)][2][parent(0)]", ['delta']),
         ("/items/*[!has_child(bravo)][2][parent()]", ['["alpha", "charlie", "delta"]']),
         ("/items/*[!has_child(bravo)][2][parent(2)]", ['[["alpha", "bravo", "charlie"], ["alpha", "charlie", "delta"], ["alpha", "bravo", "delta"], ["bravo", "charlie", "delta"]]']),
+        ("/prices_hash/*[has_child(price)][name()]", ['doohickey', 'whatchamacallit', 'widget']),
+        ("/prices_hash/*[!has_child(price)][name()]", ['unknown']),
     ])
     def test_get_parent_nodes(self, script_runner, tmp_path_factory, query, output):
         content = """---
@@ -274,6 +276,15 @@ items:
   - - bravo
     - charlie
     - delta
+
+prices_hash:
+  doohickey:
+    price: 4.99
+  whatchamacallit:
+    price: 9.95
+  widget:
+    price: 0.98
+  unknown:
 """
 
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
@@ -306,6 +317,99 @@ indexes:
   - Item 2
   - Disabled 3
   - Item 4
+"""
+
+        yaml_file = create_temp_yaml_file(tmp_path_factory, content)
+        result = script_runner.run(self.command, "--query={}".format(query), yaml_file)
+        assert result.success, result.stderr
+
+        match_index = 0
+        for line in result.stdout.splitlines():
+            assert line == output[match_index]
+            match_index += 1
+
+    @pytest.mark.parametrize("query,output", [
+        ("prices_aoh[max(price)].product", ["whatchamacallit"]),
+        ("prices_aoh[!max(price)].price", ["4.99", "4.99", "0.98"]),
+        ("/prices_hash[max(price)][name()]", ["whatchamacallit"]),
+        ("/prices_hash[!max(price)][name()]", ["doohickey", "fob", "widget", "unknown"]),
+        ("(prices_hash.*.price)[max()]", ["9.95"]),
+        ("(prices_hash.*.price)[!max()]", ["4.99", "4.99", "0.98"]),
+        ("/prices_array[max()]", ["9.95"]),
+        ("/prices_array[!max()]", ["4.99", "4.99", "0.98", "\x00"]),
+        ("bare[max()]", ["value"]),
+        ("/bad_prices_aoh[max(price)]/product", ["fob"]),
+        ("/bad_prices_aoh[!max(price)]/price", ["4.99", "9.95", "True"]),
+        ("bad_prices_hash[max(price)][name()]", ["fob"]),
+        ("bad_prices_hash[!max(price)][name()]", ["doohickey", "whatchamacallit", "widget", "unknown"]),
+        ("(/bad_prices_hash/*/price)[max()]", ["not set"]),
+        ("(/bad_prices_hash/*/price)[!max()]", ["4.99", "9.95", "True"]),
+        ("bad_prices_array[max()]", ["not set"]),
+        ("bad_prices_array[!max()]", ["4.99", "9.95", "0.98", "\x00"]),
+    ])
+    def test_get_max_nodes(self, script_runner, tmp_path_factory, query, output):
+        content = """---
+# Consistent Data Types
+prices_aoh:
+  - product: doohickey
+    price: 4.99
+  - product: fob
+    price: 4.99
+  - product: whatchamacallit
+    price: 9.95
+  - product: widget
+    price: 0.98
+  - product: unknown
+
+prices_hash:
+  doohickey:
+    price: 4.99
+  fob:
+    price: 4.99
+  whatchamacallit:
+    price: 9.95
+  widget:
+    price: 0.98
+  unknown:
+
+prices_array:
+  - 4.99
+  - 4.99
+  - 9.95
+  - 0.98
+  - null
+
+# TODO: Inconsistent Data Types
+bare: value
+
+bad_prices_aoh:
+  - product: doohickey
+    price: 4.99
+  - product: fob
+    price: not set
+  - product: whatchamacallit
+    price: 9.95
+  - product: widget
+    price: true
+  - product: unknown
+
+bad_prices_hash:
+  doohickey:
+    price: 4.99
+  fob:
+    price: not set
+  whatchamacallit:
+    price: 9.95
+  widget:
+    price: true
+  unknown:
+
+bad_prices_array:
+  - 4.99
+  - not set
+  - 9.95
+  - 0.98
+  - null
 """
 
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
