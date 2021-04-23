@@ -180,6 +180,7 @@ class Processor:
                 self._apply_change(yaml_path, node_coord, value,
                     value_format=value_format, tag=tag)
 
+    # pylint: disable=locally-disabled,too-many-locals
     def _apply_change(
         self, yaml_path: YAMLPath, node_coord: NodeCoords, value: Any,
         **kwargs: Any
@@ -197,6 +198,14 @@ class Processor:
             "Setting its value with format {} to:".format(value_format)
             , data=value
             , prefix="Processor::_apply_change:  ")
+
+        if isinstance(node_coord, list):
+            if len(node_coord) < 1:
+                return
+
+            for collector_node in node_coord:
+                self._apply_change(yaml_path, collector_node, value, **kwargs)
+            return
 
         last_segment = node_coord.path_segment
         if last_segment is not None:
@@ -1594,6 +1603,10 @@ class Processor:
                 translated_path=translated_path, ancestry=ancestry
             ):
                 matched_nodes += 1
+                if not isinstance(next_coord, NodeCoords):
+                    yield next_coord
+                    continue
+
                 if next_coord.node is None:
                     self.logger.debug((
                         "Relaying a None element <{}>{} from the data."
