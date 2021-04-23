@@ -191,7 +191,7 @@ class Processor:
         tag: str = kwargs.pop("tag", None)
 
         self.logger.debug(
-            "Matched node coordinate:"
+            "Matched node coordinate of type {}:".format(type(node_coord))
             , data=node_coord
             , prefix="Processor::_apply_change:  ")
         self.logger.debug(
@@ -204,6 +204,22 @@ class Processor:
                 return
 
             for collector_node in node_coord:
+                self.logger.debug(
+                    "Expanded Collector results to apply change:"
+                    , data=collector_node
+                    , prefix="Processor::_apply_change:  ")
+                self._apply_change(yaml_path, collector_node, value, **kwargs)
+            return
+
+        if (isinstance(node_coord.node, list)
+            and len(node_coord.node) > 0
+            and isinstance(node_coord.node[0], NodeCoords)
+        ):
+            for collector_node in node_coord.node:
+                self.logger.debug(
+                    "Expanded collected Collector results to apply change:"
+                    , data=collector_node
+                    , prefix="Processor::_apply_change:  ")
                 self._apply_change(yaml_path, collector_node, value, **kwargs)
             return
 
@@ -1294,6 +1310,10 @@ class Processor:
 
         # yield only when there are results
         if node_coords:
+            self.logger.debug((
+                "Yielding collected node list:"),
+                prefix="Processor::_get_nodes_by_collector:  ",
+                data=node_coords)
             yield node_coords
 
     # pylint: disable=locally-disabled,too-many-branches
@@ -1509,6 +1529,7 @@ class Processor:
                         data=segment_node_coords)
                     for subnode_coord in self._get_required_nodes(
                             segment_node_coords, yaml_path, depth + 1,
+                            parent=parent, parentref=parentref,
                             translated_path=translated_path,
                             ancestry=ancestry, relay_segment=pathseg):
                         yield subnode_coord
@@ -1603,8 +1624,25 @@ class Processor:
                 translated_path=translated_path, ancestry=ancestry
             ):
                 matched_nodes += 1
-                if not isinstance(next_coord, NodeCoords):
-                    yield next_coord
+                if isinstance(next_coord, list):
+                    # Drill into Collector results
+                    for node_coord in self._get_optional_nodes(
+                            next_coord, yaml_path, value, depth + 1,
+                            parent=parent, parentref=parentref,
+                            translated_path=translated_path,
+                            ancestry=ancestry,
+                            relay_segment=pathseg
+                    ):
+                        self.logger.debug((
+                            "Relaying a drilled-into Collector node:"),
+                            prefix="Processor::_get_optional_nodes:  ",
+                            data={
+                                "node": node_coord,
+                                "parent": parent,
+                                "parentref": parentref
+                            }
+                        )
+                        yield node_coord
                     continue
 
                 if next_coord.node is None:
