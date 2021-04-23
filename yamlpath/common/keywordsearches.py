@@ -9,7 +9,7 @@ Copyright 2020 William W. Kimball, Jr. MBA MSIS
 from typing import Any, Generator, List
 
 from yamlpath.types import PathSegment
-from yamlpath.enums import PathSearchKeywords
+from yamlpath.enums import PathSearchKeywords, PathSearchMethods
 from yamlpath.path import SearchKeywordTerms
 from yamlpath.exceptions import YAMLPathException
 from yamlpath.wrappers import NodeCoords
@@ -195,7 +195,11 @@ class KeywordSearches:
                 next_ancestry = ancestry + [(data, idx)]
                 if scan_node in ele:
                     eval_val = ele[scan_node]
-                    if match_value is None or eval_val > match_value:
+                    if (match_value is None
+                        or yamlpath.common.Searches.search_matches(
+                            PathSearchMethods.GREATER_THAN, match_value,
+                            eval_val)
+                    ):
                         match_value = eval_val
                         discard_nodes.extend(match_nodes)
                         match_nodes = [
@@ -205,7 +209,11 @@ class KeywordSearches:
                         ]
                         continue
 
-                    if eval_val == match_value:
+                    if (match_value is None
+                        or yamlpath.common.Searches.search_matches(
+                            PathSearchMethods.EQUALS, match_value,
+                            eval_val)
+                    ):
                         match_nodes.append(NodeCoords(
                             ele, data, idx, next_path, next_ancestry,
                             relay_segment))
@@ -232,7 +240,11 @@ class KeywordSearches:
                             translated_path + YAMLPath.escape_path_section(
                                 key, translated_path.seperator))
                         next_ancestry = ancestry + [(data, key)]
-                        if match_value is None or eval_val > match_value:
+                        if (match_value is None
+                            or yamlpath.common.Searches.search_matches(
+                                PathSearchMethods.GREATER_THAN, match_value,
+                                eval_val)
+                        ):
                             match_value = eval_val
                             discard_nodes.extend(match_nodes)
                             match_nodes = [
@@ -242,15 +254,15 @@ class KeywordSearches:
                             ]
                             continue
 
-                        if eval_val == match_value:
+                        if (match_value is None
+                            or yamlpath.common.Searches.search_matches(
+                                PathSearchMethods.EQUALS, match_value,
+                                eval_val)
+                        ):
                             match_nodes.append(NodeCoords(
                                 val, data, key, next_path, next_ancestry,
                                 relay_segment))
                             continue
-
-                    discard_nodes.append(NodeCoords(
-                        val, data, key, next_path, next_ancestry,
-                        relay_segment))
 
                 elif scan_node in data:
                     # The user probably meant to operate against the parent
@@ -262,6 +274,10 @@ class KeywordSearches:
                         " node?  Please review your YAML Path"
                         ).format(PathSearchKeywords.MAX),
                         str(yaml_path))
+
+                discard_nodes.append(NodeCoords(
+                    val, data, key, next_path, next_ancestry,
+                    relay_segment))
 
         elif isinstance(data, list):
             # A named child node is useless
@@ -277,8 +293,12 @@ class KeywordSearches:
                 next_path = translated_path + "[{}]".format(idx)
                 next_ancestry = ancestry + [(data, idx)]
                 if (ele is not None
-                    and (match_value is None or ele > match_value)
-                ):
+                    and (
+                        match_value is None or
+                        yamlpath.common.Searches.search_matches(
+                            PathSearchMethods.GREATER_THAN, match_value,
+                            ele)
+                )):
                     match_value = ele
                     discard_nodes.extend(match_nodes)
                     match_nodes = [
@@ -288,7 +308,11 @@ class KeywordSearches:
                     ]
                     continue
 
-                if ele is not None and ele == match_value:
+                if (ele is not None
+                    and yamlpath.common.Searches.search_matches(
+                        PathSearchMethods.EQUALS, match_value,
+                        ele)
+                ):
                     match_nodes.append(NodeCoords(
                         ele, data, idx, next_path, next_ancestry,
                         relay_segment))
