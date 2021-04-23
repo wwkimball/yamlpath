@@ -1815,7 +1815,7 @@ class Processor:
                                 replacement_node)
             elif isinstance(data, list):
                 for idx, item in enumerate(data):
-                    if item is reference_node:
+                    if data is parent and item is reference_node:
                         data[idx] = replacement_node
                     else:
                         recurse(item, parent, parentref, reference_node,
