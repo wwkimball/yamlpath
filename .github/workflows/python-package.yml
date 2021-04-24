@@ -1,0 +1,44 @@
+# This workflow will install Python dependencies, run tests and lint with a variety of Python versions
+# For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
+
+name: Python package
+
+on:
+  push:
+    branches: [ master, development ]
+  pull_request:
+    branches: [ master, development ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.6, 3.7, 3.8, 3.9]
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install --upgrade setuptools
+        python -m pip install --upgrade wheel
+        python -m pip install --upgrade mypy pytest pytest-cov pytest-console-scripts pylint coveralls pep257
+        python -m pip install --editable .
+    - name: Validate Compliance with PEP257
+      run: |
+        pep257 yamlpath
+    - name: Validate Compliance with MyPY
+      run: |
+        mypy yamlpath
+    - name: Lint with pylint
+      run: |
+        pylint yamlpath
+    - name: Unit Test with pytest
+      run: |
+        pytest --verbose --cov=yamlpath --cov-report=term-missing --cov-fail-under=100 --script-launch-mode=subprocess tests
