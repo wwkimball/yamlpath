@@ -2,6 +2,7 @@
 name: Upload Python TEST Package
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - development
