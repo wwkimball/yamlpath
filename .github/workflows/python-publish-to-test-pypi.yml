@@ -33,7 +33,7 @@ jobs:
         python -m pip install --upgrade setuptools wheel
     - name: Build Artifacts
       run: |
-        sed -r -e "s/(^__version__[[:space:]]*=[[:space:]]*)("'"'"[[:digit:]](\.[[:digit:]])+)"'"'"/\1\2.RC$(date "+%Y%m%d%H%M%S")"'"'"/" yamlpath/__init__.py
+        sed -i -r -e "s/(^__version__[[:space:]]*=[[:space:]]*)("'"'"[[:digit:]](\.[[:digit:]])+)"'"'"/\1\2.RC$(date "+%Y%m%d%H%M%S")"'"'"/" yamlpath/__init__.py
         python setup.py sdist bdist_wheel
     - name: Publish Artifacts
       uses: pypa/gh-action-pypi-publish@v1.4.2
