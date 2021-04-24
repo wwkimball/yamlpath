@@ -190,26 +190,21 @@ class Processor:
                                                     YAMLValueFormats.DEFAULT)
         tag: str = kwargs.pop("tag", None)
 
-        self.logger.debug(
-            "Matched node coordinate of type {}:".format(type(node_coord))
-            , data=node_coord
-            , prefix="Processor::_apply_change:  ")
-        self.logger.debug(
-            "Setting its value with format {} to:".format(value_format)
-            , data=value
-            , prefix="Processor::_apply_change:  ")
+        self.logger.debug((
+            "Attempting to change a node coordinate of type {} to value with"
+            " format <{}>:"
+            ).format(type(node_coord), value_format),
+            data={
+                "value": value,
+                "node_coord": node_coord
+            }, prefix="Processor::_apply_change:  ")
 
-        if isinstance(node_coord, list):
-            if len(node_coord) < 1:
-                return
-
-            for collector_node in node_coord:
-                self.logger.debug(
-                    "Expanded Collector results to apply change:"
-                    , data=collector_node
-                    , prefix="Processor::_apply_change:  ")
-                self._apply_change(yaml_path, collector_node, value, **kwargs)
-            return
+        if isinstance(node_coord.node, NodeCoords):
+            self.logger.debug(
+                "Unpacked Collector results to apply change:"
+                , data=node_coord.node
+                , prefix="Processor::_apply_change:  ")
+            self._apply_change(yaml_path, node_coord.node, value, **kwargs)
 
         if (isinstance(node_coord.node, list)
             and len(node_coord.node) > 0
