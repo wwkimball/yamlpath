@@ -20,6 +20,8 @@ setup(
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
         "Operating System :: OS Independent",
+        "Environment :: Console",
+        "Topic :: Utilities",
         "Topic :: Software Development :: Libraries :: Python Modules",
     ],
     url="https://github.com/wwkimball/yamlpath",
