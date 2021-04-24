@@ -47,6 +47,7 @@ jobs:
       run: |
         pytest --verbose --cov=yamlpath --cov-report=term-missing --cov-fail-under=100 --script-launch-mode=subprocess tests
     - name: Publish coveralls Report
-      env: GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         coveralls
