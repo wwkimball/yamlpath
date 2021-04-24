@@ -315,6 +315,8 @@ products_array:
         ("/top_hash/positive_float", -2.71828, 1, True, YAMLValueFormats.FLOAT, PathSeperators.FSLASH),
         ("/top_hash/negative_float", 5283.4, 1, True, YAMLValueFormats.FLOAT, PathSeperators.FSLASH),
         ("/null_value", "No longer null", 1, True, YAMLValueFormats.DEFAULT, PathSeperators.FSLASH),
+        ("(top_array[0])+(top_hash.negative_float)+(/null_value)", "REPLACEMENT", 3, True, YAMLValueFormats.DEFAULT, PathSeperators.FSLASH),
+        ("(((top_array[0])+(top_hash.negative_float))+(/null_value))", "REPLACEMENT", 3, False, YAMLValueFormats.DEFAULT, PathSeperators.FSLASH),
     ])
     def test_set_value(self, quiet_logger, yamlpath, value, tally, mustexist, vformat, pathsep):
         yamldata = """---
@@ -338,7 +340,13 @@ null_value:
         processor.set_value(yamlpath, value, mustexist=mustexist, value_format=vformat, pathsep=pathsep)
         matchtally = 0
         for node in processor.get_nodes(yamlpath, mustexist=mustexist):
-            assert unwrap_node_coords(node) == value
+            changed_value = unwrap_node_coords(node)
+            if isinstance(changed_value, list):
+                for result in changed_value:
+                    assert result == value
+                    matchtally += 1
+                continue
+            assert changed_value == value
             matchtally += 1
         assert matchtally == tally
 
