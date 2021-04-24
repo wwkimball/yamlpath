@@ -989,3 +989,35 @@ key: value
         result = script_runner.run(self.command, "--search", "=nothing", "-", "-")
         assert not result.success, result.stderr
         assert "Only one YAML_FILE may be the - pseudo-file" in result.stderr
+
+    def test_unescaped_paths(self, script_runner, tmp_path_factory):
+        # Credit: https://stackoverflow.com/questions/62155284/trying-to-get-all-paths-in-a-yaml-file
+        content = """---
+# sample set of lines
+foo:
+  x: 12
+  y: hello world
+  ip_range['initial']: 1.2.3.4
+  ip_range[]: tba
+  array['first']: Cluster1
+
+array2[]: bar
+"""
+        yaml_file = create_temp_yaml_file(tmp_path_factory, content)
+        result = script_runner.run(
+            self.command,
+            "--nostdin", "--nofile",
+            "--expand", "--noescape",
+            "--keynames", "--values",
+            "--search", "=~/.*/",
+            yaml_file
+        )
+        assert result.success, result.stderr
+        assert "\n".join([
+            'foox: 12',
+            'fooy: hello world',
+            "fooip_range['initial']: 1.2.3.4",
+            'fooip_range[]: tba',
+            "fooarray['first']: Cluster1",
+            'array2[]: bar',
+        ]) + "\n" == result.stdout
