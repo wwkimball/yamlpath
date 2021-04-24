@@ -31,6 +31,10 @@ Enhancements:
   using their internal RegEx variant, [.=~/.*/].  They are now printed as they
   are entered, using a solitary *.  As a consequence, any deliberate RegEx of
   [.=~/.*/] is also printed as its equivalent solitary *.
+* The yaml-paths command now allows printing YAML Paths without protective
+  escape symbols via a new --noescape option.  While this makes the output more
+  human-friendly, the unescaped paths will not be suitable for use as YAML Path
+  input to other YAML Path processors where special symbols require escaping.
 * [API] The NodeCoords class now tracks ancestry and the last YAML Path segment
   responsible for triggering its generation.  The ancestry stack was necessary
   to support the [parent()] Search Keyword.  The responsible YAML Path segment
