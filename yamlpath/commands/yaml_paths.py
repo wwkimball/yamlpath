@@ -92,6 +92,13 @@ def processcli():
         help="omit YAML Paths from the output (useful with --values or to\
             indicate whether a file has any matches without printing them\
             all, perhaps especially with --noexpression)")
+    valdump_group.add_argument(
+        "-n", "--noescape",
+        action="store_true",
+        help="omit escape characters from special characters in printed YAML\
+            Paths; this is unsafe for feeding the resulting YAML Paths into\
+            other YAML Path commands because the symbols that would be\
+            escaped have special meaning to YAML Path processors")
 
     parser.add_argument(
         "-t", "--pathsep",
@@ -688,7 +695,11 @@ def print_results(
 
         resline += buffers[0]
         if print_yaml_path:
-            resline += "{}".format(result)
+            if args.noescape:
+                for (_, segment) in result.escaped:
+                    resline += "{}".format(segment)
+            else:
+                resline += "{}".format(result)
 
         resline += buffers[1]
         if print_value:
