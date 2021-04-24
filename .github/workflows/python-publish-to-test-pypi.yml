@@ -19,7 +19,7 @@ jobs:
   test-publish:
     name: Publish to TEST PyPI
     runs-on: ubuntu-latest
-    environment: 'PyPI: Test'
+    environment: 'PyPI:  Test'
 
     steps:
     - uses: actions/checkout@v2
