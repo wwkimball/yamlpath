@@ -696,8 +696,13 @@ def print_results(
         resline += buffers[0]
         if print_yaml_path:
             if args.noescape:
+                use_flash = args.pathsep is PathSeperators.FSLASH
+                seglines = []
+                join_mark = "/" if use_flash else "."
+                path_prefix = "/" if use_flash else ""
                 for (_, segment) in result.escaped:
-                    resline += "{}".format(segment)
+                    seglines.append(str(segment))
+                resline += "{}{}".format(path_prefix, join_mark.join(seglines))
             else:
                 resline += "{}".format(result)
 
