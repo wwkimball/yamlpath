@@ -266,36 +266,70 @@ versions of `pip` or its own dependency, *setuptools*.
 
 ### Using pip
 
-Each published version of this project and its dependencies can be installed
-from [PyPI](https://pypi.org/) using `pip`.  Note that on systems with more than
-one version of Python, you will probably need to use `pip3`, or equivalent
-(e.g.: Cygwin users may need to use `pip3.6`, `pip3.9`, or such).
+Like most others, this Python project is published to [PyPI](https://pypi.org/)
+so that it can be easily installed via Python's `pip` command (or its
+version-specific `pip3`, `pip3.7`, and such depending on how your Python was
+installed).
+
+Python's `pip` command is ever-changing.  It is updated very frequently.  This
+command further depends on other libraries to do its job, namely *setuptools*.
+It so happens that *setuptools* is also updated very frequently.  Both of these
+are separate from Python itself, despite versions of them being pre-installed
+with Python.  It is your responsibility to keep `pip` and *setuptools*
+up-to-date.  When `pip` or *setuptools* become outdated, _you will experience
+errors_ when trying to install newer Python packages like *yamlpath* **unless
+you preinstall such packages' dependencies**.  In the case of *yamlpath*, this
+means you'd need to preinstall *ruamel.yaml* if you cannot or choose not to
+upgrade `pip` and/or *setuptools*.
+
+As long as your `pip` and *setuptools* are up-to-date, installing *yamlpath* is
+as simple as a single command (the "3.7" suffix to the `pip` command is
+optional, depending on how your Python 3 was installed):
 
 ```shell
-pip3 install yamlpath
+pip3.7 install yamlpath
 ```
 
 #### Very Old Versions of pip or its setuptools Dependency
 
 Very old versions of Python 3 ship with seriously outdated versions of `pip` and
 its *setuptools* dependency.  When using versions of `pip` older than **18.1**
-or *setuptools* older than version **46.4.0**, you may not be able to install
-yamlpath with a single command.  In this case, you have two options:  either
+or *setuptools* older than version **46.4.0**, you will not be able to install
+*yamlpath* with a single command.  In this case, you have two options:  either
 pre-install *ruamel.yaml* before installing *yamlpath* or update `pip` and/or
 *setuptools* to at least the minimum required versions so `pip` can
-auto-determine and install dependencies.  This issue is not unique to yamlpath
-because Python's ever-growing capabilities simply require periodic updates to
-access.
+auto-determine and install dependencies.  This issue is not unique to
+*yamlpath*.
 
-When you cannot update `pip` or *setuptools*, just pre-install *ruamel.yaml*
-before yamlpath, like so:
+Upgrading `pip` and *setuptools* is trivially simple as long as you have
+sufficient access rights to do so on your local machine.  Depending on your
+situation, you may need to prefix these with `sudo` and/or you may need to
+substitute `python3` and `pip3` for `python` and `pip`, or even `python3.7` and
+`pip3.7` (or another specific version of Python 3), respectively.  To reiterate
+that this project requires Python 3, these sample commands will be
+demonstrated using such prefixes:
 
 ```shell
-# In this edge-case, these commands CANNOT be joined, like:
-# pip3.6 install ruamel.yaml yamlpath
-pip3.6 install ruamel.yaml
-pip3.6 install yamlpath
+python3.7 -m pip install --upgrade pip
+pip3.7 install --upgrade setuptools
 ```
+
+When you cannot or will not update `pip` or *setuptools*, just pre-install
+*ruamel.yaml* before yamlpath.  Each must be installed seperately and in order,
+like this (you **cannot** combine these installations into a single command):
+
+```shell
+pip3.7 install ruamel.yaml
+pip3.7 install yamlpath
+```
+
+The downside to choosing this manual installation path is that you may end up
+with an incompatible version of *ruamel.yaml*.  This will manifest either as an
+inability to install *yamlpath* at all, or only certain versions of *yamlpath*,
+or *yamlpath* may experience unexpected errors caused by the incompatible code.
+For the best experience, you are strongly encouraged to just keep `pip` and
+*setuptools* up-to-date, particularly as a routine part of installing any new
+Python packages.
 
 ### Installing EYAML (Optional)
 
