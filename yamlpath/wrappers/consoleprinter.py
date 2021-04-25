@@ -11,7 +11,7 @@ Requires an object on init which has the following properties:
   verbose:  <Boolean> allows output from ConsolePrinter::verbose().
   debug:  <Boolean> allows output from ConsolePrinter::debug().
 
-Copyright 2018, 2019, 2020 William W. Kimball, Jr. MBA MSIS
+Copyright 2018, 2019, 2020, 2021 William W. Kimball, Jr. MBA MSIS
 """
 import sys
 from collections import deque

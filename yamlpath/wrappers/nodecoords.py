@@ -1,4 +1,8 @@
-"""Wrap a node along with its relative coordinates within its DOM."""
+"""
+Implement NodeCoords.
+
+Copyright 2020, 2021 William W. Kimball, Jr. MBA MSIS
+"""
 from typing import Any, List, Optional
 
 from yamlpath.types import PathSegment
@@ -6,18 +10,24 @@ from yamlpath import YAMLPath
 
 class NodeCoords:
     """
-    Initialize a new NodeCoords.
+    Wrap a node's data along with its relative coordinates within its DOM.
 
-    A node's coordinates track these properties:
-    1. Reference-to-the-Node-Itself,
-    2. Immediate-Parent-Node-of-the-Node,
-    3. Index-or-Key-of-the-Node-Within-Its-Immediate-Parent
+    A node's "coordinates" includes these properties:
+    1. Reference to the node itself,
+    2. Immediate parent node of the wrapped node,
+    3. Index or Key of the node within its immediate parent
+
+    Additional, optional data can be wrapped along with the node's coordinates
+    to facilitate other specific operations upon the node/DOM.  See the
+    `__init__` method for details.
     """
 
     # pylint: disable=locally-disabled,too-many-arguments
     def __init__(
-        self, node: Any, parent: Any, parentref: Any, path: YAMLPath = None,
-        ancestry: List[tuple] = None, path_segment: PathSegment = None
+        self, node: Any, parent: Any, parentref: Any,
+        path: Optional[YAMLPath] = None,
+        ancestry: Optional[List[tuple]] = None,
+        path_segment: Optional[PathSegment] = None
     ) -> None:
         """
         Initialize a new NodeCoords.
@@ -29,8 +39,11 @@ class NodeCoords:
            within `parent` the `node` is located
         4. path (YAMLPath) The YAML Path for this node, as reported by its
            creator process
-        5. ancestry (List[tuple]) Tuples in (parent,parentref) form tracking
-           the hierarchical ancestry of this node through its parent document
+        5. ancestry (List[AncestryEntry]) Stack of AncestryEntry (parent,
+           parentref) tracking the hierarchical ancestry of this node through
+           its parent document
+        6. path_segment (PathSegment) The YAML Path segment which most directly
+           caused the generation of this NodeCoords
 
         Returns: N/A
 

@@ -285,8 +285,9 @@ class Nodes:
         return wrapped_value
 
     @staticmethod
-    def build_next_node(yaml_path: YAMLPath, depth: int,
-                        value: Any = None) -> Any:
+    def build_next_node(
+        yaml_path: YAMLPath, depth: int, value: Any = None
+    ) -> Any:
         """
         Get the best default value for the next entry in a YAML Path.
 
@@ -313,8 +314,9 @@ class Nodes:
         return default_value
 
     @staticmethod
-    def append_list_element(data: Any, value: Any = None,
-                            anchor: str = None) -> Any:
+    def append_list_element(
+        data: Any, value: Any = None, anchor: str = None
+    ) -> Any:
         """
         Append a new element to an ruamel.yaml List.
 
@@ -369,7 +371,7 @@ class Nodes:
         3. value_tag (str) Tag to apply (or None to remove)
 
         Returns: (Any) the updated node; may be new data, so replace your node
-        with this returned value!
+            with this returned value!
         """
         if value_tag is None:
             return node
@@ -393,12 +395,26 @@ class Nodes:
 
     @staticmethod
     def node_is_leaf(node: Any) -> bool:
-        """Indicate whether a node is a leaf (Scalar data)."""
+        """
+        Indicate whether a node is a leaf (Scalar data).
+
+        Parameters:
+        1. node (Any) The node to evaluate
+
+        Returns:  (bool) True = node is a leaf; False, otherwise
+        """
         return not isinstance(node, (dict, list, set))
 
     @staticmethod
     def node_is_aoh(node: Any) -> bool:
-        """Indicate whether a node is an Array-of-Hashes (List of Dicts)."""
+        """
+        Indicate whether a node is an Array-of-Hashes (List of Dicts).
+
+        Parameters:
+        1. node (Any) The node under evaluation
+
+        Returns:  (bool) True = node is a `list` comprised **only** of `dict`s
+        """
         if node is None:
             return False
 
@@ -413,7 +429,14 @@ class Nodes:
 
     @staticmethod
     def tagless_elements(data: list) -> list:
-        """Get a copy of a list with all elements stripped of YAML Tags."""
+        """
+        Get a copy of a list with all elements stripped of YAML Tags.
+
+        Parameters:
+        1. data (list) The list to strip of YAML Tags
+
+        Returns:  (list) De-tagged version of `data`
+        """
         detagged = []
         for ele in data:
             if isinstance(ele, TaggedScalar):
@@ -424,7 +447,14 @@ class Nodes:
 
     @staticmethod
     def tagless_value(value: Any) -> Any:
-        """Get a value in its true data-type, stripped of any YAML Tag."""
+        """
+        Get a value in its true data-type, stripped of any YAML Tag.
+
+        Parameters:
+        1. value (Any) The value to de-tag
+
+        Returns:  (Any) The de-tagged value
+        """
         evalue = value
         if isinstance(value, TaggedScalar):
             evalue = value.value

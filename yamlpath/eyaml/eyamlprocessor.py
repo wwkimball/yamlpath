@@ -22,8 +22,9 @@ from yamlpath import Processor
 class EYAMLProcessor(Processor):
     """Extend Processor to understand EYAML values."""
 
-    def __init__(self, logger: ConsolePrinter, data: Any,
-                 **kwargs: Optional[str]) -> None:
+    def __init__(
+        self, logger: ConsolePrinter, data: Any, **kwargs: Optional[str]
+    ) -> None:
         """
         Instantiate an EYAMLProcessor.
 
@@ -35,15 +36,15 @@ class EYAMLProcessor(Processor):
         Parameters:
         1. logger (ConsolePrinter) Instance of ConsolePrinter or subclass
         2. data (Any) Parsed YAML data
-        3. **kwargs (Optional[str]) can contain the following keyword
-           parameters:
-            * binary (str) The external eyaml command to use when performing
-              data encryption or decryption; if no path is provided, the
-              command will be sought on the system PATH.  Defaut="eyaml"
-            * publickey (Optional[str]) Fully-qualified path to the public key
-              for use with data encryption
-            * privatekey (Optional[str]) Fully-qualified path to the public key
-              for use with data decryption
+
+        Keyword Arguments:
+        * binary (str) The external eyaml command to use when performing
+            data encryption or decryption; if no path is provided, the
+            command will be sought on the system PATH.  Defaut="eyaml"
+        * publickey (Optional[str]) Fully-qualified path to the public key
+            for use with data encryption
+        * privatekey (Optional[str]) Fully-qualified path to the public key
+            for use with data decryption
 
         Returns:  N/A
 
@@ -56,7 +57,7 @@ class EYAMLProcessor(Processor):
 
     # pylint: disable=locally-disabled,too-many-branches
     def _find_eyaml_paths(
-            self, data: Any, build_path: str = ""
+        self, data: Any, build_path: str = ""
     ) -> Generator[YAMLPath, None, None]:
         """
         Find every encrypted value and report each as a YAML Path.
@@ -65,8 +66,8 @@ class EYAMLProcessor(Processor):
         leading to an EYAML value within the evaluated YAML data.
 
         Parameters:
-            1. data (Any) The parsed YAML data to process
-            2. build_path (str) A YAML Path under construction
+        1. data (Any) The parsed YAML data to process
+        2. build_path (str) A YAML Path under construction
 
         Returns:  (Generator[Path, None, None]) each YAML Path entry as they
             are discovered
@@ -122,10 +123,10 @@ class EYAMLProcessor(Processor):
         1. value (str) The EYAML value to decrypt
 
         Returns:  (str) The decrypted value or the original value if it was not
-        actually encrypted.
+            actually encrypted.
 
         Raises:
-            - `EYAMLCommandException` when the eyaml binary cannot be utilized
+        - `EYAMLCommandException` when the eyaml binary cannot be utilized
         """
         if not self.is_eyaml_value(value):
             return value
@@ -176,9 +177,10 @@ class EYAMLProcessor(Processor):
 
         return retval
 
-    def encrypt_eyaml(self, value: str,
-                      output: EYAMLOutputFormats = EYAMLOutputFormats.STRING
-                     ) -> str:
+    def encrypt_eyaml(
+        self, value: str,
+        output: EYAMLOutputFormats = EYAMLOutputFormats.STRING
+    ) -> str:
         """
         Encrypt a value via EYAML.
 
@@ -187,10 +189,10 @@ class EYAMLProcessor(Processor):
         2. output (EYAMLOutputFormats) the output format of the encryption
 
         Returns:  (str) The encrypted result or the original value if it was
-        already an EYAML encryption.
+            already an EYAML encryption.
 
         Raises:
-            - `EYAMLCommandException` when the eyaml binary cannot be utilized.
+        - `EYAMLCommandException` when the eyaml binary cannot be utilized.
         """
         if self.is_eyaml_value(value):
             return value
@@ -248,9 +250,11 @@ class EYAMLProcessor(Processor):
         )
         return retval
 
-    def set_eyaml_value(self, yaml_path: YAMLPath, value: str,
-                        output: EYAMLOutputFormats = EYAMLOutputFormats.STRING,
-                        mustexist: bool = False) -> None:
+    def set_eyaml_value(
+        self, yaml_path: YAMLPath, value: str,
+        output: EYAMLOutputFormats = EYAMLOutputFormats.STRING,
+        mustexist: bool = False
+    ) -> None:
         """
         Encrypt and store a value where specified via YAML Path.
 
@@ -265,7 +269,7 @@ class EYAMLProcessor(Processor):
         Returns:  N/A
 
         Raises:
-            - `YAMLPathException` when YAML Path is invalid
+        - `YAMLPathException` when YAML Path is invalid
         """
         self.logger.verbose(
             "Encrypting value(s) for {}."
@@ -283,9 +287,10 @@ class EYAMLProcessor(Processor):
             value_format=emit_format
         )
 
-    def get_eyaml_values(self, yaml_path: YAMLPath, mustexist: bool = False,
-                         default_value: str = ""
-                        ) -> Generator[str, None, None]:
+    def get_eyaml_values(
+        self, yaml_path: YAMLPath, mustexist: bool = False,
+        default_value: str = ""
+    ) -> Generator[str, None, None]:
         """
         Retrieve and decrypt all EYAML nodes identified via a YAML Path.
 
@@ -302,7 +307,7 @@ class EYAMLProcessor(Processor):
             specifies a non-existant node
 
         Raises:
-            - `YAMLPathException` when YAML Path is invalid
+        - `YAMLPathException` when YAML Path is invalid
         """
         self.logger.verbose(
             "Decrypting value(s) at {}.".format(yaml_path)
@@ -319,7 +324,7 @@ class EYAMLProcessor(Processor):
         Parameters:  N/A
 
         Returns:  (bool) True when the present eyaml property indicates an
-        executable; False, otherwise
+            executable; False, otherwise
 
         Raises:  N/A
         """

@@ -1,5 +1,5 @@
 """
-Express an issue with a YAML Path.
+Implement YAMLPathException.
 
 Copyright 2019, 2020 William W. Kimball, Jr. MBA MSIS
 """
@@ -14,8 +14,9 @@ class YAMLPathException(Exception):
     YAML node.
     """
 
-    def __init__(self, user_message: str, yaml_path: str,
-                 segment: Optional[str] = None) -> None:
+    def __init__(
+        self, user_message: str, yaml_path: str, segment: Optional[str] = None
+    ) -> None:
         """
         Initialize this Exception with all pertinent data.
 

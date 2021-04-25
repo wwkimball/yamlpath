@@ -8,7 +8,7 @@ Copyright 2020 William W. Kimball, Jr. MBA MSIS
 """
 from typing import Any, Generator, List
 
-from yamlpath.types import PathSegment
+from yamlpath.types import AncestryEntry, PathSegment
 from yamlpath.enums import PathSearchKeywords, PathSearchMethods
 from yamlpath.path import SearchKeywordTerms
 from yamlpath.exceptions import YAMLPathException
@@ -24,7 +24,19 @@ class KeywordSearches:
         terms: SearchKeywordTerms, haystack: Any, yaml_path: YAMLPath,
         **kwargs: Any
     ) -> Generator[NodeCoords, None, None]:
-        """Perform a keyword search."""
+        """
+        Perform a keyword search.
+
+        Parameters:
+        1. terms (SearchKeywordTerms) The search operation to perform
+        2. haystack (Any) The data to evaluate
+        3. yaml_path (YAMLPath) YAML Path containing this search keyword
+
+        Keyword Arguments:  See each of the called KeywordSearches methods
+
+        Returns:  (Generator[NodeCoords, None, None]) Matching data as it is
+            generated
+        """
         invert: bool = terms.inverted
         keyword: PathSearchKeywords = terms.keyword
         parameters: List[str] = terms.parameters
@@ -59,11 +71,33 @@ class KeywordSearches:
         data: Any, invert: bool, parameters: List[str], yaml_path: YAMLPath,
         **kwargs: Any
     ) -> Generator[NodeCoords, None, None]:
-        """Indicate whether data has a named child."""
+        """
+        Indicate whether data has a named child.
+
+        Parameters:
+        1. data (Any) The data to evaluate
+        2. invert (bool) Invert the evaluation
+        3. parameters (List[str]) Parsed parameters
+        4. yaml_path (YAMLPath) YAML Path begetting this operation
+
+        Keyword Arguments:
+        * parent (ruamel.yaml node) The parent node from which this query
+          originates
+        * parentref (Any) The Index or Key of data within parent
+        * relay_segment (PathSegment) YAML Path segment presently under
+          evaluation
+        * translated_path (YAMLPath) YAML Path indicating precisely which node
+          is being evaluated
+        * ancestry (List[AncestryEntry]) Stack of ancestors preceding the
+          present node under evaluation
+
+        Returns:  (Generator[NodeCoords, None, None]) each result as it is
+            generated
+        """
         parent: Any = kwargs.pop("parent", None)
         parentref: Any = kwargs.pop("parentref", None)
         translated_path: YAMLPath = kwargs.pop("translated_path", YAMLPath(""))
-        ancestry: List[tuple] = kwargs.pop("ancestry", [])
+        ancestry: List[AncestryEntry] = kwargs.pop("ancestry", [])
         relay_segment: PathSegment = kwargs.pop("relay_segment", None)
 
         # There must be exactly one parameter
@@ -132,11 +166,32 @@ class KeywordSearches:
         invert: bool, parameters: List[str], yaml_path: YAMLPath,
         **kwargs: Any
     ) -> Generator[NodeCoords, None, None]:
-        """Match only the key-name of the present node."""
+        """
+        Match only the key-name of the present node.
+
+        Parameters:
+        1. invert (bool) Invert the evaluation
+        2. parameters (List[str]) Parsed parameters
+        3. yaml_path (YAMLPath) YAML Path begetting this operation
+
+        Keyword Arguments:
+        * parent (ruamel.yaml node) The parent node from which this query
+          originates
+        * parentref (Any) The Index or Key of data within parent
+        * relay_segment (PathSegment) YAML Path segment presently under
+          evaluation
+        * translated_path (YAMLPath) YAML Path indicating precisely which node
+          is being evaluated
+        * ancestry (List[AncestryEntry]) Stack of ancestors preceding the
+          present node under evaluation
+
+        Returns:  (Generator[NodeCoords, None, None]) each result as it is
+            generated
+        """
         parent: Any = kwargs.pop("parent", None)
         parentref: Any = kwargs.pop("parentref", None)
         translated_path: YAMLPath = kwargs.pop("translated_path", YAMLPath(""))
-        ancestry: List[tuple] = kwargs.pop("ancestry", [])
+        ancestry: List[AncestryEntry] = kwargs.pop("ancestry", [])
         relay_segment: PathSegment = kwargs.pop("relay_segment", None)
 
         # There are no parameters
@@ -164,11 +219,33 @@ class KeywordSearches:
         data: Any, invert: bool, parameters: List[str], yaml_path: YAMLPath,
         **kwargs: Any
     ) -> Generator[NodeCoords, None, None]:
-        """Find whichever nodes/elements have a maximum value."""
+        """
+        Find whichever nodes/elements have a maximum value.
+
+        Parameters:
+        1. data (Any) The data to evaluate
+        2. invert (bool) Invert the evaluation
+        3. parameters (List[str]) Parsed parameters
+        4. yaml_path (YAMLPath) YAML Path begetting this operation
+
+        Keyword Arguments:
+        * parent (ruamel.yaml node) The parent node from which this query
+          originates
+        * parentref (Any) The Index or Key of data within parent
+        * relay_segment (PathSegment) YAML Path segment presently under
+          evaluation
+        * translated_path (YAMLPath) YAML Path indicating precisely which node
+          is being evaluated
+        * ancestry (List[AncestryEntry]) Stack of ancestors preceding the
+          present node under evaluation
+
+        Returns:  (Generator[NodeCoords, None, None]) each result as it is
+            generated
+        """
         parent: Any = kwargs.pop("parent", None)
         parentref: Any = kwargs.pop("parentref", None)
         translated_path: YAMLPath = kwargs.pop("translated_path", YAMLPath(""))
-        ancestry: List[tuple] = kwargs.pop("ancestry", [])
+        ancestry: List[AncestryEntry] = kwargs.pop("ancestry", [])
         relay_segment: PathSegment = kwargs.pop("relay_segment", None)
 
         # There may be 0 or 1 parameters
@@ -345,11 +422,33 @@ class KeywordSearches:
         data: Any, invert: bool, parameters: List[str], yaml_path: YAMLPath,
         **kwargs: Any
     ) -> Generator[NodeCoords, None, None]:
-        """Find whichever nodes/elements have a minimum value."""
+        """
+        Find whichever nodes/elements have a minimum value.
+
+        Parameters:
+        1. data (Any) The data to evaluate
+        2. invert (bool) Invert the evaluation
+        3. parameters (List[str]) Parsed parameters
+        4. yaml_path (YAMLPath) YAML Path begetting this operation
+
+        Keyword Arguments:
+        * parent (ruamel.yaml node) The parent node from which this query
+          originates
+        * parentref (Any) The Index or Key of data within parent
+        * relay_segment (PathSegment) YAML Path segment presently under
+          evaluation
+        * translated_path (YAMLPath) YAML Path indicating precisely which node
+          is being evaluated
+        * ancestry (List[AncestryEntry]) Stack of ancestors preceding the
+          present node under evaluation
+
+        Returns:  (Generator[NodeCoords, None, None]) each result as it is
+            generated
+        """
         parent: Any = kwargs.pop("parent", None)
         parentref: Any = kwargs.pop("parentref", None)
         translated_path: YAMLPath = kwargs.pop("translated_path", YAMLPath(""))
-        ancestry: List[tuple] = kwargs.pop("ancestry", [])
+        ancestry: List[AncestryEntry] = kwargs.pop("ancestry", [])
         relay_segment: PathSegment = kwargs.pop("relay_segment", None)
 
         # There may be 0 or 1 parameters
@@ -525,11 +624,33 @@ class KeywordSearches:
         data: Any, invert: bool, parameters: List[str], yaml_path: YAMLPath,
         **kwargs: Any
     ) -> Generator[NodeCoords, None, None]:
-        """Climb back up N parent levels in the data hierarchy."""
+        """
+        Climb back up N parent levels in the data hierarchy.
+
+        Parameters:
+        1. data (Any) The data to evaluate
+        2. invert (bool) Invert the evaluation; not possible for parent()
+        3. parameters (List[str]) Parsed parameters
+        4. yaml_path (YAMLPath) YAML Path begetting this operation
+
+        Keyword Arguments:
+        * parent (ruamel.yaml node) The parent node from which this query
+          originates
+        * parentref (Any) The Index or Key of data within parent
+        * relay_segment (PathSegment) YAML Path segment presently under
+          evaluation
+        * translated_path (YAMLPath) YAML Path indicating precisely which node
+          is being evaluated
+        * ancestry (List[AncestryEntry]) Stack of ancestors preceding the
+          present node under evaluation
+
+        Returns:  (Generator[NodeCoords, None, None]) each result as it is
+            generated
+        """
         parent: Any = kwargs.pop("parent", None)
         parentref: Any = kwargs.pop("parentref", None)
         translated_path: YAMLPath = kwargs.pop("translated_path", YAMLPath(""))
-        ancestry: List[tuple] = kwargs.pop("ancestry", [])
+        ancestry: List[AncestryEntry] = kwargs.pop("ancestry", [])
         relay_segment: PathSegment = kwargs.pop("relay_segment", None)
 
         # There may be 0 or 1 parameters

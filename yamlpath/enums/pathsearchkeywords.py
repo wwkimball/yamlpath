@@ -15,20 +15,24 @@ class PathSearchKeywords(Enum):
 
     `HAS_CHILD`
         Matches when the node has a direct child with a given name.
+
     `NAME`
         Matches only the key-name or element-index of the present node,
         discarding any and all child node data.  Can be used to rename the
         matched key as long as the new name is unique within the parent, lest
         the preexisting node be overwritten.  Cannot be used to reassign an
         Array/sequence/list element to another position.
+
     `MAX`
         Matches whichever node(s) has/have the maximum value for a named child
         key or the maximum value within an Array/sequence/list.  When used
         against a scalar value, that value is always its own maximum.
+
     `MIN`
         Matches whichever node(s) has/have the minimum value for a named child
         key or the minimum value within an Array/sequence/list.  When used
         against a scalar value, that value is always its own minimum.
+
     `PARENT`
         Access the parent(s) of the present node.
     """

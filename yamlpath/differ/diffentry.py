@@ -21,7 +21,27 @@ class DiffEntry:
         self, action: DiffActions, path: YAMLPath, lhs: Any, rhs: Any,
         **kwargs
     ):
-        """Initiate a new DiffEntry."""
+        """
+        Instantiate a new DiffEntry.
+
+        Parameters:
+        1. action (DiffAction) The action taken for one document to become the
+            next
+        2. path (YAMLPath) Location within the LHS document which changes to
+            becomes the RHS document
+        3. lhs (Any) The Left-Hand-Side (original) document
+        4. rhs (Any) The Right-Hand-Side (altered) document
+
+        Keyword Arguments:
+        * lhs_iteration (Any) "Rough" position of the original element within
+          its document before it was changed
+        * lhs_parent (Any) Parent of the original data element
+        * rhs_iteration (Any) "Rough" position of the changed element within
+          its document, if it existed before the change (otherwise it'll be 0s)
+        * rhs_parent (Any) Parent of the changed data element
+
+        Returns:  N/A
+        """
         self._action: DiffActions = action
         self._path: YAMLPath = path
         self._lhs: Any = lhs
@@ -30,8 +50,24 @@ class DiffEntry:
         self._set_index(lhs, rhs, **kwargs)
         self._verbose = False
 
-    def _set_index(self, lhs: Any, rhs: Any, **kwargs) -> Any:
-        """Build the sortable index for this entry."""
+    def _set_index(self, lhs: Any, rhs: Any, **kwargs) -> None:
+        """
+        Build the sortable index for this entry.
+
+        Parameters:
+        1. lhs (Any) The Left-Hand-Side (original) document
+        2. rhs (Any) The Right-Hand-Side (altered) document
+
+        Keyword Arguments:
+        * lhs_iteration (Any) "Rough" position of the original element within
+          its document before it was changed
+        * lhs_parent (Any) Parent of the original data element
+        * rhs_iteration (Any) "Rough" position of the changed element within
+          its document, if it existed before the change (otherwise it'll be 0s)
+        * rhs_parent (Any) Parent of the changed data element
+
+        Returns:  N/A
+        """
         lhs_lc = DiffEntry._get_index(lhs, kwargs.pop("lhs_parent", None))
         rhs_lc = DiffEntry._get_index(rhs, kwargs.pop("rhs_parent", None))
         lhs_iteration = kwargs.pop("lhs_iteration", 0)
@@ -136,8 +172,8 @@ class DiffEntry:
         formatted_data = json_safe_data
         if isinstance(json_safe_data, str):
             formatted_data = json_safe_data.strip()
-        json_data = json.dumps(formatted_data).replace(
-                               "\\n", "\n{} ".format(prefix))
+        json_data = json.dumps(
+            formatted_data).replace("\\n", "\n{} ".format(prefix))
         data_tag = ""
         if isinstance(data, TaggedScalar) and data.tag.value:
             data_tag = "{} ".format(data.tag.value)

@@ -1,5 +1,5 @@
 """
-Config file processor for the Merger.
+Implement MergerConfig.
 
 Copyright 2020 William W. Kimball, Jr. MBA MSIS
 """
@@ -41,7 +41,14 @@ class MergerConfig:
         self._load_config()
 
     def anchor_merge_mode(self) -> AnchorConflictResolutions:
-        """Get Anchor merge mode."""
+        """
+        Get Anchor merge mode.
+
+        Parameters:  N/A
+
+        Returns:  (AnchorConflictResolutions) Resolved method for handling
+            YAML Anchor conflicts.
+        """
         # Precedence: CLI > config[defaults] > default
         if hasattr(self.args, "anchors") and self.args.anchors:
             return AnchorConflictResolutions.from_str(self.args.anchors)
@@ -178,13 +185,26 @@ class MergerConfig:
         self._prepare_user_rules(proc, merge_path, "keys", self.keys)
 
     def get_insertion_point(self) -> YAMLPath:
-        """Get the YAML Path at which merging shall be performed."""
+        """
+        Get the YAML Path at which merging shall be performed.
+
+        Parameters:  N/A
+
+        Returns:  (YAMLPath) User-specified point(s) within the document where
+            the RHS document is directed to be merged-in.
+        """
         if hasattr(self.args, "mergeat"):
             return YAMLPath(self.args.mergeat)
         return YAMLPath("/")
 
     def get_document_format(self) -> OutputDocTypes:
-        """Get the user-desired output format."""
+        """
+        Get the user-desired output format.
+
+        Paramerers:  N/A
+
+        Returns:  (OutputDocTypes) The destination document type
+        """
         if hasattr(self.args, "document_format"):
             return OutputDocTypes.from_str(self.args.document_format)
         return OutputDocTypes.AUTO

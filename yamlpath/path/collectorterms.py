@@ -9,9 +9,10 @@ from yamlpath.enums import CollectorOperators
 class CollectorTerms:
     """YAML Path Collector segment terms."""
 
-    def __init__(self, expression: str,
-                 operation: CollectorOperators = CollectorOperators.NONE
-                ) -> None:
+    def __init__(
+        self, expression: str,
+        operation: CollectorOperators = CollectorOperators.NONE
+    ) -> None:
         """
         Instantiate a Collector Term.
 

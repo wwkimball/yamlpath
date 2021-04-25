@@ -36,11 +36,11 @@ Enhancements:
   human-friendly, the unescaped paths will not be suitable for use as YAML Path
   input to other YAML Path processors where special symbols require escaping.
 * [API] The NodeCoords class now tracks ancestry and the last YAML Path segment
-  responsible for triggering its generation.  The ancestry stack was necessary
-  to support the [parent()] Search Keyword.  The responsible YAML Path segment
-  tracking was necessary to enable Hash/map/dict key renaming via the [name()]
-  Search Keyword.  These must be set when the NodeCoords is generated; it is
-  not automatic.
+  responsible for triggering its generation.  The ancestry stack --
+  List[AncestryEntry] -- was necessary to support the [parent()] Search
+  Keyword.  The responsible YAML Path segment tracking was necessary to enable
+  Hash/map/dict key renaming via the [name()] Search Keyword.  These optional
+  attributes may be set when the NodeCoords is generated.
 * [API] YAMLPath instances now have a pop() method.  This mutates the YAMLPath
   by popping off its last segment, returning that segment.
 

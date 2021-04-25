@@ -1,7 +1,7 @@
 """
 Implement YAML Path.
 
-Copyright 2019, 2020 William W. Kimball, Jr. MBA MSIS
+Copyright 2019, 2020, 2021 William W. Kimball, Jr. MBA MSIS
 """
 from collections import deque
 from typing import Deque, List, Optional, Union
@@ -79,6 +79,10 @@ class YAMLPath:
         """
         Indicate equivalence of two YAMLPaths.
 
+        The path seperator is ignored for this comparison.  This is deliberate
+        and allows "some.path[1]" == "/some/path[1]" because both forms of the
+        same path yield exactly the same data.
+
         Parameters:
         1. other (object) The other YAMLPath to compare against.
 
@@ -131,7 +135,7 @@ class YAMLPath:
         """
         Pop the last segment off this YAML Path.
 
-        This mutates the YAML Path and returns the removed segment tuple.
+        This mutates the YAML Path and returns the removed segment PathSegment.
 
         Returns:  (PathSegment) The removed segment
         """
@@ -159,12 +163,6 @@ class YAMLPath:
         ):
             self.original = path_now[
                 0:len(path_now) - len(removable_segment) + 1]
-
-        # I cannot come up with a test that would trigger this Exception:
-        # else:
-        #     raise YAMLPathException(
-        #         "Unable to pop unmatchable segment, {}"
-        #         .format(removable_segment), str(self))
 
         return popped_segment
 
@@ -287,7 +285,7 @@ class YAMLPath:
                     strip_escapes: bool = True
                    ) -> Deque[PathSegment]:
         r"""
-        Parse the YAML Path into its component segments.
+        Parse the YAML Path into its component PathSegment tuples.
 
         Breaks apart a stringified YAML Path into component segments, each
         identified by its type.  See README.md for sample YAML Paths.
@@ -297,8 +295,8 @@ class YAMLPath:
            only the "escaped" symbol.  False = Leave all leading \ symbols
            intact.
 
-        Returns:  (deque) an empty queue or a queue of tuples, each identifying
-          (PathSegmentTypes, segment_attributes).
+        Returns:  (Deque[PathSegment]) an empty queue or a queue of
+            PathSegments.
 
         Raises:
             - `YAMLPathException` when the YAML Path is invalid
@@ -736,7 +734,7 @@ class YAMLPath:
     def _expand_splats(
         yaml_path: str, segment_id: str,
         segment_type: Optional[PathSegmentTypes] = None
-    ) -> tuple:
+    ) -> PathSegment:
         """
         Replace segment IDs with search operators when * is present.
 
@@ -746,7 +744,7 @@ class YAMLPath:
         3. segment_type (Optional[PathSegmentTypes]) Pending predetermined type
            of the segment under evaluation.
 
-        Returns:  (tuple) Coallesced YAML Path segment.
+        Returns:  (PathSegment) Coallesced YAML Path segment.
         """
         coal_type = segment_type
         coal_value: Union[str, SearchTerms, None] = segment_id

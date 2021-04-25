@@ -1,7 +1,7 @@
 """
-YAML path Keyword Search segment terms.
+Implement SearchKeywordTerms.
 
-Copyright 2019, 2020 William W. Kimball, Jr. MBA MSIS
+Copyright 2021 William W. Kimball, Jr. MBA MSIS
 """
 from typing import List
 
@@ -9,10 +9,11 @@ from yamlpath.enums import PathSearchKeywords
 
 
 class SearchKeywordTerms:
-    """YAML path Keyword Search segment terms."""
+    """YAML path Search Keyword segment terms."""
 
-    def __init__(self, inverted: bool, keyword: PathSearchKeywords,
-                 parameters: str) -> None:
+    def __init__(
+        self, inverted: bool, keyword: PathSearchKeywords, parameters: str
+    ) -> None:
         """
         Instantiate a Keyword Search Term segment.
 

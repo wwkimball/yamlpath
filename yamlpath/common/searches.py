@@ -24,7 +24,19 @@ class Searches:
     def search_matches(
         method: PathSearchMethods, needle: str, haystack: Any
     ) -> bool:
-        """Perform a search."""
+        """
+        Perform a search comparison.
+
+        NOTE:  For less-than, greather-than and related operations, the test is
+        whether `haystack` is less/greater-than `needle`.
+
+        Parameters:
+        1. method (PathSearchMethods) The search method to employ
+        2. needle (str) The value to look for.
+        3. haystack (Any) The value to look in.
+
+        Returns:  (bool) True = comparision passes; False = comparison fails.
+        """
         try:
             cased_needle = needle
             lower_needle = str(needle).lower()
@@ -169,7 +181,14 @@ class Searches:
     def create_searchterms_from_pathattributes(
         rhs: PathAttributes
     ) -> SearchTerms:
-        """Convert a PathAttributes instance to a SearchTerms instance."""
+        """
+        Convert a PathAttributes instance to a SearchTerms instance.
+
+        Parameters:
+        1. rhs (PathAttributes) PathAttributes instance to convert
+
+        Returns:  (SearchTerms) SearchTerms extracted from `rhs`
+        """
         if isinstance(rhs, SearchTerms):
             newinst: SearchTerms = SearchTerms(
                 rhs.inverted, rhs.method, rhs.attribute, rhs.term
