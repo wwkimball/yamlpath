@@ -5,7 +5,7 @@ Copyright 2020, 2021 William W. Kimball, Jr. MBA MSIS
 """
 from typing import Any, List, Optional
 
-from yamlpath.types import PathSegment
+from yamlpath.types import AncestryEntry, PathSegment
 from yamlpath import YAMLPath
 
 class NodeCoords:
@@ -26,7 +26,7 @@ class NodeCoords:
     def __init__(
         self, node: Any, parent: Any, parentref: Any,
         path: Optional[YAMLPath] = None,
-        ancestry: Optional[List[tuple]] = None,
+        ancestry: Optional[List[AncestryEntry]] = None,
         path_segment: Optional[PathSegment] = None
     ) -> None:
         """
@@ -53,7 +53,9 @@ class NodeCoords:
         self.parent: Any = parent
         self.parentref: Any = parentref
         self.path: Optional[YAMLPath] = path
-        self.ancestry: List[tuple] = [] if ancestry is None else ancestry
+        self.ancestry: List[AncestryEntry] = ([]
+                                              if ancestry is None
+                                              else ancestry)
         self.path_segment: Optional[PathSegment] = path_segment
 
     def __str__(self) -> str:

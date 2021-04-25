@@ -6,7 +6,7 @@ Copyright 2019, 2020, 2021 William W. Kimball, Jr. MBA MSIS
 from collections import deque
 from typing import Deque, List, Optional, Union
 
-from yamlpath.types import PathSegment
+from yamlpath.types import PathAttributes, PathSegment
 from yamlpath.exceptions import YAMLPathException
 from yamlpath.enums import (
     PathSegmentTypes,
@@ -732,8 +732,8 @@ class YAMLPath:
 
     @staticmethod
     def _expand_splats(
-        yaml_path: str, segment_id: str,
-        segment_type: Optional[PathSegmentTypes] = None
+        yaml_path: str, segment_id: PathAttributes,
+        segment_type: PathSegmentTypes
     ) -> PathSegment:
         """
         Replace segment IDs with search operators when * is present.
@@ -746,10 +746,10 @@ class YAMLPath:
 
         Returns:  (PathSegment) Coallesced YAML Path segment.
         """
-        coal_type = segment_type
-        coal_value: Union[str, SearchTerms, None] = segment_id
+        coal_type: PathSegmentTypes = segment_type
+        coal_value: PathAttributes = segment_id
 
-        if '*' in segment_id:
+        if isinstance(segment_id, str) and  '*' in segment_id:
             splat_count = segment_id.count("*")
             splat_pos = segment_id.index("*")
             segment_len = len(segment_id)

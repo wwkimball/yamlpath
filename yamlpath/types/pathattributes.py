@@ -9,4 +9,4 @@ from yamlpath.path import CollectorTerms
 import yamlpath.path.searchterms as searchterms
 
 
-PathAttributes = Union[str, CollectorTerms, searchterms.SearchTerms]
+PathAttributes = Union[str, int, CollectorTerms, searchterms.SearchTerms, None]

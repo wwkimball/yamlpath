@@ -8,7 +8,7 @@ from typing import Any, Dict, Generator, List, Union
 
 from ruamel.yaml.comments import CommentedMap
 
-from yamlpath.types import AncestryEntry, PathSegment
+from yamlpath.types import AncestryEntry, PathAttributes, PathSegment
 from yamlpath.common import Anchors, KeywordSearches, Nodes, Searches
 from yamlpath import YAMLPath
 from yamlpath.path import SearchKeywordTerms, SearchTerms, CollectorTerms
@@ -798,7 +798,8 @@ class Processor:
             next_translated_path = (translated_path +
                 YAMLPath.escape_path_section(
                     str_stripped, translated_path.seperator))
-            next_ancestry = ancestry + [(data, stripped_attrs)]
+            next_ancestry: List[AncestryEntry] = ancestry + [
+                (data, stripped_attrs)]
             if stripped_attrs in data:
                 self.logger.debug(
                     "Processor::_get_nodes_by_key:  FOUND key node by name at"
@@ -1696,12 +1697,7 @@ class Processor:
         if segments and len(segments) > depth:
             pathseg: PathSegment = yaml_path.unescaped[depth]
             (segment_type, unstripped_attrs) = pathseg
-            stripped_attrs: Union[
-                str,
-                int,
-                SearchTerms,
-                CollectorTerms
-            ] = segments[depth][1]
+            stripped_attrs: PathAttributes = segments[depth][1]
             except_segment = str(unstripped_attrs)
 
             self.logger.debug(
