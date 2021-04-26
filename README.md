@@ -228,6 +228,18 @@ YAML Path understands these segment types:
   * When another segment follows, it matches every node within the remainder
     of the document's tree for which the following (and subsequent) segments
     match: `/shows/**/name/Star*`
+* Search Keywords:  Advanced search capabilities not otherwise possible using
+  other YAML Path segments.  Taking the form of `[KEYWORD(PARAMETERS)]`, these
+  keywords are
+  [deeply explored on the Wiki](https://github.com/wwkimball/yamlpath/wiki/Search-Keywords)
+  and include:
+  * `[has_child(NAME)]`: Match nodes having a named child key
+  * `[max([NAME])]`: Match nodes having the maximum value
+  * `[min([NAME])]`: Match nodes having the minimum value
+  * `[name()]`: Match only the name of the present node, discarding all
+    children
+  * `[parent([STEPS])]`, Step up 1-N levels in the document from the present
+    node
 * Collectors:  Placing any portion of the YAML Path within parenthesis defines a
   virtual list collector, like `(YAML Path)`; concatenation and exclusion
   operators are supported -- `+` and `-`, respectively -- along with nesting,
@@ -627,9 +639,9 @@ optional arguments:
 
 ```text
 usage: yaml-paths [-h] [-V] -s EXPRESSION [-c EXPRESSION] [-m] [-L] [-F] [-X]
-                  [-P] [-t ['.', '/', 'auto', 'dot', 'fslash']] [-i | -k | -K]
-                  [-a] [-A | -Y | -y | -l] [-e] [-x EYAML] [-r PRIVATEKEY]
-                  [-u PUBLICKEY] [-S] [-d | -v | -q]
+                  [-P] [-n] [-t ['.', '/', 'auto', 'dot', 'fslash']]
+                  [-i | -k | -K] [-a] [-A | -Y | -y | -l] [-e] [-x EYAML]
+                  [-r PRIVATEKEY] [-u PUBLICKEY] [-S] [-d | -v | -q]
                   [YAML_FILE [YAML_FILE ...]]
 
 Returns zero or more YAML Paths indicating where in given YAML/JSON/Compatible
@@ -674,6 +686,11 @@ result printing options:
                         or to indicate whether a file has any matches without
                         printing them all, perhaps especially with
                         --noexpression)
+  -n, --noescape        omit escape characters from special characters in
+                        printed YAML Paths; this is unsafe for feeding the
+                        resulting YAML Paths into other YAML Path commands
+                        because the symbols that would be escaped have special
+                        meaning to YAML Path processors
 
 key name searching options:
   -i, --ignorekeynames  (default) do not search key names
@@ -717,7 +734,9 @@ EYAML options:
 A search or exception EXPRESSION takes the form of a YAML Path search operator
 -- %, $, =, ^, >, <, >=, <=, =~, or ! -- followed by the search term, omitting
 the left-hand operand. For more information about YAML Paths, please visit
-https://github.com/wwkimball/yamlpath.
+https://github.com/wwkimball/yamlpath/wiki. To report issues with this tool or
+to request enhancements, please visit
+https://github.com/wwkimball/yamlpath/issues.
 ```
 
 * [yaml-set](yamlpath/commands/yaml_set.py)
@@ -1201,7 +1220,7 @@ from yamlpath.exceptions import YAMLPathException
 
 yaml_path = YAMLPath("see.documentation.above.for.many.samples")
 try:
-    for node_coordinate in processor.get_nodes(yaml_path):
+    for node_coordinate in processor.get_nodes(yaml_path, mustexist=True):
         log.debug("Got {} from '{}'.".format(node_coordinate, yaml_path))
         # Do something with each node_coordinate.node (the actual data)
 except YAMLPathException as ex:
