@@ -90,8 +90,14 @@ class Anchors:
                     data.merge[midx] = (data.merge[midx][0], repl_node)
 
     @staticmethod
-    def combine_merge_anchors(lhs: CommentedMap, rhs: CommentedMap):
-        """Merge YAML merge keys."""
+    def combine_merge_anchors(lhs: CommentedMap, rhs: CommentedMap) -> None:
+        """
+        Merge YAML merge keys.
+
+        Parameters:
+        1. lhs (CommentedMap) The map to merge into
+        2. rhs (CommentedMap) The map to merge from
+        """
         for mele in rhs.merge:
             lhs.add_yaml_merge([mele])
 
@@ -172,7 +178,14 @@ class Anchors:
 
     @staticmethod
     def get_node_anchor(node: Any) -> Optional[str]:
-        """Return a node's Anchor/Alias name or None wheh there isn't one."""
+        """
+        Return a node's Anchor/Alias name or None when there isn't one.
+
+        Parameters:
+        1. node (Any) The node to evaluate
+
+        Returns:  (str) The node's Anchor/Alias name or None when unset
+        """
         if (
                 not hasattr(node, "anchor")
                 or node.anchor is None

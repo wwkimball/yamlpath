@@ -315,6 +315,8 @@ products_array:
         ("/top_hash/positive_float", -2.71828, 1, True, YAMLValueFormats.FLOAT, PathSeperators.FSLASH),
         ("/top_hash/negative_float", 5283.4, 1, True, YAMLValueFormats.FLOAT, PathSeperators.FSLASH),
         ("/null_value", "No longer null", 1, True, YAMLValueFormats.DEFAULT, PathSeperators.FSLASH),
+        ("(top_array[0])+(top_hash.negative_float)+(/null_value)", "REPLACEMENT", 3, True, YAMLValueFormats.DEFAULT, PathSeperators.FSLASH),
+        ("(((top_array[0])+(top_hash.negative_float))+(/null_value))", "REPLACEMENT", 3, False, YAMLValueFormats.DEFAULT, PathSeperators.FSLASH),
     ])
     def test_set_value(self, quiet_logger, yamlpath, value, tally, mustexist, vformat, pathsep):
         yamldata = """---
@@ -338,7 +340,13 @@ null_value:
         processor.set_value(yamlpath, value, mustexist=mustexist, value_format=vformat, pathsep=pathsep)
         matchtally = 0
         for node in processor.get_nodes(yamlpath, mustexist=mustexist):
-            assert unwrap_node_coords(node) == value
+            changed_value = unwrap_node_coords(node)
+            if isinstance(changed_value, list):
+                for result in changed_value:
+                    assert result == value
+                    matchtally += 1
+                continue
+            assert changed_value == value
             matchtally += 1
         assert matchtally == tally
 
@@ -910,3 +918,46 @@ key: value
 
         assert isinstance(data['key'], TaggedScalar)
         assert data['key'].tag.value == tag
+
+    @pytest.mark.parametrize("yaml_path,value,old_data,new_data", [
+        (YAMLPath("/key[name()]"), "renamed_key", {'key': 'value'}, {'renamed_key': 'value'}),
+    ])
+    def test_rename_dict_key(self, quiet_logger, yaml_path, value, old_data, new_data):
+        processor = Processor(quiet_logger, old_data)
+        processor.set_value(yaml_path, value)
+        assert new_data == old_data
+
+    @pytest.mark.parametrize("yaml_path,value,old_data", [
+        (YAMLPath("/key[name()]"), "renamed_key", {'key': 'value', 'renamed_key': 'value'}),
+    ])
+    def test_rename_dict_key_cannot_overwrite(self, quiet_logger, yaml_path, value, old_data):
+        processor = Processor(quiet_logger, old_data)
+        with pytest.raises(YAMLPathException) as ex:
+            processor.set_value(yaml_path, value)
+        assert -1 < str(ex.value).find("already exists at the same document level")
+
+    def test_traverse_with_null(self, quiet_logger):
+        # Contributed by https://github.com/rbordelo
+        yamldata = """---
+Things:
+  - name: first thing
+    rank: 42
+  - name: second thing
+    rank: 5
+  - name: third thing
+    rank: null
+  - name: fourth thing
+    rank: 1
+"""
+
+        results = ["first thing", "second thing", "third thing", "fourth thing"]
+
+        yaml = YAML()
+        data = yaml.load(yamldata)
+        processor = Processor(quiet_logger, data)
+        yamlpath = YAMLPath("/**/name")
+
+        match_index = 0
+        for node in processor.get_nodes(yamlpath):
+            assert unwrap_node_coords(node) == results[match_index]
+            match_index += 1

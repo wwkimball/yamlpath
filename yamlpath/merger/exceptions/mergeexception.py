@@ -11,8 +11,10 @@ from yamlpath import YAMLPath
 class MergeException(Exception):
     """Express an issue with a document merge."""
 
-    def __init__(self, user_message: str,
-                 yaml_path: Optional[Union[YAMLPath, str]] = None) -> None:
+    def __init__(
+        self, user_message: str,
+        yaml_path: Optional[Union[YAMLPath, str]] = None
+    ) -> None:
         """
         Initialize this Exception with all pertinent data.
 

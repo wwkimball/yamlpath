@@ -2,6 +2,7 @@ import pytest
 
 from tests.conftest import create_temp_yaml_file
 
+from yamlpath.enums import PathSeperators
 
 class Test_yaml_paths():
     """Tests the yaml-paths command-line interface."""
@@ -989,3 +990,55 @@ key: value
         result = script_runner.run(self.command, "--search", "=nothing", "-", "-")
         assert not result.success, result.stderr
         assert "Only one YAML_FILE may be the - pseudo-file" in result.stderr
+
+    @pytest.mark.parametrize("pathsep,output", [
+        (PathSeperators.AUTO, [
+            'foo.x: 12',
+            'foo.y: hello world',
+            "foo.ip_range['initial']: 1.2.3.4",
+            'foo.ip_range[]: tba',
+            "foo.array['first']: Cluster1",
+            'array2[]: bar',
+        ]),
+        (PathSeperators.DOT, [
+            'foo.x: 12',
+            'foo.y: hello world',
+            "foo.ip_range['initial']: 1.2.3.4",
+            'foo.ip_range[]: tba',
+            "foo.array['first']: Cluster1",
+            'array2[]: bar',
+        ]),
+        (PathSeperators.FSLASH, [
+            '/foo/x: 12',
+            '/foo/y: hello world',
+            "/foo/ip_range['initial']: 1.2.3.4",
+            '/foo/ip_range[]: tba',
+            "/foo/array['first']: Cluster1",
+            '/array2[]: bar',
+        ]),
+    ])
+    def test_unescaped_paths(self, script_runner, tmp_path_factory, pathsep, output):
+        # Credit: https://stackoverflow.com/questions/62155284/trying-to-get-all-paths-in-a-yaml-file
+        content = """---
+# sample set of lines
+foo:
+  x: 12
+  y: hello world
+  ip_range['initial']: 1.2.3.4
+  ip_range[]: tba
+  array['first']: Cluster1
+
+array2[]: bar
+"""
+        yaml_file = create_temp_yaml_file(tmp_path_factory, content)
+        result = script_runner.run(
+            self.command,
+            "--nostdin", "--nofile",
+            "--expand", "--noescape",
+            "--keynames", "--values",
+            "--search", "=~/.*/",
+            "--pathsep", str(pathsep),
+            yaml_file
+        )
+        assert result.success, result.stderr
+        assert "\n".join(output) + "\n" == result.stdout

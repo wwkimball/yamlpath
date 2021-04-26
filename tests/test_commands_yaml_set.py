@@ -1242,3 +1242,116 @@ egress_key: Following value
         with open(yaml_file, 'r') as fhnd:
             filedat = fhnd.read()
         assert filedat == yamlout
+
+    def test_assign_to_nonexistent_nodes(self, script_runner, tmp_path_factory):
+        # Contributed By:  https://github.com/dwapstra
+        yamlin = """---
+devices:
+  R1:
+    os: ios
+    type: router
+    platform: asr1k
+  R2:
+    type: switch
+    platform: cat3k
+  R3:
+    type: access-point
+    platform: wrt
+    os:
+  R4:
+    type: tablet
+    os: null
+    platform: java
+  R5:
+    type: tablet
+    os: ""
+    platform: objective-c
+"""
+        yamlout = """---
+devices:
+  R1:
+    os: ios
+    type: router
+    platform: asr1k
+  R2:
+    type: switch
+    platform: cat3k
+    os: generic
+  R3:
+    type: access-point
+    platform: wrt
+    os:
+  R4:
+    type: tablet
+    os:
+    platform: java
+  R5:
+    type: tablet
+    os: ""
+    platform: objective-c
+"""
+        yaml_file = create_temp_yaml_file(tmp_path_factory, yamlin)
+        result = script_runner.run(
+            self.command,
+            "--change=/devices/*[!has_child(os)]/os",
+            "--value=generic",
+            yaml_file
+        )
+        assert result.success, result.stderr
+
+        with open(yaml_file, 'r') as fhnd:
+            filedat = fhnd.read()
+        assert filedat == yamlout
+
+    def test_change_key_name_good(self, script_runner, tmp_path_factory):
+        yamlin = """---
+key:  value
+"""
+        yamlout = """---
+renamed_key: value
+"""
+        yaml_file = create_temp_yaml_file(tmp_path_factory, yamlin)
+        result = script_runner.run(
+            self.command,
+            "--change=/key[name()]",
+            "--value=renamed_key",
+            yaml_file
+        )
+        assert result.success, result.stderr
+
+        with open(yaml_file, 'r') as fhnd:
+            filedat = fhnd.read()
+        assert filedat == yamlout
+
+    def test_change_key_name_maps_only(self, script_runner, tmp_path_factory):
+        yamlin = """---
+items:
+  - one
+  - two
+"""
+
+        yaml_file = create_temp_yaml_file(tmp_path_factory, yamlin)
+        result = script_runner.run(
+            self.command,
+            "--change=/items[0][name()]",
+            "--value=2",
+            yaml_file
+        )
+        assert not result.success, result.stdout
+        assert "Keys can be renamed only in Hash/map/dict" in result.stderr
+
+    def test_change_key_name_unique_only(self, script_runner, tmp_path_factory):
+        yamlin = """---
+key: value
+another_key: value
+"""
+
+        yaml_file = create_temp_yaml_file(tmp_path_factory, yamlin)
+        result = script_runner.run(
+            self.command,
+            "--change=another_key[name()]",
+            "--value=key",
+            yaml_file
+        )
+        assert not result.success, result.stdout
+        assert "already exists at the same document level" in result.stderr

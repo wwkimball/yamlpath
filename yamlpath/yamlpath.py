@@ -1,20 +1,21 @@
 """
 Implement YAML Path.
 
-Copyright 2019, 2020 William W. Kimball, Jr. MBA MSIS
+Copyright 2019, 2020, 2021 William W. Kimball, Jr. MBA MSIS
 """
 from collections import deque
 from typing import Deque, List, Optional, Union
 
-from yamlpath.types import PathSegment
+from yamlpath.types import PathAttributes, PathSegment
 from yamlpath.exceptions import YAMLPathException
 from yamlpath.enums import (
     PathSegmentTypes,
+    PathSearchKeywords,
     PathSearchMethods,
     PathSeperators,
     CollectorOperators,
 )
-from yamlpath.path import SearchTerms, CollectorTerms
+from yamlpath.path import SearchKeywordTerms, SearchTerms, CollectorTerms
 
 
 class YAMLPath:
@@ -78,6 +79,10 @@ class YAMLPath:
         """
         Indicate equivalence of two YAMLPaths.
 
+        The path seperator is ignored for this comparison.  This is deliberate
+        and allows "some.path[1]" == "/some/path[1]" because both forms of the
+        same path yield exactly the same data.
+
         Parameters:
         1. other (object) The other YAMLPath to compare against.
 
@@ -126,6 +131,41 @@ class YAMLPath:
             self.original += "{}{}".format(seperator, segment)
         return self
 
+    def pop(self) -> PathSegment:
+        """
+        Pop the last segment off this YAML Path.
+
+        This mutates the YAML Path and returns the removed segment PathSegment.
+
+        Returns:  (PathSegment) The removed segment
+        """
+        segments: Deque[PathSegment] = self.unescaped
+        if len(segments) < 1:
+            raise YAMLPathException(
+                "Cannot pop when there are no segments to pop from",
+                str(self))
+
+        popped_queue: Deque = deque()
+        popped_segment: PathSegment = segments.pop()
+        popped_queue.append(popped_segment)
+        removable_segment = YAMLPath._stringify_yamlpath_segments(
+            popped_queue, self.seperator)
+        prefixed_segment = "{}{}".format(self.seperator, removable_segment)
+        path_now = self.original
+
+        if path_now.endswith(prefixed_segment):
+            self.original = path_now[0:len(path_now) - len(prefixed_segment)]
+        elif path_now.endswith(removable_segment):
+            self.original = path_now[0:len(path_now) - len(removable_segment)]
+        elif (
+            self.seperator == PathSeperators.FSLASH
+            and path_now.endswith(removable_segment[1:])
+        ):
+            self.original = path_now[
+                0:len(path_now) - len(removable_segment) + 1]
+
+        return popped_segment
+
     @property
     def original(self) -> str:
         """
@@ -151,11 +191,13 @@ class YAMLPath:
 
         Raises:  N/A
         """
-        # Check for empty paths
-        if not str(value).strip():
-            value = ""
+        str_val = str(value)
 
-        self._original = value
+        # Check for empty paths
+        if not str_val.strip():
+            str_val = ""
+
+        self._original = str_val
         self._seperator = PathSeperators.AUTO
         self._unescaped = deque()
         self._escaped = deque()
@@ -243,7 +285,7 @@ class YAMLPath:
                     strip_escapes: bool = True
                    ) -> Deque[PathSegment]:
         r"""
-        Parse the YAML Path into its component segments.
+        Parse the YAML Path into its component PathSegment tuples.
 
         Breaks apart a stringified YAML Path into component segments, each
         identified by its type.  See README.md for sample YAML Paths.
@@ -253,8 +295,8 @@ class YAMLPath:
            only the "escaped" symbol.  False = Leave all leading \ symbols
            intact.
 
-        Returns:  (deque) an empty queue or a queue of tuples, each identifying
-          (PathSegmentTypes, segment_attributes).
+        Returns:  (Deque[PathSegment]) an empty queue or a queue of
+            PathSegments.
 
         Raises:
             - `YAMLPathException` when the YAML Path is invalid
@@ -268,12 +310,14 @@ class YAMLPath:
         search_inverted: bool = False
         search_method: Optional[PathSearchMethods] = None
         search_attr: str = ""
+        search_keyword: Optional[PathSearchKeywords] = None
         seeking_regex_delim: bool = False
         capturing_regex: bool = False
         pathsep: str = str(self.seperator)
         collector_level: int = 0
         collector_operator: CollectorOperators = CollectorOperators.NONE
         seeking_collector_operator: bool = False
+        next_char_must_be: Optional[str] = None
 
         # Empty paths yield empty queues
         if not yaml_path:
@@ -289,26 +333,25 @@ class YAMLPath:
         # pylint: disable=locally-disabled,too-many-nested-blocks
         for char in yaml_path:
             demarc_count = len(demarc_stack)
+            if next_char_must_be and char == next_char_must_be:
+                next_char_must_be = None
 
             if escape_next:
                 # Pass-through; capture this escaped character
                 escape_next = False
 
             elif capturing_regex:
-                if char == demarc_stack[-1]:
-                    # Stop the RegEx capture
-                    capturing_regex = False
-                    demarc_stack.pop()
-                    continue
-
                 # Pass-through; capture everything that isn't the present
                 # RegEx delimiter.  This deliberately means users cannot
                 # escape the RegEx delimiter itself should it occur within
                 # the RegEx; thus, users must select a delimiter that won't
                 # appear within the RegEx (which is exactly why the user
                 # gets to choose the delimiter).
-                # pylint: disable=unnecessary-pass
-                pass  # pragma: no cover
+                if char == demarc_stack[-1]:
+                    # Stop the RegEx capture
+                    capturing_regex = False
+                    demarc_stack.pop()
+                    continue
 
             # The escape test MUST come AFTER the RegEx capture test so users
             # won't be forced into "The Backslash Plague".
@@ -349,6 +392,11 @@ class YAMLPath:
                     collector_operator = CollectorOperators.SUBTRACTION
                 continue
 
+            elif next_char_must_be and char != next_char_must_be:
+                raise YAMLPathException(
+                    "Invalid YAML Path at {}, which must be {} in YAML Path"
+                    .format(char, next_char_must_be), yaml_path)
+
             elif char in ['"', "'"]:
                 # Found a string demarcation mark
                 if demarc_count > 0:
@@ -384,6 +432,25 @@ class YAMLPath:
                     continue
 
             elif char == "(":
+                if demarc_count > 0 and demarc_stack[-1] == "[" and segment_id:
+                    if PathSearchKeywords.is_keyword(segment_id):
+                        demarc_stack.append(char)
+                        demarc_count += 1
+                        segment_type = PathSegmentTypes.KEYWORD_SEARCH
+                        search_keyword = PathSearchKeywords[segment_id.upper()]
+                        segment_id = ""
+                        continue
+
+                    raise YAMLPathException(
+                        ("Unknown search keyword, {}; allowed: {}."
+                         "  Encountered in YAML Path")
+                        .format(
+                            segment_id,
+                            ', '.join(PathSearchKeywords.get_keywords())
+                        )
+                        , yaml_path
+                    )
+
                 seeking_collector_operator = False
                 collector_level += 1
                 demarc_stack.append(char)
@@ -394,12 +461,12 @@ class YAMLPath:
                 if collector_level == 1:
                     continue
 
-            elif collector_level > 0:
-                if (
-                        demarc_count > 0
-                        and char == ")"
-                        and demarc_stack[-1] == "("
-                ):
+            elif (
+                    demarc_count > 0
+                    and char == ")"
+                    and demarc_stack[-1] == "("
+            ):
+                if collector_level > 0:
                     collector_level -= 1
                     demarc_count -= 1
                     demarc_stack.pop()
@@ -412,6 +479,12 @@ class YAMLPath:
                         collector_operator = CollectorOperators.NONE
                         seeking_collector_operator = True
                         continue
+
+                if segment_type is PathSegmentTypes.KEYWORD_SEARCH:
+                    demarc_count -= 1
+                    demarc_stack.pop()
+                    next_char_must_be = "]"
+                    continue
 
             elif demarc_count == 0 and char == "[":
                 # Array INDEX/SLICE or SEARCH
@@ -557,7 +630,7 @@ class YAMLPath:
                     and char == "]"
                     and demarc_stack[-1] == "["
             ):
-                # Store the INDEX, SLICE, or SEARCH parameters
+                # Store the INDEX, SLICE, SEARCH, or KEYWORD_SEARCH parameters
                 if (
                         segment_type is PathSegmentTypes.INDEX
                         and ':' not in segment_id
@@ -586,6 +659,15 @@ class YAMLPath:
                         SearchTerms(search_inverted, search_method,
                                     search_attr, segment_id)
                     ))
+                elif (
+                    segment_type is PathSegmentTypes.KEYWORD_SEARCH
+                    and search_keyword
+                ):
+                    path_segments.append((
+                        segment_type,
+                        SearchKeywordTerms(search_inverted, search_keyword,
+                                           segment_id)
+                    ))
                 else:
                     path_segments.append((segment_type, segment_id))
 
@@ -594,6 +676,8 @@ class YAMLPath:
                 demarc_stack.pop()
                 demarc_count -= 1
                 search_method = None
+                search_inverted = False
+                search_keyword = None
                 continue
 
             elif demarc_count < 1 and char == pathsep:
@@ -648,9 +732,9 @@ class YAMLPath:
 
     @staticmethod
     def _expand_splats(
-        yaml_path: str, segment_id: str,
-        segment_type: Optional[PathSegmentTypes] = None
-    ) -> tuple:
+        yaml_path: str, segment_id: PathAttributes,
+        segment_type: PathSegmentTypes
+    ) -> PathSegment:
         """
         Replace segment IDs with search operators when * is present.
 
@@ -660,12 +744,12 @@ class YAMLPath:
         3. segment_type (Optional[PathSegmentTypes]) Pending predetermined type
            of the segment under evaluation.
 
-        Returns:  (tuple) Coallesced YAML Path segment.
+        Returns:  (PathSegment) Coallesced YAML Path segment.
         """
-        coal_type = segment_type
-        coal_value: Union[str, SearchTerms, None] = segment_id
+        coal_type: PathSegmentTypes = segment_type
+        coal_value: PathAttributes = segment_id
 
-        if '*' in segment_id:
+        if isinstance(segment_id, str) and  '*' in segment_id:
             splat_count = segment_id.count("*")
             splat_pos = segment_id.index("*")
             segment_len = len(segment_id)
@@ -755,8 +839,21 @@ class YAMLPath:
                     ppath += "[&{}]".format(segment_attrs)
                 else:
                     ppath += "&{}".format(segment_attrs)
-            elif segment_type == PathSegmentTypes.SEARCH:
+            elif segment_type == PathSegmentTypes.KEYWORD_SEARCH:
                 ppath += str(segment_attrs)
+            elif (segment_type == PathSegmentTypes.SEARCH
+                  and isinstance(segment_attrs, SearchTerms)):
+                terms: SearchTerms = segment_attrs
+                if (terms.method == PathSearchMethods.REGEX
+                    and terms.attribute == "."
+                    and terms.term == ".*"
+                    and not terms.inverted
+                ):
+                    if add_sep:
+                        ppath += pathsep
+                    ppath += "*"
+                else:
+                    ppath += str(segment_attrs)
             elif segment_type == PathSegmentTypes.COLLECTOR:
                 ppath += str(segment_attrs)
             elif segment_type == PathSegmentTypes.TRAVERSE:
@@ -786,7 +883,6 @@ class YAMLPath:
         if str(prefix) == "/":
             return path
 
-        prefix.seperator = PathSeperators.FSLASH
         path.seperator = PathSeperators.FSLASH
         prefix_str = str(prefix)
         path_str = str(path)

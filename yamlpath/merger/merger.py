@@ -28,14 +28,14 @@ from yamlpath import YAMLPath, Processor
 class Merger:
     """Performs YAML document merges."""
 
-    DEPRECATION_WARNING = ("WARNING:  Deprecated methods will be removed in"
-                           " the next major release of yamlpath.  Please refer"
-                           " to the CHANGES file for more information (and how"
-                           " to get rid of this message).")
+    DEPRECATION_WARNING = (
+        "WARNING:  Deprecated methods will be removed in the next major"
+        " release of yamlpath.  Please refer to the CHANGES file for more"
+        " information (and how to get rid of this message).")
     depwarn_printed = False
 
     def __init__(
-            self, logger: ConsolePrinter, lhs: Any, config: MergerConfig
+        self, logger: ConsolePrinter, lhs: Any, config: MergerConfig
     ) -> None:
         """
         Instantiate this class into an object.
@@ -107,7 +107,7 @@ class Merger:
         3. path (YAMLPath) Location within the DOM where this merge is taking
            place.
 
-        Keyword Parameters:
+        Keyword Arguments:
         * parent (Any) Parent node of `rhs`
         * parentref (Any) Child Key or Index of `rhs` within `parent`.
 
@@ -264,7 +264,7 @@ class Merger:
         4. node_coord (NodeCoords) The RHS root node, its parent, and reference
            within its parent; used for config lookups.
 
-        Returns: (list) The merged result.
+        Returns: (CommentedSeq) The merged result.
 
         Raises:
         - `MergeException` when a clean merge is impossible.
@@ -409,7 +409,7 @@ class Merger:
         2. rhs (CommentedSeq) The list to merge from.
         3. path (YAMLPath) Location of the `rhs` source list within its DOM.
 
-        Keyword Parameters:
+        Keyword Arguments:
         * parent (Any) Parent node of `rhs`
         * parentref (Any) Child Key or Index of `rhs` within `parent`.
 

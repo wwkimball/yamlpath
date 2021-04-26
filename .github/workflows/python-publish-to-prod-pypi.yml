@@ -9,10 +9,49 @@ on:
       - v*
 
 jobs:
+  validate:
+    name: Code Quality Assessment
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.6, 3.7, 3.8, 3.9]
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Set Environment Variables
+      run: |
+        echo "${HOME}/.gem/ruby/2.7.0/bin" >> $GITHUB_PATH
+    - name: Install dependencies
+      run: |
+        gem install --user-install hiera-eyaml -v 2.1.0
+        python -m pip install --upgrade pip
+        python -m pip install --upgrade setuptools
+        python -m pip install --upgrade wheel
+        python -m pip install --upgrade mypy pytest pytest-cov pytest-console-scripts pylint coveralls pep257
+        python -m pip install --editable .
+    - name: Validate Compliance with PEP257
+      run: |
+        pep257 yamlpath
+    - name: Validate Compliance with MyPY
+      run: |
+        mypy yamlpath
+    - name: Lint with pylint
+      run: |
+        pylint yamlpath
+    - name: Unit Test with pytest
+      run: |
+        pytest --verbose --cov=yamlpath --cov-report=term-missing --cov-fail-under=100 --script-launch-mode=subprocess tests
+
   publish:
     name: Publish to Production PyPI
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     environment: 'PyPI:  Production'
+    needs: validate
 
     steps:
     - uses: actions/checkout@v2

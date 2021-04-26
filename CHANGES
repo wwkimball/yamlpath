@@ -1,3 +1,49 @@
+3.5.0:
+Bug Fixes:
+* Search expressions against Boolean values, [key=True] and [key=False], were
+  impossible.  Now, they are working and are not case-sensitive, so [key=True],
+  [key=true], [key=TRUE], and such all work as expected.
+* When null values were present, Deep Traversal (**) segments would always
+  return every node with a null value even when they would not match filter
+  conditions after the ** segment.  When mustexist=False, this would also cause
+  a YAMLPathException.
+* Descendent searches were considering only the first child of the search
+  ancestor.  Now, ANY matching descendent node will correctly yield the
+  ancestor.
+* Some Python-generated complex data types were escaping JSONification,
+  leading to unexpected stack-dumps when writing out JSON data for data types
+  like date and datetime.
+
+Enhancements:
+* An entirely new segment type has been added to YAML Path and is now supported
+  by the library and reference implementation command-line tools:  Keyword
+  Searches.  Similar to programming language keywords, these reserved Keywords
+  work much like functions, accepting parameters and performing algorythmic
+  operations or returning data not otherwise accessible to other YAML Path
+  segment types.  These new capabilities -- explored on the project Wiki --
+  include:
+  * [has_child(NAME)]
+  * [name()]
+  * [max(NAME)]
+  * [min(NAME)]
+  * [parent([STEPS])]
+* When stringified, YAML Paths with a solitary * wildcard segment were printed
+  using their internal RegEx variant, [.=~/.*/].  They are now printed as they
+  are entered, using a solitary *.  As a consequence, any deliberate RegEx of
+  [.=~/.*/] is also printed as its equivalent solitary *.
+* The yaml-paths command now allows printing YAML Paths without protective
+  escape symbols via a new --noescape option.  While this makes the output more
+  human-friendly, the unescaped paths will not be suitable for use as YAML Path
+  input to other YAML Path processors where special symbols require escaping.
+* [API] The NodeCoords class now tracks ancestry and the last YAML Path segment
+  responsible for triggering its generation.  The ancestry stack --
+  List[AncestryEntry] -- was necessary to support the [parent()] Search
+  Keyword.  The responsible YAML Path segment tracking was necessary to enable
+  Hash/map/dict key renaming via the [name()] Search Keyword.  These optional
+  attributes may be set when the NodeCoords is generated.
+* [API] YAMLPath instances now have a pop() method.  This mutates the YAMLPath
+  by popping off its last segment, returning that segment.
+
 3.4.1:
 Bug Fixes:
 * yaml-set (and the underlying Processor class) were unable to change nodes

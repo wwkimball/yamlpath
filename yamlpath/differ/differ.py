@@ -30,6 +30,10 @@ class Differ:
         1. logger (ConsolePrinter) Instance of ConsoleWriter or subclass
         2. document (Any) The basis document
 
+        Keyword Arguments:
+        * ignore_eyaml_values (bool) Do not decrypt encrypted YAML value for
+          comparison
+
         Returns:  N/A
 
         Raises:  N/A
@@ -46,20 +50,41 @@ class Differ:
                            else EYAMLProcessor(logger, document, **kwargs))
 
     def compare_to(self, document: Any) -> None:
-        """Perform the diff calculation."""
+        """
+        Perform the diff calculation.
+
+        Parameers:
+        1. document (Any) The document to compare against
+
+        Returns:  N/A
+        """
         self._diffs.clear()
         self.config.prepare(document)
         self._diff_between(YAMLPath(), self._data, document)
 
     def get_report(self) -> Generator[DiffEntry, None, None]:
-        """Get the diff report."""
+        """
+        Get the diff report.
+
+        Parameters:  N/A
+
+        Returns:  (Generator[DiffEntry, None, None]) Sorted DiffEntry records
+        """
         for entry in sorted(
             self._diffs, key=lambda e: [int(i) for i in e.index.split('.')]
         ):
             yield entry
 
-    def _purge_document(self, path: YAMLPath, data: Any):
-        """Delete every node in the document."""
+    def _purge_document(self, path: YAMLPath, data: Any) -> None:
+        """
+        Record changes necessary to delete every node in the document.
+
+        Parameters:
+        1. path (YAMLPath) YAML Path to the document element under evaluation
+        2. data (Any) The DOM element under evaluation
+
+        Returns:  N/A
+        """
         if isinstance(data, CommentedMap):
             lhs_iteration = -1
             for key, val in data.items():
@@ -84,7 +109,15 @@ class Differ:
                 )
 
     def _add_everything(self, path: YAMLPath, data: Any) -> None:
-        """Add every node in the document."""
+        """
+        Record changes necessary to add every node in the document.
+
+        Parameters:
+        1. path (YAMLPath) YAML Path to the document element under evaluation
+        2. data (Any) The DOM element under evaluation
+
+        Returns:  N/A
+        """
         if isinstance(data, CommentedMap):
             rhs_iteration = -1
             for key, val in data.items():
@@ -111,7 +144,18 @@ class Differ:
     def _diff_scalars(
         self, path: YAMLPath, lhs: Any, rhs: Any, **kwargs
     ) -> None:
-        """Diff two Scalar values."""
+        """
+        Diff two Scalar values.
+
+        Parameters:
+        1. path (YAMLPath) YAML Path to the document element under evaluation
+        2. lhs (Any) The left-hand-side (original) document
+        3. rhs (Any) The right-hand-side (altered) document
+
+        Keyword Arguments:  See `DiffEntry`
+
+        Returns:  N/A
+        """
         self.logger.debug(
             "Comparing LHS:",
             prefix="Differ::_diff_scalars:  ",
@@ -145,7 +189,14 @@ class Differ:
     def _diff_dicts(
         self, path: YAMLPath, lhs: CommentedMap, rhs: CommentedMap
     ) -> None:
-        """Diff two dicts."""
+        """
+        Diff two dicts.
+
+        Parameters:
+        1. path (YAMLPath) YAML Path to the document element under evaluation
+        2. lhs (Any) The left-hand-side (original) document
+        3. rhs (Any) The right-hand-side (altered) document
+        """
         self.logger.debug(
             "Comparing LHS:",
             prefix="Differ::_diff_dicts:  ",
@@ -223,7 +274,20 @@ class Differ:
     def _diff_synced_lists(
         self, path: YAMLPath, lhs: CommentedSeq, rhs: CommentedSeq
     ) -> None:
-        """Diff two synchronized lists."""
+        """
+        Diff two synchronized lists.
+
+        A "synchronized" list -- in this context -- is one in which all
+        elements that are identical to those of its exemplar list are
+        (re)positioned to identical index.
+
+        Parameters:
+        1. path (YAMLPath) YAML Path to the document element under evaluation
+        2. lhs (Any) The left-hand-side (original) document
+        3. rhs (Any) The right-hand-side (altered) document
+
+        Returns:  N/A
+        """
         self.logger.debug("Differ::_diff_synced_lists:  Starting...")
         self.logger.debug(
             "Synchronizing LHS Array elements at YAML Path, {}:"
@@ -286,7 +350,19 @@ class Differ:
         self, path: YAMLPath, lhs: CommentedSeq, rhs: CommentedSeq,
         node_coord: NodeCoords, **kwargs
     ) -> None:
-        """Diff two lists of scalars."""
+        """
+        Diff two lists of scalars.
+
+        Parameters:
+        1. path (YAMLPath) YAML Path to the document element under evaluation
+        2. lhs (Any) The left-hand-side (original) document
+        3. rhs (Any) The right-hand-side (altered) document
+        4. node_coord (NodeCoords) The node being evaluated
+
+        Keyword Parameers:
+        * diff_deeply (bool) True = Deeply traverse complex elements; False =
+          compare complex elements as-is
+        """
         self.logger.debug(
             "Comparing LHS:",
             prefix="Differ::_diff_arrays_of_scalars:  ",
@@ -336,7 +412,17 @@ class Differ:
         self, path: YAMLPath, lhs: CommentedSeq, rhs: CommentedSeq,
         node_coord: NodeCoords
     ) -> None:
-        """Diff two lists-of-dictionaries."""
+        """
+        Diff two lists-of-dictionaries.
+
+        Parameters:
+        1. path (YAMLPath) YAML Path to the document element under evaluation
+        2. lhs (Any) The left-hand-side (original) document
+        3. rhs (Any) The right-hand-side (altered) document
+        4. node_coord (NodeCoords) The node being evaluated
+
+        Returns:  N/A
+        """
         self.logger.debug(
             "Comparing LHS:",
             prefix="Differ::_diff_arrays_of_hashes:  ",
@@ -418,7 +504,20 @@ class Differ:
     def _diff_lists(
         self, path: YAMLPath, lhs: CommentedSeq, rhs: CommentedSeq, **kwargs
     ) -> None:
-        """Diff two lists."""
+        """
+        Diff two lists.
+
+        Parameters:
+        1. path (YAMLPath) YAML Path to the document element under evaluation
+        2. lhs (Any) The left-hand-side (original) document
+        3. rhs (Any) The right-hand-side (altered) document
+
+        Keyword Arguments:
+        * rhs_parent (Any) Parent data node of rhs
+        * parentref (Any) Reference indicating rhs within rhs_parent
+
+        Returns:  N/A
+        """
         self.logger.debug(
             "Comparing LHS:",
             prefix="Differ::_diff_lists:  ",
@@ -442,7 +541,16 @@ class Differ:
     def _diff_between(
         self, path: YAMLPath, lhs: Any, rhs: Any, **kwargs
     ) -> None:
-        """Calculate the differences between two document nodes."""
+        """
+        Calculate the differences between two document nodes.
+
+        Parameters:
+        1. path (YAMLPath) YAML Path to the document element under evaluation
+        2. lhs (Any) The left-hand-side (original) document
+        3. rhs (Any) The right-hand-side (altered) document
+
+        Keyword Arguments:  See _diff_lists() and _diff_scalars()
+        """
         self.logger.debug(
             "Comparing LHS:",
             prefix="Differ::_diff_between:  ",
@@ -481,7 +589,17 @@ class Differ:
     ) -> List[Tuple[
         Optional[int], Optional[Any], Optional[int], Optional[Any]
     ]]:
-        """Synchronize two lists by value."""
+        """
+        Synchronize two lists by value.
+
+        Parameters:
+        1. lhs (Any) The left-hand-side (original) document
+        2. rhs (Any) The right-hand-side (altered) document
+
+        Returns:  (List[Tuple[
+               Optional[int], Optional[Any], Optional[int], Optional[Any]
+            ]]) List with LHS and RHS elements at identical elements
+        """
         # Build a parallel index array to track the original RHS element
         # indexes of any surviving elements.
         rhs_reduced = []
@@ -517,7 +635,19 @@ class Differ:
     ) -> List[Tuple[
         Optional[int], Optional[Any], Optional[int], Optional[Any]
     ]]:
-        """Synchronize two lists-of-dictionaries by identity key."""
+        """
+        Synchronize two lists-of-dictionaries by identity key.
+
+        Parameters:
+        1. path (YAMLPath) YAML Path to the document element under evaluation
+        2. lhs (Any) The left-hand-side (original) document
+        3. rhs (Any) The right-hand-side (altered) document
+
+        Returns: (List[Tuple[
+                Optional[int], Optional[Any], Optional[int], Optional[Any]
+            ]]) List of identical LHS and RHS elements in the same element
+            positions
+        """
         # Build a parallel index array to track the original RHS element
         # indexes of any surviving elements.
         key_attr: str = ""
@@ -591,7 +721,17 @@ class Differ:
 
     @classmethod
     def _get_key_indicies(cls, data: CommentedMap) -> Dict[Any, int]:
-        """Get a dictionary mapping of keys to relative positions."""
+        """
+        Get a dictionary mapping of keys to relative positions.
+
+        Parameters:
+        1. path (YAMLPath) YAML Path to the document element under evaluation
+        2. lhs (Any) The left-hand-side (original) document
+        3. rhs (Any) The right-hand-side (altered) document
+
+        Returns:  (Dict[Any, int]) Dictionary indicating the element position
+            of each key
+        """
         key_map = {}
         if isinstance(data, CommentedMap):
             for idx, key in enumerate(data.keys()):

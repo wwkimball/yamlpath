@@ -11,10 +11,11 @@ Requires an object on init which has the following properties:
   verbose:  <Boolean> allows output from ConsolePrinter::verbose().
   debug:  <Boolean> allows output from ConsolePrinter::debug().
 
-Copyright 2018, 2019, 2020 William W. Kimball, Jr. MBA MSIS
+Copyright 2018, 2019, 2020, 2021 William W. Kimball, Jr. MBA MSIS
 """
 import sys
-from typing import Any, Dict, Generator, List, Set, Tuple, Union
+from collections import deque
+from typing import Any, Deque, Dict, Generator, List, Set, Tuple, Union
 
 from ruamel.yaml.comments import (
     CommentedBase,
@@ -231,7 +232,7 @@ class ConsolePrinter:
                 data, prefix=prefix, **kwargs
             ):
                 yield line
-        elif isinstance(data, (list, set, tuple)):
+        elif isinstance(data, (list, set, tuple, deque)):
             for line in ConsolePrinter._debug_list(
                 data, prefix=prefix, **kwargs
             ):
@@ -287,11 +288,18 @@ class ConsolePrinter:
         """Helper method for debug."""
         prefix = kwargs.pop("prefix", "")
         path_prefix = "{}(path)".format(prefix)
+        segment_prefix = "{}(segment)".format(prefix)
         node_prefix = "{}(node)".format(prefix)
         parent_prefix = "{}(parent)".format(prefix)
         parentref_prefix = "{}(parentref)".format(prefix)
+        ancestry_prefix = "{}(ancestry)".format(prefix)
 
         for line in ConsolePrinter._debug_dump(data.path, prefix=path_prefix):
+            yield line
+
+        for line in ConsolePrinter._debug_dump(
+            data.path_segment, prefix=segment_prefix
+        ):
             yield line
 
         for line in ConsolePrinter._debug_dump(data.node, prefix=node_prefix):
@@ -307,9 +315,14 @@ class ConsolePrinter:
         ):
             yield line
 
+        for line in ConsolePrinter._debug_dump(
+            data.ancestry, prefix=ancestry_prefix
+        ):
+            yield line
+
     @staticmethod
     def _debug_list(
-        data: Union[List[Any], Tuple[Any, ...], Set[Any]], **kwargs
+        data: Union[List[Any], Set[Any], Tuple[Any, ...], Deque[Any]], **kwargs
     ) -> Generator[str, None, None]:
         """Helper for debug."""
         prefix = kwargs.pop("prefix", "")

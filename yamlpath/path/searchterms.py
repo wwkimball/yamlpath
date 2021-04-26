@@ -9,8 +9,10 @@ from yamlpath.enums import PathSearchMethods
 class SearchTerms:
     """YAML path Search segment terms."""
 
-    def __init__(self, inverted: bool, method: PathSearchMethods,
-                 attribute: str, term: str) -> None:
+    def __init__(
+        self, inverted: bool, method: PathSearchMethods, attribute: str,
+        term: str
+    ) -> None:
         """
         Instantiate a Search Term.
 

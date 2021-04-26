@@ -79,7 +79,7 @@ class Parsers:
         3. source (str) The source file or serialized literal to load; can be -
            for reading from STDIN (implies literal=True)
 
-        Keyword Parameters:
+        Keyword Arguments:
         * literal (bool) `source` is literal serialized YAML data rather than a
           file-spec, so load it directly
 
@@ -177,7 +177,7 @@ class Parsers:
         3. source (str) The source file to load; can be - for reading from
            STDIN
 
-        Keyword Parameters:
+        Keyword Arguments:
         * literal (bool) `source` is literal serialized YAML data rather than a
           file-spec, so load it directly
 
@@ -317,7 +317,10 @@ class Parsers:
 
             for key, val in data.items():
                 data[key] = Parsers.jsonify_yaml_data(val)
-        elif isinstance(data, CommentedSeq):
+        elif isinstance(data, dict):
+            for key, val in data.items():
+                data[key] = Parsers.jsonify_yaml_data(val)
+        elif isinstance(data, (list, CommentedSeq)):
             for idx, ele in enumerate(data):
                 data[idx] = Parsers.jsonify_yaml_data(ele)
         elif isinstance(data, TaggedScalar):

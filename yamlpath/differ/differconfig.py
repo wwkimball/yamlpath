@@ -1,5 +1,5 @@
 """
-Config file processor for the Differ.
+Implements DifferConfig.
 
 Copyright 2020 William W. Kimball, Jr. MBA MSIS
 """
