@@ -23,6 +23,7 @@ from yamlpath.enums import (
     PathSegmentTypes,
     YAMLValueFormats,
 )
+from yamlpath.wrappers import NodeCoords
 from yamlpath import YAMLPath
 
 
@@ -424,6 +425,29 @@ class Nodes:
         for ele in node:
             if not isinstance(ele, dict):
                 return False
+
+        return True
+
+    @staticmethod
+    def node_is_aoh_of_nodecoords(node: Any) -> bool:
+        """
+        Indicate whether a node is an Array-of-Hashes (List of Dicts).
+
+        Parameters:
+        1. node (Any) The node under evaluation
+
+        Returns:  (bool) True = node is a `list` comprised **only** of `dict`s
+        """
+        if node is None:
+            return False
+
+        if isinstance(node, list):
+            for ele in node:
+                if (
+                    not isinstance(ele, NodeCoords)
+                    or not isinstance(ele.node, dict)
+                ):
+                    return False
 
         return True
 
