@@ -261,49 +261,8 @@ class KeywordSearches:
         match_value: Any = None
         match_nodes: List[NodeCoords] = []
         discard_nodes: List[NodeCoords] = []
-        if yamlpath.common.Nodes.node_is_aoh(data):
-            # A named child node is mandatory
-            if scan_node is None:
-                raise YAMLPathException((
-                    "The {}([NAME]) Search Keyword requires a key name to scan"
-                    " when evaluating an Array-of-Hashes in YAML Path"
-                    ).format(PathSearchKeywords.MAX),
-                    str(yaml_path))
-
-            for idx, ele in enumerate(data):
-                next_path = translated_path + "[{}]".format(idx)
-                next_ancestry = ancestry + [(data, idx)]
-                if scan_node in ele:
-                    eval_val = ele[scan_node]
-                    if (match_value is None
-                        or yamlpath.common.Searches.search_matches(
-                            PathSearchMethods.GREATER_THAN, match_value,
-                            eval_val)
-                    ):
-                        match_value = eval_val
-                        discard_nodes.extend(match_nodes)
-                        match_nodes = [
-                            NodeCoords(
-                                ele, data, idx, next_path, next_ancestry,
-                                relay_segment)
-                        ]
-                        continue
-
-                    if (match_value is None
-                        or yamlpath.common.Searches.search_matches(
-                            PathSearchMethods.EQUALS, match_value,
-                            eval_val)
-                    ):
-                        match_nodes.append(NodeCoords(
-                            ele, data, idx, next_path, next_ancestry,
-                            relay_segment))
-                        continue
-
-                discard_nodes.append(NodeCoords(
-                    ele, data, idx, next_path, next_ancestry,
-                    relay_segment))
-
-        elif yamlpath.common.Nodes.node_is_aoh_of_nodecoords(data):
+        unwrapped_data: Any = NodeCoords.unwrap_node_coords(data)
+        if yamlpath.common.Nodes.node_is_aoh(unwrapped_data):
             # A named child node is mandatory
             if scan_node is None:
                 raise YAMLPathException((
@@ -313,7 +272,7 @@ class KeywordSearches:
                     str(yaml_path))
 
             for idx, wrapped_ele in enumerate(data):
-                ele = wrapped_ele.node
+                ele = NodeCoords.unwrap_node_coords(wrapped_ele)
                 next_path = translated_path + "[{}]".format(idx)
                 next_ancestry = ancestry + [(data, idx)]
                 if scan_node in ele:
