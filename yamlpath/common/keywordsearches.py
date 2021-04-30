@@ -467,7 +467,7 @@ class KeywordSearches:
         match_nodes: List[NodeCoords] = []
         discard_nodes: List[NodeCoords] = []
         unwrapped_data: Any = NodeCoords.unwrap_node_coords(data)
-        if yamlpath.common.Nodes.node_is_aoh(data):
+        if yamlpath.common.Nodes.node_is_aoh(unwrapped_data):
             # A named child node is mandatory
             if scan_node is None:
                 raise YAMLPathException((
