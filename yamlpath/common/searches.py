@@ -4,7 +4,6 @@ Implement Searches, a static library of generally-useful code for searching.
 Copyright 2020 William W. Kimball, Jr. MBA MSIS
 """
 import re
-from ast import literal_eval
 from typing import Any, List
 
 from yamlpath.enums import (
