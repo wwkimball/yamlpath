@@ -82,6 +82,7 @@ class Test_Processor():
         ("/array_of_hashes/**", [1, "one", 2, "two"], True, None),
         ("products_hash.*[dimensions.weight==4].(availability.start.date)+(availability.stop.date)", [[date(2020, 8, 1), date(2020, 9, 25)], [date(2020, 1, 1), date(2020, 1, 1)]], True, None),
         ("products_array[dimensions.weight==4].product", ["doohickey", "widget"], True, None),
+        ("(products_hash.*.dimensions.weight)[max()][parent(2)].dimensions.weight", [10], True, None)
     ])
     def test_get_nodes(self, quiet_logger, yamlpath, results, mustexist, default):
         yamldata = """---
