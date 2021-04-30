@@ -466,6 +466,7 @@ class KeywordSearches:
         match_value: Any = None
         match_nodes: List[NodeCoords] = []
         discard_nodes: List[NodeCoords] = []
+        unwrapped_data: Any = NodeCoords.unwrap_node_coords(data)
         if yamlpath.common.Nodes.node_is_aoh(data):
             # A named child node is mandatory
             if scan_node is None:
@@ -475,7 +476,8 @@ class KeywordSearches:
                     ).format(PathSearchKeywords.MIN),
                     str(yaml_path))
 
-            for idx, ele in enumerate(data):
+            for idx, wrapped_ele in enumerate(data):
+                ele = NodeCoords.unwrap_node_coords(wrapped_ele)
                 next_path = translated_path + "[{}]".format(idx)
                 next_ancestry = ancestry + [(data, idx)]
                 if scan_node in ele:
