@@ -706,6 +706,11 @@ class Processor:
                     " consumption while yielding no additional useful data",
                     str(yaml_path), "**")
 
+        # NodeCoords cannot be directly evaluated as data, so pull out their
+        # wrapped data for evaluation.
+        if isinstance(data, NodeCoords):
+            data = data.node
+
         node_coords: Any = None
         if segment_type == PathSegmentTypes.KEY:
             node_coords = self._get_nodes_by_key(
