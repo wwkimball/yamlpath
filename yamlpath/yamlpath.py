@@ -32,7 +32,7 @@ class YAMLPath:
     only when necessary.
     """
 
-    def __init__(self, yaml_path: Union["YAMLPath", str] = "",
+    def __init__(self, yaml_path: Union["YAMLPath", str, None] = "",
                  pathsep: PathSeperators = PathSeperators.AUTO) -> None:
         """
         Instantiate this class into an object.
@@ -55,7 +55,7 @@ class YAMLPath:
         if isinstance(yaml_path, YAMLPath):
             self.original = yaml_path.original
         else:
-            self.original = yaml_path
+            self.original = "" if yaml_path is None else yaml_path
 
     def __str__(self) -> str:
         """Get a stringified version of this object."""
