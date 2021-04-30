@@ -709,6 +709,10 @@ class Processor:
         # NodeCoords cannot be directly evaluated as data, so pull out their
         # wrapped data for evaluation.
         if isinstance(data, NodeCoords):
+            ancestry = data.ancestry
+            translated_path = YAMLPath(data.path)
+            parent = data.parent
+            parentref = data.parentref
             data = data.node
 
         node_coords: Any = None
