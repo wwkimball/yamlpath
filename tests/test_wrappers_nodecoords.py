@@ -35,3 +35,7 @@ class Test_wrappers_NodeCoords():
 		lhs_nc = NodeCoords(5, None, None)
 		rhs_nc = NodeCoords(None, None, None)
 		assert not lhs_nc < rhs_nc
+
+	def test_isa_null(self):
+		nc = NodeCoords(None, None, None)
+		assert nc.wraps_a(None)

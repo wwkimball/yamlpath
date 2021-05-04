@@ -3,7 +3,7 @@ Implement NodeCoords.
 
 Copyright 2020, 2021 William W. Kimball, Jr. MBA MSIS
 """
-from typing import Any, List, Optional
+from typing import Any, List, Optional, Type
 
 from yamlpath.types import AncestryEntry, PathSegment
 from yamlpath import YAMLPath
@@ -83,6 +83,32 @@ class NodeCoords:
         if self.node is None or rhs.node is None:
             return False
         return self.node < rhs.node
+
+    @property
+    def unwrapped_node(self) -> Any:
+        """Unwrap the data, no matter how deeply nested it may be."""
+        return NodeCoords.unwrap_node_coords(self)
+
+    @property
+    def deepest_node_coord(self) -> "NodeCoords":
+        """Get the deepest wrapped NodeCoord contained within."""
+        return NodeCoords._deepest_node_coord(self)
+
+    def wraps_a(self, compare_type: Type) -> bool:
+        """Indicate whether the wrapped node is of a given data-type."""
+        if compare_type is None:
+            return self.unwrapped_node is None
+        return isinstance(self.unwrapped_node, compare_type)
+
+    @staticmethod
+    def _deepest_node_coord(node: "NodeCoords") -> "NodeCoords":
+        """Get the deepest nested NodeCoord."""
+        if (not isinstance(node, NodeCoords)
+            or not isinstance(node.node, NodeCoords)
+        ):
+            return node
+
+        return NodeCoords._deepest_node_coord(node.node)
 
     @staticmethod
     def unwrap_node_coords(data: Any) -> Any:

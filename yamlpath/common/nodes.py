@@ -3,7 +3,7 @@ Implement Nodes, a static library of generally-useful code for data nodes.
 
 Copyright 2020 William W. Kimball, Jr. MBA MSIS
 """
-import ast
+from ast import literal_eval
 from distutils.util import strtobool
 from typing import Any
 
@@ -23,6 +23,7 @@ from yamlpath.enums import (
     PathSegmentTypes,
     YAMLValueFormats,
 )
+from yamlpath.wrappers import NodeCoords
 from yamlpath import YAMLPath
 
 
@@ -257,17 +258,7 @@ class Nodes:
         Raises:  N/A
         """
         wrapped_value = value
-
-        try:
-            cased_value = value
-            if str(value).lower() in ("true", "false"):
-                cased_value = str(value).title()
-            ast_value = ast.literal_eval(cased_value)
-        except ValueError:
-            ast_value = value
-        except SyntaxError:
-            ast_value = value
-
+        ast_value = Nodes.typed_value(value)
         typ = type(ast_value)
         if typ is list:
             wrapped_value = CommentedSeq(value)
@@ -458,12 +449,32 @@ class Nodes:
         evalue = value
         if isinstance(value, TaggedScalar):
             evalue = value.value
+        return Nodes.typed_value(evalue)
+
+    @staticmethod
+    def typed_value(value: str) -> Any:
+        """
+        Safely convert a String value to its intrinsic Python data type.
+
+        Parameters:
+        1. value (Any) the value to convert
+        """
+        if value is None:
+            return value
+
+        if isinstance(value, NodeCoords):
+            return Nodes.typed_value(value.node)
+
+        cased_value = value
+        lower_value = str(value).lower()
 
         try:
-            untagged_value = ast.literal_eval(evalue)
+            # Booleans require special handling
+            if lower_value in ("true", "false"):
+                cased_value = str(value).title()
+            typed_value = literal_eval(cased_value)
         except ValueError:
-            untagged_value = value
+            typed_value = value
         except SyntaxError:
-            untagged_value = value
-
-        return untagged_value
+            typed_value = value
+        return typed_value

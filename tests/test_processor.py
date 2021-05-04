@@ -82,6 +82,7 @@ class Test_Processor():
         ("/array_of_hashes/**", [1, "one", 2, "two"], True, None),
         ("products_hash.*[dimensions.weight==4].(availability.start.date)+(availability.stop.date)", [[date(2020, 8, 1), date(2020, 9, 25)], [date(2020, 1, 1), date(2020, 1, 1)]], True, None),
         ("products_array[dimensions.weight==4].product", ["doohickey", "widget"], True, None),
+        ("(products_hash.*.dimensions.weight)[max()][parent(2)].dimensions.weight", [10], True, None)
     ])
     def test_get_nodes(self, quiet_logger, yamlpath, results, mustexist, default):
         yamldata = """---
@@ -730,18 +731,18 @@ null_value:
     ])
     def test_scalar_collectors(self, quiet_logger, yamlpath, results):
         yamldata = """---
-        list1:
-          - 1
-          - 2
-          - 3
-        list2:
-          - 4
-          - 5
-          - 6
-        exclude:
-          - 3
-          - 4
-        """
+list1:
+  - 1
+  - 2
+  - 3
+list2:
+  - 4
+  - 5
+  - 6
+exclude:
+  - 3
+  - 4
+"""
         yaml = YAML()
         processor = Processor(quiet_logger, yaml.load(yamldata))
         matchidx = 0
@@ -749,6 +750,70 @@ null_value:
         # be set True.  Otherwise, ephemeral virtual nodes would be created and
         # discarded.  Is this desirable?  Maybe, but not today.  For now, using
         # Collectors without setting mustexist=True will be undefined behavior.
+        for node in processor.get_nodes(yamlpath, mustexist=True):
+            assert unwrap_node_coords(node) == results[matchidx]
+            matchidx += 1
+        assert len(results) == matchidx
+
+    @pytest.mark.parametrize("yamlpath,results", [
+        ("(hash.*)-(array[1])", [["value1", "value3"]]),
+        ("(hash)-(hoh.two.*)", [[{"key1": "value1"}]]),
+        ("(aoa)-(hoa.two)", [[["value1", "value2", "value3"], ["value3"]]]),
+        ("(aoh)-(aoh[max(key1)])", [[{"key2": "value2", "key3": "value3"}, {"key3": "value3"}]]),
+    ])
+    def test_collector_math(self, quiet_logger, yamlpath, results):
+        yamldata = """---
+hash:
+  key1: value1
+  key2: value2
+  key3: value3
+
+array:
+  - value1
+  - value2
+  - vlaue3
+
+hoh:
+  one:
+    key1: value1
+    key2: value2
+    key3: value3
+  two:
+    key2: value2
+    key3: value3
+  three:
+    key3: value3
+
+aoh:
+  - key1: value1
+    key2: value2
+    key3: value3
+  - key2: value2
+    key3: value3
+  - key3: value3
+
+aoa:
+  - - value1
+    - value2
+    - value3
+  - - value2
+    - value3
+  - - value3
+
+hoa:
+  one:
+    - value1
+    - value2
+    - value3
+  two:
+    - value2
+    - value3
+  three:
+    - value3
+"""
+        yaml = YAML()
+        processor = Processor(quiet_logger, yaml.load(yamldata))
+        matchidx = 0
         for node in processor.get_nodes(yamlpath, mustexist=True):
             assert unwrap_node_coords(node) == results[matchidx]
             matchidx += 1
@@ -961,3 +1026,67 @@ Things:
         for node in processor.get_nodes(yamlpath):
             assert unwrap_node_coords(node) == results[match_index]
             match_index += 1
+
+    @pytest.mark.parametrize("yamlpath,results", [
+        ("hash_of_hashes.*[!has_child(child_two)]", [{"child_one": "value2.1", "child_three": "value2.3"}]),
+        ("/array_of_hashes/*[!has_child(child_two)]", [{"id": "two", "child_one": "value2.1", "child_three": "value2.3"}]),
+        ("/hash_of_hashes/*[!has_child(child_two)][name()]", ["two"]),
+        ("array_of_hashes.*[!has_child(child_two)].id", ["two"]),
+        ("/array_of_arrays/*[!has_child(value2.1)]", [["value1.1", "value1.2"], ["value3.1", "value3.2"]]),
+        ("array_of_arrays[*!=value2.1]", [["value1.1", "value1.2"], ["value3.1", "value3.2"]]),
+        ("array_of_arrays.*[!has_child(value2.1)][name()]", [0, 2]),
+        ("/array_of_arrays[*!=value2.1][name()]", [0, 2]),
+        ("(/array_of_arrays/*[!has_child(value2.1)][name()])[0]", [0]),
+        ("(array_of_arrays[*!=value2.1][name()])[0]", [0]),
+        ("(array_of_arrays.*[!has_child(value2.1)][name()])[-1]", [2]),
+        ("(/array_of_arrays[*!=value2.1][name()])[-1]", [2]),
+        ("/simple_array[has_child(value1.1)]", [["value1.1", "value1.2", "value2.1", "value2.3", "value3.1", "value3.2"]]),
+        ("/simple_array[!has_child(value1.3)]", [["value1.1", "value1.2", "value2.1", "value2.3", "value3.1", "value3.2"]]),
+    ])
+    def test_wiki_has_child(self, quiet_logger, yamlpath, results):
+        yamldata = """---
+hash_of_hashes:
+  one:
+    child_one: value1.1
+    child_two: value1.2
+  two:
+    child_one: value2.1
+    child_three: value2.3
+  three:
+    child_one: value3.1
+    child_two: value3.2
+
+array_of_hashes:
+  - id: one
+    child_one: value1.1
+    child_two: value1.2
+  - id: two
+    child_one: value2.1
+    child_three: value2.3
+  - id: three
+    child_one: value3.1
+    child_two: value3.2
+
+simple_array:
+  - value1.1
+  - value1.2
+  - value2.1
+  - value2.3
+  - value3.1
+  - value3.2
+
+array_of_arrays:
+  - - value1.1
+    - value1.2
+  - - value2.1
+    - value2.3
+  - - value3.1
+    - value3.2
+"""
+        yaml = YAML()
+        processor = Processor(quiet_logger, yaml.load(yamldata))
+        matchidx = 0
+        for node in processor.get_nodes(yamlpath, mustexist=True):
+            assert unwrap_node_coords(node) == results[matchidx]
+            matchidx += 1
+        assert len(results) == matchidx
