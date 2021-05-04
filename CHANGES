@@ -1,3 +1,41 @@
+3.6.0:
+Bug Fixes:
+* Some peculiar data constructions could cause the ConsolePrinter to stack-dump
+  when writing debug messages.
+* A NotImplementedError stack-dump was generated whenever a YAML Path was
+  evaluated when written improperly for Collector Math operations.  This
+  specifically occurred when the RHS term was not demarcated with a parenthesis
+  pair.  Now, a YAML Path parsing error is generated, indicating where the
+  missing character must appear.
+
+Enhancements:
+* YAML Path parsing errors are now a little more specific, indicating at which
+  character index the issue occurs.  API users who have been scanning error
+  messages will need to update their code to accommodate the new text.
+* Collector subtraction now handles Hash-of-Hashes and Array-of-Array results,
+  which were not possible before.
+
+API Changes:
+* The common.nodes utility class now has a generally-useful static method which
+  accepts any String data and safely converts it to its native Python data-type
+  equivalent with special handling for case-insensitive Booleans via
+  ast.literal_eval:  typed_value.
+* The common.searches utility class now requires both terms to be of the same
+  data-type for comparisons.  When they types materially differ -- int and
+  float are treated as similar enough -- a String comparision is performed.
+  This is how it has always been excepting that types were lazily coalesced in
+  older versions; they are now converted before the comparison is considered.
+* The NodeCoords wrapper now supports more utility properties:
+  * .unwrapped_node() is the same output as calling
+    NodeCoords.unwrap_node_coords(data) except it can be called directly upon
+    instances of NodeCoords rather than as a static method call.  The static
+    method is still available.
+  * .deepest_node_coord() returns whichever NodeCoord instance is most deeply
+    wrapped by an instance of NodeCoords.  Such wrapping comes from nesting
+    Collectors.  This method simplfies getting to the original data element(s).
+  * .wraps_a(Type) indicates whether the deepest wrapped data element is of a
+    given data-type.
+
 3.5.0:
 Bug Fixes:
 * Search expressions against Boolean values, [key=True] and [key=False], were
