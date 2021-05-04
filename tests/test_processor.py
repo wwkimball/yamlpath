@@ -731,18 +731,18 @@ null_value:
     ])
     def test_scalar_collectors(self, quiet_logger, yamlpath, results):
         yamldata = """---
-        list1:
-          - 1
-          - 2
-          - 3
-        list2:
-          - 4
-          - 5
-          - 6
-        exclude:
-          - 3
-          - 4
-        """
+list1:
+  - 1
+  - 2
+  - 3
+list2:
+  - 4
+  - 5
+  - 6
+exclude:
+  - 3
+  - 4
+"""
         yaml = YAML()
         processor = Processor(quiet_logger, yaml.load(yamldata))
         matchidx = 0
@@ -750,6 +750,69 @@ null_value:
         # be set True.  Otherwise, ephemeral virtual nodes would be created and
         # discarded.  Is this desirable?  Maybe, but not today.  For now, using
         # Collectors without setting mustexist=True will be undefined behavior.
+        for node in processor.get_nodes(yamlpath, mustexist=True):
+            assert unwrap_node_coords(node) == results[matchidx]
+            matchidx += 1
+        assert len(results) == matchidx
+
+    @pytest.mark.parametrize("yamlpath,results", [
+        ("(hash.*)-(array[1])", [["value1", "value3"]]),
+        ("(hash)-(hoh.two.*)", [[{"key1": "value1"}]]),
+        ("(aoa)-(hoa.two)", [[["value1", "value2", "value3"], ["value3"]]]),
+    ])
+    def test_collector_math(self, quiet_logger, yamlpath, results):
+        yamldata = """---
+hash:
+  key1: value1
+  key2: value2
+  key3: value3
+
+array:
+  - value1
+  - value2
+  - vlaue3
+
+hoh:
+  one:
+    key1: value1
+    key2: value2
+    key3: value3
+  two:
+    key2: value2
+    key3: value3
+  three:
+    key3: value3
+
+aoh:
+  - key1: value1
+    key2: value2
+    key3: value3
+  - key2: value2
+    key3: value3
+  - key3: value3
+
+aoa:
+  - - value1
+    - value2
+    - value3
+  - - value2
+    - value3
+  - - value3
+
+hoa:
+  one:
+    - value1
+    - value2
+    - value3
+  two:
+    - value2
+    - value3
+  three:
+    - value3
+"""
+        yaml = YAML()
+        processor = Processor(quiet_logger, yaml.load(yamldata))
+        matchidx = 0
         for node in processor.get_nodes(yamlpath, mustexist=True):
             assert unwrap_node_coords(node) == results[matchidx]
             matchidx += 1

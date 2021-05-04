@@ -478,7 +478,7 @@ new_key: New value
             , lhs_file
             , rhs_file)
         assert not result.success, result.stderr
-        assert "Unexpected use of ~ operator" in result.stderr
+        assert "Unexpected use of \"~\" operator" in result.stderr
 
     def test_too_many_pseudofiles(self, script_runner):
         result = script_runner.run(

@@ -213,14 +213,18 @@ class ConsolePrinter:
     def _debug_get_anchor(data: Any) -> str:
         """Helper for debug."""
         return ("&{}".format(data.anchor.value)
-                if hasattr(data, "anchor") and data.anchor.value is not None
+                if (hasattr(data, "anchor")
+                    and hasattr(data.anchor, "value")
+                    and data.anchor.value is not None)
                 else "")
 
     @staticmethod
     def _debug_get_tag(data: Any) -> str:
         """Helper for debug."""
         return str(data.tag.value
-                if hasattr(data, "tag") and data.tag.value is not None
+                if (hasattr(data, "tag")
+                    and hasattr(data.tag, "value")
+                    and data.tag.value is not None)
                 else "")
 
     @staticmethod
