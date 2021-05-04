@@ -322,9 +322,6 @@ class KeywordSearches:
                 if isinstance(val, dict):
                     if val is not None and scan_node in val:
                         eval_val = val[scan_node]
-                        next_path = (
-                            translated_path + YAMLPath.escape_path_section(
-                                key, translated_path.seperator))
                         if (match_value is None
                             or yamlpath.common.Searches.search_matches(
                                 PathSearchMethods.GREATER_THAN, match_value,
@@ -523,13 +520,13 @@ class KeywordSearches:
                     str(yaml_path))
 
             for key, val in data.items():
+                next_ancestry = ancestry + [(data, key)]
+                next_path = (
+                    translated_path + YAMLPath.escape_path_section(
+                        key, translated_path.seperator))
                 if isinstance(val, dict):
                     if val is not None and scan_node in val:
                         eval_val = val[scan_node]
-                        next_path = (
-                            translated_path + YAMLPath.escape_path_section(
-                                key, translated_path.seperator))
-                        next_ancestry = ancestry + [(data, key)]
                         if (match_value is None
                             or yamlpath.common.Searches.search_matches(
                                 PathSearchMethods.LESS_THAN, match_value,
