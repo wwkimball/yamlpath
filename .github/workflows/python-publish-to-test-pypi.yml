@@ -6,14 +6,9 @@ on:
   push:
     branches:
       - development
-      - feature/*
-      - bugfix/*
-      - issue/*
   pull_request:
     branches:
-      - master
       - development
-      - release/*
 
 jobs:
   validate:
