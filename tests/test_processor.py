@@ -759,6 +759,7 @@ exclude:
         ("(hash.*)-(array[1])", [["value1", "value3"]]),
         ("(hash)-(hoh.two.*)", [[{"key1": "value1"}]]),
         ("(aoa)-(hoa.two)", [[["value1", "value2", "value3"], ["value3"]]]),
+        ("(aoh)-(aoh[max(key1)])", [[{"key2": "value2", "key3": "value3"}, {"key3": "value3"}]]),
     ])
     def test_collector_math(self, quiet_logger, yamlpath, results):
         yamldata = """---

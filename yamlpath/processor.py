@@ -4,6 +4,7 @@ YAML Path processor based on ruamel.yaml.
 
 Copyright 2018, 2019, 2020, 2021 William W. Kimball, Jr. MBA MSIS
 """
+from collections import OrderedDict
 from typing import Any, Dict, Generator, List, Union
 
 from ruamel.yaml.comments import CommentedMap
@@ -1337,16 +1338,25 @@ class Processor:
             })
 
         # If LHS in RHS, delete it
+        rem_dels = []
+        rem_idx = 0
         updated_coords: List[NodeCoords] = []
         for lhs in collected_ncs:
             unwrapped_lhs = lhs.unwrapped_node
             deepest_lhs = lhs.deepest_node_coord
 
             if lhs.wraps_a(dict):
+                if unwrapped_lhs in rem_data:
+                    continue
                 for rhs in rem_data:
+                    if isinstance(rhs, OrderedDict):
+                        # Do not drill into OrderedDict results because such
+                        # wrapping means the user intends for the ENTIRE dict
+                        # to be matched, not its individual key-value pairs.
+                        continue
                     for key, val in rhs.items():
-                        if key in unwrapped_lhs and val == unwrapped_lhs[key]:
-                            del deepest_lhs.node[key]
+                        if key in unwrapped_lhs and unwrapped_lhs[key] == val:
+                            rem_dels.append((rem_idx, key))
             elif lhs.wraps_a(list):
                 if unwrapped_lhs in rem_data or rem_data == unwrapped_lhs:
                     continue
@@ -1354,6 +1364,9 @@ class Processor:
                 if unwrapped_lhs in rem_data:
                     continue
             updated_coords.append(deepest_lhs)
+            rem_idx += 1
+        for idx, key in rem_dels:
+            del updated_coords[idx].deepest_node_coord.node[key]
 
         self.logger.debug((
             "Resulting data:"),
