@@ -485,6 +485,7 @@ class YAMLPath:
                     demarc_count -= 1
                     demarc_stack.pop()
                     next_char_must_be = "]"
+                    seeking_collector_operator = False
                     continue
 
             elif demarc_count == 0 and char == "[":
@@ -501,6 +502,7 @@ class YAMLPath:
                 demarc_stack.append(char)
                 demarc_count += 1
                 segment_type = PathSegmentTypes.INDEX
+                seeking_collector_operator = False
                 seeking_anchor_mark = True
                 search_inverted = False
                 search_method = None
