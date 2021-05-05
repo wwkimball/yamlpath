@@ -1111,8 +1111,19 @@ array_of_arrays:
         ("((prices_hash[!max(price)])[max(price)])[0]", [{"price": 4.99}]),
         ("((prices_aoh[!max(price)])[max(price)])[0].price", [4.99]),
         ("((prices_hash[!max(price)])[max(price)])[0].price", [4.99]),
+        ("/prices_aoh[min(price)]", [{"product": "widget", "price": 0.98}]),
+        ("/prices_hash[min(price)]", [{"price": 0.98}]),
+        ("/prices_aoh[min(price)]/price", [0.98]),
+        ("/prices_hash[min(price)]/price", [0.98]),
+        ("/prices_aoh[min(price)]/product", ["widget"]),
+        ("/prices_hash[min(price)][name()]", ["widget"]),
+        ("prices_array[min()]", [0.98]),
+        ("bad_prices_aoh[min(price)]", [{"product": "widget", "price": True}]),
+        ("bad_prices_hash[min(price)]", [{"price": True}]),
+        ("bad_prices_array[min()]", [0.98]),
+        ("bare[min()]", ["value"]),
     ])
-    def test_wiki_max(self, quiet_logger, yamlpath, results):
+    def test_wiki_min_max(self, quiet_logger, yamlpath, results):
         yamldata = """---
 # Consistent Data Types
 prices_aoh:
