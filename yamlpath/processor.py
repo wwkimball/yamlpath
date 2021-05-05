@@ -1295,19 +1295,8 @@ class Processor:
             unwrapped_node = NodeCoords.unwrap_node_coords(node_coord)
             if isinstance(unwrapped_node, list):
                 for ele in unwrapped_node:
-                    self.logger.debug((
-                        "Adding for LIST removal:"),
-                        prefix="Processor::_collector_subtraction"
-                               "::get_del_nodes:  ",
-                        data=ele)
                     del_nodes.append(ele)
             else:
-                self.logger.debug((
-                    "Adding for SINGULAR removal:"),
-                        prefix="Processor::_collector_subtraction"
-                               "::get_del_nodes:  ",
-                    data=node_coord
-                )
                 if isinstance(node_coord.parent, dict):
                     del_nodes.append(
                         {node_coord.parentref: unwrapped_node})

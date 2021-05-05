@@ -262,7 +262,9 @@ class KeywordSearches:
         match_nodes: List[NodeCoords] = []
         discard_nodes: List[NodeCoords] = []
         unwrapped_data: Any = NodeCoords.unwrap_node_coords(data)
-        if yamlpath.common.Nodes.node_is_aoh(unwrapped_data):
+        if yamlpath.common.Nodes.node_is_aoh(
+            unwrapped_data, accept_nulls=True
+        ):
             # A named child node is mandatory
             if scan_node is None:
                 raise YAMLPathException((
@@ -275,7 +277,7 @@ class KeywordSearches:
                 ele = NodeCoords.unwrap_node_coords(wrapped_ele)
                 next_path = translated_path + "[{}]".format(idx)
                 next_ancestry = ancestry + [(data, idx)]
-                if scan_node in ele:
+                if ele is not None and scan_node in ele:
                     eval_val = ele[scan_node]
                     if (match_value is None
                         or yamlpath.common.Searches.search_matches(
@@ -467,7 +469,9 @@ class KeywordSearches:
         match_nodes: List[NodeCoords] = []
         discard_nodes: List[NodeCoords] = []
         unwrapped_data: Any = NodeCoords.unwrap_node_coords(data)
-        if yamlpath.common.Nodes.node_is_aoh(unwrapped_data):
+        if yamlpath.common.Nodes.node_is_aoh(
+            unwrapped_data, accept_nulls=True
+        ):
             # A named child node is mandatory
             if scan_node is None:
                 raise YAMLPathException((
@@ -480,7 +484,7 @@ class KeywordSearches:
                 ele = NodeCoords.unwrap_node_coords(wrapped_ele)
                 next_path = translated_path + "[{}]".format(idx)
                 next_ancestry = ancestry + [(data, idx)]
-                if scan_node in ele:
+                if ele is not None and scan_node in ele:
                     eval_val = ele[scan_node]
                     if (match_value is None
                         or yamlpath.common.Searches.search_matches(
