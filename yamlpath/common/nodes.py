@@ -397,15 +397,20 @@ class Nodes:
         return not isinstance(node, (dict, list, set))
 
     @staticmethod
-    def node_is_aoh(node: Any) -> bool:
+    def node_is_aoh(node: Any, **kwargs) -> bool:
         """
         Indicate whether a node is an Array-of-Hashes (List of Dicts).
 
         Parameters:
         1. node (Any) The node under evaluation
 
+        Keyword Arguments:
+        * accept_nulls (bool) When node is enumerable, True = allow elements to
+          be None; False, otherwise; default=False
+
         Returns:  (bool) True = node is a `list` comprised **only** of `dict`s
         """
+        accept_nulls: bool = kwargs.pop("accept_nulls", False)
         if node is None:
             return False
 
@@ -413,6 +418,8 @@ class Nodes:
             return False
 
         for ele in node:
+            if accept_nulls and ele is None:
+                continue
             if not isinstance(ele, dict):
                 return False
 

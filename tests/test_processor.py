@@ -1090,3 +1090,97 @@ array_of_arrays:
             assert unwrap_node_coords(node) == results[matchidx]
             matchidx += 1
         assert len(results) == matchidx
+
+    @pytest.mark.parametrize("yamlpath,results", [
+        ("/prices_aoh[max(price)]", [{"product": "whatchamacallit", "price": 9.95}]),
+        ("/prices_hash[max(price)]", [{"price": 9.95}]),
+        ("/prices_aoh[max(price)]/price", [9.95]),
+        ("/prices_hash[max(price)]/price", [9.95]),
+        ("/prices_aoh[max(price)]/product", ["whatchamacallit"]),
+        ("/prices_hash[max(price)][name()]", ["whatchamacallit"]),
+        ("prices_array[max()]", [9.95]),
+        ("bad_prices_aoh[max(price)]", [{"product": "fob", "price": "not set"}]),
+        ("bad_prices_hash[max(price)]", [{"price": "not set"}]),
+        ("bad_prices_array[max()]", ["not set"]),
+        ("bare[max()]", ["value"]),
+        ("(prices_aoh[!max(price)])[max(price)]", [{"product": "doohickey", "price": 4.99}, {"product": "fob", "price": 4.99}]),
+        ("(prices_hash[!max(price)])[max(price)]", [{"price": 4.99}, {"price": 4.99}]),
+        ("(prices_aoh)-(prices_aoh[max(price)])[max(price)]", [{"product": "doohickey", "price": 4.99}, {"product": "fob", "price": 4.99}]),
+        ("(prices_hash)-(prices_hash[max(price)]).*[max(price)]", [{"price": 4.99}, {"price": 4.99}]),
+        ("((prices_aoh[!max(price)])[max(price)])[0]", [{"product": "doohickey", "price": 4.99}]),
+        ("((prices_hash[!max(price)])[max(price)])[0]", [{"price": 4.99}]),
+        ("((prices_aoh[!max(price)])[max(price)])[0].price", [4.99]),
+        ("((prices_hash[!max(price)])[max(price)])[0].price", [4.99]),
+    ])
+    def test_wiki_max(self, quiet_logger, yamlpath, results):
+        yamldata = """---
+# Consistent Data Types
+prices_aoh:
+  - product: doohickey
+    price: 4.99
+  - product: fob
+    price: 4.99
+  - product: whatchamacallit
+    price: 9.95
+  - product: widget
+    price: 0.98
+  - product: unknown
+
+prices_hash:
+  doohickey:
+    price: 4.99
+  fob:
+    price: 4.99
+  whatchamacallit:
+    price: 9.95
+  widget:
+    price: 0.98
+  unknown:
+
+prices_array:
+  - 4.99
+  - 4.99
+  - 9.95
+  - 0.98
+  - null
+
+# TODO: Inconsistent Data Types
+bare: value
+
+bad_prices_aoh:
+  - product: doohickey
+    price: 4.99
+  - product: fob
+    price: not set
+  - product: whatchamacallit
+    price: 9.95
+  - product: widget
+    price: true
+  - product: unknown
+
+bad_prices_hash:
+  doohickey:
+    price: 4.99
+  fob:
+    price: not set
+  whatchamacallit:
+    price: 9.95
+  widget:
+    price: true
+  unknown:
+
+bad_prices_array:
+  - 4.99
+  - not set
+  - 9.95
+  - 0.98
+  - null
+"""
+        yaml = YAML()
+        processor = Processor(quiet_logger, yaml.load(yamldata))
+        matchidx = 0
+        for node in processor.get_nodes(yamlpath, mustexist=True):
+            assert unwrap_node_coords(node) == results[matchidx]
+            matchidx += 1
+        assert len(results) == matchidx
+
