@@ -669,7 +669,7 @@ class Merger:
         """
         Prepare this merged document and its writer for final rendering.
 
-        This coallesces the YAML writer's settings to, in particular,
+        This coalesces the YAML writer's settings to, in particular,
         distinguish between YAML and JSON.  It will also force demarcation of
         every String key and value within the document when the output will be
         JSON.

@@ -38,8 +38,9 @@ class YAMLPath:
         Instantiate this class into an object.
 
         Parameters:
-        1. yaml_path (Union["YAMLPath", str]) The YAML Path to parse or copy
-        2. pathsep (PathSeperators) Forced YAML Path segment seperator; set
+        1. yaml_path (Union["YAMLPath", str, None]) The YAML Path to parse or
+           copy
+        2. pathsep (PathSeperators) Forced YAML Path segment separator; set
            only when automatic inference fails
 
         Returns:  N/A
@@ -907,6 +908,12 @@ class YAMLPath:
 
         Ensures all instances of a symbol are escaped (via \) within a value.
         Multiple symbols can be processed at once.
+
+        Parameters:
+        1. value (str) The String in which to escape special characters
+        2. *symbols (str) List of special characters to escape
+
+        Returns:  (str) `value` with all `symbols` escaped
         """
         escaped: str = value
         for symbol in symbols:
@@ -926,6 +933,13 @@ class YAMLPath:
         Renders inert via escaping all symbols within a string which have
         special meaning to YAML Path.  The resulting string can be consumed as
         a YAML Path section without triggering unwanted additional processing.
+
+        Parameters:
+        1. section (str) The portion of a YAML Path segment to escape
+        2. pathsep (PathSeperators) The YAML Path segment seperator symbol to
+           also escape, when present
+
+        Returns:  (str) `section` with all special symbols escaped
         """
         return YAMLPath.ensure_escaped(
             section,

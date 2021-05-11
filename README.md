@@ -365,7 +365,7 @@ can tell YAML Path library and tools where to find the `eyaml` command.
 
 In order to support the best available YAML editing capability (so called,
 round-trip editing with support for comment preservation), this project is based
-on [ruamel.yaml](https://bitbucket.org/ruamel/yaml/overview) for
+on [ruamel.yaml](https://sourceforge.net/projects/ruamel-yaml/) for
 Python 3.  While ruamel.yaml is based on PyYAML --
 Python's "standard" YAML library -- ruamel.yaml is [objectively better than
 PyYAML](https://yaml.readthedocs.io/en/latest/pyyaml.html), which lacks critical
