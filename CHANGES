@@ -35,12 +35,12 @@ API Changes:
   float are treated as similar enough -- a String comparision is performed.
   This is how it has always been excepting that types were lazily coalesced in
   older versions; they are now converted before the comparison is considered.
-* The NodeCoords wrapper now supports more utility properties:
-  * .unwrapped_node() is the same output as calling
+* The NodeCoords wrapper now supports more utility properties and methods:
+  * .unwrapped_node is the same output as calling
     NodeCoords.unwrap_node_coords(data) except it can be called directly upon
     instances of NodeCoords rather than as a static method call.  The static
     method is still available.
-  * .deepest_node_coord() returns whichever NodeCoord instance is most deeply
+  * .deepest_node_coord returns whichever NodeCoord instance is most deeply
     wrapped by an instance of NodeCoords.  Such wrapping comes from nesting
     Collectors.  This method simplfies getting to the original data element(s).
   * .wraps_a(Type) indicates whether the deepest wrapped data element is of a
