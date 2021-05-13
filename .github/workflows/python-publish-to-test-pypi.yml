@@ -50,6 +50,7 @@ jobs:
 
   publish:
     name: Publish to TEST PyPI
+    if: github.ref == 'refs/heads/development'
     runs-on: ubuntu-latest
     environment: 'PyPI:  Test'
     needs: validate
