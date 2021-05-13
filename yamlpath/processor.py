@@ -1123,7 +1123,6 @@ class Processor:
 
             is_aoh = Nodes.node_is_aoh(data, accept_nulls=True)
             search_keys = attr == '.'
-
             for lstidx, ele in enumerate(data):
                 if search_keys:
                     # pylint: disable=locally-disabled,consider-using-ternary

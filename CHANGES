@@ -14,6 +14,16 @@ Enhancements:
   messages will need to update their code to accommodate the new text.
 * Collector subtraction now handles Hash-of-Hashes and Array-of-Array results,
   which were not possible before.
+* Array-of-Hash nodes can now be searched for the presence of a given key in
+  its Hash elements using the . search operand, yielding matching elements (the
+  entire Hash elements having the given key).  The difference can be
+  illustrated by contrasting these two now-equivalent YAML Paths:
+  1. `/**/books/*[.=isbn]` or `**.books.*[.isbn]`
+  2. `/**/books[.=isbn]/isbn` or `**.books[.=isbn].isbn`
+  Note that the latter example yields the entire matching Hash, allowing access
+  to other keys of the Hash without necessitating use of a `[parent()]` search
+  keyword, which would be necessary for the former example if any key other
+  than "isbn" were desired of elements having such a key.
 
 API Changes:
 * The common.nodes utility class now has a generally-useful static method which
