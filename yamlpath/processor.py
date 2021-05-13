@@ -800,9 +800,12 @@ class Processor:
         (_, stripped_attrs) = pathseg
         str_stripped = str(stripped_attrs)
 
-        self.logger.debug(
-            "Processor::_get_nodes_by_key:  Seeking KEY node at {}."
-            .format(str_stripped))
+        self.logger.debug((
+            "Seeking KEY node, {}, in data:"
+            ).format(str_stripped),
+            prefix="Processor::_get_nodes_by_key:  ",
+            data={"KEY": stripped_attrs,
+                  "DATA": data})
 
         if isinstance(data, dict):
             next_translated_path = (translated_path +
@@ -1118,9 +1121,13 @@ class Processor:
                     " list.")
                 return
 
+            is_aoh = Nodes.node_is_aoh(data, accept_nulls=True)
+            search_keys = attr == '.'
             for lstidx, ele in enumerate(data):
-                if attr == '.':
-                    matches = Searches.search_matches(method, term, ele)
+                if search_keys:
+                    # pylint: disable=locally-disabled,consider-using-ternary
+                    matches = ((is_aoh and term in ele)
+                        or Searches.search_matches(method, term, ele))
                 elif isinstance(ele, dict) and attr in ele:
                     matches = Searches.search_matches(method, term, ele[attr])
                 else:
@@ -1573,15 +1580,18 @@ class Processor:
             # every child against the following segment until there are no more
             # nodes.  For each match, resume normal path function against the
             # matching node(s).
+            peekseg: PathSegment = segments[next_segment_idx]
 
             # Because the calling code will continue to process the remainder
             # of the YAML Path, only the parent of the matched node(s) can be
             # yielded.
-            self.logger.debug(
-                "Processor::_get_nodes_by_traversal:  Checking the DIRECT node"
-                " for a next-segment match at {}...".format(parentref))
+            self.logger.debug((
+                "Checking the DIRECT node for a next-segment match at"
+                " parentref {} with next segment {} in data..."
+                ).format(parentref, peekseg),
+                prefix="Processor::_get_nodes_by_traversal:  ",
+                data=data)
 
-            peekseg: PathSegment = segments[next_segment_idx]
             for node_coord in self._get_nodes_by_path_segment(
                 data, yaml_path, next_segment_idx, parent=parent,
                 parentref=parentref, traverse_lists=False,
