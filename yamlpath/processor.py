@@ -1126,10 +1126,9 @@ class Processor:
 
             for lstidx, ele in enumerate(data):
                 if search_keys:
-                    if is_aoh:
-                        matches = term in ele
-                    else:
-                        matches = Searches.search_matches(method, term, ele)
+                    # pylint: disable=locally-disabled,consider-using-ternary
+                    matches = ((is_aoh and term in ele)
+                        or Searches.search_matches(method, term, ele))
                 elif isinstance(ele, dict) and attr in ele:
                     matches = Searches.search_matches(method, term, ele[attr])
                 else:
