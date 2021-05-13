@@ -282,8 +282,9 @@ class ConsolePrinter:
             dtype += ",folded@{}".format(data.fold_pos)
 
         print_prefix += anchor_prefix
+        print_line = str(data).replace("\n", "\n{}".format(print_prefix))
         return ConsolePrinter._debug_prefix_lines(
-            "{}{}{}".format(print_prefix, data, dtype))
+            "{}{}{}".format(print_prefix, print_line, dtype))
 
     @staticmethod
     def _debug_node_coord(
