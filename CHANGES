@@ -17,13 +17,18 @@ Enhancements:
 * Array-of-Hash nodes can now be searched for the presence of a given key in
   its Hash elements using the . search operand, yielding matching elements (the
   entire Hash elements having the given key).  The difference can be
-  illustrated by contrasting these two now-equivalent YAML Paths:
-  1. `/**/books/*[.=isbn]` or `**.books.*[.isbn]`
-  2. `/**/books[.=isbn]/isbn` or `**.books[.=isbn].isbn`
-  Note that the latter example yields the entire matching Hash, allowing access
-  to other keys of the Hash without necessitating use of a `[parent()]` search
-  keyword, which would be necessary for the former example if any key other
-  than "isbn" were desired of elements having such a key.
+  illustrated by contrasting these two now-equivalent YAML Paths (where "books"
+  is an Array-of-Hashes; imagine only some Hash elements have an "isbn" key):
+  1. `/books/*[.=isbn]` or `books.*[.=isbn]`
+  2. `/books[.=isbn]/isbn` or `books[.=isbn].isbn`
+  3. `/books/*[has_child(isbn)]/isbn` or `books.*[has_child(isbn)].isbn`
+  4. `/books[has_child(isbn)]/isbn` or `books[has_child(isbn)].isbn`
+  All four of those queries yield exactly the same data.  Note that example 2
+  behaves like examples 3 and 4.  Examples 2-4 yield the entire matching Hash,
+  not just the "isbn" value.  This enables access to other keys of the Hash
+  without necessitating use of a `[parent()]` search keyword, which would be
+  necessary for example 1 if you wanted to access any key other than "isbn"
+  from the matches.
 
 API Changes:
 * The common.nodes utility class now has a generally-useful static method which
