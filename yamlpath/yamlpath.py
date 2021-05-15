@@ -315,7 +315,6 @@ class YAMLPath:
         seeking_regex_delim: bool = False
         capturing_regex: bool = False
         pathsep: str = str(self.seperator)
-        bracket_level: int = 0
         collector_level: int = 0
         collector_operator: CollectorOperators = CollectorOperators.NONE
         seeking_collector_operator: bool = False
@@ -436,7 +435,7 @@ class YAMLPath:
                     continue
 
             elif char == "(":
-                if demarc_count > 0 and demarc_stack[-1] == "[" and segment_id:
+                if demarc_count == 1 and demarc_stack[-1] == "[" and segment_id:
                     if PathSearchKeywords.is_keyword(segment_id):
                         demarc_stack.append(char)
                         demarc_count += 1
@@ -467,27 +466,31 @@ class YAMLPath:
             elif (
                     demarc_count > 0
                     and char == ")"
-                    and demarc_stack[-1] == "("
+                    and segment_type is PathSegmentTypes.KEYWORD_SEARCH
             ):
-                if collector_level > 0:
-                    collector_level -= 1
-                    demarc_count -= 1
-                    demarc_stack.pop()
+                demarc_count -= 1
+                demarc_stack.pop()
+                next_char_must_be = "]"
+                seeking_collector_operator = False
+                continue
 
-                    if collector_level < 1:
-                        path_segments.append(
-                            (segment_type,
-                             CollectorTerms(segment_id, collector_operator)))
-                        segment_id = ""
-                        collector_operator = CollectorOperators.NONE
-                        seeking_collector_operator = True
-                        continue
+            elif (
+                    demarc_count > 0
+                    and char == ")"
+                    and demarc_stack[-1] == "("
+                    and collector_level > 0
+            ):
+                collector_level -= 1
+                demarc_count -= 1
+                demarc_stack.pop()
 
-                if segment_type is PathSegmentTypes.KEYWORD_SEARCH:
-                    demarc_count -= 1
-                    demarc_stack.pop()
-                    next_char_must_be = "]"
-                    seeking_collector_operator = False
+                if collector_level < 1:
+                    path_segments.append(
+                        (segment_type,
+                            CollectorTerms(segment_id, collector_operator)))
+                    segment_id = ""
+                    collector_operator = CollectorOperators.NONE
+                    seeking_collector_operator = True
                     continue
 
             elif demarc_count == 0 and char == "[":
@@ -503,7 +506,6 @@ class YAMLPath:
 
                 demarc_stack.append(char)
                 demarc_count += 1
-                bracket_level += 1
                 segment_type = PathSegmentTypes.INDEX
                 seeking_collector_operator = False
                 seeking_anchor_mark = True
@@ -513,7 +515,7 @@ class YAMLPath:
                 continue
 
             elif (
-                    demarc_count > 0
+                    demarc_count == 1
                     and demarc_stack[-1] == "["
                     and char in ["=", "^", "$", "%", "!", ">", "<", "~"]
             ):
@@ -635,8 +637,13 @@ class YAMLPath:
                         segment_id = ""
                     continue
 
+            elif char == "[":
+                # Track bracket nesting
+                demarc_stack.append(char)
+                demarc_count += 1
+
             elif (
-                    demarc_count > 0
+                    demarc_count == 1
                     and char == "]"
                     and demarc_stack[-1] == "["
             ):
@@ -686,11 +693,15 @@ class YAMLPath:
                 segment_type = None
                 demarc_stack.pop()
                 demarc_count -= 1
-                bracket_level -= 1
                 search_method = None
                 search_inverted = False
                 search_keyword = None
                 continue
+
+            elif char == "]":
+                # Track bracket de-nesting
+                demarc_stack.pop()
+                demarc_count -= 1
 
             elif demarc_count < 1 and char == pathsep:
                 # Do not store empty elements
@@ -710,13 +721,6 @@ class YAMLPath:
             seeking_anchor_mark = False
             seeking_collector_operator = False
 
-        # Check for unmatched square-bracket demarcations
-        if bracket_level > 0:
-            raise YAMLPathException(
-                "YAML Path contains an unmatched [] pair",
-                yaml_path
-            )
-
         # Check for unmatched subpath demarcations
         if collector_level > 0:
             raise YAMLPathException(
@@ -733,8 +737,10 @@ class YAMLPath:
 
         # Check for mismatched demarcations
         if demarc_count > 0:
-            raise YAMLPathException(
-                "YAML Path contains at least one unmatched demarcation mark",
+            raise YAMLPathException((
+                "YAML Path contains at least one unmatched demarcation mark"
+                " with remaining open marks, {} in"
+                ).format(", ".join(demarc_stack)),
                 yaml_path
             )
 
