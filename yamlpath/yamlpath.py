@@ -315,6 +315,7 @@ class YAMLPath:
         seeking_regex_delim: bool = False
         capturing_regex: bool = False
         pathsep: str = str(self.seperator)
+        bracket_level: int = 0
         collector_level: int = 0
         collector_operator: CollectorOperators = CollectorOperators.NONE
         seeking_collector_operator: bool = False
@@ -502,6 +503,7 @@ class YAMLPath:
 
                 demarc_stack.append(char)
                 demarc_count += 1
+                bracket_level += 1
                 segment_type = PathSegmentTypes.INDEX
                 seeking_collector_operator = False
                 seeking_anchor_mark = True
@@ -684,6 +686,7 @@ class YAMLPath:
                 segment_type = None
                 demarc_stack.pop()
                 demarc_count -= 1
+                bracket_level -= 1
                 search_method = None
                 search_inverted = False
                 search_keyword = None
@@ -706,6 +709,13 @@ class YAMLPath:
             segment_id += char
             seeking_anchor_mark = False
             seeking_collector_operator = False
+
+        # Check for unmatched square-bracket demarcations
+        if bracket_level > 0:
+            raise YAMLPathException(
+                "YAML Path contains an unmatched [] pair",
+                yaml_path
+            )
 
         # Check for unmatched subpath demarcations
         if collector_level > 0:
