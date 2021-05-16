@@ -435,7 +435,10 @@ class YAMLPath:
                     continue
 
             elif char == "(":
-                if demarc_count == 1 and demarc_stack[-1] == "[" and segment_id:
+                if (demarc_count == 1
+                    and demarc_stack[-1] == "["
+                    and segment_id
+                ):
                     if PathSearchKeywords.is_keyword(segment_id):
                         demarc_stack.append(char)
                         demarc_count += 1
