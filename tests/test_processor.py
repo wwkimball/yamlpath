@@ -1195,3 +1195,49 @@ bad_prices_array:
             matchidx += 1
         assert len(results) == matchidx
 
+    @pytest.mark.parametrize("yamlpath,results", [
+        ("**.Opal[parent()][name()]", ["silicates"]),
+        ("minerals.*.*.mohs_hardness[.>7][parent(2)][name()]", ["Tourmaline", 'Uvarovite']),
+        ("minerals.*.*.[mohs_hardness[1]>7][name()]", ["Tourmaline", 'Uvarovite']),
+    ])
+    def test_wiki_parent(self, quiet_logger, yamlpath, results):
+        yamldata = """---
+minerals:
+  silicates:
+    Opal:
+      mohs_hardness: [5.5,6]
+      specific_gravity: [2.06,2.23]
+    Tourmaline:
+      mohs_hardness: [7,7.5]
+      specific_gravity: [3,3.26]
+  non-silicates:
+    Azurite:
+      mohs_hardness: [3.5,4]
+      specific_gravity: [3.773,3.78]
+    Bismuth:
+      mohs_hardness: [2.25,2.25]
+      specific_gravity: [9.87]
+    Crocoite:
+      mohs_hardness: [2.5,3]
+      specific_gravity: [6,6]
+    Flourite:
+      mohs_hardness: [4,4]
+      specific_gravity: [3.175,3.184]
+    Rhodochrosite:
+      mohs_hardness: [3.5,4]
+      specific_gravity: [3.5,3.7]
+    "Rose Quartz":
+      mohs_hardness: [7,7]
+      specific_gravity: [2.6,2.7]
+    Uvarovite:
+      mohs_hardness: [6.5,7.5]
+      specific_gravity: [3.77,3.81]
+"""
+        yaml = YAML()
+        processor = Processor(quiet_logger, yaml.load(yamldata))
+        matchidx = 0
+        for node in processor.get_nodes(yamlpath, mustexist=True):
+            assert unwrap_node_coords(node) == results[matchidx]
+            matchidx += 1
+        assert len(results) == matchidx
+

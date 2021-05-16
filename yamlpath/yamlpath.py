@@ -435,7 +435,10 @@ class YAMLPath:
                     continue
 
             elif char == "(":
-                if demarc_count > 0 and demarc_stack[-1] == "[" and segment_id:
+                if (demarc_count == 1
+                    and demarc_stack[-1] == "["
+                    and segment_id
+                ):
                     if PathSearchKeywords.is_keyword(segment_id):
                         demarc_stack.append(char)
                         demarc_count += 1
@@ -466,27 +469,31 @@ class YAMLPath:
             elif (
                     demarc_count > 0
                     and char == ")"
-                    and demarc_stack[-1] == "("
+                    and segment_type is PathSegmentTypes.KEYWORD_SEARCH
             ):
-                if collector_level > 0:
-                    collector_level -= 1
-                    demarc_count -= 1
-                    demarc_stack.pop()
+                demarc_count -= 1
+                demarc_stack.pop()
+                next_char_must_be = "]"
+                seeking_collector_operator = False
+                continue
 
-                    if collector_level < 1:
-                        path_segments.append(
-                            (segment_type,
-                             CollectorTerms(segment_id, collector_operator)))
-                        segment_id = ""
-                        collector_operator = CollectorOperators.NONE
-                        seeking_collector_operator = True
-                        continue
+            elif (
+                    demarc_count > 0
+                    and char == ")"
+                    and demarc_stack[-1] == "("
+                    and collector_level > 0
+            ):
+                collector_level -= 1
+                demarc_count -= 1
+                demarc_stack.pop()
 
-                if segment_type is PathSegmentTypes.KEYWORD_SEARCH:
-                    demarc_count -= 1
-                    demarc_stack.pop()
-                    next_char_must_be = "]"
-                    seeking_collector_operator = False
+                if collector_level < 1:
+                    path_segments.append(
+                        (segment_type,
+                            CollectorTerms(segment_id, collector_operator)))
+                    segment_id = ""
+                    collector_operator = CollectorOperators.NONE
+                    seeking_collector_operator = True
                     continue
 
             elif demarc_count == 0 and char == "[":
@@ -511,7 +518,7 @@ class YAMLPath:
                 continue
 
             elif (
-                    demarc_count > 0
+                    demarc_count == 1
                     and demarc_stack[-1] == "["
                     and char in ["=", "^", "$", "%", "!", ">", "<", "~"]
             ):
@@ -633,8 +640,13 @@ class YAMLPath:
                         segment_id = ""
                     continue
 
+            elif char == "[":
+                # Track bracket nesting
+                demarc_stack.append(char)
+                demarc_count += 1
+
             elif (
-                    demarc_count > 0
+                    demarc_count == 1
                     and char == "]"
                     and demarc_stack[-1] == "["
             ):
@@ -689,6 +701,11 @@ class YAMLPath:
                 search_keyword = None
                 continue
 
+            elif char == "]":
+                # Track bracket de-nesting
+                demarc_stack.pop()
+                demarc_count -= 1
+
             elif demarc_count < 1 and char == pathsep:
                 # Do not store empty elements
                 if segment_id:
@@ -723,8 +740,10 @@ class YAMLPath:
 
         # Check for mismatched demarcations
         if demarc_count > 0:
-            raise YAMLPathException(
-                "YAML Path contains at least one unmatched demarcation mark",
+            raise YAMLPathException((
+                "YAML Path contains at least one unmatched demarcation mark"
+                " with remaining open marks, {} in"
+                ).format(", ".join(demarc_stack)),
                 yaml_path
             )
 
