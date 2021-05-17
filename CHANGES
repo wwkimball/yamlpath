@@ -7,6 +7,10 @@ Bug Fixes:
   specifically occurred when the RHS term was not demarcated with a parenthesis
   pair.  Now, a YAML Path parsing error is generated, indicating where the
   missing character must appear.
+* Use of an Array Element index in square-bracket notation ([N]) within a
+  sub-path -- such as in a Search Expression or Collector -- caused incorrect
+  YAML Path parsing.  This usually manifested as a "not an integer index"
+  error.
 
 Enhancements:
 * YAML Path parsing errors are now a little more specific, indicating at which
