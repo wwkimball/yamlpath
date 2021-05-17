@@ -1354,11 +1354,14 @@ class Processor:
         for lhs in collected_ncs:
             unwrapped_lhs = lhs.unwrapped_node
             deepest_lhs = lhs.deepest_node_coord
+            append_node = True
 
             if lhs.wraps_a(dict):
                 if unwrapped_lhs in rem_data:
                     continue
                 for rhs in rem_data:
+                    if lhs.parentref in rhs:
+                        append_node = False
                     if isinstance(rhs, OrderedDict):
                         # Do not drill into OrderedDict results because such
                         # wrapping means the user intends for the ENTIRE dict
@@ -1373,8 +1376,10 @@ class Processor:
             else:
                 if unwrapped_lhs in rem_data:
                     continue
-            updated_coords.append(deepest_lhs)
-            rem_idx += 1
+
+            if append_node:
+                updated_coords.append(deepest_lhs)
+                rem_idx += 1
         for idx, key in rem_dels:
             del updated_coords[idx].deepest_node_coord.node[key]
 
