@@ -456,6 +456,15 @@ class YAMLPath:
                         , yaml_path
                     )
 
+                if collector_level == 0 and segment_id:
+                    # Record its predecessor element; unless it has already
+                    # been identified as a special type, assume it is a KEY.
+                    if segment_type is None:
+                        segment_type = PathSegmentTypes.KEY
+                    path_segments.append(self._expand_splats(
+                        yaml_path, segment_id, segment_type))
+                    segment_id = ""
+
                 seeking_collector_operator = False
                 collector_level += 1
                 demarc_stack.append(char)

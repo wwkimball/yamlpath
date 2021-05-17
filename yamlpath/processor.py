@@ -1303,12 +1303,11 @@ class Processor:
             if isinstance(unwrapped_node, list):
                 for ele in unwrapped_node:
                     del_nodes.append(ele)
+            elif isinstance(node_coord.parent, dict):
+                del_nodes.append(
+                    {node_coord.parentref: unwrapped_node})
             else:
-                if isinstance(node_coord.parent, dict):
-                    del_nodes.append(
-                        {node_coord.parentref: unwrapped_node})
-                else:
-                    del_nodes.append(unwrapped_node)
+                del_nodes.append(unwrapped_node)
 
 
         parent: Any = kwargs.pop("parent", None)
@@ -1317,12 +1316,27 @@ class Processor:
         ancestry: List[AncestryEntry] = kwargs.pop("ancestry", [])
         relay_segment: PathSegment = kwargs.pop("relay_segment")
 
+        expression_path = YAMLPath(peek_path)
+
+        self.logger.debug((
+            "Getting required nodes matching collector sub-path, {}, from:"
+            ).format(peek_path),
+            prefix="Processor::_collector_subtraction:  ",
+            data={
+                "segments": expression_path.unescaped,
+                "data": data})
+
         rem_data: List[Any] = []
         for node_coord in self._get_required_nodes(
-            data, peek_path, 0, parent=parent, parentref=parentref,
+            data, expression_path, 0, parent=parent, parentref=parentref,
             translated_path=translated_path, ancestry=ancestry,
             relay_segment=relay_segment
         ):
+            self.logger.debug((
+                "Extracting node(s) for deletion from collected result:"
+                ),
+                prefix="Processor::_collector_subtraction:  ",
+                data=node_coord)
             get_del_nodes(rem_data, node_coord)
 
         self.logger.debug((
@@ -1403,6 +1417,10 @@ class Processor:
         Raises:  N/A
         """
         if not terms.operation is CollectorOperators.NONE:
+            self.logger.debug((
+                "Processor::_get_nodes_by_collector:  Bailing out -- yielding"
+                " the input data -- because the operation is {}"
+                ).format(terms.operation))
             yield data
             return
 
@@ -1415,12 +1433,17 @@ class Processor:
         segments = yaml_path.escaped
         next_segment_idx = segment_index + 1
         pathseg: PathSegment = segments[segment_index]
+        expression_path = YAMLPath(terms.expression)
 
-        self.logger.debug(
-            "Processor::_get_nodes_by_collector:  Getting required nodes"
-            " matching search expression:  {}".format(terms.expression))
+        self.logger.debug((
+            "Getting required nodes matching collector sub-path, {}, from:"
+            ).format(terms.expression),
+            prefix="Processor::_get_nodes_by_collector:  ",
+            data={
+                "segments": expression_path.unescaped,
+                "data": data})
         for node_coord in self._get_required_nodes(
-            data, YAMLPath(terms.expression), 0, parent=parent,
+            data, expression_path, 0, parent=parent,
             parentref=parentref, translated_path=translated_path,
             ancestry=ancestry, relay_segment=pathseg
         ):
