@@ -1197,8 +1197,9 @@ bad_prices_array:
 
     @pytest.mark.parametrize("yamlpath,results", [
         ("**.Opal[parent()][name()]", ["silicates"]),
-        ("minerals.*.*.mohs_hardness[.>7][parent(2)][name()]", ["Tourmaline", 'Uvarovite']),
-        ("minerals.*.*.[mohs_hardness[1]>7][name()]", ["Tourmaline", 'Uvarovite']),
+        ("minerals.*.*.mohs_hardness[.>7][parent(2)][name()]", ["Tourmaline", "Uvarovite"]),
+        ("minerals.*.*.[mohs_hardness[1]>7][name()]", ["Tourmaline", "Uvarovite"]),
+        ("minerals.*.*(([mohs_hardness[0]>=4])-([mohs_hardness[1]>5]))[name()]", ["Flourite"]),
     ])
     def test_wiki_parent(self, quiet_logger, yamlpath, results):
         yamldata = """---
