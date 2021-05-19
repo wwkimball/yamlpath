@@ -329,6 +329,8 @@ class Parsers:
             return Parsers.jsonify_yaml_data(data.value)
         elif isinstance(data, date):
             return str(data)
+        elif isinstance(data, bytes):
+            return str(data)
         return data
 
     @staticmethod

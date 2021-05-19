@@ -11,6 +11,9 @@ Bug Fixes:
   sub-path -- such as in a Search Expression or Collector -- caused incorrect
   YAML Path parsing.  This usually manifested as a "not an integer index"
   error.
+* Byte strings were causing stack-dumps during JSON serialization; they are now
+  serialized as double-demarcated strings (a ' pair within a " pair) with a b
+  prefix, like:  {"byte_value": "b'BYTEVAL'"}.
 
 Enhancements:
 * YAML Path parsing errors are now a little more specific, indicating at which
