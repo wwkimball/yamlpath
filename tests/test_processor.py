@@ -1028,6 +1028,214 @@ Things:
             match_index += 1
 
     @pytest.mark.parametrize("yamlpath,results", [
+        (r"temperature[. =~ /\d{3}/]", [110, 100, 114]),
+    ])
+    def test_wiki_array_element_searches(self, quiet_logger, yamlpath, results):
+        yamldata = """---
+temperature:
+  - 32
+  - 0
+  - 110
+  - 100
+  - 72
+  - 68
+  - 114
+  - 34
+  - 36
+"""
+        yaml = YAML()
+        processor = Processor(quiet_logger, yaml.load(yamldata))
+        matchidx = 0
+        for node in processor.get_nodes(yamlpath, mustexist=True):
+            assert unwrap_node_coords(node) == results[matchidx]
+            matchidx += 1
+        assert len(results) == matchidx
+
+    @pytest.mark.parametrize("yamlpath,results", [
+        ("consoles[. % SEGA]", ["SEGA Master System", "SEGA Genesis", "SEGA CD", "SEGA 32X", "SEGA Saturn", "SEGA DreamCast"]),
+    ])
+    def test_wiki_collectors(self, quiet_logger, yamlpath, results):
+        yamldata = """---
+consoles:
+  - ColecoVision
+  - Atari 2600
+  - Atari 4800
+  - Nintendo Entertainment System
+  - SEGA Master System
+  - SEGA Genesis
+  - Nintendo SNES
+  - SEGA CD
+  - TurboGrafx 16
+  - SEGA 32X
+  - NeoGeo
+  - SEGA Saturn
+  - Sony PlayStation
+  - Nintendo 64
+  - SEGA DreamCast
+  - Sony PlayStation 2
+  - Microsoft Xbox
+  - Sony PlayStation 3
+  - Nintendo Wii
+  - Microsoft Xbox 360
+  - Sony PlayStation 4
+  - Nintendo Wii-U
+  - Microsoft Xbox One
+  - Microsoft Xbox One S
+  - Sony PlayStation 4 Pro
+  - Microsoft Xbox One X
+  - Nintendo Switch
+"""
+        yaml = YAML()
+        processor = Processor(quiet_logger, yaml.load(yamldata))
+        matchidx = 0
+        for node in processor.get_nodes(yamlpath, mustexist=True):
+            assert unwrap_node_coords(node) == results[matchidx]
+            matchidx += 1
+        assert len(results) == matchidx
+
+    @pytest.mark.parametrize("yamlpath,results", [
+        ("(/standard/setup/action) + (/standard/teardown/action) + (/change/action)", [["Initialize", "Provision", "Deprovision", "Terminate", "Do something", "Do something else"]]),
+        ("(/standard[.!='']/action) + (/change/action)", [["Initialize", "Provision", "Deprovision", "Terminate", "Do something", "Do something else"]]),
+        ("(/standard[.!='']/id) + (/change/id) - (/disabled_ids)", [[0, 1, 2, 4]]),
+    ])
+    def test_wiki_collector_math(self, quiet_logger, yamlpath, results):
+        yamldata = """---
+standard:
+  setup:
+    - id: 0
+      step: 1
+      action: Initialize
+    - id: 1
+      step: 2
+      action: Provision
+  teardown:
+    - id: 2
+      step: 1
+      action: Deprovision
+    - id: 3
+      step: 2
+      action: Terminate
+
+change:
+  - id: 4
+    step: 1
+    action: Do something
+  - id: 5
+    step: 2
+    action: Do something else
+
+rollback:
+  data_error:
+    - id: 6
+      step: 1
+      action: Flush
+  app_error:
+    - id: 7
+      step: 1
+      action: Abend
+    - id: 8
+      step: 2
+      action: Shutdown
+
+disabled_ids:
+  - 3
+  - 5
+  - 8
+"""
+        yaml = YAML()
+        processor = Processor(quiet_logger, yaml.load(yamldata))
+        matchidx = 0
+        for node in processor.get_nodes(yamlpath, mustexist=True):
+            assert unwrap_node_coords(node) == results[matchidx]
+            matchidx += 1
+        assert len(results) == matchidx
+
+    @pytest.mark.parametrize("yamlpath,results", [
+        ("(/list1) + (/list2)", [[1, 2, 3, 4, 5, 6]]),
+        ("(/list1) - (/exclude)", [[1, 2]]),
+        ("(/list2) - (/exclude)", [[5, 6]]),
+        ("(/list1) + (/list2) - (/exclude)", [[1, 2, 5, 6]]),
+        ("((/list1) - (/exclude)) + (/list2)", [[1, 2, 4, 5, 6]]),
+        ("(/list1) + ((/list2) - (/exclude))", [[1, 2, 3, 5, 6]]),
+    ])
+    def test_wiki_collector_order_of_ops(self, quiet_logger, yamlpath, results):
+        yamldata = """---
+list1:
+  - 1
+  - 2
+  - 3
+list2:
+  - 4
+  - 5
+  - 6
+exclude:
+  - 3
+  - 4
+"""
+        yaml = YAML()
+        processor = Processor(quiet_logger, yaml.load(yamldata))
+        matchidx = 0
+        for node in processor.get_nodes(yamlpath, mustexist=True):
+            assert unwrap_node_coords(node) == results[matchidx]
+            matchidx += 1
+        assert len(results) == matchidx
+
+    @pytest.mark.parametrize("yamlpath,results", [
+        ("warriors[power_level > 9000]", [{"name": "Goku Higashi", "power_level": 9001, "style": "Z fight"}]),
+        ("warriors[power_level = 5280]", [
+            {"name": "Chi-chi Shiranui", "power_level": 5280, "style": "Dragon fury"},
+            {"name": "Krillin Bogard", "power_level": 5280, "style": "Fatal ball"}
+        ]),
+    ])
+    def test_wiki_search_array_of_hashes(self, quiet_logger, yamlpath, results):
+        yamldata = """---
+warriors:
+  - name: Chi-chi Shiranui
+    power_level: 5280
+    style: Dragon fury
+  - name: Goku Higashi
+    power_level: 9001
+    style: Z fight
+  - name: Krillin Bogard
+    power_level: 5280
+    style: Fatal ball
+  - name: Bulma Sakazaki
+    power_level: 1024
+    style: Super final
+"""
+        yaml = YAML()
+        processor = Processor(quiet_logger, yaml.load(yamldata))
+        matchidx = 0
+        for node in processor.get_nodes(yamlpath, mustexist=True):
+            assert unwrap_node_coords(node) == results[matchidx]
+            matchidx += 1
+        assert len(results) == matchidx
+
+    @pytest.mark.parametrize("yamlpath,results", [
+        ("contrast_ct[. % bowel]", [0.095, 0.355]),
+    ])
+    def test_wiki_search_key_names(self, quiet_logger, yamlpath, results):
+        yamldata = """---
+contrast_ct:
+  appendicitis: .009
+  colitis: .002
+  diverticulitis: .015
+  gastroenteritis: .007
+  ileus: .227
+  large_bowel_obstruction: .095
+  peptic_ulcer_disease: .007
+  small_bowel_obstruction: .355
+  ulcerative_colitis: .010
+"""
+        yaml = YAML()
+        processor = Processor(quiet_logger, yaml.load(yamldata))
+        matchidx = 0
+        for node in processor.get_nodes(yamlpath, mustexist=True):
+            assert unwrap_node_coords(node) == results[matchidx]
+            matchidx += 1
+        assert len(results) == matchidx
+
+    @pytest.mark.parametrize("yamlpath,results", [
         ("hash_of_hashes.*[!has_child(child_two)]", [{"child_one": "value2.1", "child_three": "value2.3"}]),
         ("/array_of_hashes/*[!has_child(child_two)]", [{"id": "two", "child_one": "value2.1", "child_three": "value2.3"}]),
         ("/hash_of_hashes/*[!has_child(child_two)][name()]", ["two"]),
