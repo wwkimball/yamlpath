@@ -14,9 +14,9 @@ Bug Fixes:
 * Byte strings were causing stack-dumps during JSON serialization; they are now
   serialized as double-demarcated strings (a ' pair within a " pair) with a b
   prefix, like:  {"byte_value": "b'BYTEVAL'"}.
-* Bare Anchor name references were treated as Hash key names when not the very
-  first non-separator character of a YAML Path or immediately following a `]`.
-  So, /my_hash/&my_anchor was not working as expected.
+* Bare Anchor name references were treated as Hash key names when & was not the
+  very first non-separator character of a YAML Path or immediately following a
+  `]`.  So, /my_hash/&my_anchor was not working as expected.
 
 Enhancements:
 * YAML Path parsing errors are now a little more specific, indicating at which
@@ -39,6 +39,12 @@ Enhancements:
   without necessitating use of a `[parent()]` search keyword, which would be
   necessary for example 1 if you wanted to access any key other than "isbn"
   from the matches.
+* YAML Merge Keys can now be accessed directly by Anchor name, yielding the
+  entire original -- pre-merged -- reference Hash.  This has _very limited_
+  utility.  Using this in isolation will only reveal the default values for any
+  referenced keys, ignoring -- perhaps confusingly -- any local overrides.  It
+  can however be helpful when reverse-engineering very complex merge
+  arrangements.
 
 API Changes:
 * The common.nodes utility class now has a generally-useful static method which
