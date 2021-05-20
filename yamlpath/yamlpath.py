@@ -727,6 +727,7 @@ class YAMLPath:
                     segment_id = ""
 
                 segment_type = None
+                seeking_anchor_mark = True
                 continue
 
             segment_id += char

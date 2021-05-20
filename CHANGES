@@ -14,6 +14,9 @@ Bug Fixes:
 * Byte strings were causing stack-dumps during JSON serialization; they are now
   serialized as double-demarcated strings (a ' pair within a " pair) with a b
   prefix, like:  {"byte_value": "b'BYTEVAL'"}.
+* Bare Anchor name references were treated as Hash key names when not the very
+  first non-separator character of a YAML Path or immediately following a `]`.
+  So, /my_hash/&my_anchor was not working as expected.
 
 Enhancements:
 * YAML Path parsing errors are now a little more specific, indicating at which
