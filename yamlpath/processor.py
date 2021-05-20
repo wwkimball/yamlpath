@@ -1009,13 +1009,14 @@ class Processor:
                         and stripped_attrs == ele.anchor.value):
                     yield NodeCoords(ele, data, lstidx, next_translated_path,
                         ancestry + [(data, lstidx)], pathseg)
-        elif isinstance(data, dict):
-            if (hasattr(data, "merge")
+        elif isinstance(data, (CommentedMap, dict)):
+            if (isinstance(data, CommentedMap)
+                and hasattr(data, "merge")
                 and len(data.merge) > 0
             ):
-                all_anchors = {}
+                all_anchors: Dict[str, Any] = {}
                 Anchors.scan_for_anchors(self.data, all_anchors)
-                compare_node = (all_anchors[stripped_attrs]
+                compare_node = (all_anchors[str(stripped_attrs)]
                                 if stripped_attrs in all_anchors
                                 else None)
                 if compare_node:
@@ -1034,8 +1035,7 @@ class Processor:
                             yield NodeCoords(
                                 compare_node, data,
                                 stripped_attrs, next_translated_path,
-                                next_ancestry, pathseg
-                            )
+                                next_ancestry, pathseg)
                             break
 
             for key, val in data.items():
