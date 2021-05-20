@@ -152,6 +152,16 @@ https://github.com/wwkimball/yamlpath/issues.
             "default=auto"))
 
     parser.add_argument(
+        "-l", "--preserve-lhs-comments", action="store_true",
+        help=(
+            "while all comments are normally dicarded during a\n"
+            "merge, this option will attempt to preserve\n"
+            "comments in the left-most YAML_FILE; may produce\n"
+            "unexpected comment-to-data associations or\n"
+            "spurious new-lines and all other document comments\n"
+            "are still discarded"))
+
+    parser.add_argument(
         "-S", "--nostdin", action="store_true",
         help=(
             "Do not implicitly read from STDIN, even when there are\n"

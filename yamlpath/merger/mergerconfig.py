@@ -209,6 +209,12 @@ class MergerConfig:
             return OutputDocTypes.from_str(self.args.document_format)
         return OutputDocTypes.AUTO
 
+    def is_preserving_lhs_comments(self) -> bool:
+        """Indicate whether the user wants LHS comments preserved."""
+        if hasattr(self.args, "preserve_lhs_comments"):
+            return self.args.preserve_lhs_comments
+        return False
+
     def _prepare_user_rules(
         self, proc: Processor, merge_path: YAMLPath, section: str,
         collector: dict

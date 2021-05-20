@@ -50,16 +50,18 @@ class Merger:
         Raises:  N/A
         """
         self.logger: ConsolePrinter = logger
-        self.data: Any = lhs
         self.config: MergerConfig = config
+        self.data: Any = lhs
 
         # ryamel.yaml unfortunately tracks comments AFTER each YAML node.  As
         # such, it is impossible to copy comments from RHS to LHS in any
         # sensible way.  Trying leads to absurd merge results that are data-
         # accurate but comment-insane.  This ruamel.yaml design decision forces
         # me to simply delete all comments from all merge documents to produce
-        # a sensible result.
-        Parsers.delete_all_comments(self.data)
+        # a sensible result.  That said, enable users to attempt to preserve
+        # LHS comments.
+        if not self.config.is_preserving_lhs_comments():
+            Parsers.delete_all_comments(self.data)
 
     @property
     def data(self) -> Any:
@@ -69,7 +71,8 @@ class Merger:
     @data.setter
     def data(self, value: Any) -> None:
         """Document data being merged into (mutator)."""
-        Parsers.delete_all_comments(value)
+        if not self.config.is_preserving_lhs_comments():
+            Parsers.delete_all_comments(value)
         self._data = value
 
     def _delete_mergeref_keys(self, data: CommentedMap) -> None:
