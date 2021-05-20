@@ -1010,6 +1010,34 @@ class Processor:
                     yield NodeCoords(ele, data, lstidx, next_translated_path,
                         ancestry + [(data, lstidx)], pathseg)
         elif isinstance(data, dict):
+            if (hasattr(data, "merge")
+                and len(data.merge) > 0
+            ):
+                all_anchors = {}
+                Anchors.scan_for_anchors(self.data, all_anchors)
+                compare_node = (all_anchors[stripped_attrs]
+                                if stripped_attrs in all_anchors
+                                else None)
+                if compare_node:
+                    for merge_tuple in data.merge:
+                        merge_node = merge_tuple[1]
+                        self.logger.debug((
+                            "Comparing YAML Merge Key against ANCHOR node {}:"
+                            ).format(stripped_attrs),
+                            prefix="Processor::_get_nodes_by_anchor:  ",
+                            data={
+                                "merge_node": merge_node,
+                                "anchor_node": compare_node
+                            })
+                        if merge_node == compare_node:
+                            next_ancestry = ancestry + [(data, merge_node)]
+                            yield NodeCoords(
+                                compare_node, data,
+                                stripped_attrs, next_translated_path,
+                                next_ancestry, pathseg
+                            )
+                            break
+
             for key, val in data.items():
                 next_ancestry = ancestry + [(data, key)]
                 if (hasattr(key, "anchor")
