@@ -212,7 +212,8 @@ class MergerConfig:
     def is_preserving_lhs_comments(self) -> bool:
         """Indicate whether the user wants LHS comments preserved."""
         if hasattr(self.args, "preserve_lhs_comments"):
-            return self.args.preserve_lhs_comments
+            is_preserving: bool = self.args.preserve_lhs_comments
+            return is_preserving
         return False
 
     def _prepare_user_rules(
