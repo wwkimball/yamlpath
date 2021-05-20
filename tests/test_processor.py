@@ -1028,6 +1028,61 @@ Things:
             match_index += 1
 
     @pytest.mark.parametrize("yamlpath,results", [
+        ("reuse1.key12", ["overridden value in reuse1 for definition1"]),
+        ("reuse1.&alias_name1.key12", ["value12"]),
+        ("reuse1[&alias_name1].key12", ["value12"]),
+    ])
+    def test_yaml_merge_keys_access(self, quiet_logger, yamlpath, results):
+        yamldata = """---
+definition1: &alias_name1
+  key11: value11
+  key12: value12
+
+definition2: &alias_name2
+  key21: value21
+  key22: value22
+
+compound_definition: &alias_name3
+  <<: [ *alias_name1, *alias_name2 ]
+  key31: value31
+  key32: value32
+
+reuse1: &alias_name4
+  <<: *alias_name1
+  key1: new key in reuse1
+  key12: overridden value in reuse1 for definition1
+
+reuse2: &alias_name5
+  <<: [*alias_name1, *alias_name2 ]
+  key2: new key in reuse2
+
+reuse3: &alias_name6
+  <<: *alias_name3
+  key3: new key3 in reuse3
+  key4: new key4 in reuse3
+
+re_reuse1:
+  <<: *alias_name4
+  re_key1: new key in re_reuse1
+  key1: override key from reuse1
+  key12: override overridden key from reuse1
+
+re_reuse2:
+  <<: *alias_name6
+  re_key2: new key in re_reuse2
+  key3: override key from reuse3
+  key31: override key from compound_definition
+  key12: override key from definition1
+"""
+        yaml = YAML()
+        processor = Processor(quiet_logger, yaml.load(yamldata))
+        matchidx = 0
+        for node in processor.get_nodes(yamlpath, mustexist=True):
+            assert unwrap_node_coords(node) == results[matchidx]
+            matchidx += 1
+        assert len(results) == matchidx
+
+    @pytest.mark.parametrize("yamlpath,results", [
         (r"temperature[. =~ /\d{3}/]", [110, 100, 114]),
     ])
     def test_wiki_array_element_searches(self, quiet_logger, yamlpath, results):
