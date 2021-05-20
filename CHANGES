@@ -45,6 +45,14 @@ Enhancements:
   referenced keys, ignoring -- perhaps confusingly -- any local overrides.  It
   can however be helpful when reverse-engineering very complex merge
   arrangements.
+* The yaml-merge command-line tool (and the underlying Merger class) now offer
+  an option to preserve LHS document comments.  USE WITH CAUTION.  At present,
+  comment handling during a merge is unwieldy, so some comments or new-line
+  characters may appear to become divorced from nodes they should obviously be
+  attached to.  As such, the default behavior of the merge engine will continue
+  to be removal of all comments.  At this time, RHS document comments will
+  still be discarded during merge operations.  This will be revisited when
+  ruamel.yaml refactors how YAML comments are handled.
 
 API Changes:
 * The common.nodes utility class now has a generally-useful static method which
