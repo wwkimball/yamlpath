@@ -57,6 +57,8 @@ Enhancements:
 * The [has_child(NAME)] Search Keyword now accepts an &NAME form of its first
   (only) parameter.  This switches the function to match against Anchor/Alias
   names, including YAML Merge Keys.
+* YAML Merge Keys can now be deleted by their Anchor/Alias name via the
+  yaml-set command-line tool and the underlying Processor class.
 
 API Changes:
 * The common.nodes utility class now has a generally-useful static method which
