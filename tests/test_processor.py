@@ -1083,6 +1083,75 @@ re_reuse2:
         assert len(results) == matchidx
 
     @pytest.mark.parametrize("yamlpath,results", [
+        ("/list*[has_child(&anchored_value)][name()]", ["list_matches"]),
+        ("/list*[!has_child(&anchored_value)][name()]", ["list_no_match"]),
+        ("/hash*[has_child(&anchored_hash)][name()]", ["hash_ymk_matches"]),
+        ("/hash*[!has_child(&anchored_hash)][name()]", ["hash_key_matches", "hash_val_matches", "hash_no_match"]),
+        ("/hash*[has_child(&anchored_key)][name()]", ["hash_key_matches"]),
+        ("/hash*[!has_child(&anchored_key)][name()]", ["hash_ymk_matches", "hash_val_matches", "hash_no_match"]),
+        ("/hash*[has_child(&anchored_value)][name()]", ["hash_val_matches"]),
+        ("/hash*[!has_child(&anchored_value)][name()]", ["hash_key_matches", "hash_ymk_matches", "hash_no_match"]),
+        ("/aoh[has_child(&anchored_hash)]/intent", ["hash_match"]),
+        ("/aoh[!has_child(&anchored_hash)]/intent", ["no_match"]),
+        ("/aoa/*[has_child(&anchored_value)][name()]", [0]),
+        ("/aoa/*[!has_child(&anchored_value)][name()]", [1]),
+    ])
+    def test_yaml_merge_key_queries(self, quiet_logger, yamlpath, results):
+        yamldata = """---
+aliases:
+  - &anchored_key anchored_key
+  - &anchored_value This value is Anchored
+
+anchored_hash: &anchored_hash
+  default_key_1: Some default value
+  default_key_2: Another default value
+
+list_matches:
+  - l1e1
+  - *anchored_value
+
+list_no_match:
+  - l2e1
+  - l2e2
+
+hash_key_matches:
+  *anchored_key : A dynamic key-name for a static value
+  static_key: A static key-name with a static value
+
+hash_ymk_matches:
+  <<: *anchored_hash
+  h1k1: An implementation value
+
+hash_val_matches:
+  k2k1: *anchored_value
+  k2k2: static value
+
+hash_no_match:
+  h2k1: A value
+  h2k2: Another value
+
+aoh:
+  - intent: hash_match
+    <<: *anchored_hash
+  - intent: no_match
+    aohk1: non-matching value
+  - null
+
+aoa:
+  - - 0.0
+    - *anchored_value
+  - - 1.0
+    - 1.1
+"""
+        yaml = YAML()
+        processor = Processor(quiet_logger, yaml.load(yamldata))
+        matchidx = 0
+        for node in processor.get_nodes(yamlpath, mustexist=True):
+            assert unwrap_node_coords(node) == results[matchidx]
+            matchidx += 1
+        assert len(results) == matchidx
+
+    @pytest.mark.parametrize("yamlpath,results", [
         (r"temperature[. =~ /\d{3}/]", [110, 100, 114]),
     ])
     def test_wiki_array_element_searches(self, quiet_logger, yamlpath, results):

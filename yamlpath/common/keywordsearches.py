@@ -107,10 +107,10 @@ class KeywordSearches:
         match_key = parameters[0]
 
         if match_key[0] == "&":
-            matches = KeywordSearches.has_anchored_child(
+            matches = KeywordSearches._has_anchored_child(
                 data, invert, parameters, yaml_path, **kwargs)
         else:
-            matches = KeywordSearches.has_concrete_child(
+            matches = KeywordSearches._has_concrete_child(
                 data, invert, parameters, yaml_path, **kwargs)
 
         for match in matches:
@@ -118,7 +118,7 @@ class KeywordSearches:
 
     @staticmethod
     # pylint: disable=locally-disabled,too-many-locals
-    def has_concrete_child(
+    def _has_concrete_child(
         data: Any, invert: bool, parameters: List[str], yaml_path: YAMLPath,
         **kwargs: Any
     ) -> Generator[NodeCoords, None, None]:
@@ -151,14 +151,6 @@ class KeywordSearches:
         ancestry: List[AncestryEntry] = kwargs.pop("ancestry", [])
         relay_segment: PathSegment = kwargs.pop("relay_segment", None)
 
-        # There must be exactly one parameter
-        param_count = len(parameters)
-        if param_count != 1:
-            raise YAMLPathException(
-                ("Invalid parameter count to {}; {} required, got {} in"
-                 " YAML Path").format(
-                     PathSearchKeywords.HAS_CHILD, 1, param_count),
-                str(yaml_path))
         match_key = parameters[0]
 
         # Against a map, this will return nodes which have an immediate
@@ -184,7 +176,7 @@ class KeywordSearches:
             if yc.Nodes.node_is_aoh(data):
                 for idx, ele in enumerate(data):
                     next_path = translated_path.append("[{}]".format(str(idx)))
-                    for aoh_match in KeywordSearches.has_concrete_child(
+                    for aoh_match in KeywordSearches._has_concrete_child(
                         ele, invert, parameters, yaml_path,
                         parent=data, parentref=idx, translated_path=next_path
                     ):
@@ -212,8 +204,8 @@ class KeywordSearches:
                 str(yaml_path))
 
     @staticmethod
-    # pylint: disable=locally-disabled,too-many-locals,too-many-branches
-    def has_anchored_child(
+    # pylint: disable=locally-disabled,too-many-locals,too-many-branches,too-many-statements
+    def _has_anchored_child(
         data: Any, invert: bool, parameters: List[str], yaml_path: YAMLPath,
         **kwargs: Any
     ) -> Generator[NodeCoords, None, None]:
@@ -246,21 +238,14 @@ class KeywordSearches:
         ancestry: List[AncestryEntry] = kwargs.pop("ancestry", [])
         relay_segment: PathSegment = kwargs.pop("relay_segment", None)
 
-        # There must be exactly one parameter
-        param_count = len(parameters)
-        if param_count != 1:
-            raise YAMLPathException(
-                ("Invalid parameter count to {}; {} required, got {} in"
-                 " YAML Path").format(
-                     PathSearchKeywords.HAS_CHILD, 1, param_count),
-                str(yaml_path))
         match_key = parameters[0]
         anchor_name = match_key[1:] if match_key[0] == "&" else match_key
 
         if isinstance(data, CommentedMap):
             # Look for YAML Merge Keys by the Anchor name
+            all_data = ancestry[0][0] if len(ancestry) > 0 else data
             all_anchors: Dict[str, Any] = {}
-            yc.Anchors.scan_for_anchors(ancestry[0][0], all_anchors)
+            yc.Anchors.scan_for_anchors(all_data, all_anchors)
             compare_node = (all_anchors[anchor_name]
                             if anchor_name in all_anchors
                             else None)
@@ -312,12 +297,13 @@ class KeywordSearches:
                     continue
 
                 next_path = translated_path.append("[{}]".format(str(idx)))
-                for aoh_match in KeywordSearches.has_anchored_child(
+                next_ancestry = ancestry + [(data, idx)]
+                for aoh_match in KeywordSearches._has_anchored_child(
                     ele, invert, parameters, yaml_path,
-                    parent=data, parentref=idx, translated_path=next_path
+                    parent=data, parentref=idx, translated_path=next_path,
+                    ancestry=next_ancestry
                 ):
                     yield aoh_match
-            return
 
         elif isinstance(data, list):
             child_present = False
