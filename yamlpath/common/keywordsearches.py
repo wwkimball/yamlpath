@@ -12,11 +12,11 @@ from ruamel.yaml.comments import CommentedMap
 
 from yamlpath.types import AncestryEntry, PathSegment
 from yamlpath.enums import PathSearchKeywords, PathSearchMethods
+from yamlpath.common import Anchors, Nodes, Searches
 from yamlpath.path import SearchKeywordTerms
 from yamlpath.exceptions import YAMLPathException
 from yamlpath.wrappers import NodeCoords
 from yamlpath import YAMLPath
-import yamlpath.common as yc
 
 class KeywordSearches:
     """Helper methods for common data searching operations."""
@@ -173,7 +173,7 @@ class KeywordSearches:
             # Against an AoH, this will scan each element's immediate children,
             # treating and yielding as if this search were performed directly
             # against each map in the list.
-            if yc.Nodes.node_is_aoh(data):
+            if Nodes.node_is_aoh(data):
                 for idx, ele in enumerate(data):
                     next_path = translated_path.append("[{}]".format(str(idx)))
                     for aoh_match in KeywordSearches._has_concrete_child(
@@ -245,7 +245,7 @@ class KeywordSearches:
             # Look for YAML Merge Keys by the Anchor name
             all_data = ancestry[0][0] if len(ancestry) > 0 else data
             all_anchors: Dict[str, Any] = {}
-            yc.Anchors.scan_for_anchors(all_data, all_anchors)
+            Anchors.scan_for_anchors(all_data, all_anchors)
             compare_node = (all_anchors[anchor_name]
                             if anchor_name in all_anchors
                             else None)
@@ -274,8 +274,8 @@ class KeywordSearches:
             else:
                 child_present = False
                 for (key, val) in data.items():
-                    key_anchor = yc.Anchors.get_node_anchor(key)
-                    val_anchor = yc.Anchors.get_node_anchor(val)
+                    key_anchor = Anchors.get_node_anchor(key)
+                    val_anchor = Anchors.get_node_anchor(val)
                     if key_anchor and key_anchor == anchor_name:
                         child_present = True
                         break
@@ -291,7 +291,7 @@ class KeywordSearches:
                         data, parent, parentref, translated_path,
                         ancestry, relay_segment)
 
-        elif yc.Nodes.node_is_aoh(data, accept_nulls=True):
+        elif Nodes.node_is_aoh(data, accept_nulls=True):
             for idx, ele in enumerate(data):
                 if ele is None:
                     continue
@@ -308,7 +308,7 @@ class KeywordSearches:
         elif isinstance(data, list):
             child_present = False
             for ele in data:
-                ele_anchor = yc.Anchors.get_node_anchor(ele)
+                ele_anchor = Anchors.get_node_anchor(ele)
                 if ele_anchor and ele_anchor == anchor_name:
                     child_present = True
                     break
@@ -423,7 +423,7 @@ class KeywordSearches:
         match_nodes: List[NodeCoords] = []
         discard_nodes: List[NodeCoords] = []
         unwrapped_data: Any = NodeCoords.unwrap_node_coords(data)
-        if yc.Nodes.node_is_aoh(
+        if Nodes.node_is_aoh(
             unwrapped_data, accept_nulls=True
         ):
             # A named child node is mandatory
@@ -441,7 +441,7 @@ class KeywordSearches:
                 if ele is not None and scan_node in ele:
                     eval_val = ele[scan_node]
                     if (match_value is None
-                        or yc.Searches.search_matches(
+                        or Searches.search_matches(
                             PathSearchMethods.GREATER_THAN, match_value,
                             eval_val)
                     ):
@@ -455,7 +455,7 @@ class KeywordSearches:
                         continue
 
                     if (match_value is None
-                        or yc.Searches.search_matches(
+                        or Searches.search_matches(
                             PathSearchMethods.EQUALS, match_value,
                             eval_val)
                     ):
@@ -486,7 +486,7 @@ class KeywordSearches:
                     if val is not None and scan_node in val:
                         eval_val = val[scan_node]
                         if (match_value is None
-                            or yc.Searches.search_matches(
+                            or Searches.search_matches(
                                 PathSearchMethods.GREATER_THAN, match_value,
                                 eval_val)
                         ):
@@ -500,7 +500,7 @@ class KeywordSearches:
                             continue
 
                         if (match_value is None
-                            or yc.Searches.search_matches(
+                            or Searches.search_matches(
                                 PathSearchMethods.EQUALS, match_value,
                                 eval_val)
                         ):
@@ -540,7 +540,7 @@ class KeywordSearches:
                 if (ele is not None
                     and (
                         match_value is None or
-                        yc.Searches.search_matches(
+                        Searches.search_matches(
                             PathSearchMethods.GREATER_THAN, match_value,
                             ele)
                 )):
@@ -554,7 +554,7 @@ class KeywordSearches:
                     continue
 
                 if (ele is not None
-                    and yc.Searches.search_matches(
+                    and Searches.search_matches(
                         PathSearchMethods.EQUALS, match_value,
                         ele)
                 ):
@@ -630,7 +630,7 @@ class KeywordSearches:
         match_nodes: List[NodeCoords] = []
         discard_nodes: List[NodeCoords] = []
         unwrapped_data: Any = NodeCoords.unwrap_node_coords(data)
-        if yc.Nodes.node_is_aoh(
+        if Nodes.node_is_aoh(
             unwrapped_data, accept_nulls=True
         ):
             # A named child node is mandatory
@@ -648,7 +648,7 @@ class KeywordSearches:
                 if ele is not None and scan_node in ele:
                     eval_val = ele[scan_node]
                     if (match_value is None
-                        or yc.Searches.search_matches(
+                        or Searches.search_matches(
                             PathSearchMethods.LESS_THAN, match_value,
                             eval_val)
                     ):
@@ -662,7 +662,7 @@ class KeywordSearches:
                         continue
 
                     if (match_value is None
-                        or yc.Searches.search_matches(
+                        or Searches.search_matches(
                             PathSearchMethods.EQUALS, match_value,
                             eval_val)
                     ):
@@ -693,7 +693,7 @@ class KeywordSearches:
                     if val is not None and scan_node in val:
                         eval_val = val[scan_node]
                         if (match_value is None
-                            or yc.Searches.search_matches(
+                            or Searches.search_matches(
                                 PathSearchMethods.LESS_THAN, match_value,
                                 eval_val)
                         ):
@@ -707,7 +707,7 @@ class KeywordSearches:
                             continue
 
                         if (match_value is None
-                            or yc.Searches.search_matches(
+                            or Searches.search_matches(
                                 PathSearchMethods.EQUALS, match_value,
                                 eval_val)
                         ):
@@ -747,7 +747,7 @@ class KeywordSearches:
                 if (ele is not None
                     and (
                         match_value is None or
-                        yc.Searches.search_matches(
+                        Searches.search_matches(
                             PathSearchMethods.LESS_THAN, match_value,
                             ele)
                 )):
@@ -761,7 +761,7 @@ class KeywordSearches:
                     continue
 
                 if (ele is not None
-                    and yc.Searches.search_matches(
+                    and Searches.search_matches(
                         PathSearchMethods.EQUALS, match_value,
                         ele)
                 ):
