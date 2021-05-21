@@ -306,8 +306,11 @@ class KeywordSearches:
                         data, parent, parentref, translated_path,
                         ancestry, relay_segment)
 
-        elif yc.Nodes.node_is_aoh(data):
+        elif yc.Nodes.node_is_aoh(data, True):
             for idx, ele in enumerate(data):
+                if ele is None:
+                    continue
+
                 next_path = translated_path.append("[{}]".format(str(idx)))
                 for aoh_match in KeywordSearches.has_anchored_child(
                     ele, invert, parameters, yaml_path,
@@ -315,6 +318,22 @@ class KeywordSearches:
                 ):
                     yield aoh_match
             return
+
+        elif isinstance(data, list):
+            child_present = False
+            for ele in data:
+                ele_anchor = yc.Anchors.get_node_anchor(ele)
+                if ele_anchor and ele_anchor == anchor_name:
+                    child_present = True
+                    break
+
+            if (
+                (invert and not child_present) or
+                (child_present and not invert)
+            ):
+                yield NodeCoords(
+                    data, parent, parentref, translated_path,
+                    ancestry, relay_segment)
 
     @staticmethod
     # pylint: disable=locally-disabled,too-many-locals
