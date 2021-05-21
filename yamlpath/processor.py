@@ -615,6 +615,7 @@ class Processor:
             node = delete_nc.node
             parent = delete_nc.parent
             parentref = delete_nc.parentref
+            ancestry = delete_nc.ancestry
             self.logger.debug(
                 "Deleting node:",
                 prefix="yaml_set::delete_nodes:  ",
@@ -628,7 +629,29 @@ class Processor:
             elif isinstance(node, NodeCoords):
                 self._delete_nodes([node])
             elif isinstance(parent, dict):
-                if parentref in parent:
+                all_data = ancestry[0][0] if len(ancestry) > 0 else parent
+                all_anchors: Dict[str, Any] = {}
+                Anchors.scan_for_anchors(all_data, all_anchors)
+                compare_node = (all_anchors[parentref]
+                                if parentref in all_anchors
+                                else None)
+                is_ymk_anchor = (
+                    compare_node is not None
+                    and isinstance(compare_node, dict))
+
+                if is_ymk_anchor:
+                    if hasattr(parent, "merge") and len(parent.merge) > 0:
+                        remove_nodes = None
+                        for (midx, merge_node) in parent.merge:
+                            if merge_node == compare_node:
+                                remove_nodes = merge_node
+                                del parent.merge[midx]
+                                break
+                        if remove_nodes:
+                            for (key, val) in remove_nodes.items():
+                                if key in parent and parent[key] == val:
+                                    del parent[key]
+                elif parentref in parent:
                     del parent[parentref]
             elif isinstance(parent, list):
                 if len(parent) > parentref:
