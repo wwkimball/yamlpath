@@ -218,7 +218,7 @@ class KeywordSearches:
         **kwargs: Any
     ) -> Generator[NodeCoords, None, None]:
         """
-        Indicate whether data has a named child.
+        Indicate whether data has an anchored child.
 
         Parameters:
         1. data (Any) The data to evaluate
@@ -286,11 +286,15 @@ class KeywordSearches:
                     return
 
             # Look for Anchored keys; include merged nodes
-            if not is_ymk_anchor:
+            else:
                 child_present = False
-                for (key, _) in data.items():
+                for (key, val) in data.items():
                     key_anchor = yc.Anchors.get_node_anchor(key)
+                    val_anchor = yc.Anchors.get_node_anchor(val)
                     if key_anchor and key_anchor == anchor_name:
+                        child_present = True
+                        break
+                    elif val_anchor and val_anchor == anchor_name:
                         child_present = True
                         break
 
