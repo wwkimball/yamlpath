@@ -54,10 +54,9 @@ Enhancements:
   of all comments.  At this time, RHS document comments will still be discarded
   during merge operations.  This will be revisited when ruamel.yaml refactors
   how YAML comments are handled.
-* The [has_key(NAME)] Search Keyword now accepts an &NAME form of its first
-  (only) parameter.  This switches the function to look only at Aliased keys
-  and YAML Merge Keys.  As a key-centric evaluation, Anchored/Aliased values --
-  including scalar Array elements -- are ignored.
+* The [has_child(NAME)] Search Keyword now accepts an &NAME form of its first
+  (only) parameter.  This switches the function to match against Anchor/Alias
+  names, including YAML Merge Keys.
 
 API Changes:
 * The common.nodes utility class now has a generally-useful static method which
