@@ -361,6 +361,77 @@ class Processor:
 
         return anchor_node
 
+    def ymk_nodes(
+        self, yaml_path: Union[YAMLPath, str],
+        anchor_path: Union[YAMLPath, str], **kwargs: Any
+    ) -> None:
+        """Add a YAML Merge Key to YAML Path specified nodes."""
+        pathsep: PathSeperators = kwargs.pop("pathsep", PathSeperators.AUTO)
+        anchor_name: str = kwargs.pop("anchor_name", "")
+
+        if self.data is None:
+            self.logger.debug(
+                "Refusing to set a YAML Merge Key to nodes in a null"
+                " document!",
+                prefix="Processor::ymk_nodes:  ", data=self.data)
+            return
+
+        if isinstance(yaml_path, str):
+            yaml_path = YAMLPath(yaml_path, pathsep)
+        elif pathsep is not PathSeperators.AUTO:
+            yaml_path.seperator = pathsep
+
+        anchor_node = self._get_anchor_node(
+            anchor_path, pathsep=pathsep, anchor_name=anchor_name)
+
+        gathered_nodes: List[NodeCoords] = []
+        for node_coords in self._get_required_nodes(self.data, yaml_path):
+            self.logger.debug(
+                "Gathered node for YAML Merge Key assignment:",
+                prefix="Processor::ymk_nodes:  ", data=node_coords)
+            gathered_nodes.append(node_coords)
+
+        if len(gathered_nodes) > 0:
+            self._ymk_nodes(gathered_nodes, anchor_node)
+
+    def ymk_gathered_nodes(
+        self, gathered_nodes: List[NodeCoords],
+        anchor_path: Union[YAMLPath, str], **kwargs: Any
+    ) -> None:
+        """Add a YAML Merge Key to pre-gathered nodes."""
+        pathsep: PathSeperators = kwargs.pop("pathsep", PathSeperators.AUTO)
+        anchor_name: str = kwargs.pop("anchor_name", "")
+
+        if self.data is None:
+            self.logger.debug(
+                "Refusing to set a YAML Merge Key to nodes in a null"
+                " document!",
+                prefix="Processor::ymk_gathered_nodes:  ", data=self.data)
+            return
+
+        anchor_node = self._get_anchor_node(
+            anchor_path, pathsep=pathsep, anchor_name=anchor_name)
+
+        if gathered_nodes:
+            self._ymk_nodes(gathered_nodes, anchor_node)
+
+    def _ymk_nodes(
+        self, gathered_nodes: List[NodeCoords], anchor_node: Any
+    ) -> None:
+        """Add a YAML Merge Key to nodes."""
+        anchor_name = anchor_node.anchor.value
+        for node_coord in gathered_nodes:
+            self.logger.debug(
+                "Attempting to add YAML Merge Key for node to {}:"
+                .format(anchor_name),
+                data=node_coord,
+                prefix="yaml_set::_ymk_nodes:  ")
+            node = node_coord.node
+            refs = node.merge if hasattr(node, "merge") else []
+            nidx = len(refs)
+            ykey = (nidx, anchor_node)
+            node_coord.node.add_yaml_merge([ykey])
+
     def alias_nodes(
         self, yaml_path: Union[YAMLPath, str],
         anchor_path: Union[YAMLPath, str], **kwargs: Any
@@ -411,7 +482,7 @@ class Processor:
         for node_coords in self._get_required_nodes(self.data, yaml_path):
             self.logger.debug(
                 "Gathered node for YAML Alias assignment:",
-                prefix="Processor::delete_nodes:  ", data=node_coords)
+                prefix="Processor::alias_nodes:  ", data=node_coords)
             gathered_nodes.append(node_coords)
 
         if len(gathered_nodes) > 0:
