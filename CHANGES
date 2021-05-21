@@ -16,7 +16,7 @@ Bug Fixes:
   prefix, like:  {"byte_value": "b'BYTEVAL'"}.
 * Bare Anchor name references were treated as Hash key names when & was not the
   very first non-separator character of a YAML Path or immediately following a
-  `]`.  So, /my_hash/&my_anchor was not working as expected.
+  `[`.  So, /my_hash/&my_anchor was not working as expected.
 
 Enhancements:
 * YAML Path parsing errors are now a little more specific, indicating at which
@@ -59,6 +59,10 @@ Enhancements:
   names, including YAML Merge Keys.
 * YAML Merge Keys can now be deleted by their Anchor/Alias name via the
   yaml-set command-line tool and the underlying Processor class.
+* YAML Merge Keys can now be created, offering run-time merging of
+  same-document Hash data.  The yaml-set command-line tool offers a new option,
+  --mergekey, which applies to --change targets the new YAML Merge Key, as long
+  as each target is a Hash.
 
 API Changes:
 * The common.nodes utility class now has a generally-useful static method which
