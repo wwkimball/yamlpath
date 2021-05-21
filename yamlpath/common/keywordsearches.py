@@ -6,7 +6,7 @@ pre-defined keywords (in the programming language sense).
 
 Copyright 2020 William W. Kimball, Jr. MBA MSIS
 """
-from typing import Any, Generator, List
+from typing import Any, Dict, Generator, List
 
 from ruamel.yaml.comments import CommentedMap
 
@@ -212,7 +212,7 @@ class KeywordSearches:
                 str(yaml_path))
 
     @staticmethod
-    # pylint: disable=locally-disabled,too-many-locals
+    # pylint: disable=locally-disabled,too-many-locals,too-many-branches
     def has_anchored_child(
         data: Any, invert: bool, parameters: List[str], yaml_path: YAMLPath,
         **kwargs: Any
@@ -294,7 +294,7 @@ class KeywordSearches:
                     if key_anchor and key_anchor == anchor_name:
                         child_present = True
                         break
-                    elif val_anchor and val_anchor == anchor_name:
+                    if val_anchor and val_anchor == anchor_name:
                         child_present = True
                         break
 
@@ -306,7 +306,7 @@ class KeywordSearches:
                         data, parent, parentref, translated_path,
                         ancestry, relay_segment)
 
-        elif yc.Nodes.node_is_aoh(data, True):
+        elif yc.Nodes.node_is_aoh(data, accept_nulls=True):
             for idx, ele in enumerate(data):
                 if ele is None:
                     continue
