@@ -1303,6 +1303,80 @@ devices:
             filedat = fhnd.read()
         assert filedat == yamlout
 
+    def test_yaml_merge_keys_delete(self, script_runner, tmp_path_factory):
+        # Based on contributed data from:  https://github.com/dwapstra
+        yamlin = """---
+device_defaults: &device_defaults
+  os: unknown
+  type: unknown
+  platform: unknown
+  notes: N/A
+
+devices:
+  R1:
+    <<: *device_defaults
+    os: ios
+    type: router
+    platform: asr1k
+  R2:
+    type: switch
+    platform: cat3k
+  R3:
+    <<: *device_defaults
+    type: access-point
+    platform: wrt
+    os:
+  R4:
+    <<: *device_defaults
+    type: tablet
+    os: null
+    platform: java
+  R5:
+    type: tablet
+    os: ""
+    platform: objective-c
+"""
+        yamlout = """---
+device_defaults:
+  os: unknown
+  type: unknown
+  platform: unknown
+  notes: N/A
+
+devices:
+  R1:
+    os: ios
+    type: router
+    platform: asr1k
+  R2:
+    type: switch
+    platform: cat3k
+  R3:
+    type: access-point
+    platform: wrt
+    os:
+  R4:
+    type: tablet
+    os:
+    platform: java
+  R5:
+    type: tablet
+    os: ""
+    platform: objective-c
+"""
+        yaml_file = create_temp_yaml_file(tmp_path_factory, yamlin)
+        result = script_runner.run(
+            self.command,
+            "--change=/devices/*/&device_defaults",
+            "--delete",
+            yaml_file
+        )
+        assert result.success, result.stderr
+
+        with open(yaml_file, 'r') as fhnd:
+            filedat = fhnd.read()
+        assert filedat == yamlout
+
     def test_change_key_name_good(self, script_runner, tmp_path_factory):
         yamlin = """---
 key:  value

@@ -611,6 +611,7 @@ class Processor:
         - `YAMLPathException` when the operation would destroy the entire
            document
         """
+        # pylint: disable=locally-disabled,too-many-nested-blocks
         for delete_nc in reversed(delete_nodes):
             node = delete_nc.node
             parent = delete_nc.parent
@@ -628,7 +629,7 @@ class Processor:
                 self._delete_nodes(node)
             elif isinstance(node, NodeCoords):
                 self._delete_nodes([node])
-            elif isinstance(parent, dict):
+            elif isinstance(parent, (CommentedMap, dict)):
                 all_data = ancestry[0][0] if len(ancestry) > 0 else parent
                 all_anchors: Dict[str, Any] = {}
                 Anchors.scan_for_anchors(all_data, all_anchors)
@@ -639,18 +640,18 @@ class Processor:
                     compare_node is not None
                     and isinstance(compare_node, dict))
 
-                if is_ymk_anchor:
-                    if hasattr(parent, "merge") and len(parent.merge) > 0:
-                        remove_nodes = None
-                        for (midx, merge_node) in parent.merge:
-                            if merge_node == compare_node:
-                                remove_nodes = merge_node
-                                del parent.merge[midx]
-                                break
-                        if remove_nodes:
-                            for (key, val) in remove_nodes.items():
+                if (is_ymk_anchor
+                    and isinstance(parent, CommentedMap)
+                    and hasattr(parent, "merge")
+                    and len(parent.merge) > 0
+                ):
+                    for (midx, merge_node) in parent.merge:
+                        if merge_node == compare_node:
+                            for (key, val) in merge_node.items():
                                 if key in parent and parent[key] == val:
                                     del parent[key]
+                            del parent.merge[midx]
+                            break
                 elif parentref in parent:
                     del parent[parentref]
             elif isinstance(parent, list):
