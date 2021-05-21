@@ -440,12 +440,12 @@ def _alias_nodes(
         log.critical(ex, 1)
 
 def _ymk_nodes(
-    log, processor, assign_to_nodes, anchor_path, anchor_name
+    log, processor, assign_to_nodes, anchor_path, anchor_name, target_path
 ):
     """Assign YAML Aliases to the target nodes."""
     try:
         processor.ymk_gathered_nodes(
-            assign_to_nodes, anchor_path, anchor_name=anchor_name)
+            assign_to_nodes, anchor_path, target_path, anchor_name=anchor_name)
     except YAMLPathException as ex:
         log.critical(ex, 1)
 
@@ -602,7 +602,7 @@ def main():
         # points to.
         _ymk_nodes(
             log, processor, change_node_coordinates, args.mergekey,
-            args.anchor)
+            args.anchor, change_path)
     elif args.eyamlcrypt:
         # If the user hasn't specified a format, use the same format as the
         # value being replaced, if known.

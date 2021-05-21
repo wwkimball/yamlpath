@@ -363,7 +363,8 @@ class Processor:
 
     def ymk_nodes(
         self, yaml_path: Union[YAMLPath, str],
-        anchor_path: Union[YAMLPath, str], **kwargs: Any
+        anchor_path: Union[YAMLPath, str], target_path: Union[YAMLPath, str],
+        **kwargs: Any
     ) -> None:
         """Add a YAML Merge Key to YAML Path specified nodes."""
         pathsep: PathSeperators = kwargs.pop("pathsep", PathSeperators.AUTO)
@@ -392,11 +393,12 @@ class Processor:
             gathered_nodes.append(node_coords)
 
         if len(gathered_nodes) > 0:
-            self._ymk_nodes(gathered_nodes, anchor_node)
+            self._ymk_nodes(gathered_nodes, anchor_node, target_path)
 
     def ymk_gathered_nodes(
         self, gathered_nodes: List[NodeCoords],
-        anchor_path: Union[YAMLPath, str], **kwargs: Any
+        anchor_path: Union[YAMLPath, str], target_path: Union[YAMLPath, str],
+        **kwargs: Any
     ) -> None:
         """Add a YAML Merge Key to pre-gathered nodes."""
         pathsep: PathSeperators = kwargs.pop("pathsep", PathSeperators.AUTO)
@@ -413,10 +415,11 @@ class Processor:
             anchor_path, pathsep=pathsep, anchor_name=anchor_name)
 
         if gathered_nodes:
-            self._ymk_nodes(gathered_nodes, anchor_node)
+            self._ymk_nodes(gathered_nodes, anchor_node, target_path)
 
     def _ymk_nodes(
-        self, gathered_nodes: List[NodeCoords], anchor_node: Any
+        self, gathered_nodes: List[NodeCoords], anchor_node: Any,
+        target_path: Union[YAMLPath, str]
     ) -> None:
         """Add a YAML Merge Key to nodes."""
         anchor_name = anchor_node.anchor.value
@@ -427,10 +430,22 @@ class Processor:
                 data=node_coord,
                 prefix="yaml_set::_ymk_nodes:  ")
             node = node_coord.node
+            if not isinstance(node, CommentedMap):
+                raise YAMLPathException(
+                    "Cannot add YAML Merge Keys to non-Hash nodes specified"
+                    " by",
+                    str(target_path))
+
             refs = node.merge if hasattr(node, "merge") else []
-            nidx = len(refs)
-            ykey = (nidx, anchor_node)
-            node_coord.node.add_yaml_merge([ykey])
+            already_refed = False
+            for (_, ref_node) in refs:
+                if ref_node == anchor_node:
+                    already_refed = True
+                    break
+            if already_refed:
+                continue
+
+            node_coord.node.add_yaml_merge([(len(refs), anchor_node)])
 
     def alias_nodes(
         self, yaml_path: Union[YAMLPath, str],
