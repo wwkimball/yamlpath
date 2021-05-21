@@ -195,12 +195,12 @@ def validateargs(args, log):
         has_errors = True
         log.error("There must be a YAML_FILE or STDIN document.")
 
-    # At least one of --value, --aliasof, --file, --stdin, or --random must be
-    # set.
+    # One of the input group options must be specified.
     if not (
             args.value
             or args.value == ""
             or args.aliasof
+            or args.mergekey
             or args.file
             or args.stdin
             or args.random
@@ -212,7 +212,8 @@ def validateargs(args, log):
         has_errors = True
         log.error(
             "Exactly one of the following must be set:  --value, --aliasof,"
-            " --file, --stdin, --random, --null, --delete, --anchor, or --tag")
+            " --mergekey, --file, --stdin, --random, --null, --delete,"
+            " --anchor, or --tag")
 
     # --stdin cannot be used with -, explicit or implied
     if args.stdin and in_stream_mode:
@@ -221,7 +222,7 @@ def validateargs(args, log):
             "Impossible to read both document and replacement value from"
             " STDIN!")
 
-    # --anchor can be used only when --aliasof is set; remove illegal chars
+    # Remove potentially-accidental characters from any Anchor
     if args.anchor:
         args.anchor = (
             args.anchor
@@ -229,8 +230,13 @@ def validateargs(args, log):
             .replace("&", "")
             .replace("*", "")
         )
-    if args.anchor and not args.aliasof:
-        args.aliasof = args.change
+
+    # --anchor can be used only when --aliasof or --mergekey are set
+    if args.anchor and not (args.aliasof or args.mergekey):
+        has_errors = True
+        log.error(
+            "The --anchor|-H option may be used only when --aliasof|-A or"
+            " --mergekey|-K are also set.")
 
     # --backup has no meaning when reading the YAML file from STDIN
     if args.backup and in_stream_mode:
