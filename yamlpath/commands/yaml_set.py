@@ -439,6 +439,7 @@ def _alias_nodes(
     except YAMLPathException as ex:
         log.critical(ex, 1)
 
+# pylint: disable=locally-disabled,too-many-arguments
 def _ymk_nodes(
     log, processor, assign_to_nodes, anchor_path, anchor_name, target_path
 ):
