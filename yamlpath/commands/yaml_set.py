@@ -66,8 +66,15 @@ def processcli():
     input_group.add_argument(
         "-A", "--aliasof",
         metavar="ANCHOR",
-        help="set the value as a YAML Alias of an existing Anchor, by name "
-             "(merely copies the target value for non-YAML files)")
+        help="set the value as a YAML Alias of an existing scalar value Anchor"
+             " by its source ANCHOR YAML Path (merely copies the target value"
+             " for non-YAML files)")
+    input_group.add_argument(
+        "-K", "--mergekey",
+        metavar="ANCHOR",
+        help="assign a YAML Merge Key to target Hash(es) by the source Hash's"
+             " ANCHOR YAML Path (merely copies unique key-value pairs from the"
+             " source Hash into the target Hash for non-YAML files)")
     input_group.add_argument(
         "-f", "--file",
         help="read the new value from file (discarding any trailing\
