@@ -54,6 +54,10 @@ Enhancements:
   of all comments.  At this time, RHS document comments will still be discarded
   during merge operations.  This will be revisited when ruamel.yaml refactors
   how YAML comments are handled.
+* The yaml-merge command-line tool now offers a new option, --no-collapse-lhs
+  (-C), which stops LHS multi-documents from being collapsed into a single
+  document by merging all of its documents up into the first.  All RHS
+  documents are then merged discretely into each of the LHS documents.
 * The [has_child(NAME)] Search Keyword now accepts an &NAME form of its first
   (only) parameter.  This switches the function to match against Anchor/Alias
   names, including YAML Merge Keys.
@@ -65,7 +69,7 @@ Enhancements:
   as each target is a Hash.
   WARNING:  As a consequence of adding this capability to the yaml-set command-
   line tool, it is no longer possible to implicitly alias scalar nodes by
-  passing ony the --change and --anchor parameters.  The operation must now be
+  passing only the --change and --anchor parameters.  The operation must now be
   explicit by setting --aliasof or --mergekey along with --change and
   optionally with --anchor.
 
