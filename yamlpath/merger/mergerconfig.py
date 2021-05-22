@@ -13,6 +13,7 @@ from yamlpath.merger.enums import (
     AoHMergeOpts,
     ArrayMergeOpts,
     HashMergeOpts,
+    MultiDocModes,
     OutputDocTypes,
 )
 from yamlpath import Processor, YAMLPath
@@ -208,6 +209,18 @@ class MergerConfig:
         if hasattr(self.args, "document_format"):
             return OutputDocTypes.from_str(self.args.document_format)
         return OutputDocTypes.AUTO
+
+    def get_multidoc_mode(self) -> MultiDocModes:
+        """
+        Get the user-desired mode for handling multi-document merges.
+
+        Paramerers:  N/A
+
+        Returns:  (MultiDocModes) The condence/merge mode
+        """
+        if hasattr(self.args, "multi_doc_mode"):
+            return MultiDocModes.from_str(self.args.multi_doc_mode)
+        return MultiDocModes.CONDENSE_ALL
 
     def is_preserving_lhs_comments(self) -> bool:
         """Indicate whether the user wants LHS comments preserved."""
