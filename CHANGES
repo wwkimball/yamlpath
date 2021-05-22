@@ -63,6 +63,11 @@ Enhancements:
   same-document Hash data.  The yaml-set command-line tool offers a new option,
   --mergekey, which applies to --change targets the new YAML Merge Key, as long
   as each target is a Hash.
+  WARNING:  As a consequence of adding this capability to the yaml-set command-
+  line tool, it is no longer possible to implicitly alias scalar nodes by
+  passing ony the --change and --anchor parameters.  The operation must now be
+  explicit by setting --aliasof or --mergekey along with --change and
+  optionally with --anchor.
 
 API Changes:
 * The common.nodes utility class now has a generally-useful static method which
