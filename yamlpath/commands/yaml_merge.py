@@ -21,6 +21,7 @@ from yamlpath.merger.enums import (
     AoHMergeOpts,
     ArrayMergeOpts,
     HashMergeOpts,
+    MultiDocModes,
     OutputDocTypes,
 )
 from yamlpath.merger.exceptions import MergeException
@@ -125,12 +126,12 @@ https://github.com/wwkimball/yamlpath/issues.
     output_doc_group.add_argument(
         "-o", "--output",
         help=(
-            "Write the merged result to the indicated nonexistent\n"
+            "write the merged result to the indicated nonexistent\n"
             "file"))
     output_doc_group.add_argument(
         "-w", "--overwrite",
         help=(
-            "Write the merged result to the indicated file; will\n"
+            "write the merged result to the indicated file; will\n"
             "replace the file when it already exists"))
 
     parser.add_argument(
@@ -145,19 +146,21 @@ https://github.com/wwkimball/yamlpath/issues.
         type=str.lower,
         default="auto",
         help=(
-            "Force the merged result to be presented in one of the\n"
+            "force the merged result to be presented in one of the\n"
             "supported formats or let it automatically match the\n"
             "known file-name extension of OUTPUT|OVERWRITE (when\n"
             "provided), or match the type of the first document;\n"
             "default=auto"))
 
     parser.add_argument(
-        "-C", "--no-collapse-lhs", action="store_true",
+        "-M", "--multi-doc-mode",
+        choices=[l.lower() for l in MultiDocModes.get_names()],
+        type=str.lower,
+        default="condense_all",
         help=(
-            "when the left-most file or stream contains multiple\n"
-            "documents, do not collapse it by merging all of its\n"
-            "documents up into the first; rather, merge all RHS\n"
-            "documents discretely into each of the LHS documents"))
+            "control how multi-document files and streams are\n"
+            "merged together, with or without condensing them as\n"
+            "part of the merge"))
 
     parser.add_argument(
         "-l", "--preserve-lhs-comments", action="store_true",
@@ -172,7 +175,7 @@ https://github.com/wwkimball/yamlpath/issues.
     parser.add_argument(
         "-S", "--nostdin", action="store_true",
         help=(
-            "Do not implicitly read from STDIN, even when there are\n"
+            "do not implicitly read from STDIN, even when there are\n"
             "no - pseudo-files in YAML_FILEs with a non-TTY session"))
 
     noise_group = parser.add_mutually_exclusive_group()

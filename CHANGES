@@ -54,10 +54,17 @@ Enhancements:
   of all comments.  At this time, RHS document comments will still be discarded
   during merge operations.  This will be revisited when ruamel.yaml refactors
   how YAML comments are handled.
-* The yaml-merge command-line tool now offers a new option, --no-collapse-lhs
-  (-C), which stops LHS multi-documents from being collapsed into a single
-  document by merging all of its documents up into the first.  All RHS
-  documents are then merged discretely into each of the LHS documents.
+* The yaml-merge command-line tool now offers a new option, --multi-doc-mode
+  (-M), which accepts one of the following modes:
+  * CONDENSE_ALL:  This is the default, which merges all multi-documents up
+    into single documents during the merge.
+  * CONDENSE_RHS:  Only RHS multi-documents are condensed into single documents
+    during the merge; the result is then merged discretely into each of the
+    left-most documents (when LHS is a multi-document file/stream).
+  * MERGE_ACROSS:  Condence no multi-documents; rather, only merge documents
+    "across" from right to left.
+  * MATRIX_MERGE:  Condence no multi-documents; rather, merge every RHS
+    document into every LHS document.
 * The [has_child(NAME)] Search Keyword now accepts an &NAME form of its first
   (only) parameter.  This switches the function to match against Anchor/Alias
   names, including YAML Merge Keys.
