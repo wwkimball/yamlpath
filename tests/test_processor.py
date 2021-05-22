@@ -925,6 +925,26 @@ records:
         console = capsys.readouterr()
         assert "Refusing to alias nodes in a null document" in console.out
 
+    def test_null_docs_have_nothing_to_gather_and_ymk(self, capsys):
+        args = SimpleNamespace(verbose=False, quiet=False, debug=True)
+        logger = ConsolePrinter(args)
+        processor = Processor(logger, None)
+
+        processor.ymk_nodes("/alias*", "/anchor")
+
+        console = capsys.readouterr()
+        assert "Refusing to set a YAML Merge Key to nodes in a null document" in console.out
+
+    def test_null_docs_have_nothing_to_ymk(self, capsys):
+        args = SimpleNamespace(verbose=False, quiet=False, debug=True)
+        logger = ConsolePrinter(args)
+        processor = Processor(logger, None)
+
+        processor.ymk_gathered_nodes([], "/alias*", "/anchor")
+
+        console = capsys.readouterr()
+        assert "Refusing to set a YAML Merge Key to nodes in a null document" in console.out
+
     def test_null_docs_have_nothing_to_tag(self, capsys):
         args = SimpleNamespace(verbose=False, quiet=False, debug=True)
         logger = ConsolePrinter(args)
@@ -962,6 +982,62 @@ a_hash:
             match_count += 1
             assert unwrap_node_coords(node) == anchor_value
         assert match_count == 1
+
+    @pytest.mark.parametrize("change_path,ymk_path,anchor_name,pathseperator,validations", [
+        ("target", "source", "", PathSeperators.AUTO, [
+            ("target.target_key", ["other"]),
+            ("target.source_key", ["value"]),
+            ("target[&source].source_key", ["value"]),
+            ("target.override_this", ["overridden"]),
+            ("target[&source].override_this", ["original"]),
+        ]),
+        (YAMLPath("target"), YAMLPath("source"), "", PathSeperators.DOT, [
+            ("target.target_key", ["other"]),
+            ("target.source_key", ["value"]),
+            ("target[&source].source_key", ["value"]),
+            ("target.override_this", ["overridden"]),
+            ("target[&source].override_this", ["original"]),
+        ]),
+        ("/target", "/source", "", PathSeperators.FSLASH, [
+            ("/target/target_key", ["other"]),
+            ("/target/source_key", ["value"]),
+            ("/target/&source/source_key", ["value"]),
+            ("/target/override_this", ["overridden"]),
+            ("/target/&source/override_this", ["original"]),
+        ]),
+        ("target", "source", "custom_name", PathSeperators.DOT, [
+            ("target.target_key", ["other"]),
+            ("target.source_key", ["value"]),
+            ("target[&custom_name].source_key", ["value"]),
+            ("target.override_this", ["overridden"]),
+            ("target[&custom_name].override_this", ["original"]),
+        ]),
+    ])
+    def test_ymk_nodes(self, quiet_logger, change_path, ymk_path, anchor_name, pathseperator, validations):
+        yamlin = """---
+source:
+  source_key: value
+  override_this: original
+
+target:
+  target_key: other
+  override_this: overridden
+"""
+
+        yaml = YAML()
+        data = yaml.load(yamlin)
+        processor = Processor(quiet_logger, data)
+
+        processor.ymk_nodes(
+            change_path, ymk_path,
+            pathsep=pathseperator, anchor_name=anchor_name)
+
+        for (valid_path, valid_values) in validations:
+            match_count = 0
+            for check_node in processor.get_nodes(valid_path, mustexist=True):
+                assert unwrap_node_coords(check_node) == valid_values[match_count]
+                match_count += 1
+            assert len(valid_values) == match_count
 
     @pytest.mark.parametrize("yaml_path,tag,pathseperator", [
         (YAMLPath("/key"), "!taggidy", PathSeperators.FSLASH),

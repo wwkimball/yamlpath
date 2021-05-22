@@ -363,8 +363,7 @@ class Processor:
 
     def ymk_nodes(
         self, yaml_path: Union[YAMLPath, str],
-        anchor_path: Union[YAMLPath, str], target_path: Union[YAMLPath, str],
-        **kwargs: Any
+        anchor_path: Union[YAMLPath, str], **kwargs: Any
     ) -> None:
         """Add a YAML Merge Key to YAML Path specified nodes."""
         pathsep: PathSeperators = kwargs.pop("pathsep", PathSeperators.AUTO)
@@ -393,7 +392,7 @@ class Processor:
             gathered_nodes.append(node_coords)
 
         if len(gathered_nodes) > 0:
-            self._ymk_nodes(gathered_nodes, anchor_node, target_path)
+            self._ymk_nodes(gathered_nodes, anchor_node, yaml_path)
 
     def ymk_gathered_nodes(
         self, gathered_nodes: List[NodeCoords],
