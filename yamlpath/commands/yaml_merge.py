@@ -152,6 +152,14 @@ https://github.com/wwkimball/yamlpath/issues.
             "default=auto"))
 
     parser.add_argument(
+        "-C", "--no-collapse-lhs", action="store_true",
+        help=(
+            "when the left-most file or stream contains multiple\n"
+            "documents, do not collapse it by merging all of its\n"
+            "documents up into the first; rather, merge all RHS\n"
+            "documents discretely into each of the LHS documents"))
+
+    parser.add_argument(
         "-l", "--preserve-lhs-comments", action="store_true",
         help=(
             "while all comments are normally dicarded during a\n"
