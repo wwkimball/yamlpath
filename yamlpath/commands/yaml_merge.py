@@ -318,20 +318,21 @@ def write_output_document(
 def condense_document(
     log: ConsolePrinter, yaml_editor: YAML, config: MergerConfig,
     yaml_file: str
-) -> Tuple[Union[None, Merger], bool]:
+) -> Tuple[Merger, bool]:
     """Merge a multi-document file up into a single document."""
+    null_doc: Merger = Merger(log, None, config)
+    document: Merger = null_doc
+    loaded: bool = True
     if yaml_file != "-" and not isfile(yaml_file):
         log.error("Not a file:  {}".format(yaml_file))
-        return (None, False)
+        return (null_doc, False)
 
-    document = None
-    loaded = True
     for (yaml_data, doc_loaded) in Parsers.get_yaml_multidoc_data(
         yaml_editor, log, yaml_file
     ):
         if not doc_loaded:
             # An error message has already been logged
-            document = None
+            document = null_doc
             loaded = False
             break
 
@@ -343,17 +344,15 @@ def condense_document(
             document.merge_with(yaml_data)
         except MergeException as mex:
             log.error(mex)
-            document = None
+            document = null_doc
             loaded = False
             break
         except YAMLPathException as yex:
             log.error(yex)
-            document = None
+            document = null_doc
             loaded = False
             break
 
-    if loaded and document is None:
-        document = Merger(log, None, config)
     return (document, loaded)
 
 def get_doc_mergers(
