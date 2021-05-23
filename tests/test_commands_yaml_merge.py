@@ -182,9 +182,9 @@ hash:
         merged_yaml_content = """---
 hash:
   lhs_exclusive: LHS exclusive
-  rhs2_exclusive: RHS2 exclusive
-  rhs_exclusive: RHS exclusive
   merge_target: RHS2 override value
+  rhs_exclusive: RHS exclusive
+  rhs2_exclusive: RHS2 exclusive
   lhs2_exclusive: LHS2 exclusive
   merge2_target: RHS2 2nd override value
 """
