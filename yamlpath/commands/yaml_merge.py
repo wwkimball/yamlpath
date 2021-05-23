@@ -12,7 +12,7 @@ import json
 from os import access, R_OK, remove
 from os.path import isfile, exists
 from shutil import copy2
-from typing import List, Union
+from typing import List, Tuple, Union
 
 from ruamel.yaml import YAML
 
@@ -318,19 +318,21 @@ def write_output_document(
 def condense_document(
     log: ConsolePrinter, yaml_editor: YAML, config: MergerConfig,
     yaml_file: str
-) -> Union[None, Merger]:
+) -> Tuple[Union[None, Merger], bool]:
     """Merge a multi-document file up into a single document."""
     if yaml_file != "-" and not isfile(yaml_file):
         log.error("Not a file:  {}".format(yaml_file))
-        return None
+        return (None, False)
 
     document = None
+    loaded = True
     for (yaml_data, doc_loaded) in Parsers.get_yaml_multidoc_data(
         yaml_editor, log, yaml_file
     ):
         if not doc_loaded:
             # An error message has already been logged
             document = None
+            loaded = False
             break
 
         if document is None:
@@ -342,13 +344,17 @@ def condense_document(
         except MergeException as mex:
             log.error(mex)
             document = None
+            loaded = False
             break
         except YAMLPathException as yex:
             log.error(yex)
             document = None
+            loaded = False
             break
 
-    return document
+    if loaded and document is None:
+        document = Merger(log, None, config)
+    return (document, loaded)
 
 def get_doc_mergers(
     log: ConsolePrinter, yaml_editor: YAML, config: MergerConfig,
@@ -361,8 +367,9 @@ def get_doc_mergers(
 
     doc_mergers: List[Merger] = []
     if config.get_multidoc_mode() is MultiDocModes.CONDENSE_ALL:
-        condensed_doc = condense_document(log, yaml_editor, config, yaml_file)
-        if condensed_doc is None:
+        (condensed_doc, doc_loaded) = condense_document(
+            log, yaml_editor, config, yaml_file)
+        if not doc_loaded:
             return []
         doc_mergers.append(condensed_doc)
     else:
@@ -388,8 +395,9 @@ def merge_docs(
     return_state = 0
 
     if merge_mode is MultiDocModes.CONDENSE_ALL:
-        condensed_rhs = condense_document(log, yaml_editor, config, rhs_file)
-        if condensed_rhs is None:
+        (condensed_rhs, rhs_loaded) = condense_document(
+            log, yaml_editor, config, rhs_file)
+        if not rhs_loaded:
             return_state = 10
         else:
             try:
@@ -402,8 +410,9 @@ def merge_docs(
                 return_state = 12
 
     elif merge_mode is MultiDocModes.CONDENSE_RHS:
-        condensed_rhs = condense_document(log, yaml_editor, config, rhs_file)
-        if condensed_rhs is None:
+        (condensed_rhs, rhs_loaded) = condense_document(
+            log, yaml_editor, config, rhs_file)
+        if not rhs_loaded:
             return_state = 20
         else:
             for lhs_doc in lhs_docs:
