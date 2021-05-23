@@ -12,7 +12,7 @@ import json
 from os import access, R_OK, remove
 from os.path import isfile, exists
 from shutil import copy2
-from typing import Any, List, Union
+from typing import List, Union
 
 from ruamel.yaml import YAML
 
@@ -288,25 +288,29 @@ def write_output_document(
     if args.output:
         with open(args.output, 'w') as out_fhnd:
             if document_is_json:
-                if len(docs) > 1:
-                    raise NotImplementedError
+                if len(dumps) > 1:
+                    for dump in dumps:
+                        print(
+                            json.dumps(Parsers.jsonify_yaml_data(dump)),
+                            file=out_fhnd)
                 else:
                     json.dump(Parsers.jsonify_yaml_data(dumps[0]), out_fhnd)
             else:
-                if len(docs) > 1:
-                    yaml_editor.explicit_end = True
+                if len(dumps) > 1:
+                    yaml_editor.explicit_end = True  # type: ignore
                     yaml_editor.dump_all(dumps, out_fhnd)
                 else:
                     yaml_editor.dump(dumps[0], out_fhnd)
     else:
         if document_is_json:
-            if len(docs) > 1:
-                raise NotImplementedError
+            if len(dumps) > 1:
+                for dump in dumps:
+                    print(json.dumps(Parsers.jsonify_yaml_data(dump)))
             else:
                 json.dump(Parsers.jsonify_yaml_data(dumps[0]), sys.stdout)
         else:
-            if len(docs) > 1:
-                yaml_editor.explicit_end = True
+            if len(dumps) > 1:
+                yaml_editor.explicit_end = True  # type: ignore
                 yaml_editor.dump_all(dumps, sys.stdout)
             else:
                 yaml_editor.dump(dumps[0], sys.stdout)
@@ -374,6 +378,7 @@ def get_doc_mergers(
 
     return doc_mergers
 
+# pylint: disable=locally-disabled,too-many-locals,too-many-statements
 def merge_docs(
     log: ConsolePrinter, yaml_editor: YAML, config: MergerConfig,
     lhs_docs: List[Merger], rhs_file: str
@@ -475,7 +480,6 @@ def main():
     consumed_stdin = False
     mergers: List[Merger] = []
     for yaml_file in args.yaml_files:
-        proc_state = 0
         if yaml_file.strip() == '-':
             consumed_stdin = True
 
@@ -484,7 +488,8 @@ def main():
                 "STDIN" if yaml_file.strip() == "-" else yaml_file))
 
         if len(mergers) < 1:
-            mergers = get_doc_mergers(log, yaml_editor, merge_config, yaml_file)
+            mergers = get_doc_mergers(
+                log, yaml_editor, merge_config, yaml_file)
             if len(mergers) < 1:
                 exit_state = 4
                 break
