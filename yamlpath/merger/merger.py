@@ -3,7 +3,8 @@ Implement YAML document Merger.
 
 Copyright 2020 William W. Kimball, Jr. MBA MSIS
 """
-import sys  # For deprecation warnings
+import sys
+from os.path import basename
 from typing import Any, Dict, List, Set, Tuple
 import json
 from io import StringIO
@@ -548,6 +549,7 @@ class Merger:
                 # re-definitions.
                 Anchors.replace_anchor(self.data, lhs_anchor, rhs_anchor)
 
+    # pylint: disable=locally-disabled,too-many-statements
     def merge_with(self, rhs: Any) -> None:
         """
         Merge this document with another.
@@ -647,12 +649,20 @@ class Merger:
                     Nodes.append_list_element(target_node, rhs)
                     merge_performed = True
                 elif isinstance(target_node, CommentedMap):
-                    raise MergeException(
+                    ex_message = (
                         "Impossible to add Scalar value, {}, to a Hash without"
                         " a key.  Change the value to a 'key: value' pair, a"
                         " '{{key: value}}' Hash, or change the merge target to"
                         " an Array or other Scalar value."
-                        .format(rhs), insert_at)
+                        ).format(rhs)
+                    if len(str(rhs)) < 1 and not sys.stdin.isatty():
+                        ex_message += (
+                            "  You may be seeing this because your workflow"
+                            " inadvertently opened a STDIN handle to {}.  If"
+                            " this may be the case, try adding --nostdin or -S"
+                            " so as to block unintentional STDIN reading."
+                        ).format(basename(sys.argv[0]))
+                    raise MergeException(ex_message, insert_at)
                 else:
                     lhs_proc.set_value(insert_at, rhs)
                     merge_performed = True
