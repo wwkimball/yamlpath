@@ -9,7 +9,7 @@ from typing import List
 
 class MultiDocModes(Enum):
     """
-    Supported Output Document Types.
+    Supported means of merging multi-document content.
 
     Options include:
 

@@ -12,7 +12,9 @@ import json
 from os import access, R_OK, remove
 from os.path import isfile, exists
 from shutil import copy2
-from typing import Any
+from typing import Any, List, Union
+
+from ruamel.yaml import YAML
 
 from yamlpath import __version__ as YAMLPATH_VERSION
 from yamlpath.common import Parsers
@@ -332,6 +334,142 @@ def write_output_document(args, log, merger, yaml_editor):
         else:
             yaml_editor.dump(merger.data, sys.stdout)
 
+def condense_document(
+    log: ConsolePrinter, yaml_editor: YAML, config: MergerConfig,
+    yaml_file: str
+) -> Union[None, Merger]:
+    """Merge a multi-document file up into a single document."""
+    if yaml_file != "-" and not isfile(yaml_file):
+        log.error("Not a file:  {}".format(yaml_file))
+        return None
+
+    document = None
+    for (yaml_data, doc_loaded) in Parsers.get_yaml_multidoc_data(
+        yaml_editor, log, yaml_file
+    ):
+        if not doc_loaded:
+            # An error message has already been logged
+            document = None
+            break
+
+        if document is None:
+            document = Merger(log, yaml_data, config)
+            continue
+
+        try:
+            document.merge_with(yaml_data)
+        except MergeException as mex:
+            log.error(mex)
+            document = None
+            break
+        except YAMLPathException as yex:
+            log.error(yex)
+            document = None
+            break
+
+    return document
+
+def prime_lhs_docs(
+    log: ConsolePrinter, yaml_editor: YAML, config: MergerConfig,
+    yaml_file: str
+) -> List[Merger]:
+    """Create a list of Mergers, one for each prime document."""
+    if yaml_file != "-" and not isfile(yaml_file):
+        log.error("Not a file:  {}".format(yaml_file))
+        return []
+
+    prime_docs: List[Merger] = []
+    if config.get_multidoc_mode() is MultiDocModes.CONDENSE_ALL:
+        condensed_doc = condense_document(log, yaml_editor, config, yaml_file)
+        if condensed_doc is None:
+            return []
+        prime_docs.append(condensed_doc)
+    else:
+        for (yaml_data, doc_loaded) in Parsers.get_yaml_multidoc_data(
+            yaml_editor, log, yaml_file
+        ):
+            if not doc_loaded:
+                # An error message has already been logged
+                prime_docs.clear()
+                break
+
+            prime_docs.append(Merger(log, yaml_data, config))
+
+    return prime_docs
+
+def merge_docs(
+    log: ConsolePrinter, yaml_editor: YAML, config: MergerConfig,
+    lhs_docs: List[Merger], rhs_file: str
+) -> int:
+    """Merge RHS into LHS."""
+    merge_mode = config.get_multidoc_mode()
+    return_state = 0
+    if merge_mode is MultiDocModes.CONDENSE_ALL:
+        return_state = process_yaml_file(
+            lhs_docs[0], log, yaml_editor, rhs_file, True)
+
+    elif merge_mode is MultiDocModes.CONDENSE_RHS:
+        condensed_rhs = condense_document(log, yaml_editor, config, rhs_file)
+        if condensed_rhs is None:
+            return_state = 10
+        else:
+            for lhs_doc in lhs_docs:
+                try:
+                    lhs_doc.merge_with(condensed_rhs)
+                except MergeException as mex:
+                    log.error(mex)
+                    return_state = 11
+                    break
+                except YAMLPathException as yex:
+                    log.error(yex)
+                    return_state = 12
+                    break
+
+    elif merge_mode is MultiDocModes.MERGE_ACROSS:
+        rhs_docs = prime_lhs_docs(log, yaml_editor, config, rhs_file)
+        if len(rhs_docs) < 1:
+            return_state = 20
+        else:
+            lhs_len = len(lhs_docs)
+            rhs_len = len(rhs_docs)
+            max_len = lhs_len if lhs_len > rhs_len else rhs_len
+            for i in range(0, max_len):
+                if i > rhs_len:
+                    break
+                if i > lhs_len:
+                    lhs_docs.append(rhs_docs[i])
+                    continue
+                try:
+                    lhs_docs[i].merge_with(rhs_docs[i].data)
+                except MergeException as mex:
+                    log.error(mex)
+                    return_state = 21
+                    break
+                except YAMLPathException as yex:
+                    log.error(yex)
+                    return_state = 22
+                    break
+
+    elif merge_mode is MultiDocModes.MATRIX_MERGE:
+        rhs_docs = prime_lhs_docs(log, yaml_editor, config, rhs_file)
+        if len(rhs_docs) < 1:
+            return_state = 30
+        else:
+            for lhs_doc in lhs_docs:
+                for rhs_doc in rhs_docs:
+                    try:
+                        lhs_doc.merge_with(rhs_doc.data)
+                    except MergeException as mex:
+                        log.error(mex)
+                        return_state = 31
+                        break
+                    except YAMLPathException as yex:
+                        log.error(yex)
+                        return_state = 32
+                        break
+
+    return return_state
+
 def main():
     """Main code."""
     args = processcli()
@@ -343,26 +481,33 @@ def main():
         args.output = args.overwrite
 
     # Merge all input files
-    merger = Merger(log, None, MergerConfig(log, args))
     yaml_editor = Parsers.get_yaml_editor()
+    merge_config = MergerConfig(log, args)
+    merge_mode = merge_config.get_multidoc_mode()
     exit_state = 0
     consumed_stdin = False
     merger_primed = False
+    mergers: List[Merger] = []
     for yaml_file in args.yaml_files:
+        proc_state = 0
         if yaml_file.strip() == '-':
             consumed_stdin = True
 
         log.debug(
             "yaml_merge::main:  Processing file, {}".format(
                 "STDIN" if yaml_file.strip() == "-" else yaml_file))
-        proc_state = process_yaml_file(
-            merger, log, yaml_editor, yaml_file, merger_primed)
 
-        if proc_state == 0:
-            merger_primed = True
+        if len(mergers) < 1:
+            mergers = prime_lhs_docs(log, yaml_editor, merge_config, yaml_file)
+            if len(mergers) < 1:
+                exit_state = 4
+                break
         else:
-            exit_state = proc_state
-            break
+            # Merge RHS into LHS
+            exit_state = merge_docs(
+                log, yaml_editor, merge_config, mergers, yaml_file)
+            if not exit_state == 0:
+                break
 
     # Check for a waiting STDIN document
     if (exit_state == 0
@@ -370,12 +515,11 @@ def main():
         and not args.nostdin
         and not sys.stdin.isatty()
     ):
-        exit_state = process_yaml_file(
-            merger, log, yaml_editor, '-', merger_primed)
+        exit_state = merge_docs(log, yaml_editor, merge_config, mergers, "-")
 
     # Output the final document
     if exit_state == 0:
-        write_output_document(args, log, merger, yaml_editor)
+        write_output_document(args, log, mergers[0], yaml_editor)
 
     sys.exit(exit_state)
 

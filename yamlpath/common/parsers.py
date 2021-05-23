@@ -24,7 +24,7 @@ class Parsers:
     """Helper methods for common YAML/JSON/Compatible parser operations."""
 
     @staticmethod
-    def get_yaml_editor(**kwargs: Any) -> Any:
+    def get_yaml_editor(**kwargs: Any) -> YAML:
         """
         Build and return a generic YAML editor based on ruamel.yaml.
 
