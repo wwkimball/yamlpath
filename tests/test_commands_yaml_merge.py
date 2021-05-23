@@ -182,9 +182,9 @@ hash:
         merged_yaml_content = """---
 hash:
   lhs_exclusive: LHS exclusive
-  merge_target: RHS2 override value
-  rhs_exclusive: RHS exclusive
   rhs2_exclusive: RHS2 exclusive
+  rhs_exclusive: RHS exclusive
+  merge_target: RHS2 override value
   lhs2_exclusive: LHS2 exclusive
   merge2_target: RHS2 2nd override value
 """
@@ -204,70 +204,6 @@ hash:
             self.command
             , "--nostdin"
             , "--output={}".format(output_file)
-            , lhs_file
-            , rhs_file)
-        assert result.success, result.stderr
-
-        with open(output_file, 'r') as fhnd:
-            filedat = fhnd.read()
-        assert merged_yaml_content == filedat
-
-    def test_merge_two_condense_rhs_multidoc_yaml_files_to_file(self, script_runner, tmp_path, tmp_path_factory):
-        lhs_file = create_temp_yaml_file(tmp_path_factory, """---
-hash:
-  lhs_exclusive: LHS exclusive
-  merge_target: LHS original value
-...
----
-hash:
-  lhs2_exclusive: LHS2 exclusive
-  merge2_target: LHS2 original value
-""")
-        rhs_file = create_temp_yaml_file(tmp_path_factory, """---
-hash:
-  rhs_exclusive: RHS exclusive
-  merge_target: RHS override value
-...
----
-hash:
-  rhs2_exclusive: RHS2 exclusive
-  merge_target: RHS2 override value
-  merge2_target: RHS2 2nd override value
-""")
-        merged_yaml_content = """---
-hash:
-  lhs_exclusive: LHS exclusive
-  merge_target: RHS2 override value
-  rhs_exclusive: RHS exclusive
-  rhs2_exclusive: RHS2 exclusive
-  merge2_target: RHS2 2nd override value
-...
----
-hash:
-  lhs2_exclusive: LHS2 exclusive
-  merge2_target: RHS2 2nd override value
-  rhs_exclusive: RHS exclusive
-  rhs2_exclusive: RHS2 exclusive
-  merge_target: RHS2 override value
-...
-"""
-
-        output_dir = tmp_path / "test_merge_two_condense_rhs_multidoc_yaml_files_to_file"
-        output_dir.mkdir()
-        output_file = output_dir / "output.yaml"
-
-        # DEBUG
-        # print("LHS File:  {}".format(lhs_file))
-        # print("RHS File:  {}".format(rhs_file))
-        # print("Output File:  {}".format(output_file))
-        # print("Expected Output:")
-        # print(merged_yaml_content)
-
-        result = script_runner.run(
-            self.command
-            , "--nostdin"
-            , "--output={}".format(output_file)
-            , "--multi-doc-mode=condense_rhs"
             , lhs_file
             , rhs_file)
         assert result.success, result.stderr

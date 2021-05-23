@@ -315,74 +315,28 @@ def write_output_document(
             else:
                 yaml_editor.dump(dumps[0], sys.stdout)
 
-def condense_document(
+def get_doc_mergers(
     log: ConsolePrinter, yaml_editor: YAML, config: MergerConfig,
     yaml_file: str
-) -> Tuple[Merger, bool]:
-    """Merge a multi-document file up into a single document."""
-    null_doc: Merger = Merger(log, None, config)
-    document: Merger = null_doc
-    loaded: bool = True
+) -> Tuple[List[Merger], bool]:
+    """Create a list of Mergers, one for each source document."""
+    docs_loaded = True
     if yaml_file != "-" and not isfile(yaml_file):
         log.error("Not a file:  {}".format(yaml_file))
-        return (null_doc, False)
+        return ([], False)
 
+    doc_mergers: List[Merger] = []
     for (yaml_data, doc_loaded) in Parsers.get_yaml_multidoc_data(
         yaml_editor, log, yaml_file
     ):
         if not doc_loaded:
             # An error message has already been logged
-            document = null_doc
-            loaded = False
+            doc_mergers.clear()
             break
 
-        if document is None:
-            document = Merger(log, yaml_data, config)
-            continue
+        doc_mergers.append(Merger(log, yaml_data, config))
 
-        try:
-            document.merge_with(yaml_data)
-        except MergeException as mex:
-            log.error(mex)
-            document = null_doc
-            loaded = False
-            break
-        except YAMLPathException as yex:
-            log.error(yex)
-            document = null_doc
-            loaded = False
-            break
-
-    return (document, loaded)
-
-def get_doc_mergers(
-    log: ConsolePrinter, yaml_editor: YAML, config: MergerConfig,
-    yaml_file: str
-) -> List[Merger]:
-    """Create a list of Mergers, one for each source document."""
-    if yaml_file != "-" and not isfile(yaml_file):
-        log.error("Not a file:  {}".format(yaml_file))
-        return []
-
-    doc_mergers: List[Merger] = []
-    if config.get_multidoc_mode() is MultiDocModes.CONDENSE_ALL:
-        (condensed_doc, doc_loaded) = condense_document(
-            log, yaml_editor, config, yaml_file)
-        if not doc_loaded:
-            return []
-        doc_mergers.append(condensed_doc)
-    else:
-        for (yaml_data, doc_loaded) in Parsers.get_yaml_multidoc_data(
-            yaml_editor, log, yaml_file
-        ):
-            if not doc_loaded:
-                # An error message has already been logged
-                doc_mergers.clear()
-                break
-
-            doc_mergers.append(Merger(log, yaml_data, config))
-
-    return doc_mergers
+    return (doc_mergers, docs_loaded)
 
 # pylint: disable=locally-disabled,too-many-locals,too-many-statements
 def merge_docs(
@@ -390,84 +344,76 @@ def merge_docs(
     lhs_docs: List[Merger], rhs_file: str
 ) -> int:
     """Merge RHS into LHS."""
-    merge_mode = config.get_multidoc_mode()
     return_state = 0
+    merge_mode = config.get_multidoc_mode()
+    (rhs_docs, rhs_loaded) = get_doc_mergers(
+        log, yaml_editor, config, rhs_file)
+    if not rhs_loaded:
+        # Failed to load any RHS documents
+        return 3
 
     if merge_mode is MultiDocModes.CONDENSE_ALL:
-        (condensed_rhs, rhs_loaded) = condense_document(
-            log, yaml_editor, config, rhs_file)
-        if not rhs_loaded:
-            return_state = 10
-        else:
+        # Condense the LHS document, first
+        lhs_prime = lhs_docs[0]
+        if len(lhs_docs) > 1:
+            for lhs_doc in lhs_docs[1:]:
+                try:
+                    lhs_prime.merge_with(lhs_doc.data)
+                except MergeException as mex:
+                    log.error(mex)
+                    return_state = 11
+                except YAMLPathException as yex:
+                    log.error(yex)
+                    return_state = 12
+
+        for i in reversed(range(1, len(lhs_docs))):
+            del lhs_docs[i]
+
+        # Merge every RHS doc into the prime LHS doc
+        for rhs_doc in rhs_docs:
             try:
-                lhs_docs[0].merge_with(condensed_rhs.data)
+                lhs_prime.merge_with(rhs_doc.data)
             except MergeException as mex:
                 log.error(mex)
-                return_state = 11
+                return_state = 13
             except YAMLPathException as yex:
                 log.error(yex)
-                return_state = 12
-
-    elif merge_mode is MultiDocModes.CONDENSE_RHS:
-        (condensed_rhs, rhs_loaded) = condense_document(
-            log, yaml_editor, config, rhs_file)
-        if not rhs_loaded:
-            return_state = 20
-        else:
-            for lhs_doc in lhs_docs:
-                try:
-                    lhs_doc.merge_with(condensed_rhs.data)
-                except MergeException as mex:
-                    log.error(mex)
-                    return_state = 21
-                    break
-                except YAMLPathException as yex:
-                    log.error(yex)
-                    return_state = 22
-                    break
+                return_state = 14
 
     elif merge_mode is MultiDocModes.MERGE_ACROSS:
-        rhs_docs = get_doc_mergers(log, yaml_editor, config, rhs_file)
-        if len(rhs_docs) < 1:
-            return_state = 30
-        else:
-            lhs_len = len(lhs_docs)
-            rhs_len = len(rhs_docs)
-            max_len = lhs_len if lhs_len > rhs_len else rhs_len
-            for i in range(0, max_len):
-                if i > rhs_len:
-                    break
-                if i > lhs_len:
-                    lhs_docs.append(rhs_docs[i])
-                    continue
+        lhs_len = len(lhs_docs)
+        rhs_len = len(rhs_docs)
+        max_len = lhs_len if lhs_len > rhs_len else rhs_len
+        for i in range(0, max_len):
+            if i > rhs_len:
+                break
+            if i > lhs_len:
+                lhs_docs.append(rhs_docs[i])
+                continue
+            try:
+                lhs_docs[i].merge_with(rhs_docs[i].data)
+            except MergeException as mex:
+                log.error(mex)
+                return_state = 31
+                break
+            except YAMLPathException as yex:
+                log.error(yex)
+                return_state = 32
+                break
+
+    elif merge_mode is MultiDocModes.MATRIX_MERGE:
+        for lhs_doc in lhs_docs:
+            for rhs_doc in rhs_docs:
                 try:
-                    lhs_docs[i].merge_with(rhs_docs[i].data)
+                    lhs_doc.merge_with(rhs_doc.data)
                 except MergeException as mex:
                     log.error(mex)
-                    return_state = 31
+                    return_state = 41
                     break
                 except YAMLPathException as yex:
                     log.error(yex)
-                    return_state = 32
+                    return_state = 42
                     break
-
-    elif merge_mode is MultiDocModes.MATRIX_MERGE:
-        rhs_docs = get_doc_mergers(log, yaml_editor, config, rhs_file)
-        if len(rhs_docs) < 1:
-            return_state = 40
-        else:
-            for lhs_doc in lhs_docs:
-                for rhs_doc in rhs_docs:
-                    try:
-                        lhs_doc.merge_with(rhs_doc.data)
-                    except MergeException as mex:
-                        log.error(mex)
-                        return_state = 41
-                        break
-                    except YAMLPathException as yex:
-                        log.error(yex)
-                        return_state = 42
-                        break
 
     return return_state
 
@@ -496,9 +442,9 @@ def main():
                 "STDIN" if yaml_file.strip() == "-" else yaml_file))
 
         if len(mergers) < 1:
-            mergers = get_doc_mergers(
+            (mergers, mergers_loaded) = get_doc_mergers(
                 log, yaml_editor, merge_config, yaml_file)
-            if len(mergers) < 1:
+            if not mergers_loaded:
                 exit_state = 4
                 break
         else:

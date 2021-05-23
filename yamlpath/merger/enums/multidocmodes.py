@@ -16,11 +16,6 @@ class MultiDocModes(Enum):
     `CONDENSE_ALL`
         Merge all multi-documents up into single documents during the merge.
 
-    `CONDENSE_RHS`
-        Only RHS multi-documents are condensed into single documents during the
-        merge; the result is then merged discretely into each of the left-most
-        documents (when LHS is a multi-document file/stream).
-
     `MERGE_ACROSS`
         Condence no multi-documents; rather, only merge documents "across" from
         right to left.
@@ -31,7 +26,6 @@ class MultiDocModes(Enum):
     """
 
     CONDENSE_ALL = auto()
-    CONDENSE_RHS = auto()
     MERGE_ACROSS = auto()
     MATRIX_MERGE = auto()
 
