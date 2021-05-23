@@ -338,6 +338,42 @@ def get_doc_mergers(
 
     return (doc_mergers, docs_loaded)
 
+def merge_condense_all(
+    log: ConsolePrinter, lhs_docs: List[Merger], rhs_docs: List[Merger]
+) -> int:
+    """Condense LHS and RHS multi-docs together into one."""
+    return_state = 0
+
+    # Condense the LHS document, first
+    lhs_prime = lhs_docs[0]
+    if len(lhs_docs) > 1:
+        for lhs_doc in lhs_docs[1:]:
+            try:
+                lhs_prime.merge_with(lhs_doc.data)
+            except MergeException as mex:
+                log.error(mex)
+                return_state = 11
+            except YAMLPathException as yex:
+                log.error(yex)
+                return_state = 12
+
+    # With all subdocs merged into the first, eliminate all subdocs
+    for i in reversed(range(1, len(lhs_docs))):
+        del lhs_docs[i]
+
+    # Merge every RHS doc into the prime LHS doc
+    for rhs_doc in rhs_docs:
+        try:
+            lhs_prime.merge_with(rhs_doc.data)
+        except MergeException as mex:
+            log.error(mex)
+            return_state = 13
+        except YAMLPathException as yex:
+            log.error(yex)
+            return_state = 14
+
+    return return_state
+
 # pylint: disable=locally-disabled,too-many-locals,too-many-statements
 def merge_docs(
     log: ConsolePrinter, yaml_editor: YAML, config: MergerConfig,
@@ -353,32 +389,7 @@ def merge_docs(
         return 3
 
     if merge_mode is MultiDocModes.CONDENSE_ALL:
-        # Condense the LHS document, first
-        lhs_prime = lhs_docs[0]
-        if len(lhs_docs) > 1:
-            for lhs_doc in lhs_docs[1:]:
-                try:
-                    lhs_prime.merge_with(lhs_doc.data)
-                except MergeException as mex:
-                    log.error(mex)
-                    return_state = 11
-                except YAMLPathException as yex:
-                    log.error(yex)
-                    return_state = 12
-
-        for i in reversed(range(1, len(lhs_docs))):
-            del lhs_docs[i]
-
-        # Merge every RHS doc into the prime LHS doc
-        for rhs_doc in rhs_docs:
-            try:
-                lhs_prime.merge_with(rhs_doc.data)
-            except MergeException as mex:
-                log.error(mex)
-                return_state = 13
-            except YAMLPathException as yex:
-                log.error(yex)
-                return_state = 14
+        return_state = merge_condense_all(log, lhs_docs, rhs_docs)
 
     elif merge_mode is MultiDocModes.MERGE_ACROSS:
         lhs_len = len(lhs_docs)
@@ -433,6 +444,7 @@ def main():
     exit_state = 0
     consumed_stdin = False
     mergers: List[Merger] = []
+    merge_count = 0
     for yaml_file in args.yaml_files:
         if yaml_file.strip() == '-':
             consumed_stdin = True
@@ -453,6 +465,7 @@ def main():
                 log, yaml_editor, merge_config, mergers, yaml_file)
             if not exit_state == 0:
                 break
+            merge_count += 1
 
     # Check for a waiting STDIN document
     if (exit_state == 0
@@ -461,6 +474,14 @@ def main():
         and not sys.stdin.isatty()
     ):
         exit_state = merge_docs(log, yaml_editor, merge_config, mergers, "-")
+        merge_count += 1
+
+    # When no merges have occurred, check for a single-doc merge request
+    if (exit_state == 0
+        and merge_count == 0
+        and merge_config.get_multidoc_mode() is MultiDocModes.CONDENSE_ALL
+    ):
+        exit_state = merge_condense_all(log, mergers, [])
 
     # Output the final document
     if exit_state == 0:
