@@ -380,10 +380,12 @@ def merge_across(
     lhs_len = len(lhs_docs)
     rhs_len = len(rhs_docs)
     max_len = lhs_len if lhs_len > rhs_len else rhs_len
+    lhs_limit = lhs_len - 1
+    rhs_limit = rhs_len - 1
     for i in range(0, max_len):
-        if i > rhs_len:
+        if i > rhs_limit:
             break
-        if i > lhs_len:
+        if i > lhs_limit:
             lhs_docs.append(rhs_docs[i])
             continue
         try:
