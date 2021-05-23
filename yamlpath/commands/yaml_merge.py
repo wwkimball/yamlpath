@@ -262,7 +262,10 @@ def validateargs(args, log):
     if has_errors:
         sys.exit(1)
 
-def write_output_document(args, log, merger, yaml_editor):
+def write_output_document(
+    args: argparse.Namespace, log: ConsolePrinter, yaml_editor: YAML,
+    docs: List[Merger]
+) -> None:
     """Save a backup of the overwrite file, if requested."""
     if args.backup:
         backup_file = args.overwrite + ".bak"
@@ -274,19 +277,39 @@ def write_output_document(args, log, merger, yaml_editor):
         copy2(args.overwrite, backup_file)
 
     document_is_json = (
-        merger.prepare_for_dump(yaml_editor, args.output)
+        docs[0].prepare_for_dump(yaml_editor, args.output)
         is OutputDocTypes.JSON)
+
+    dumps = []
+    for doc in docs:
+        doc.prepare_for_dump(yaml_editor, args.output)
+        dumps.append(doc.data)
+
     if args.output:
         with open(args.output, 'w') as out_fhnd:
             if document_is_json:
-                json.dump(Parsers.jsonify_yaml_data(merger.data), out_fhnd)
+                if len(docs) > 1:
+                    raise NotImplementedError
+                else:
+                    json.dump(Parsers.jsonify_yaml_data(dumps[0]), out_fhnd)
             else:
-                yaml_editor.dump(merger.data, out_fhnd)
+                if len(docs) > 1:
+                    yaml_editor.explicit_end = True
+                    yaml_editor.dump_all(dumps, out_fhnd)
+                else:
+                    yaml_editor.dump(dumps[0], out_fhnd)
     else:
         if document_is_json:
-            json.dump(Parsers.jsonify_yaml_data(merger.data), sys.stdout)
+            if len(docs) > 1:
+                raise NotImplementedError
+            else:
+                json.dump(Parsers.jsonify_yaml_data(dumps[0]), sys.stdout)
         else:
-            yaml_editor.dump(merger.data, sys.stdout)
+            if len(docs) > 1:
+                yaml_editor.explicit_end = True
+                yaml_editor.dump_all(dumps, sys.stdout)
+            else:
+                yaml_editor.dump(dumps[0], sys.stdout)
 
 def condense_document(
     log: ConsolePrinter, yaml_editor: YAML, config: MergerConfig,
@@ -482,7 +505,7 @@ def main():
 
     # Output the final document
     if exit_state == 0:
-        write_output_document(args, log, mergers[0], yaml_editor)
+        write_output_document(args, log, yaml_editor, mergers)
 
     sys.exit(exit_state)
 
