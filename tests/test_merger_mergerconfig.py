@@ -7,6 +7,7 @@ from yamlpath.merger.enums import (
     AoHMergeOpts,
     ArrayMergeOpts,
     HashMergeOpts,
+    MultiDocModes,
     OutputDocTypes
 )
 from yamlpath.wrappers import NodeCoords
@@ -39,6 +40,18 @@ class Test_merger_MergerConfig():
     def test_get_document_format(self, quiet_logger):
         mc = MergerConfig(quiet_logger, SimpleNamespace())
         assert mc.get_document_format() == OutputDocTypes.AUTO
+
+
+    ###
+    # get_multidoc_mode
+    ###
+    def test_get_multidoc_mode_default(self, quiet_logger):
+        mc = MergerConfig(quiet_logger, SimpleNamespace())
+        assert mc.get_multidoc_mode() == MultiDocModes.CONDENSE_ALL
+
+    def test_get_multidoc_mode_cli(self, quiet_logger):
+        mc = MergerConfig(quiet_logger, SimpleNamespace(multi_doc_mode="matrix_merge"))
+        assert mc.get_multidoc_mode() == MultiDocModes.MATRIX_MERGE
 
 
     ###
