@@ -343,8 +343,6 @@ def merge_condense_all(
 ) -> int:
     """Condense LHS and RHS multi-docs together into one."""
     return_state = 0
-
-    # Condense the LHS document, first
     lhs_prime = lhs_docs[0]
     if len(lhs_docs) > 1:
         for lhs_doc in lhs_docs[1:]:
@@ -374,7 +372,53 @@ def merge_condense_all(
 
     return return_state
 
-# pylint: disable=locally-disabled,too-many-locals,too-many-statements
+def merge_across(
+    log: ConsolePrinter, lhs_docs: List[Merger], rhs_docs: List[Merger]
+) -> int:
+    """Condense LHS and RHS multi-docs together into one."""
+    return_state = 0
+    lhs_len = len(lhs_docs)
+    rhs_len = len(rhs_docs)
+    max_len = lhs_len if lhs_len > rhs_len else rhs_len
+    for i in range(0, max_len):
+        if i > rhs_len:
+            break
+        if i > lhs_len:
+            lhs_docs.append(rhs_docs[i])
+            continue
+        try:
+            lhs_docs[i].merge_with(rhs_docs[i].data)
+        except MergeException as mex:
+            log.error(mex)
+            return_state = 31
+            break
+        except YAMLPathException as yex:
+            log.error(yex)
+            return_state = 32
+            break
+
+    return return_state
+
+def merge_matrix(
+    log: ConsolePrinter, lhs_docs: List[Merger], rhs_docs: List[Merger]
+) -> int:
+    """Condense LHS and RHS multi-docs together into one."""
+    return_state = 0
+    for lhs_doc in lhs_docs:
+        for rhs_doc in rhs_docs:
+            try:
+                lhs_doc.merge_with(rhs_doc.data)
+            except MergeException as mex:
+                log.error(mex)
+                return_state = 41
+                break
+            except YAMLPathException as yex:
+                log.error(yex)
+                return_state = 42
+                break
+
+    return return_state
+
 def merge_docs(
     log: ConsolePrinter, yaml_editor: YAML, config: MergerConfig,
     lhs_docs: List[Merger], rhs_file: str
@@ -392,39 +436,10 @@ def merge_docs(
         return_state = merge_condense_all(log, lhs_docs, rhs_docs)
 
     elif merge_mode is MultiDocModes.MERGE_ACROSS:
-        lhs_len = len(lhs_docs)
-        rhs_len = len(rhs_docs)
-        max_len = lhs_len if lhs_len > rhs_len else rhs_len
-        for i in range(0, max_len):
-            if i > rhs_len:
-                break
-            if i > lhs_len:
-                lhs_docs.append(rhs_docs[i])
-                continue
-            try:
-                lhs_docs[i].merge_with(rhs_docs[i].data)
-            except MergeException as mex:
-                log.error(mex)
-                return_state = 31
-                break
-            except YAMLPathException as yex:
-                log.error(yex)
-                return_state = 32
-                break
+        return_state = merge_across(log, lhs_docs, rhs_docs)
 
     elif merge_mode is MultiDocModes.MATRIX_MERGE:
-        for lhs_doc in lhs_docs:
-            for rhs_doc in rhs_docs:
-                try:
-                    lhs_doc.merge_with(rhs_doc.data)
-                except MergeException as mex:
-                    log.error(mex)
-                    return_state = 41
-                    break
-                except YAMLPathException as yex:
-                    log.error(yex)
-                    return_state = 42
-                    break
+        return_state = merge_matrix(log, lhs_docs, rhs_docs)
 
     return return_state
 
