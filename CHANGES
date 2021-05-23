@@ -58,13 +58,13 @@ Enhancements:
   (-M), which accepts one of the following modes:
   * CONDENSE_ALL:  This is the default, which merges all multi-documents up
     into single documents during the merge.
-  * CONDENSE_RHS:  Only RHS multi-documents are condensed into single documents
-    during the merge; the result is then merged discretely into each of the
-    left-most documents (when LHS is a multi-document file/stream).
-  * MERGE_ACROSS:  Condence no multi-documents; rather, only merge documents
-    "across" from right to left.
-  * MATRIX_MERGE:  Condence no multi-documents; rather, merge every RHS
-    document into every LHS document.
+  * MERGE_ACROSS:  Condense no multi-documents; rather, only merge documents
+    "across" from right to left such that the first document in the RHS multi-
+    document merges only into the first document in the LHS multi-document, the
+    second across similarly, and so on.
+  * MATRIX_MERGE:  Condense no multi-documents; rather, merge every RHS
+    document in a multi-document RHS into every LHS document in a multi-
+    document LHS.
 * The [has_child(NAME)] Search Keyword now accepts an &NAME form of its first
   (only) parameter.  This switches the function to match against Anchor/Alias
   names, including YAML Merge Keys.
