@@ -193,12 +193,13 @@ class Test_yaml_paths():
         result = script_runner.run(
             self.command,
             "--nostdin", "--nofile",
-            "--pathsep=/", "--keynames", "--refnames",
+            "--pathsep=/", "--keynames", "--refnames", "--allowvaluealiases",
             "--search", "^anchored", yaml_file
         )
         assert result.success, result.stderr
         assert "\n".join([
             "/anchored_hash",
+            "/more_hash[&anchoredHash]",
         ]) + "\n" == result.stdout
 
     def test_anchored_hash_value(self, script_runner, tmp_path_factory):

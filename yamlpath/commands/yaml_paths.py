@@ -12,12 +12,12 @@ import argparse
 import json
 from os import access, R_OK
 from os.path import isfile
-from typing import Any, Generator, List, Optional, Tuple
+from typing import Any, Dict, Generator, List, Optional, Tuple
 
 from ruamel.yaml.comments import CommentedSeq, CommentedMap
 
 from yamlpath import __version__ as YAMLPATH_VERSION
-from yamlpath.common import Parsers, Searches
+from yamlpath.common import Anchors, Parsers, Searches
 from yamlpath.exceptions import YAMLPathException
 from yamlpath.enums import (
     AnchorMatches,
@@ -376,7 +376,7 @@ def search_for_paths(logger: ConsolePrinter, processor: EYAMLProcessor,
                      pathsep: PathSeperators = PathSeperators.DOT,
                      build_path: str = "",
                      seen_anchors: Optional[List[str]] = None,
-                     **kwargs: bool) -> Generator[YAMLPath, None, None]:
+                     **kwargs) -> Generator[YAMLPath, None, None]:
     """
     Recursively search a data structure for nodes matching an expression.
 
@@ -391,6 +391,7 @@ def search_for_paths(logger: ConsolePrinter, processor: EYAMLProcessor,
     include_value_aliases: bool = kwargs.pop("include_value_aliases", False)
     decrypt_eyaml: bool = kwargs.pop("decrypt_eyaml", False)
     expand_children: bool = kwargs.pop("expand_children", False)
+    all_anchors: Dict[str, Any] = kwargs.pop("all_anchors", {})
     strsep = str(pathsep)
     invert = terms.inverted
     method = terms.method
@@ -459,8 +460,8 @@ def search_for_paths(logger: ConsolePrinter, processor: EYAMLProcessor,
                         include_key_aliases=include_key_aliases,
                         include_value_aliases=include_value_aliases,
                         decrypt_eyaml=decrypt_eyaml,
-                        expand_children=expand_children
-                ):
+                        expand_children=expand_children,
+                        all_anchors=all_anchors):
                     logger.debug(
                         "Yielding RECURSED match, {}.".format(subpath),
                         prefix="yaml_paths::search_for_paths<list>:  ",
@@ -600,8 +601,8 @@ def search_for_paths(logger: ConsolePrinter, processor: EYAMLProcessor,
                         include_key_aliases=include_key_aliases,
                         include_value_aliases=include_value_aliases,
                         decrypt_eyaml=decrypt_eyaml,
-                        expand_children=expand_children
-                ):
+                        expand_children=expand_children,
+                        all_anchors=all_anchors):
                     logger.debug(
                         "Yielding RECURSED match, {}.".format(subpath),
                         prefix="yaml_paths::search_for_paths<dict>:  ",
@@ -625,6 +626,27 @@ def search_for_paths(logger: ConsolePrinter, processor: EYAMLProcessor,
                         ).format(check_value, tmp_path)
                     )
                     yield YAMLPath(tmp_path)
+
+        # Include YAML Merge Keys when include_value_aliases is enabled
+        if include_value_aliases:
+            refs = data.merge if hasattr(data, "merge") else []
+            for (_, ref_node) in refs:
+                for anchor_name, anchor_node in all_anchors.items():
+                    if anchor_node == ref_node:
+                        tmp_path = (build_path + "[&{}]".format(
+                            YAMLPath.escape_path_section(
+                                anchor_name, pathsep)))
+                        matches = Searches.search_matches(
+                            method, term, anchor_name)
+                        if ((matches and not invert)
+                            or (invert and not matches)
+                        ):
+                            logger.debug(
+                                ("yaml_paths::search_for_paths<ymk>:"
+                                + "yielding YMK-VALUE match, {}:  {}."
+                                ).format(anchor_name, tmp_path)
+                            )
+                            yield YAMLPath(tmp_path)
 
 def get_search_term(logger: ConsolePrinter,
                     expression: str) -> Optional[SearchTerms]:
@@ -743,6 +765,8 @@ def process_yaml_file(
 
         # Process all searches
         processor.data = yaml_data
+        all_anchors: Dict[str, Any] = {}
+        Anchors.scan_for_anchors(yaml_data, all_anchors)
         yaml_paths = []
         for expression in args.search:
             exterm = get_search_term(log, expression)
@@ -760,7 +784,8 @@ def process_yaml_file(
                     include_key_aliases=include_key_aliases,
                     include_value_aliases=include_value_aliases,
                     decrypt_eyaml=args.decrypt,
-                    expand_children=args.expand):
+                    expand_children=args.expand,
+                    all_anchors=all_anchors):
                 # Record only unique results
                 add_entry = True
                 for entry in yaml_paths:
@@ -792,7 +817,8 @@ def process_yaml_file(
                         include_key_aliases=include_key_aliases,
                         include_value_aliases=include_value_aliases,
                         decrypt_eyaml=args.decrypt,
-                        expand_children=args.expand):
+                        expand_children=args.expand,
+                        all_anchors=all_anchors):
                     for entry in yaml_paths:
                         if str(result) == str(entry[1]):
                             yaml_paths.remove(entry)
