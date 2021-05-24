@@ -85,6 +85,24 @@ https://github.com/wwkimball/yamlpath/issues.
         help="Show only nodes which are the same, still reporting\nthat"
              " differences exist -- when they do -- with an\nexit-state of 1")
 
+    multi_doc_group = parser.add_argument_group(
+        "multi-document source options",
+        "As diffs can be performed only between two documents, one must be\n"
+        "selected from multi-document sources when present.  Make a\n"
+        "selection by indicating the zero-based index of the one document\n"
+        "to use from each multi-document source (the first document is\n"
+        "index 0).")
+    multi_doc_group.add_argument(
+        "-L", "--left-document-index",
+        metavar="DOCUMENT_INDEX",
+        type=int,
+        help="zero-based document index of the LHS multi-document source")
+    multi_doc_group.add_argument(
+        "-R", "--right-document-index",
+        metavar="DOCUMENT_INDEX",
+        type=int,
+        help="zero-based document index of the RHS multi-document source")
+
     parser.add_argument(
         "-t", "--pathsep",
         default="dot",
@@ -236,6 +254,20 @@ def get_docs(log, yaml_editor, yaml_file):
 
     return (docs, docs_loaded)
 
+def get_doc(log, docs, index):
+    """Get one document from a multi-document source."""
+    doc_count = len(docs)
+    if doc_count < 1:
+        return None
+    if doc_count == 1:
+        return docs[0]
+    if index > doc_count:
+        log.critical(
+            "DOCUMENT_INDEX is greater than available document count, {}."
+            .format(doc_count), 1)
+    return docs[index]
+
+# pylint: disable=locally-disabled,too-many-locals
 def main():
     """Main code."""
     args = processcli()
@@ -248,13 +280,28 @@ def main():
     rhs_yaml = Parsers.get_yaml_editor()
     (lhs_docs, lhs_loaded) = get_docs(log, lhs_yaml, lhs_file)
     (rhs_docs, rhs_loaded) = get_docs(log, rhs_yaml, rhs_file)
+    lhs_doc_count = len(lhs_docs) if lhs_loaded else 0
+    rhs_doc_count = len(rhs_docs) if rhs_loaded else 0
+    lhs_idx_set = hasattr(args, "left_document_index")
+    rhs_idx_set = hasattr(args, "right_document_index")
 
     if not (lhs_loaded and rhs_loaded):
         # An error message has already been logged
         sys.exit(1)
 
-    lhs_document = lhs_docs[0]
-    rhs_document = rhs_docs[0]
+    if lhs_doc_count > 1 and not lhs_idx_set:
+        log.critical((
+            "--left-document-index|-L must be set; the document contains {}"
+            " documents.").format(lhs_doc_count))
+    lhs_index = args.left_document_index if lhs_idx_set else 0
+    lhs_document = get_doc(log, lhs_docs, lhs_index)
+
+    if rhs_doc_count > 1 and not rhs_idx_set:
+        log.critical((
+            "--right-document-index|-R must be set; the document contains {}"
+            " documents.").format(rhs_doc_count))
+    rhs_index = args.right_document_index if rhs_idx_set else 0
+    rhs_document = get_doc(log, rhs_docs, rhs_index)
 
     diff = Differ(
         DifferConfig(log, args), log, lhs_document,
