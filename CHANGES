@@ -79,6 +79,7 @@ Enhancements:
   passing only the --change and --anchor parameters.  The operation must now be
   explicit by setting --aliasof or --mergekey along with --change and
   optionally with --anchor.
+* The yaml-diff tool now supports multi-document sources.
 
 API Changes:
 * The common.nodes utility class now has a generally-useful static method which

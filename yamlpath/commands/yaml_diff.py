@@ -210,6 +210,32 @@ def print_report(log, args, diff):
 
     return changes_found
 
+def get_docs(log, yaml_editor, yaml_file):
+    """Get all documents from a YAML/JSON/Compatible file."""
+    docs_loaded = True
+    docs = []
+    if yaml_file != "-" and not isfile(yaml_file):
+        log.error("File not found:  {}".format(yaml_file))
+        return ([], False)
+
+    for (yaml_data, doc_loaded) in Parsers.get_yaml_multidoc_data(
+        yaml_editor, log, yaml_file
+    ):
+        if not doc_loaded:
+            # An error message has already been logged
+            docs.clear()
+            docs_loaded = False
+            break
+
+        if (not isinstance(yaml_data, (list, dict))
+            and len(str(yaml_data)) < 1
+        ):
+            yaml_data = None
+
+        docs.append(yaml_data)
+
+    return (docs, docs_loaded)
+
 def main():
     """Main code."""
     args = processcli()
@@ -220,16 +246,15 @@ def main():
     rhs_file = args.yaml_files[1]
     lhs_yaml = Parsers.get_yaml_editor()
     rhs_yaml = Parsers.get_yaml_editor()
+    (lhs_docs, lhs_loaded) = get_docs(log, lhs_yaml, lhs_file)
+    (rhs_docs, rhs_loaded) = get_docs(log, rhs_yaml, rhs_file)
 
-    (lhs_document, doc_loaded) = Parsers.get_yaml_data(lhs_yaml, log, lhs_file)
-    if not doc_loaded:
+    if not (lhs_loaded and rhs_loaded):
         # An error message has already been logged
         sys.exit(1)
 
-    (rhs_document, doc_loaded) = Parsers.get_yaml_data(rhs_yaml, log, rhs_file)
-    if not doc_loaded:
-        # An error message has already been logged
-        sys.exit(1)
+    lhs_document = lhs_docs[0]
+    rhs_document = rhs_docs[0]
 
     diff = Differ(
         DifferConfig(log, args), log, lhs_document,

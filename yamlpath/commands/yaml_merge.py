@@ -332,6 +332,7 @@ def get_doc_mergers(
         if not doc_loaded:
             # An error message has already been logged
             doc_mergers.clear()
+            docs_loaded = False
             break
 
         doc_mergers.append(Merger(log, yaml_data, config))
