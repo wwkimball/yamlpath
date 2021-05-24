@@ -79,7 +79,12 @@ Enhancements:
   passing only the --change and --anchor parameters.  The operation must now be
   explicit by setting --aliasof or --mergekey along with --change and
   optionally with --anchor.
-* The yaml-diff tool now supports multi-document sources.
+* The yaml-diff tool now supports multi-document sources.  Only one document of
+  any multi-document source on each side of the LHS-RHS comparison can be
+  selected for the operation (diffs are performed only between two documents).
+  Such selection is made via two new options, --left-document-index|-L and
+  --right-document-index|-R.  An error is emitted whenever a multi-document
+  source is detected without an appropriate document index selection.
 
 API Changes:
 * The common.nodes utility class now has a generally-useful static method which
