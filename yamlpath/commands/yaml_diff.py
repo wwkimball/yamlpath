@@ -257,14 +257,12 @@ def get_docs(log, yaml_editor, yaml_file):
 def get_doc(log, docs, index):
     """Get one document from a multi-document source."""
     doc_count = len(docs)
-    if doc_count < 1:
-        return None
-    if doc_count == 1:
-        return docs[0]
-    if index > doc_count:
-        log.critical(
-            "DOCUMENT_INDEX is greater than available document count, {}."
-            .format(doc_count), 1)
+    max_index = doc_count - 1
+    if index > max_index:
+        log.critical((
+            "DOCUMENT_INDEX is too high; the maximum zero-based index is {}"
+            " when the document count is {}."
+            ).format(max_index, doc_count), 1)
     return docs[index]
 
 # pylint: disable=locally-disabled,too-many-locals
@@ -282,8 +280,10 @@ def main():
     (rhs_docs, rhs_loaded) = get_docs(log, rhs_yaml, rhs_file)
     lhs_doc_count = len(lhs_docs) if lhs_loaded else 0
     rhs_doc_count = len(rhs_docs) if rhs_loaded else 0
-    lhs_idx_set = hasattr(args, "left_document_index")
-    rhs_idx_set = hasattr(args, "right_document_index")
+    lhs_idx_set = (hasattr(args, "left_document_index")
+                   and args.left_document_index is not None)
+    rhs_idx_set = (hasattr(args, "right_document_index")
+                   and args.right_document_index is not None)
 
     if not (lhs_loaded and rhs_loaded):
         # An error message has already been logged
@@ -291,15 +291,15 @@ def main():
 
     if lhs_doc_count > 1 and not lhs_idx_set:
         log.critical((
-            "--left-document-index|-L must be set; the document contains {}"
-            " documents.").format(lhs_doc_count))
+            "--left-document-index|-L must be set; the source contains {}"
+            " documents.").format(lhs_doc_count), 1)
     lhs_index = args.left_document_index if lhs_idx_set else 0
     lhs_document = get_doc(log, lhs_docs, lhs_index)
 
     if rhs_doc_count > 1 and not rhs_idx_set:
         log.critical((
-            "--right-document-index|-R must be set; the document contains {}"
-            " documents.").format(rhs_doc_count))
+            "--right-document-index|-R must be set; the source contains {}"
+            " documents.").format(rhs_doc_count), 1)
     rhs_index = args.right_document_index if rhs_idx_set else 0
     rhs_document = get_doc(log, rhs_docs, rhs_index)
 

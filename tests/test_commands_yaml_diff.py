@@ -244,6 +244,69 @@ c [2].message
         assert not result.success, result.stderr
         assert "No accessible eyaml command" in result.stderr
 
+    def test_diff_yaml_parsing_error(self, script_runner, imparsible_yaml_file, badsyntax_yaml_file):
+        result = script_runner.run(
+            self.command,
+            imparsible_yaml_file,
+            badsyntax_yaml_file
+        )
+        assert not result.success, result.stderr
+        assert "YAML parsing error" in result.stderr
+
+    def test_multidoc_missing_lhs_index_error(self, script_runner, tmp_path_factory):
+        lhs_file = create_temp_yaml_file(tmp_path_factory, """---
+key: value
+...
+---
+second_key: second value
+...
+""")
+        rhs_file = create_temp_yaml_file(tmp_path_factory, self.lhs_hash_content)
+
+        result = script_runner.run(
+            self.command,
+            lhs_file,
+            rhs_file
+        )
+        assert not result.success, result.stderr
+        assert "--left-document-index|-L must be set" in result.stderr
+
+    def test_multidoc_missing_rhs_index_error(self, script_runner, tmp_path_factory):
+        lhs_file = create_temp_yaml_file(tmp_path_factory, self.lhs_hash_content)
+        rhs_file = create_temp_yaml_file(tmp_path_factory, """---
+key: value
+...
+---
+second_key: second value
+...
+""")
+
+        result = script_runner.run(
+            self.command,
+            lhs_file,
+            rhs_file
+        )
+        assert not result.success, result.stderr
+        assert "--right-document-index|-R must be set" in result.stderr
+
+    def test_multidoc_index_too_high(self, script_runner, tmp_path_factory):
+        lhs_file = create_temp_yaml_file(tmp_path_factory, self.lhs_hash_content)
+        rhs_file = create_temp_yaml_file(tmp_path_factory, self.lhs_hash_content)
+
+        # DEBUG
+        # print("LHS File:  {}".format(lhs_file))
+        # print("RHS File:  {}".format(rhs_file))
+        # print("Expected Output:")
+        # print(merged_yaml_content)
+
+        result = script_runner.run(
+            self.command
+            , "--left-document-index=1"
+            , lhs_file
+            , rhs_file)
+        assert not result.success, result.stderr
+        assert "DOCUMENT_INDEX is too high" in result.stderr
+
     def test_no_diff_two_hash_files(self, script_runner, tmp_path_factory):
         lhs_file = create_temp_yaml_file(tmp_path_factory, self.lhs_hash_content)
         rhs_file = create_temp_yaml_file(tmp_path_factory, self.lhs_hash_content)
