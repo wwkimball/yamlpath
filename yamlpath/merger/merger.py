@@ -617,6 +617,9 @@ class Merger:
     ) -> bool:
         """Insert an RHS dict merge result into the LHS document."""
         merge_performed = False
+        merged_data: Union[
+            CommentedMap, CommentedSeq, CommentedSet
+        ] = CommentedMap()
         if isinstance(lhs, CommentedSeq):
             # Merge a dict into a list
             self.logger.debug(

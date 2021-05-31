@@ -20,8 +20,10 @@ from ruamel.yaml.comments import (
 )
 
 from yamlpath.wrappers import ConsolePrinter
-from yamlpath.patches.aliasstyle import MySerializer # type: ignore
-from yamlpath.patches.aliasstyle import MyEmitter    # type: ignore
+
+if ruamel.yaml.version_info < (0, 17, 5):                # pragma: no cover
+    from yamlpath.patches.aliasstyle import MySerializer # type: ignore
+    from yamlpath.patches.aliasstyle import MyEmitter    # type: ignore
 
 
 class Parsers:
@@ -60,7 +62,7 @@ class Parsers:
 
         # Import Anthon's patch for Aliased entries in Unordered Sets per
         # https://sourceforge.net/p/ruamel-yaml/tickets/384/
-        if ruamel.yaml.version_info < (0, 17, 5):
+        if ruamel.yaml.version_info < (0, 17, 5):  # pragma: no cover
             yaml.Serializer = MySerializer         # type: ignore
             yaml.Emitter = MyEmitter               # type: ignore
 
