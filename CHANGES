@@ -17,6 +17,10 @@ Bug Fixes:
 * Bare Anchor name references were treated as Hash key names when & was not the
   very first non-separator character of a YAML Path or immediately following a
   `[`.  So, /my_hash/&my_anchor was not working as expected.
+* The Merger (and thus, the yaml-merge command-line tool) would only return the
+  LHS document when neither LHS nor RHS documents were Hashes, no matter what
+  the merge options were set to.  This did not affect content which was
+  children of Hashes.
 
 Enhancements:
 * YAML Path parsing errors are now a little more specific, indicating at which
@@ -85,6 +89,14 @@ Enhancements:
   Such selection is made via two new options, --left-document-index|-L and
   --right-document-index|-R.  An error is emitted whenever a multi-document
   source is detected without an appropriate document index selection.
+* YAML Unordered Sets -- https://yaml.org/type/set.html -- are now fully
+  supported in YAML Paths, this project's API, and the reference command-line
+  tools.  Because an Unordered Set is effectively a Hash (map/dict) where the
+  entries are key-value pairs all having null (None) values, their entries are
+  accessible only by their exact key.  While they look in YAML data like Arrays
+  (sequences/lists) with a leading `?` rather than a `-`, they are not; their
+  entries cannot be accessed by a numerical index because they are defined in
+  the YAML specification as deliberately unordered.
 
 API Changes:
 * The common.nodes utility class now has a generally-useful static method which

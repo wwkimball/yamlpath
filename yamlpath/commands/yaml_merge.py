@@ -4,7 +4,7 @@ Enable users to merge YAML/Compatible files.
 Due to the complexities of merging, users are given deep control over the merge
 operation via both default behaviors as well as per YAML Path behaviors.
 
-Copyright 2020 William W. Kimball, Jr. MBA MSIS
+Copyright 2020, 2021 William W. Kimball, Jr. MBA MSIS
 """
 import sys
 import argparse
@@ -25,6 +25,7 @@ from yamlpath.merger.enums import (
     HashMergeOpts,
     MultiDocModes,
     OutputDocTypes,
+    SetMergeOpts,
 )
 from yamlpath.merger.exceptions import MergeException
 from yamlpath.merger import Merger, MergerConfig
@@ -97,6 +98,14 @@ https://github.com/wwkimball/yamlpath/issues.
             "default means by which Arrays are merged together\n"
             "(overrides [defaults]arrays but is overridden on a\n"
             "YAML Path basis via --config|-c); default=all"))
+    parser.add_argument(
+        "-E", "--sets",
+        choices=[l.lower() for l in SetMergeOpts.get_names()],
+        type=str.lower,
+        help=(
+            "default means by which Sets are merged together\n"
+            "(overrides [defaults]sets but is overridden on a\n"
+            "YAML Path basis via --config|-c); default=unique"))
     parser.add_argument(
         "-H", "--hashes",
         choices=[l.lower() for l in HashMergeOpts.get_names()],

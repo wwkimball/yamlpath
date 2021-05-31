@@ -168,6 +168,11 @@ class YAMLPath:
         return popped_segment
 
     @property
+    def is_root(self) -> bool:
+        """Indicate whether this YAML Path points at the document root."""
+        return len(self.escaped) == 0
+
+    @property
     def original(self) -> str:
         """
         Original YAML Path accessor.

@@ -5,3 +5,4 @@ from .arraymergeopts import ArrayMergeOpts
 from .hashmergeopts import HashMergeOpts
 from .multidocmodes import MultiDocModes
 from .outputdoctypes import OutputDocTypes
+from .setmergeopts import SetMergeOpts

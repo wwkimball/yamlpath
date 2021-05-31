@@ -236,8 +236,13 @@ class ConsolePrinter:
                 data, prefix=prefix, **kwargs
             ):
                 yield line
-        elif isinstance(data, (list, set, tuple, deque)):
+        elif isinstance(data, (list, tuple, deque)):
             for line in ConsolePrinter._debug_list(
+                data, prefix=prefix, **kwargs
+            ):
+                yield line
+        elif isinstance(data, (set, CommentedSet)):
+            for line in ConsolePrinter._debug_set(
                 data, prefix=prefix, **kwargs
             ):
                 yield line
@@ -412,3 +417,18 @@ class ConsolePrinter:
                 print_anchor=False
             ):
                 yield line
+
+    @staticmethod
+    def _debug_set(
+        data: Union[Set, CommentedSet], **kwargs
+    ) -> Generator[str, None, None]:
+        """Helper for debug."""
+        prefix = kwargs.pop("prefix", "")
+
+        for key in data:
+            display_anchor = ConsolePrinter._debug_get_kv_anchors(key, None)
+            display_tag = ConsolePrinter._debug_get_kv_tags(key, None)
+            line = "{{{}}}{}{}".format(
+                key, display_anchor, display_tag)
+            yield ConsolePrinter._debug_prefix_lines(
+                "{}{}{}".format(prefix, line, type(key)))

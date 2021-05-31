@@ -6,13 +6,15 @@ Output is printed to STDOUT, one line per match.  When a result is a complex
 data-type (Array or Hash), a JSON dump is produced to represent each complex
 result.  EYAML can be employed to decrypt the values.
 
-Copyright 2018, 2019, 2020 William W. Kimball, Jr. MBA MSIS
+Copyright 2018, 2019, 2020, 2021 William W. Kimball, Jr. MBA MSIS
 """
 import sys
 import argparse
 import json
 from os import access, R_OK
 from os.path import isfile
+
+from ruamel.yaml.comments import CommentedSet
 
 from yamlpath import __version__ as YAMLPATH_VERSION
 from yamlpath.common import Parsers
@@ -186,7 +188,7 @@ def main():
 
     try:
         for node in discovered_nodes:
-            if isinstance(node, (dict, list)):
+            if isinstance(node, (dict, list, CommentedSet)):
                 print(json.dumps(Parsers.jsonify_yaml_data(node)))
             else:
                 if node is None:

@@ -2,7 +2,7 @@ import pytest
 
 from types import SimpleNamespace
 
-from ruamel.yaml.comments import CommentedMap, CommentedSeq, TaggedScalar
+from ruamel.yaml.comments import CommentedMap, CommentedSeq, CommentedSet, TaggedScalar
 from ruamel.yaml.scalarstring import PlainScalarString, FoldedScalarString
 
 from yamlpath.enums import PathSegmentTypes
@@ -119,6 +119,7 @@ class Test_wrappers_ConsolePrinter():
                 "aoh": [{"id": 1},{"id": 2},{"id": 3}],
                 "aoa": [[True, True], [True, False], [False, True]],
                 "dod": {"a": {"b": {"c": "d"}}},
+                "set": CommentedSet(["one", "two"]),
             })
         )
         console = capsys.readouterr()
@@ -145,6 +146,8 @@ class Test_wrappers_ConsolePrinter():
             "DEBUG:  test_debug_noisy:  [aoa][2][0]False<class 'bool'>",
             "DEBUG:  test_debug_noisy:  [aoa][2][1]True<class 'bool'>",
             "DEBUG:  test_debug_noisy:  [dod][a][b][c]d<class 'str'>",
+            "DEBUG:  test_debug_noisy:  [set]{one}<class 'str'>",
+            "DEBUG:  test_debug_noisy:  [set]{two}<class 'str'>",
             "DEBUG:  test_debug_noisy:  ::: DATA FOOTER :::",
             "DEBUG:  test_debug_noisy:  === FOOTER ===",
         ]) + "\n" == console.out

@@ -234,6 +234,115 @@ products_array:
             matchidx += 1
         assert len(results) == matchidx
 
+    @pytest.mark.parametrize("mustexist,yamlpath,results,yp_error", [
+        (True, "baseball_legends", [set(['Mark McGwire', 'Sammy Sosa', 'Ty Cobb', 'Ken Griff'])], None),
+        (True, "baseball_legends.*bb", ["Ty Cobb"], None),
+        (True, "baseball_legends[A:S]", ["Mark McGwire", "Ken Griff"], None),
+        (True, "baseball_legends[2]", [], "Array indexing is invalid against unordered set"),
+        (True, "baseball_legends[&bl_anchor]", ["Ty Cobb"], None),
+        (True, "baseball_legends([A:M])+([T:Z])", [["Ken Griff", "Ty Cobb"]], None),
+        (True, "baseball_legends([A:Z])-([S:Z])", [["Mark McGwire", "Ken Griff"]], None),
+        (True, "**", ["Ty Cobb", "Mark McGwire", "Sammy Sosa", "Ty Cobb", "Ken Griff"], None),
+        (False, "baseball_legends", [set(['Mark McGwire', 'Sammy Sosa', 'Ty Cobb', 'Ken Griff'])], None),
+        (False, "baseball_legends.*bb", ["Ty Cobb"], None),
+        (False, "baseball_legends[A:S]", ["Mark McGwire", "Ken Griff"], None),
+        (False, "baseball_legends[2]", [], "Array indexing is invalid against unordered set"),
+        (False, "baseball_legends[&bl_anchor]", ["Ty Cobb"], None),
+        (False, "baseball_legends([A:M])+([T:Z])", [["Ken Griff", "Ty Cobb"]], None),
+        (False, "baseball_legends([A:Z])-([S:Z])", [["Mark McGwire", "Ken Griff"]], None),
+        (False, "**", ["Ty Cobb", "Mark McGwire", "Sammy Sosa", "Ty Cobb", "Ken Griff"], None),
+        (False, "baseball_legends(rbi)+(errate)", [], "Cannot add PathSegmentTypes.COLLECTOR subreference to sets"),
+        (False, r"baseball_legends.Ted\ Williams", [set(['Mark McGwire', 'Sammy Sosa', 'Ty Cobb', 'Ken Griff', "Ted Williams"])], None),
+    ])
+    def test_get_from_sets(self, quiet_logger, mustexist, yamlpath, results, yp_error):
+        yamldata = """---
+aliases:
+  - &bl_anchor Ty Cobb
+
+baseball_legends: !!set
+  ? Mark McGwire
+  ? Sammy Sosa
+  ? *bl_anchor
+  ? Ken Griff
+"""
+        yaml = YAML()
+        processor = Processor(quiet_logger, yaml.load(yamldata))
+        matchidx = 0
+
+        try:
+            for node in processor.get_nodes(yamlpath, mustexist=mustexist):
+                assert unwrap_node_coords(node) == results[matchidx]
+                matchidx += 1
+        except YAMLPathException as ex:
+            if yp_error is not None:
+                assert yp_error in str(ex)
+            else:
+                # Unexpected error
+                assert False
+
+        assert len(results) == matchidx
+
+    @pytest.mark.parametrize("setpath,value,verifypath,tally", [
+        ("aliases[&bl_anchor]", "REPLACEMENT", "**.&bl_anchor", 2),
+        (r"baseball_legends.Sammy\ Sosa", "REPLACEMENT", "baseball_legends.REPLACEMENT", 1),
+    ])
+    def test_change_values_in_sets(self, quiet_logger, setpath, value, verifypath, tally):
+        yamldata = """---
+aliases:
+  - &bl_anchor Ty Cobb
+
+baseball_legends: !!set
+  ? Mark McGwire
+  ? Sammy Sosa
+  ? *bl_anchor
+  ? Ken Griff
+"""
+        yaml = YAML()
+        data = yaml.load(yamldata)
+        processor = Processor(quiet_logger, data)
+        processor.set_value(setpath, value)
+        matchtally = 0
+        for node in processor.get_nodes(verifypath):
+            changed_value = unwrap_node_coords(node)
+            if isinstance(changed_value, list):
+                for result in changed_value:
+                    assert result == value
+                    matchtally += 1
+                continue
+            assert changed_value == value
+            matchtally += 1
+        assert matchtally == tally
+
+    @pytest.mark.parametrize("delete_yamlpath,old_deleted_nodes,new_flat_data", [
+        ("**[&bl_anchor]", ["Ty Cobb", "Ty Cobb"], ["Mark McGwire", "Sammy Sosa", "Ken Griff"]),
+        (r"/baseball_legends/Ken\ Griff", ["Ken Griff"], ["Ty Cobb", "Mark McGwire", "Sammy Sosa", "Ty Cobb"]),
+    ])
+    def test_delete_from_sets(self, quiet_logger, delete_yamlpath, old_deleted_nodes, new_flat_data):
+        yamldata = """---
+aliases:
+  - &bl_anchor Ty Cobb
+
+baseball_legends: !!set
+  ? Mark McGwire
+  ? Sammy Sosa
+  ? *bl_anchor
+  ? Ken Griff
+"""
+        yaml = YAML()
+        data = yaml.load(yamldata)
+        processor = Processor(quiet_logger, data)
+
+        # The return set must be received lest no nodes will be deleted
+        deleted_nodes = []
+        for nc in processor.delete_nodes(delete_yamlpath):
+            deleted_nodes.append(nc)
+
+        for (test_value, verify_node_coord) in zip(old_deleted_nodes, deleted_nodes):
+            assert test_value, unwrap_node_coords(verify_node_coord)
+
+        for (test_value, verify_node_coord) in zip(new_flat_data, processor.get_nodes("**")):
+            assert test_value, unwrap_node_coords(verify_node_coord)
+
     def test_enforce_pathsep(self, quiet_logger):
         yamldata = """---
         aliases:

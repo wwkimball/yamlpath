@@ -1,12 +1,12 @@
 """
 Implement Parsers, a static library of generally-useful code for data parsers.
 
-Copyright 2020 William W. Kimball, Jr. MBA MSIS
+Copyright 2020, 2021 William W. Kimball, Jr. MBA MSIS
 """
 import warnings
 from sys import maxsize, stdin
 from datetime import date
-from typing import Any, Generator, Tuple
+from typing import Any, Dict, Generator, Tuple
 
 import ruamel.yaml # type: ignore
 from ruamel.yaml import YAML
@@ -15,9 +15,13 @@ from ruamel.yaml.composer import ComposerError, ReusedAnchorWarning
 from ruamel.yaml.constructor import ConstructorError, DuplicateKeyError
 from ruamel.yaml.scanner import ScannerError
 from ruamel.yaml.scalarstring import ScalarString
-from ruamel.yaml.comments import CommentedSeq, CommentedMap, TaggedScalar
+from ruamel.yaml.comments import (
+    CommentedMap, CommentedSet, CommentedSeq, TaggedScalar
+)
 
 from yamlpath.wrappers import ConsolePrinter
+from yamlpath.patches.aliasstyle import MySerializer # type: ignore
+from yamlpath.patches.aliasstyle import MyEmitter    # type: ignore
 
 
 class Parsers:
@@ -53,6 +57,13 @@ class Parsers:
         # The ruamel.yaml class appears to be missing some typing data, so
         # these valid assignments cannot be type-checked.
         yaml = YAML()
+
+        # Import Anthon's patch for Aliased entries in Unordered Sets per
+        # https://sourceforge.net/p/ruamel-yaml/tickets/384/
+        if ruamel.yaml.version_info < (0, 17, 5):
+            yaml.Serializer = MySerializer         # type: ignore
+            yaml.Emitter = MyEmitter               # type: ignore
+
         yaml.indent(mapping=2, sequence=4, offset=2)
         yaml.explicit_start = explicit_start       # type: ignore
         yaml.preserve_quotes = preserve_quotes     # type: ignore
@@ -299,6 +310,7 @@ class Parsers:
         return data
 
     @staticmethod
+    # pylint: disable=too-many-branches
     def jsonify_yaml_data(data: Any) -> Any:
         """
         Convert all non-JSON-serializable values to strings.
@@ -323,6 +335,15 @@ class Parsers:
         elif isinstance(data, (list, CommentedSeq)):
             for idx, ele in enumerate(data):
                 data[idx] = Parsers.jsonify_yaml_data(ele)
+        elif isinstance(data, (set, CommentedSet)):
+            json_repr: Dict[str, None] = {}
+            for set_val in data:
+                json_key_proto = Parsers.jsonify_yaml_data(set_val)
+                json_key = (str(json_key_proto)
+                            if isinstance(json_key_proto, tuple)
+                            else json_key_proto)
+                json_repr[json_key] = None
+            data = json_repr
         elif isinstance(data, TaggedScalar):
             if data.tag.value == "!null":
                 return None

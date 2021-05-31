@@ -695,6 +695,38 @@ hash:
             filedat = fhnd.read()
         assert merged_yaml_content == filedat
 
+    def test_convert_yaml_tagged_set_to_json_file(self, script_runner, tmp_path, tmp_path_factory):
+        lhs_file = create_temp_yaml_file(tmp_path_factory, """--- !!set
+? !int 5280
+? !bool false
+? !double 3.1415926535856
+? BareVal
+? !string TaggedVal
+""")
+        merged_yaml_content = """{"5280": null, "false": null, "3.1415926535856": null, "BareVal": null, "TaggedVal": null}"""
+
+        output_dir = tmp_path / "test_convert_yaml_tagged_set_to_json_file"
+        output_dir.mkdir()
+        output_file = output_dir / "output.yaml"
+
+        # DEBUG
+        # print("LHS File:  {}".format(lhs_file))
+        # print("Output File:  {}".format(output_file))
+        # print("Expected Output:")
+        # print(merged_yaml_content)
+
+        result = script_runner.run(
+            self.command
+            , "--nostdin"
+            , "--document-format=json"
+            , "--output={}".format(output_file)
+            , lhs_file)
+        assert result.success, result.stderr
+
+        with open(output_file, 'r') as fhnd:
+            filedat = fhnd.read()
+        assert merged_yaml_content == filedat
+
     def test_convert_json_to_yaml_file(self, script_runner, tmp_path, tmp_path_factory):
         lhs_file = create_temp_yaml_file(tmp_path_factory, """{"hash": {"lhs_exclusive": "LHS exclusive", "merge_target": "LHS original value"}}""")
         merged_yaml_content = """---

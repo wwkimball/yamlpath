@@ -5,7 +5,7 @@ Returns zero or more YAML Paths indicating where in given YAML/Compatible data
 a search expression matches.  Values and/or keys can be searched.  EYAML can be
 employed to search encrypted values.
 
-Copyright 2019, 2020 William W. Kimball, Jr. MBA MSIS
+Copyright 2019, 2020, 2021 William W. Kimball, Jr. MBA MSIS
 """
 import sys
 import argparse
@@ -14,7 +14,7 @@ from os import access, R_OK
 from os.path import isfile
 from typing import Any, Dict, Generator, List, Optional, Tuple
 
-from ruamel.yaml.comments import CommentedSeq, CommentedMap
+from ruamel.yaml.comments import CommentedSeq, CommentedMap, CommentedSet
 
 from yamlpath import __version__ as YAMLPATH_VERSION
 from yamlpath.common import Anchors, Parsers, Searches
@@ -588,7 +588,7 @@ def search_for_paths(logger: ConsolePrinter, processor: EYAMLProcessor,
                     yield YAMLPath(tmp_path)
                 continue
 
-            if isinstance(val, (CommentedSeq, CommentedMap)):
+            if isinstance(val, (CommentedSeq, CommentedMap, CommentedSet)):
                 logger.debug(
                     "Recursing into complex data:", data=val,
                     prefix="yaml_paths::search_for_paths<dict>:  ",
@@ -647,6 +647,46 @@ def search_for_paths(logger: ConsolePrinter, processor: EYAMLProcessor,
                                 ).format(anchor_name, tmp_path)
                             )
                             yield YAMLPath(tmp_path)
+
+    elif isinstance(data, CommentedSet):
+        if build_path:
+            build_path += strsep
+        elif pathsep is PathSeperators.FSLASH:
+            build_path = strsep
+
+        for key in data:
+            tmp_path = build_path + YAMLPath.escape_path_section(key, pathsep)
+
+            # The key itself may be an Anchor or Alias.  Search it when the
+            # caller wishes.
+            key_anchor_matched = Searches.search_anchor(
+                key, terms, seen_anchors, search_anchors=search_anchors,
+                include_aliases=include_key_aliases)
+            logger.debug(
+                ("yaml_paths::search_for_paths<set>:"
+                    + "KEY anchor search, {}:  {}.")
+                .format(key, key_anchor_matched)
+            )
+
+            if key_anchor_matched in [AnchorMatches.MATCH,
+                                      AnchorMatches.ALIAS_INCLUDED]:
+                logger.debug(
+                    ("yaml_paths::search_for_paths<set>:"
+                        + "yielding a KEY-ANCHOR match, {}."
+                    ).format(key, tmp_path)
+                )
+                yield YAMLPath(tmp_path)
+                continue
+
+            # Search the name of the key, itself
+            matches = Searches.search_matches(method, term, key)
+            if (matches and not invert) or (invert and not matches):
+                logger.debug(
+                    ("yaml_paths::search_for_paths<set>:"
+                        + "yielding KEY name match, {}:  {}."
+                    ).format(key, tmp_path)
+                )
+                yield YAMLPath(tmp_path)
 
 def get_search_term(logger: ConsolePrinter,
                     expression: str) -> Optional[SearchTerms]:
@@ -734,7 +774,7 @@ def print_results(
             # output become messy.
             for node_coordinate in processor.get_nodes(result, mustexist=True):
                 node = node_coordinate.node
-                if isinstance(node, (dict, list)):
+                if isinstance(node, (dict, list, CommentedSet)):
                     resline += "{}".format(
                         json.dumps(Parsers.jsonify_yaml_data(node)))
                 else:

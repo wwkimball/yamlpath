@@ -7,7 +7,12 @@ Copyright 2018, 2019, 2020, 2021 William W. Kimball, Jr. MBA MSIS
 from collections import OrderedDict
 from typing import Any, Dict, Generator, List, Union
 
-from ruamel.yaml.comments import CommentedMap
+from ruamel.yaml.comments import (
+    CommentedMap,
+    CommentedSeq,
+    CommentedSet,
+    TaggedScalar,
+)
 
 from yamlpath.types import AncestryEntry, PathAttributes, PathSegment
 from yamlpath.common import Anchors, KeywordSearches, Nodes, Searches
@@ -739,9 +744,11 @@ class Processor:
                             break
                 elif parentref in parent:
                     del parent[parentref]
-            elif isinstance(parent, list):
+            elif isinstance(parent, (CommentedSeq, list)):
                 if len(parent) > parentref:
                     del parent[parentref]
+            elif isinstance(parent, (CommentedSet, set)):
+                parent.discard(parentref)
             else:
                 # Edge-case:  Attempt to delete from a document which is
                 # entirely one Scalar value OR user is deleting the entire
@@ -908,6 +915,7 @@ class Processor:
         pathseg: PathSegment = yaml_path.escaped[segment_index]
         (_, stripped_attrs) = pathseg
         str_stripped = str(stripped_attrs)
+        next_ancestry: List[AncestryEntry] = []
 
         self.logger.debug((
             "Seeking KEY node, {}, in data:"
@@ -920,8 +928,7 @@ class Processor:
             next_translated_path = (translated_path +
                 YAMLPath.escape_path_section(
                     str_stripped, translated_path.seperator))
-            next_ancestry: List[AncestryEntry] = ancestry + [
-                (data, stripped_attrs)]
+            next_ancestry = ancestry + [(data, stripped_attrs)]
             if stripped_attrs in data:
                 self.logger.debug(
                     "Processor::_get_nodes_by_key:  FOUND key node by name at"
@@ -940,6 +947,7 @@ class Processor:
                             ancestry + [(data, intkey)], pathseg)
                 except ValueError:
                     pass
+
         elif isinstance(data, list):
             try:
                 # Try using the ref as a bare Array index
@@ -949,10 +957,11 @@ class Processor:
                         "Processor::_get_nodes_by_key:  FOUND key node as a"
                         " bare Array index at [{}]."
                         .format(str_stripped))
+                    next_translated_path = translated_path + "[{}]".format(idx)
+                    next_ancestry = ancestry + [(data, idx)]
                     yield NodeCoords(
                         data[idx], data, idx,
-                        translated_path + "[{}]".format(idx),
-                        ancestry + [(data, idx)], pathseg)
+                        next_translated_path, next_ancestry, pathseg)
             except ValueError:
                 # Pass-through search against possible Array-of-Hashes, if
                 # allowed.
@@ -976,6 +985,25 @@ class Processor:
                             " via pass-through Array-of-Hashes search at {}."
                             .format(next_translated_path))
                         yield node_coord
+
+        elif isinstance(data, (set, CommentedSet)):
+            for ele in data:
+                if ele == stripped_attrs or (
+                    isinstance(ele, TaggedScalar)
+                    and ele.value == stripped_attrs
+                ):
+                    self.logger.debug((
+                        "Processor::_get_nodes_by_key:  FOUND set node by"
+                        " name at {}."
+                        ).format(str_stripped))
+                    next_translated_path = (translated_path +
+                        YAMLPath.escape_path_section(
+                            ele, translated_path.seperator))
+                    next_ancestry = ancestry + [(data, ele)]
+                    yield NodeCoords(
+                        ele, data, stripped_attrs,
+                        next_translated_path, next_ancestry, pathseg)
+                    break
 
     # pylint: disable=locally-disabled,too-many-locals
     def _get_nodes_by_index(
@@ -1058,6 +1086,15 @@ class Processor:
                             translated_path + YAMLPath.escape_path_section(
                                 key, translated_path.seperator),
                             ancestry + [(data, key)], pathseg)
+
+            elif isinstance(data, (CommentedSet, set)):
+                for ele in data:
+                    if min_match <= ele <= max_match:
+                        yield NodeCoords(
+                            ele, data, ele,
+                            translated_path + YAMLPath.escape_path_section(
+                                ele, translated_path.seperator),
+                            ancestry + [(data, ele)], pathseg)
         else:
             try:
                 idx: int = int(str_stripped)
@@ -1073,6 +1110,16 @@ class Processor:
                 yield NodeCoords(
                     data[idx], data, idx, translated_path + "[{}]".format(idx),
                     ancestry + [(data, idx)], pathseg)
+
+            elif isinstance(data, (CommentedSet, set)):
+                raise YAMLPathException(
+                    "Array indexing is invalid against unordered set data"
+                    " because element positioning is not guaranteed in"
+                    " unordered data; rather, match set entries by their"
+                    " actual values.  This error was encountered",
+                    str(yaml_path),
+                    str(unstripped_attrs)
+                )
 
     def _get_nodes_by_anchor(
         self, data: Any, yaml_path: YAMLPath, segment_index: int, **kwargs
@@ -1159,6 +1206,12 @@ class Processor:
                     yield NodeCoords(
                         val, data, key, next_translated_path,
                         next_ancestry, pathseg)
+        elif isinstance(data, (CommentedSet, set)):
+            for ele in data:
+                if (hasattr(ele, "anchor")
+                        and stripped_attrs == ele.anchor.value):
+                    yield NodeCoords(ele, data, ele, next_translated_path,
+                        ancestry + [(data, ele)], pathseg)
 
     def _get_nodes_by_keyword_search(
         self, data: Any, yaml_path: YAMLPath, terms: SearchKeywordTerms,
@@ -1372,6 +1425,21 @@ class Processor:
                         data, parent, parentref, translated_path, ancestry,
                         pathseg)
 
+        elif isinstance(data, (CommentedSet, set)):
+            for ele in data:
+                matches = Searches.search_matches(method, term, ele)
+
+                if (matches and not invert) or (invert and not matches):
+                    debug_matched = "one set match yielded"
+                    self.logger.debug(
+                        "Yielding set match at value {}:".format(ele),
+                        prefix="Processor::_get_nodes_by_search:  ")
+                    yield NodeCoords(
+                        ele, data, ele,
+                        translated_path + YAMLPath.escape_path_section(
+                            ele, translated_path.seperator),
+                        ancestry + [(data, ele)], pathseg)
+
         else:
             # Check the passed data itself for a match
             matches = Searches.search_matches(method, term, data)
@@ -1437,7 +1505,7 @@ class Processor:
             del_nodes: List[Any], node_coord: NodeCoords
         ) -> None:
             unwrapped_node = NodeCoords.unwrap_node_coords(node_coord)
-            if isinstance(unwrapped_node, list):
+            if isinstance(unwrapped_node, (list, CommentedSet, set)):
                 for ele in unwrapped_node:
                     del_nodes.append(ele)
             elif isinstance(node_coord.parent, dict):
@@ -1703,7 +1771,7 @@ class Processor:
                     ancestry, pathseg)
                 return
 
-            if isinstance(data, dict):
+            if isinstance(data, (CommentedMap, dict)):
                 for key, val in data.items():
                     next_translated_path = (
                         translated_path + YAMLPath.escape_path_section(
@@ -1720,7 +1788,7 @@ class Processor:
                             prefix="Processor::_get_nodes_by_traversal:  ",
                             data=node_coord)
                         yield node_coord
-            elif isinstance(data, list):
+            elif isinstance(data, (CommentedSeq, list)):
                 for idx, ele in enumerate(data):
                     next_translated_path = translated_path + "[{}]".format(idx)
                     for node_coord in self._get_nodes_by_traversal(
@@ -1733,6 +1801,19 @@ class Processor:
                             prefix="Processor::_get_nodes_by_traversal:  ",
                             data=node_coord)
                         yield node_coord
+            elif isinstance(data, (CommentedSet, set)):
+                # Sets cannot be traversed; they cannot have complex children
+                for ele in data:
+                    next_translated_path = (
+                        translated_path + YAMLPath.escape_path_section(
+                            ele, translated_path.seperator))
+                    self.logger.debug(
+                        "Yielding unfiltered Set value:",
+                        prefix="Processor::_get_nodes_by_traversal:  ",
+                        data=ele)
+                    yield NodeCoords(
+                        ele, parent, ele, next_translated_path, ancestry,
+                        pathseg)
             else:
                 self.logger.debug(
                     "Yielding unfiltered Scalar value:",
@@ -2115,6 +2196,7 @@ class Processor:
                             str(yaml_path),
                             except_segment
                         )
+
                 elif isinstance(data, dict):
                     self.logger.debug(
                         "Processor::_get_optional_nodes:  Dealing with a"
@@ -2151,6 +2233,24 @@ class Processor:
                             str(yaml_path),
                             except_segment
                         )
+
+                elif isinstance(data, (CommentedSet, set)):
+                    self.logger.debug(
+                        "Processor::_get_optional_nodes:  Dealing with a set"
+                    )
+                    if segment_type is not PathSegmentTypes.KEY:
+                        raise YAMLPathException(
+                            "Cannot add {} subreference to sets"
+                            .format(str(segment_type)),
+                            str(yaml_path),
+                            except_segment
+                        )
+
+                    data.add(stripped_attrs)
+                    yield NodeCoords(
+                        data, parent, parentref,
+                        translated_path, ancestry,
+                        relay_segment)
 
                 else:
                     self.logger.debug(
@@ -2213,7 +2313,7 @@ class Processor:
         # author of ruamel.yaml, to resolve how to update all references to an
         # Anchor throughout the parsed data structure.
         def recurse(data, parent, parentref, reference_node, replacement_node):
-            if isinstance(data, dict):
+            if isinstance(data, (CommentedMap, dict)):
                 for i, k in [
                         (idx, key) for idx, key in enumerate(data.keys())
                         if key is reference_node
@@ -2227,15 +2327,24 @@ class Processor:
                     else:
                         recurse(val, parent, parentref, reference_node,
                                 replacement_node)
-            elif isinstance(data, list):
+            elif isinstance(data, (CommentedSeq, list)):
                 for idx, item in enumerate(data):
                     if data is parent and item is reference_node:
                         data[idx] = replacement_node
                     else:
                         recurse(item, parent, parentref, reference_node,
                                 replacement_node)
+            elif isinstance(data, (CommentedSet, set)):
+                data.discard(reference_node)
+                data.add(replacement_node)
 
-        change_node = parent[parentref]
+        if isinstance(parent, (set, CommentedSet)):
+            for ele in parent:
+                if ele == parentref:
+                    change_node = ele
+                    break
+        else:
+            change_node = parent[parentref]
         new_node = Nodes.make_new_node(
             change_node, value, value_format, tag=value_tag)
 

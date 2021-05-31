@@ -90,6 +90,54 @@ class Test_yaml_paths():
             "/[0]",
         ]) + "\n" == result.stdout
 
+    def test_simple_set_result(self, script_runner, tmp_path_factory):
+        content = """--- !!set
+? I
+? II
+? III
+? IV
+? V
+? VI
+? VII
+? VIII
+? IX
+? X
+"""
+        yaml_file = create_temp_yaml_file(tmp_path_factory, content)
+        result = script_runner.run(
+            self.command,
+            "--nostdin", "--nofile", "--pathsep=/",
+            "--search", "$V", yaml_file
+        )
+        assert result.success, result.stderr
+        assert "\n".join([
+            "/IV",
+            "/V",
+        ]) + "\n" == result.stdout
+
+    def test_aliased_set_result(self, script_runner, tmp_path_factory):
+        content = """---
+aliases:
+  - &bl_anchor Ty Cobb
+
+baseball_legends: !!set
+  ? Mark McGwire
+  ? Sammy Sosa
+  ? *bl_anchor
+  ? Ken Griffy
+"""
+        yaml_file = create_temp_yaml_file(tmp_path_factory, content)
+        result = script_runner.run(
+            self.command,
+            "--nostdin", "--nofile", "--pathsep=/",
+            "--refnames", "--search", "^bl", yaml_file
+        )
+        assert result.success, result.stderr
+        assert "\n".join([
+            "/aliases[&bl_anchor]",
+            r"/baseball_legends/Ty\ Cobb",
+        ]) + "\n" == result.stdout
+
     def test_nonrepeating_value_anchored_array(self, script_runner, tmp_path_factory):
         content = """---
         aliases:
