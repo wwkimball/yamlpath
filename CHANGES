@@ -31,7 +31,7 @@ Enhancements:
 * Array-of-Hash nodes can now be searched for the presence of a given key in
   its Hash elements using the . search operand, yielding matching elements (the
   entire Hash elements having the given key).  The difference can be
-  illustrated by contrasting these two now-equivalent YAML Paths (where "books"
+  illustrated by contrasting these now-equivalent YAML Paths (where "books"
   is an Array-of-Hashes; imagine only some Hash elements have an "isbn" key):
   1. `/books/*[.=isbn]` or `books.*[.=isbn]`
   2. `/books[.=isbn]/isbn` or `books[.=isbn].isbn`
