@@ -219,6 +219,7 @@ YAML Path understands these segment types:
   `/warriors[power_level>9000]`, `warriors.power_level[.>9000]`, and
   `/warriors/power_level[.>9000]` all yield only the power_level from *all*
   warriors with power_levels over 9,000 within the same array of warrior hashes.
+* Unordered Set value accessing and searching with all above search methods.
 * Wildcard Searches: The `*` symbol can be used as shorthand for the `[]`
   search operator against text keys and values: `/warriors/name/Go*`; it also
   returns every immediate child, regardless its key or value.
