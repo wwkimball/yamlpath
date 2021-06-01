@@ -1,4 +1,5 @@
 import pytest
+import json
 import datetime as dt
 
 import ruamel.yaml as ry
@@ -102,13 +103,20 @@ has: different data
         assert jdata["dates"][0] == "2020-10-31"
         assert jdata["dates"][1] == "2020-11-03"
 
+        jstr = json.dumps(jdata)
+        assert jstr == """{"tagged": "tagged value", "null": null, "dates": ["2020-10-31", "2020-11-03"]}"""
+
     def test_jsonify_complex_python_data(self):
         cdata = {
             "dates": [
                 dt.date(2020, 10, 31),
                 dt.date(2020, 11, 3)
-            ]
+            ],
+            "bytes": b"abc"
         }
         jdata = Parsers.jsonify_yaml_data(cdata)
         assert jdata["dates"][0] == "2020-10-31"
         assert jdata["dates"][1] == "2020-11-03"
+
+        jstr = json.dumps(jdata)
+        assert jstr == """{"dates": ["2020-10-31", "2020-11-03"], "bytes": "b'abc'"}"""

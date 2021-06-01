@@ -219,6 +219,7 @@ YAML Path understands these segment types:
   `/warriors[power_level>9000]`, `warriors.power_level[.>9000]`, and
   `/warriors/power_level[.>9000]` all yield only the power_level from *all*
   warriors with power_levels over 9,000 within the same array of warrior hashes.
+* Unordered Set value accessing and searching with all above search methods.
 * Wildcard Searches: The `*` symbol can be used as shorthand for the `[]`
   search operator against text keys and values: `/warriors/name/Go*`; it also
   returns every immediate child, regardless its key or value.
@@ -365,7 +366,7 @@ can tell YAML Path library and tools where to find the `eyaml` command.
 
 In order to support the best available YAML editing capability (so called,
 round-trip editing with support for comment preservation), this project is based
-on [ruamel.yaml](https://bitbucket.org/ruamel/yaml/overview) for
+on [ruamel.yaml](https://sourceforge.net/projects/ruamel-yaml/) for
 Python 3.  While ruamel.yaml is based on PyYAML --
 Python's "standard" YAML library -- ruamel.yaml is [objectively better than
 PyYAML](https://yaml.readthedocs.io/en/latest/pyyaml.html), which lacks critical

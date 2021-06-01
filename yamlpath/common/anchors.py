@@ -72,7 +72,7 @@ class Anchors:
     @staticmethod
     def replace_merge_anchor(data: Any, old_node: Any, repl_node: Any) -> None:
         """
-        Replace anchor merge references.
+        Replace YAML Merge Key references.
 
         Anchor merge references in YAML are formed using the `<<: *anchor`
         operator.
@@ -92,7 +92,7 @@ class Anchors:
     @staticmethod
     def combine_merge_anchors(lhs: CommentedMap, rhs: CommentedMap) -> None:
         """
-        Merge YAML merge keys.
+        Merge YAML Merge Keys.
 
         Parameters:
         1. lhs (CommentedMap) The map to merge into

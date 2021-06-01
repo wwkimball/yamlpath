@@ -32,14 +32,15 @@ class YAMLPath:
     only when necessary.
     """
 
-    def __init__(self, yaml_path: Union["YAMLPath", str] = "",
+    def __init__(self, yaml_path: Union["YAMLPath", str, None] = "",
                  pathsep: PathSeperators = PathSeperators.AUTO) -> None:
         """
         Instantiate this class into an object.
 
         Parameters:
-        1. yaml_path (Union["YAMLPath", str]) The YAML Path to parse or copy
-        2. pathsep (PathSeperators) Forced YAML Path segment seperator; set
+        1. yaml_path (Union["YAMLPath", str, None]) The YAML Path to parse or
+           copy
+        2. pathsep (PathSeperators) Forced YAML Path segment separator; set
            only when automatic inference fails
 
         Returns:  N/A
@@ -55,7 +56,7 @@ class YAMLPath:
         if isinstance(yaml_path, YAMLPath):
             self.original = yaml_path.original
         else:
-            self.original = yaml_path
+            self.original = "" if yaml_path is None else yaml_path
 
     def __str__(self) -> str:
         """Get a stringified version of this object."""
@@ -165,6 +166,11 @@ class YAMLPath:
                 0:len(path_now) - len(removable_segment) + 1]
 
         return popped_segment
+
+    @property
+    def is_root(self) -> bool:
+        """Indicate whether this YAML Path points at the document root."""
+        return len(self.escaped) == 0
 
     @property
     def original(self) -> str:
@@ -331,7 +337,7 @@ class YAMLPath:
 
         # Parse the YAML Path
         # pylint: disable=locally-disabled,too-many-nested-blocks
-        for char in yaml_path:
+        for char_idx, char in enumerate(yaml_path):
             demarc_count = len(demarc_stack)
             if next_char_must_be and char == next_char_must_be:
                 next_char_must_be = None
@@ -386,6 +392,7 @@ class YAMLPath:
 
             elif seeking_collector_operator and char in ['+', '-']:
                 seeking_collector_operator = False
+                next_char_must_be = '('
                 if char == '+':
                     collector_operator = CollectorOperators.ADDITION
                 elif char == '-':
@@ -393,9 +400,10 @@ class YAMLPath:
                 continue
 
             elif next_char_must_be and char != next_char_must_be:
-                raise YAMLPathException(
-                    "Invalid YAML Path at {}, which must be {} in YAML Path"
-                    .format(char, next_char_must_be), yaml_path)
+                raise YAMLPathException((
+                    "Invalid YAML Path at character index {}, \"{}\", which"
+                    " must be \"{}\" in YAML Path")
+                    .format(char_idx, char, next_char_must_be), yaml_path)
 
             elif char in ['"', "'"]:
                 # Found a string demarcation mark
@@ -432,7 +440,10 @@ class YAMLPath:
                     continue
 
             elif char == "(":
-                if demarc_count > 0 and demarc_stack[-1] == "[" and segment_id:
+                if (demarc_count == 1
+                    and demarc_stack[-1] == "["
+                    and segment_id
+                ):
                     if PathSearchKeywords.is_keyword(segment_id):
                         demarc_stack.append(char)
                         demarc_count += 1
@@ -441,15 +452,23 @@ class YAMLPath:
                         segment_id = ""
                         continue
 
-                    raise YAMLPathException(
-                        ("Unknown search keyword, {}; allowed: {}."
-                         "  Encountered in YAML Path")
-                        .format(
-                            segment_id,
+                    raise YAMLPathException((
+                        "Unknown Search Keyword at character index {},"
+                        " \"{}\"; allowed: {}.  Encountered in YAML Path")
+                        .format(char_idx - len(segment_id), segment_id,
                             ', '.join(PathSearchKeywords.get_keywords())
                         )
                         , yaml_path
                     )
+
+                if collector_level == 0 and segment_id:
+                    # Record its predecessor element; unless it has already
+                    # been identified as a special type, assume it is a KEY.
+                    if segment_type is None:
+                        segment_type = PathSegmentTypes.KEY
+                    path_segments.append(self._expand_splats(
+                        yaml_path, segment_id, segment_type))
+                    segment_id = ""
 
                 seeking_collector_operator = False
                 collector_level += 1
@@ -464,26 +483,31 @@ class YAMLPath:
             elif (
                     demarc_count > 0
                     and char == ")"
-                    and demarc_stack[-1] == "("
+                    and segment_type is PathSegmentTypes.KEYWORD_SEARCH
             ):
-                if collector_level > 0:
-                    collector_level -= 1
-                    demarc_count -= 1
-                    demarc_stack.pop()
+                demarc_count -= 1
+                demarc_stack.pop()
+                next_char_must_be = "]"
+                seeking_collector_operator = False
+                continue
 
-                    if collector_level < 1:
-                        path_segments.append(
-                            (segment_type,
-                             CollectorTerms(segment_id, collector_operator)))
-                        segment_id = ""
-                        collector_operator = CollectorOperators.NONE
-                        seeking_collector_operator = True
-                        continue
+            elif (
+                    demarc_count > 0
+                    and char == ")"
+                    and demarc_stack[-1] == "("
+                    and collector_level > 0
+            ):
+                collector_level -= 1
+                demarc_count -= 1
+                demarc_stack.pop()
 
-                if segment_type is PathSegmentTypes.KEYWORD_SEARCH:
-                    demarc_count -= 1
-                    demarc_stack.pop()
-                    next_char_must_be = "]"
+                if collector_level < 1:
+                    path_segments.append(
+                        (segment_type,
+                            CollectorTerms(segment_id, collector_operator)))
+                    segment_id = ""
+                    collector_operator = CollectorOperators.NONE
+                    seeking_collector_operator = True
                     continue
 
             elif demarc_count == 0 and char == "[":
@@ -500,6 +524,7 @@ class YAMLPath:
                 demarc_stack.append(char)
                 demarc_count += 1
                 segment_type = PathSegmentTypes.INDEX
+                seeking_collector_operator = False
                 seeking_anchor_mark = True
                 search_inverted = False
                 search_method = None
@@ -507,7 +532,7 @@ class YAMLPath:
                 continue
 
             elif (
-                    demarc_count > 0
+                    demarc_count == 1
                     and demarc_stack[-1] == "["
                     and char in ["=", "^", "$", "%", "!", ">", "<", "~"]
             ):
@@ -515,9 +540,10 @@ class YAMLPath:
                 # pylint: disable=no-else-continue
                 if char == "!":
                     if search_inverted:
-                        raise YAMLPathException(
-                            "Double search inversion is meaningless at {}"
-                            .format(char)
+                        raise YAMLPathException((
+                            "Double search inversion is meaningless at"
+                            " character index {}, {}")
+                            .format(char_idx, char)
                             , yaml_path
                         )
 
@@ -543,15 +569,17 @@ class YAMLPath:
                             search_attr = segment_id
                             segment_id = ""
                         else:
-                            raise YAMLPathException(
-                                "Missing search operand before operator, {}"
-                                .format(char)
+                            raise YAMLPathException((
+                                "Missing search operand before operator at"
+                                " character index {}, \"{}\"")
+                                .format(char_idx, char)
                                 , yaml_path
                             )
                     else:
-                        raise YAMLPathException(
-                            "Unsupported search operator combination at {}"
-                            .format(char)
+                        raise YAMLPathException((
+                            "Unsupported search operator combination at"
+                            " character index {}, \"{}\"")
+                            .format(char_idx, char)
                             , yaml_path
                         )
 
@@ -562,11 +590,11 @@ class YAMLPath:
                         search_method = PathSearchMethods.REGEX
                         seeking_regex_delim = True
                     else:
-                        raise YAMLPathException(
-                            ("Unexpected use of {} operator.  Please try =~ if"
-                             + " you mean to search with a Regular"
-                             + " Expression."
-                            ).format(char)
+                        raise YAMLPathException((
+                            "Unexpected use of \"{}\" operator at character"
+                            " index {}.  Please try =~ if you mean to search"
+                            " with a Regular Expression."
+                            ).format(char, char_idx)
                             , yaml_path
                         )
 
@@ -574,9 +602,10 @@ class YAMLPath:
 
                 elif not segment_id:
                     # All tests beyond this point require an operand
-                    raise YAMLPathException(
-                        "Missing search operand before operator, {}"
-                        .format(char)
+                    raise YAMLPathException((
+                        "Missing search operand before operator, \"{}\" at"
+                        " character index, {}")
+                        .format(char, char_idx)
                         , yaml_path
                     )
 
@@ -625,8 +654,13 @@ class YAMLPath:
                         segment_id = ""
                     continue
 
+            elif char == "[":
+                # Track bracket nesting
+                demarc_stack.append(char)
+                demarc_count += 1
+
             elif (
-                    demarc_count > 0
+                    demarc_count == 1
                     and char == "]"
                     and demarc_stack[-1] == "["
             ):
@@ -638,8 +672,9 @@ class YAMLPath:
                     try:
                         idx = int(segment_id)
                     except ValueError as wrap_ex:
-                        raise YAMLPathException(
-                            "Not an integer index:  {}".format(segment_id)
+                        raise YAMLPathException((
+                            "Not an integer index at character index {}:  {}")
+                            .format(char_idx, segment_id)
                             , yaml_path
                             , segment_id
                         ) from wrap_ex
@@ -680,6 +715,11 @@ class YAMLPath:
                 search_keyword = None
                 continue
 
+            elif char == "]":
+                # Track bracket de-nesting
+                demarc_stack.pop()
+                demarc_count -= 1
+
             elif demarc_count < 1 and char == pathsep:
                 # Do not store empty elements
                 if segment_id:
@@ -692,6 +732,7 @@ class YAMLPath:
                     segment_id = ""
 
                 segment_type = None
+                seeking_anchor_mark = True
                 continue
 
             segment_id += char
@@ -714,8 +755,10 @@ class YAMLPath:
 
         # Check for mismatched demarcations
         if demarc_count > 0:
-            raise YAMLPathException(
-                "YAML Path contains at least one unmatched demarcation mark",
+            raise YAMLPathException((
+                "YAML Path contains at least one unmatched demarcation mark"
+                " with remaining open marks, {} in"
+                ).format(", ".join(demarc_stack)),
                 yaml_path
             )
 
@@ -899,6 +942,12 @@ class YAMLPath:
 
         Ensures all instances of a symbol are escaped (via \) within a value.
         Multiple symbols can be processed at once.
+
+        Parameters:
+        1. value (str) The String in which to escape special characters
+        2. *symbols (str) List of special characters to escape
+
+        Returns:  (str) `value` with all `symbols` escaped
         """
         escaped: str = value
         for symbol in symbols:
@@ -918,6 +967,13 @@ class YAMLPath:
         Renders inert via escaping all symbols within a string which have
         special meaning to YAML Path.  The resulting string can be consumed as
         a YAML Path section without triggering unwanted additional processing.
+
+        Parameters:
+        1. section (str) The portion of a YAML Path segment to escape
+        2. pathsep (PathSeperators) The YAML Path segment seperator symbol to
+           also escape, when present
+
+        Returns:  (str) `section` with all special symbols escaped
         """
         return YAMLPath.ensure_escaped(
             section,

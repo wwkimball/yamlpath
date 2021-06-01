@@ -1,3 +1,124 @@
+3.6.0:
+Bug Fixes:
+* Some peculiar data constructions could cause the ConsolePrinter to stack-dump
+  when writing debug messages.
+* A NotImplementedError stack-dump was generated whenever a YAML Path was
+  evaluated when written improperly for Collector Math operations.  This
+  specifically occurred when the RHS term was not demarcated with a parenthesis
+  pair.  Now, a YAML Path parsing error is generated, indicating where the
+  missing character must appear.
+* Use of an Array Element index in square-bracket notation ([N]) within a
+  sub-path -- such as in a Search Expression or Collector -- caused incorrect
+  YAML Path parsing.  This usually manifested as a "not an integer index"
+  error.
+* Byte strings were causing stack-dumps during JSON serialization; they are now
+  serialized as double-demarcated strings (a ' pair within a " pair) with a b
+  prefix, like:  {"byte_value": "b'BYTEVAL'"}.
+* Bare Anchor name references were treated as Hash key names when & was not the
+  very first non-separator character of a YAML Path or immediately following a
+  `[`.  So, /my_hash/&my_anchor was not working as expected.
+* The Merger (and thus, the yaml-merge command-line tool) would only return the
+  LHS document when neither LHS nor RHS documents were Hashes, no matter what
+  the merge options were set to.  This did not affect content which was
+  children of Hashes.
+
+Enhancements:
+* YAML Path parsing errors are now a little more specific, indicating at which
+  character index the issue occurs.  API users who have been scanning error
+  messages will need to update their code to accommodate the new text.
+* Collector subtraction now handles Hash-of-Hashes and Array-of-Array results,
+  which were not possible before.
+* Array-of-Hash nodes can now be searched for the presence of a given key in
+  its Hash elements using the . search operand, yielding matching elements (the
+  entire Hash elements having the given key).  The difference can be
+  illustrated by contrasting these now-equivalent YAML Paths (where "books"
+  is an Array-of-Hashes; imagine only some Hash elements have an "isbn" key):
+  1. `/books/*[.=isbn]` or `books.*[.=isbn]`
+  2. `/books[.=isbn]/isbn` or `books[.=isbn].isbn`
+  3. `/books/*[has_child(isbn)]/isbn` or `books.*[has_child(isbn)].isbn`
+  4. `/books[has_child(isbn)]/isbn` or `books[has_child(isbn)].isbn`
+  All four of those queries yield exactly the same data.  Note that example 2
+  behaves like examples 3 and 4.  Examples 2-4 yield the entire matching Hash,
+  not just the "isbn" value.  This enables access to other keys of the Hash
+  without necessitating use of a `[parent()]` search keyword, which would be
+  necessary for example 1 if you wanted to access any key other than "isbn"
+  from the matches.
+* YAML Merge Keys can now be accessed directly by Anchor name, yielding the
+  entire original -- pre-merged -- reference Hash.  This has _very limited_
+  utility.  Using this in isolation will only reveal the default values for any
+  referenced keys, ignoring -- perhaps confusingly -- any local overrides.  It
+  can however be helpful when reverse-engineering very complex merge
+  arrangements.
+* The yaml-merge command-line tool (and the underlying Merger class) now offer
+  an option -- --preserve-lhs-comments (-l) -- that will attempt to preserve
+  LHS document comments.  USE WITH CAUTION.  At present, comment handling
+  during a merge is unwieldy, so some comments or new-line characters may
+  appear to become divorced from nodes they should obviously be attached to.
+  As such, the default behavior of the merge engine will continue to be removal
+  of all comments.  At this time, RHS document comments will still be discarded
+  during merge operations.  This will be revisited when ruamel.yaml refactors
+  how YAML comments are handled.
+* The yaml-merge command-line tool now offers a new option, --multi-doc-mode
+  (-M), which accepts one of the following modes:
+  * CONDENSE_ALL:  This is the default, which merges all multi-documents up
+    into single documents during the merge.
+  * MERGE_ACROSS:  Condense no multi-documents; rather, only merge documents
+    "across" from right to left such that the first document in the RHS multi-
+    document merges only into the first document in the LHS multi-document, the
+    second across similarly, and so on.
+  * MATRIX_MERGE:  Condense no multi-documents; rather, merge every RHS
+    document in a multi-document RHS into every LHS document in a multi-
+    document LHS.
+* The [has_child(NAME)] Search Keyword now accepts an &NAME form of its first
+  (only) parameter.  This switches the function to match against Anchor/Alias
+  names, including YAML Merge Keys.
+* YAML Merge Keys can now be deleted by their Anchor/Alias name via the
+  yaml-set command-line tool and the underlying Processor class.
+* YAML Merge Keys can now be created, offering run-time merging of
+  same-document Hash data.  The yaml-set command-line tool offers a new option,
+  --mergekey, which applies to --change targets the new YAML Merge Key, as long
+  as each target is a Hash.
+  WARNING:  As a consequence of adding this capability to the yaml-set command-
+  line tool, it is no longer possible to implicitly alias scalar nodes by
+  passing only the --change and --anchor parameters.  The operation must now be
+  explicit by setting --aliasof or --mergekey along with --change and
+  optionally with --anchor.
+* The yaml-diff tool now supports multi-document sources.  Only one document of
+  any multi-document source on each side of the LHS-RHS comparison can be
+  selected for the operation (diffs are performed only between two documents).
+  Such selection is made via two new options, --left-document-index|-L and
+  --right-document-index|-R.  An error is emitted whenever a multi-document
+  source is detected without an appropriate document index selection.
+* YAML Unordered Sets -- https://yaml.org/type/set.html -- are now fully
+  supported in YAML Paths, this project's API, and the reference command-line
+  tools.  Because an Unordered Set is effectively a Hash (map/dict) where the
+  entries are key-value pairs all having null (None) values, their entries are
+  accessible only by their exact key.  While they look in YAML data like Arrays
+  (sequences/lists) with a leading `?` rather than a `-`, they are not; their
+  entries cannot be accessed by a numerical index because they are defined in
+  the YAML specification as deliberately unordered.
+
+API Changes:
+* The common.nodes utility class now has a generally-useful static method which
+  accepts any String data and safely converts it to its native Python data-type
+  equivalent with special handling for case-insensitive Booleans via
+  ast.literal_eval:  typed_value.
+* The common.searches utility class now requires both terms to be of the same
+  data-type for comparisons.  When they types materially differ -- int and
+  float are treated as similar enough -- a String comparision is performed.
+  This is how it has always been excepting that types were lazily coalesced in
+  older versions; they are now converted before the comparison is considered.
+* The NodeCoords wrapper now supports more utility properties and methods:
+  * .unwrapped_node is the same output as calling
+    NodeCoords.unwrap_node_coords(data) except it can be called directly upon
+    instances of NodeCoords rather than as a static method call.  The static
+    method is still available.
+  * .deepest_node_coord returns whichever NodeCoord instance is most deeply
+    wrapped by an instance of NodeCoords.  Such wrapping comes from nesting
+    Collectors.  This method simplfies getting to the original data element(s).
+  * .wraps_a(Type) indicates whether the deepest wrapped data element is of a
+    given data-type.
+
 3.5.0:
 Bug Fixes:
 * Search expressions against Boolean values, [key=True] and [key=False], were

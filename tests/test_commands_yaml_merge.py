@@ -157,7 +157,7 @@ hash:
             filedat = fhnd.read()
         assert merged_yaml_content == filedat
 
-    def test_merge_two_happy_multidoc_yaml_files_to_file(self, script_runner, tmp_path, tmp_path_factory):
+    def test_merge_two_condense_all_multidoc_yaml_files_to_file(self, script_runner, tmp_path, tmp_path_factory):
         lhs_file = create_temp_yaml_file(tmp_path_factory, """---
 hash:
   lhs_exclusive: LHS exclusive
@@ -189,7 +189,7 @@ hash:
   merge2_target: RHS2 2nd override value
 """
 
-        output_dir = tmp_path / "test_merge_two_happy_multidoc_yaml_files_to_file"
+        output_dir = tmp_path / "test_merge_two_condense_all_multidoc_yaml_files_to_file"
         output_dir.mkdir()
         output_file = output_dir / "output.yaml"
 
@@ -204,6 +204,418 @@ hash:
             self.command
             , "--nostdin"
             , "--output={}".format(output_file)
+            , lhs_file
+            , rhs_file)
+        assert result.success, result.stderr
+
+        with open(output_file, 'r') as fhnd:
+            filedat = fhnd.read()
+        assert merged_yaml_content == filedat
+
+    def test_merge_two_across_multidoc_yaml_files_to_file(self, script_runner, tmp_path, tmp_path_factory):
+        lhs_file = create_temp_yaml_file(tmp_path_factory, """---
+hash:
+  lhs_exclusive: LHS exclusive
+  merge_target: LHS original value
+...
+---
+hash:
+  lhs2_exclusive: LHS2 exclusive
+  merge2_target: LHS2 original value
+""")
+        rhs_file = create_temp_yaml_file(tmp_path_factory, """---
+hash:
+  rhs_exclusive: RHS exclusive
+  merge_target: RHS override value
+...
+---
+hash:
+  rhs2_exclusive: RHS2 exclusive
+  merge_target: RHS2 override value
+  merge2_target: RHS2 2nd override value
+""")
+        merged_yaml_content = """---
+hash:
+  lhs_exclusive: LHS exclusive
+  rhs_exclusive: RHS exclusive
+  merge_target: RHS override value
+...
+---
+hash:
+  lhs2_exclusive: LHS2 exclusive
+  merge2_target: RHS2 2nd override value
+  rhs2_exclusive: RHS2 exclusive
+  merge_target: RHS2 override value
+...
+"""
+
+        output_dir = tmp_path / "test_merge_two_across_multidoc_yaml_files_to_file"
+        output_dir.mkdir()
+        output_file = output_dir / "output.yaml"
+
+        # DEBUG
+        # print("LHS File:  {}".format(lhs_file))
+        # print("RHS File:  {}".format(rhs_file))
+        # print("Output File:  {}".format(output_file))
+        # print("Expected Output:")
+        # print(merged_yaml_content)
+
+        result = script_runner.run(
+            self.command
+            , "--nostdin"
+            , "--output={}".format(output_file)
+            , "--multi-doc-mode=merge_across"
+            , lhs_file
+            , rhs_file)
+        assert result.success, result.stderr
+
+        with open(output_file, 'r') as fhnd:
+            filedat = fhnd.read()
+        assert merged_yaml_content == filedat
+
+    def test_merge_two_across_multidoc_yaml_files_to_file_json(self, script_runner, tmp_path, tmp_path_factory):
+        lhs_file = create_temp_yaml_file(tmp_path_factory, """---
+hash:
+  lhs_exclusive: LHS exclusive
+  merge_target: LHS original value
+...
+---
+hash:
+  lhs2_exclusive: LHS2 exclusive
+  merge2_target: LHS2 original value
+""")
+        rhs_file = create_temp_yaml_file(tmp_path_factory, """---
+hash:
+  rhs_exclusive: RHS exclusive
+  merge_target: RHS override value
+...
+---
+hash:
+  rhs2_exclusive: RHS2 exclusive
+  merge_target: RHS2 override value
+  merge2_target: RHS2 2nd override value
+""")
+        merged_yaml_content = """{"hash": {"lhs_exclusive": "LHS exclusive", "rhs_exclusive": "RHS exclusive", "merge_target": "RHS override value"}}
+{"hash": {"lhs2_exclusive": "LHS2 exclusive", "merge2_target": "RHS2 2nd override value", "rhs2_exclusive": "RHS2 exclusive", "merge_target": "RHS2 override value"}}
+"""
+
+        output_dir = tmp_path / "test_merge_two_across_multidoc_yaml_files_to_file_json"
+        output_dir.mkdir()
+        output_file = output_dir / "output.json"
+
+        # DEBUG
+        # print("LHS File:  {}".format(lhs_file))
+        # print("RHS File:  {}".format(rhs_file))
+        # print("Output File:  {}".format(output_file))
+        # print("Expected Output:")
+        # print(merged_yaml_content)
+
+        result = script_runner.run(
+            self.command
+            , "--nostdin"
+            , "--output={}".format(output_file)
+            , "--multi-doc-mode=merge_across"
+            , lhs_file
+            , rhs_file)
+        assert result.success, result.stderr
+
+        with open(output_file, 'r') as fhnd:
+            filedat = fhnd.read()
+        assert merged_yaml_content == filedat
+
+    def test_merge_two_across_multidoc_yaml_files_to_stdout_json(self, script_runner, tmp_path, tmp_path_factory):
+        lhs_file = create_temp_yaml_file(tmp_path_factory, """---
+hash:
+  lhs_exclusive: LHS exclusive
+  merge_target: LHS original value
+...
+---
+hash:
+  lhs2_exclusive: LHS2 exclusive
+  merge2_target: LHS2 original value
+""")
+        rhs_file = create_temp_yaml_file(tmp_path_factory, """---
+hash:
+  rhs_exclusive: RHS exclusive
+  merge_target: RHS override value
+...
+---
+hash:
+  rhs2_exclusive: RHS2 exclusive
+  merge_target: RHS2 override value
+  merge2_target: RHS2 2nd override value
+""")
+        merged_yaml_content = """{"hash": {"lhs_exclusive": "LHS exclusive", "rhs_exclusive": "RHS exclusive", "merge_target": "RHS override value"}}
+{"hash": {"lhs2_exclusive": "LHS2 exclusive", "merge2_target": "RHS2 2nd override value", "rhs2_exclusive": "RHS2 exclusive", "merge_target": "RHS2 override value"}}
+"""
+
+        output_dir = tmp_path / "test_merge_two_across_multidoc_yaml_files_to_stdout_json"
+        output_dir.mkdir()
+        output_file = output_dir / "output.json"
+
+        # DEBUG
+        # print("LHS File:  {}".format(lhs_file))
+        # print("RHS File:  {}".format(rhs_file))
+        # print("Output File:  {}".format(output_file))
+        # print("Expected Output:")
+        # print(merged_yaml_content)
+
+        result = script_runner.run(
+            self.command
+            , "--nostdin"
+            , "--multi-doc-mode=merge_across"
+            , "--document-format=json"
+            , lhs_file
+            , rhs_file)
+        assert result.success, result.stderr
+        assert merged_yaml_content == result.stdout
+
+    def test_merge_two_across_multidoc_yaml_files_to_stdout(self, script_runner, tmp_path, tmp_path_factory):
+        lhs_file = create_temp_yaml_file(tmp_path_factory, """---
+hash:
+  lhs_exclusive: LHS exclusive
+  merge_target: LHS original value
+...
+---
+hash:
+  lhs2_exclusive: LHS2 exclusive
+  merge2_target: LHS2 original value
+""")
+        rhs_file = create_temp_yaml_file(tmp_path_factory, """---
+hash:
+  rhs_exclusive: RHS exclusive
+  merge_target: RHS override value
+...
+---
+hash:
+  rhs2_exclusive: RHS2 exclusive
+  merge_target: RHS2 override value
+  merge2_target: RHS2 2nd override value
+""")
+        merged_yaml_content = """---
+hash:
+  lhs_exclusive: LHS exclusive
+  rhs_exclusive: RHS exclusive
+  merge_target: RHS override value
+...
+---
+hash:
+  lhs2_exclusive: LHS2 exclusive
+  merge2_target: RHS2 2nd override value
+  rhs2_exclusive: RHS2 exclusive
+  merge_target: RHS2 override value
+...
+"""
+
+        output_dir = tmp_path / "test_merge_two_across_multidoc_yaml_files_to_stdout"
+        output_dir.mkdir()
+        output_file = output_dir / "output.json"
+
+        # DEBUG
+        # print("LHS File:  {}".format(lhs_file))
+        # print("RHS File:  {}".format(rhs_file))
+        # print("Output File:  {}".format(output_file))
+        # print("Expected Output:")
+        # print(merged_yaml_content)
+
+        result = script_runner.run(
+            self.command
+            , "--nostdin"
+            , "--multi-doc-mode=merge_across"
+            , lhs_file
+            , rhs_file)
+        assert result.success, result.stderr
+        assert merged_yaml_content == result.stdout
+
+    def test_merge_two_uneven_lhs_across_multidoc_yaml_files_to_stdout(self, script_runner, tmp_path, tmp_path_factory):
+        lhs_file = create_temp_yaml_file(tmp_path_factory, """---
+hash:
+  lhs_exclusive: LHS exclusive
+  merge_target: LHS original value
+...
+---
+hash:
+  lhs2_exclusive: LHS2 exclusive
+  merge2_target: LHS2 original value
+""")
+        rhs_file = create_temp_yaml_file(tmp_path_factory, """---
+hash:
+  rhs_exclusive: RHS exclusive
+  merge_target: RHS override value
+...
+---
+hash:
+  rhs2_exclusive: RHS2 exclusive
+  merge_target: RHS2 override value
+  merge2_target: RHS2 2nd override value
+...
+---
+hash:
+  rhs3_exclusive: RHS3 exclusive
+rhs3:
+  exclusive: true
+""")
+        merged_yaml_content = """---
+hash:
+  lhs_exclusive: LHS exclusive
+  rhs_exclusive: RHS exclusive
+  merge_target: RHS override value
+...
+---
+hash:
+  lhs2_exclusive: LHS2 exclusive
+  merge2_target: RHS2 2nd override value
+  rhs2_exclusive: RHS2 exclusive
+  merge_target: RHS2 override value
+...
+---
+hash:
+  rhs3_exclusive: RHS3 exclusive
+rhs3:
+  exclusive: true
+...
+"""
+
+        output_dir = tmp_path / "test_merge_two_uneven_lhs_across_multidoc_yaml_files_to_stdout"
+        output_dir.mkdir()
+        output_file = output_dir / "output.json"
+
+        # DEBUG
+        # print("LHS File:  {}".format(lhs_file))
+        # print("RHS File:  {}".format(rhs_file))
+        # print("Output File:  {}".format(output_file))
+        # print("Expected Output:")
+        # print(merged_yaml_content)
+
+        result = script_runner.run(
+            self.command
+            , "--nostdin"
+            , "--multi-doc-mode=merge_across"
+            , lhs_file
+            , rhs_file)
+        assert result.success, result.stderr
+        assert merged_yaml_content == result.stdout
+
+    def test_merge_two_uneven_rhs_across_multidoc_yaml_files_to_stdout(self, script_runner, tmp_path, tmp_path_factory):
+        lhs_file = create_temp_yaml_file(tmp_path_factory, """---
+hash:
+  lhs_exclusive: LHS exclusive
+  merge_target: LHS original value
+...
+---
+hash:
+  lhs2_exclusive: LHS2 exclusive
+  merge2_target: LHS2 original value
+...
+---
+lhs_exclusive: true
+...
+""")
+        rhs_file = create_temp_yaml_file(tmp_path_factory, """---
+hash:
+  rhs_exclusive: RHS exclusive
+  merge_target: RHS override value
+...
+---
+hash:
+  rhs2_exclusive: RHS2 exclusive
+  merge_target: RHS2 override value
+  merge2_target: RHS2 2nd override value
+""")
+        merged_yaml_content = """---
+hash:
+  lhs_exclusive: LHS exclusive
+  rhs_exclusive: RHS exclusive
+  merge_target: RHS override value
+...
+---
+hash:
+  lhs2_exclusive: LHS2 exclusive
+  merge2_target: RHS2 2nd override value
+  rhs2_exclusive: RHS2 exclusive
+  merge_target: RHS2 override value
+...
+---
+lhs_exclusive: true
+...
+"""
+
+        output_dir = tmp_path / "test_merge_two_uneven_lhs_across_multidoc_yaml_files_to_stdout"
+        output_dir.mkdir()
+        output_file = output_dir / "output.json"
+
+        # DEBUG
+        # print("LHS File:  {}".format(lhs_file))
+        # print("RHS File:  {}".format(rhs_file))
+        # print("Output File:  {}".format(output_file))
+        # print("Expected Output:")
+        # print(merged_yaml_content)
+
+        result = script_runner.run(
+            self.command
+            , "--nostdin"
+            , "--multi-doc-mode=merge_across"
+            , lhs_file
+            , rhs_file)
+        assert result.success, result.stderr
+        assert merged_yaml_content == result.stdout
+
+    def test_merge_two_matrix_multidoc_yaml_files_to_file(self, script_runner, tmp_path, tmp_path_factory):
+        lhs_file = create_temp_yaml_file(tmp_path_factory, """---
+hash:
+  lhs_exclusive: LHS exclusive
+  merge_target: LHS original value
+...
+---
+hash:
+  lhs2_exclusive: LHS2 exclusive
+  merge2_target: LHS2 original value
+""")
+        rhs_file = create_temp_yaml_file(tmp_path_factory, """---
+hash:
+  rhs_exclusive: RHS exclusive
+  merge_target: RHS override value
+...
+---
+hash:
+  rhs2_exclusive: RHS2 exclusive
+  merge_target: RHS2 override value
+  merge2_target: RHS2 2nd override value
+""")
+        merged_yaml_content = """---
+hash:
+  lhs_exclusive: LHS exclusive
+  rhs2_exclusive: RHS2 exclusive
+  rhs_exclusive: RHS exclusive
+  merge_target: RHS2 override value
+  merge2_target: RHS2 2nd override value
+...
+---
+hash:
+  lhs2_exclusive: LHS2 exclusive
+  rhs2_exclusive: RHS2 exclusive
+  merge2_target: RHS2 2nd override value
+  rhs_exclusive: RHS exclusive
+  merge_target: RHS2 override value
+...
+"""
+
+        output_dir = tmp_path / "test_merge_two_matrix_multidoc_yaml_files_to_file"
+        output_dir.mkdir()
+        output_file = output_dir / "output.yaml"
+
+        # DEBUG
+        # print("LHS File:  {}".format(lhs_file))
+        # print("RHS File:  {}".format(rhs_file))
+        # print("Output File:  {}".format(output_file))
+        # print("Expected Output:")
+        # print(merged_yaml_content)
+
+        result = script_runner.run(
+            self.command
+            , "--nostdin"
+            , "--output={}".format(output_file)
+            , "--multi-doc-mode=matrix_merge"
             , lhs_file
             , rhs_file)
         assert result.success, result.stderr
@@ -283,6 +695,38 @@ hash:
             filedat = fhnd.read()
         assert merged_yaml_content == filedat
 
+    def test_convert_yaml_tagged_set_to_json_file(self, script_runner, tmp_path, tmp_path_factory):
+        lhs_file = create_temp_yaml_file(tmp_path_factory, """--- !!set
+? !int 5280
+? !bool false
+? !double 3.1415926535856
+? BareVal
+? !string TaggedVal
+""")
+        merged_yaml_content = """{"5280": null, "false": null, "3.1415926535856": null, "BareVal": null, "TaggedVal": null}"""
+
+        output_dir = tmp_path / "test_convert_yaml_tagged_set_to_json_file"
+        output_dir.mkdir()
+        output_file = output_dir / "output.yaml"
+
+        # DEBUG
+        # print("LHS File:  {}".format(lhs_file))
+        # print("Output File:  {}".format(output_file))
+        # print("Expected Output:")
+        # print(merged_yaml_content)
+
+        result = script_runner.run(
+            self.command
+            , "--nostdin"
+            , "--document-format=json"
+            , "--output={}".format(output_file)
+            , lhs_file)
+        assert result.success, result.stderr
+
+        with open(output_file, 'r') as fhnd:
+            filedat = fhnd.read()
+        assert merged_yaml_content == filedat
+
     def test_convert_json_to_yaml_file(self, script_runner, tmp_path, tmp_path_factory):
         lhs_file = create_temp_yaml_file(tmp_path_factory, """{"hash": {"lhs_exclusive": "LHS exclusive", "merge_target": "LHS original value"}}""")
         merged_yaml_content = """---
@@ -330,7 +774,29 @@ hash:
             , rhs_file)
         assert not result.success, result.stderr
 
-    def test_bad_multidoc_rhs_input_file(self, script_runner, tmp_path_factory):
+    def test_bad_multidoc_lhs_input_file(self, script_runner, tmp_path_factory):
+        lhs_file = create_temp_yaml_file(tmp_path_factory, """---
+hash:
+  rhs_exclusive: RHS exclusive
+  merge_target: RHS override value
+...
+---
+- one
+- two
+""")
+        rhs_file = create_temp_yaml_file(tmp_path_factory, """---
+hash:
+  lhs_exclusive: LHS exclusive
+  merge_target: LHS original value
+""")
+
+        result = script_runner.run(
+            self.command
+            , lhs_file
+            , rhs_file)
+        assert not result.success, result.stderr
+
+    def test_bad_multidoc_rhs_input_file_condense_all(self, script_runner, tmp_path_factory):
         lhs_file = create_temp_yaml_file(tmp_path_factory, """---
 hash:
   lhs_exclusive: LHS exclusive
@@ -348,6 +814,52 @@ hash:
 
         result = script_runner.run(
             self.command
+            , lhs_file
+            , rhs_file)
+        assert not result.success, result.stderr
+
+    def test_bad_multidoc_rhs_input_file_merge_across(self, script_runner, tmp_path_factory):
+        lhs_file = create_temp_yaml_file(tmp_path_factory, """---
+hash:
+  lhs_exclusive: LHS exclusive
+  merge_target: LHS original value
+""")
+        rhs_file = create_temp_yaml_file(tmp_path_factory, """---
+hash:
+  rhs_exclusive: RHS exclusive
+  merge_target: RHS override value
+...
+---
+- one
+- two
+""")
+
+        result = script_runner.run(
+            self.command
+            , "--multi-doc-mode=merge_across"
+            , lhs_file
+            , rhs_file)
+        assert not result.success, result.stderr
+
+    def test_bad_multidoc_rhs_input_file_matrix_merge(self, script_runner, tmp_path_factory):
+        lhs_file = create_temp_yaml_file(tmp_path_factory, """---
+hash:
+  lhs_exclusive: LHS exclusive
+  merge_target: LHS original value
+""")
+        rhs_file = create_temp_yaml_file(tmp_path_factory, """---
+hash:
+  rhs_exclusive: RHS exclusive
+  merge_target: RHS override value
+...
+---
+- one
+- two
+""")
+
+        result = script_runner.run(
+            self.command
+            , "--multi-doc-mode=matrix_merge"
             , lhs_file
             , rhs_file)
         assert not result.success, result.stderr
@@ -462,7 +974,7 @@ hash:
         assert 0 == result.returncode, result.stderr
         assert merged_yaml_content == result.stdout
 
-    def test_bad_mergeat_yamlpath(self, script_runner, tmp_path_factory):
+    def test_bad_mergeat_yamlpath_condense_all(self, script_runner, tmp_path_factory):
         lhs_file = create_temp_yaml_file(tmp_path_factory, """---
 hash:
   lhs_exclusive: LHS exclusive
@@ -478,7 +990,66 @@ new_key: New value
             , lhs_file
             , rhs_file)
         assert not result.success, result.stderr
-        assert "Unexpected use of ~ operator" in result.stderr
+        assert "Unexpected use of \"~\" operator" in result.stderr
+
+    def test_bad_mergeat_yamlpath_merge_across(self, script_runner, tmp_path_factory):
+        lhs_file = create_temp_yaml_file(tmp_path_factory, """---
+hash:
+  lhs_exclusive: LHS exclusive
+  merge_target: LHS original value
+""")
+        rhs_file = create_temp_yaml_file(tmp_path_factory, """---
+new_key: New value
+""")
+
+        result = script_runner.run(
+            self.command
+            , "--mergeat=/[.~='']"
+            , "--multi-doc-mode=merge_across"
+            , lhs_file
+            , rhs_file)
+        assert not result.success, result.stderr
+        assert "Unexpected use of \"~\" operator" in result.stderr
+
+    def test_bad_mergeat_yamlpath_matrix_merge(self, script_runner, tmp_path_factory):
+        lhs_file = create_temp_yaml_file(tmp_path_factory, """---
+hash:
+  lhs_exclusive: LHS exclusive
+  merge_target: LHS original value
+""")
+        rhs_file = create_temp_yaml_file(tmp_path_factory, """---
+new_key: New value
+""")
+
+        result = script_runner.run(
+            self.command
+            , "--mergeat=/[.~='']"
+            , "--multi-doc-mode=matrix_merge"
+            , lhs_file
+            , rhs_file)
+        assert not result.success, result.stderr
+        assert "Unexpected use of \"~\" operator" in result.stderr
+
+    def test_bad_lhs_multidoc_mergeat_yamlpath(self, script_runner, tmp_path_factory):
+        lhs_file = create_temp_yaml_file(tmp_path_factory, """---
+hash:
+  lhs_exclusive: LHS exclusive
+  merge_target: LHS original value
+...
+---
+new_key: New value
+""")
+        rhs_file = create_temp_yaml_file(tmp_path_factory, """---
+new_key: Override value
+""")
+
+        result = script_runner.run(
+            self.command
+            , "--mergeat=/[.~='']"
+            , lhs_file
+            , rhs_file)
+        assert not result.success, result.stderr
+        assert "Unexpected use of \"~\" operator" in result.stderr
 
     def test_too_many_pseudofiles(self, script_runner):
         result = script_runner.run(

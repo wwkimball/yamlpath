@@ -20,18 +20,13 @@ from yamlpath import Processor
 
 
 class EYAMLProcessor(Processor):
-    """Extend Processor to understand EYAML values."""
+    """Extend Processor to understand EYAML content."""
 
     def __init__(
         self, logger: ConsolePrinter, data: Any, **kwargs: Optional[str]
     ) -> None:
         """
         Instantiate an EYAMLProcessor.
-
-        Note that due to a bug in the eyaml command at the time of this
-        writing, either both or neither of the public and private keys must be
-        set.  So, even though you would normally need only the public key to
-        encrypt values, you must also supply the private key, anyway.
 
         Parameters:
         1. logger (ConsolePrinter) Instance of ConsolePrinter or subclass

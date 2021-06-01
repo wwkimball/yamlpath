@@ -4,14 +4,13 @@ Implement Searches, a static library of generally-useful code for searching.
 Copyright 2020 William W. Kimball, Jr. MBA MSIS
 """
 import re
-from ast import literal_eval
 from typing import Any, List
 
 from yamlpath.enums import (
     AnchorMatches,
     PathSearchMethods,
 )
-from yamlpath.common import Anchors
+from yamlpath.common import Anchors, Nodes
 from yamlpath.types import PathAttributes
 from yamlpath.path import SearchTerms
 
@@ -37,89 +36,81 @@ class Searches:
 
         Returns:  (bool) True = comparision passes; False = comparison fails.
         """
-        try:
-            cased_needle = needle
-            lower_needle = str(needle).lower()
-            if lower_needle in ("true", "false"):
-                cased_needle = str(needle).title()
-            typed_needle = literal_eval(cased_needle)
-        except ValueError:
-            typed_needle = needle
-        except SyntaxError:
-            typed_needle = needle
+        typed_haystack = Nodes.typed_value(haystack)
+        typed_needle = Nodes.typed_value(needle)
         needle_type = type(typed_needle)
         matches: bool = False
 
         if method is PathSearchMethods.EQUALS:
-            if isinstance(haystack, bool) and needle_type is bool:
-                matches = haystack == typed_needle
-            elif isinstance(haystack, int) and needle_type is int:
-                matches = haystack == typed_needle
-            elif isinstance(haystack, float) and needle_type is float:
-                matches = haystack == typed_needle
+            if isinstance(typed_haystack, bool) and needle_type is bool:
+                matches = typed_haystack == typed_needle
+            elif isinstance(typed_haystack, int) and needle_type is int:
+                matches = typed_haystack == typed_needle
+            elif isinstance(typed_haystack, float) and needle_type is float:
+                matches = typed_haystack == typed_needle
             else:
-                matches = str(haystack) == str(needle)
+                matches = str(typed_haystack) == str(needle)
         elif method is PathSearchMethods.STARTS_WITH:
-            matches = str(haystack).startswith(needle)
+            matches = str(typed_haystack).startswith(needle)
         elif method is PathSearchMethods.ENDS_WITH:
-            matches = str(haystack).endswith(needle)
+            matches = str(typed_haystack).endswith(needle)
         elif method is PathSearchMethods.CONTAINS:
-            matches = needle in str(haystack)
+            matches = needle in str(typed_haystack)
         elif method is PathSearchMethods.GREATER_THAN:
-            if isinstance(haystack, int):
-                try:
-                    matches = haystack > int(needle)
-                except ValueError:
+            if isinstance(typed_haystack, int):
+                if isinstance(typed_needle, (int, float)):
+                    matches = typed_haystack > typed_needle
+                else:
                     matches = False
-            elif isinstance(haystack, float):
-                try:
-                    matches = haystack > float(needle)
-                except ValueError:
+            elif isinstance(typed_haystack, float):
+                if isinstance(typed_needle, (int, float)):
+                    matches = typed_haystack > typed_needle
+                else:
                     matches = False
             else:
-                matches = str(haystack) > str(needle)
+                matches = str(typed_haystack) > str(needle)
         elif method is PathSearchMethods.LESS_THAN:
-            if isinstance(haystack, int):
-                try:
-                    matches = haystack < int(needle)
-                except ValueError:
+            if isinstance(typed_haystack, int):
+                if isinstance(typed_needle, (int, float)):
+                    matches = typed_haystack < typed_needle
+                else:
                     matches = False
-            elif isinstance(haystack, float):
-                try:
-                    matches = haystack < float(needle)
-                except ValueError:
+            elif isinstance(typed_haystack, float):
+                if isinstance(typed_needle, (int, float)):
+                    matches = typed_haystack < typed_needle
+                else:
                     matches = False
             else:
-                matches = str(haystack) < str(needle)
+                matches = str(typed_haystack) < str(needle)
         elif method is PathSearchMethods.GREATER_THAN_OR_EQUAL:
-            if isinstance(haystack, int):
-                try:
-                    matches = haystack >= int(needle)
-                except ValueError:
+            if isinstance(typed_haystack, int):
+                if isinstance(typed_needle, (int, float)):
+                    matches = typed_haystack >= typed_needle
+                else:
                     matches = False
-            elif isinstance(haystack, float):
-                try:
-                    matches = haystack >= float(needle)
-                except ValueError:
+            elif isinstance(typed_haystack, float):
+                if isinstance(typed_needle, (int, float)):
+                    matches = typed_haystack >= typed_needle
+                else:
                     matches = False
             else:
-                matches = str(haystack) >= str(needle)
+                matches = str(typed_haystack) >= str(needle)
         elif method is PathSearchMethods.LESS_THAN_OR_EQUAL:
-            if isinstance(haystack, int):
-                try:
-                    matches = haystack <= int(needle)
-                except ValueError:
+            if isinstance(typed_haystack, int):
+                if isinstance(typed_needle, (int, float)):
+                    matches = typed_haystack <= typed_needle
+                else:
                     matches = False
-            elif isinstance(haystack, float):
-                try:
-                    matches = haystack <= float(needle)
-                except ValueError:
+            elif isinstance(typed_haystack, float):
+                if isinstance(typed_needle, (int, float)):
+                    matches = typed_haystack <= typed_needle
+                else:
                     matches = False
             else:
-                matches = str(haystack) <= str(needle)
+                matches = str(typed_haystack) <= str(needle)
         elif method == PathSearchMethods.REGEX:
             matcher = re.compile(needle)
-            matches = matcher.search(str(haystack)) is not None
+            matches = matcher.search(str(typed_haystack)) is not None
         else:
             raise NotImplementedError
 

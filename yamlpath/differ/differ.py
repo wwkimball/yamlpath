@@ -1,12 +1,12 @@
 """
 Implement YAML document Differ.
 
-Copyright 2020 William W. Kimball, Jr. MBA MSIS
+Copyright 2020, 2021 William W. Kimball, Jr. MBA MSIS
 """
 from itertools import zip_longest
-from typing import Any, Dict, Generator, List, Optional, Tuple
+from typing import Any, Dict, Generator, List, Optional, Tuple, Union
 
-from ruamel.yaml.comments import CommentedMap, CommentedSeq
+from ruamel.yaml.comments import CommentedMap, CommentedSeq, CommentedSet
 
 from yamlpath import YAMLPath
 from yamlpath.wrappers import ConsolePrinter, NodeCoords
@@ -102,6 +102,14 @@ class Differ:
                     DiffEntry(
                         DiffActions.DELETE, next_path, ele, None,
                         lhs_parent=data, lhs_iteration=idx))
+        elif isinstance(data, CommentedSet):
+            for idx, ele in enumerate(data):
+                next_path = (path +
+                    YAMLPath.escape_path_section(ele, path.seperator))
+                self._diffs.append(
+                    DiffEntry(
+                        DiffActions.DELETE, next_path, ele, None,
+                        lhs_parent=data, lhs_iteration=idx))
         else:
             if data is not None:
                 self._diffs.append(
@@ -131,6 +139,14 @@ class Differ:
         elif isinstance(data, CommentedSeq):
             for idx, ele in enumerate(data):
                 next_path = path + "[{}]".format(idx)
+                self._diffs.append(
+                    DiffEntry(
+                        DiffActions.ADD, next_path, None, ele,
+                        rhs_parent=data, rhs_iteration=idx))
+        elif isinstance(data, CommentedSet):
+            for idx, ele in enumerate(data):
+                next_path = (path +
+                    YAMLPath.escape_path_section(ele, path.seperator))
                 self._diffs.append(
                     DiffEntry(
                         DiffActions.ADD, next_path, None, ele,
@@ -538,6 +554,111 @@ class Differ:
                 # This list is an Array-of-Arrays or a simple list of Scalars
                 self._diff_arrays_of_scalars(path, lhs, rhs, node_coord)
 
+    # pylint: disable=too-many-locals
+    def _diff_sets(
+        self, path: YAMLPath, lhs: CommentedSet, rhs: CommentedSet
+    ) -> None:
+        """
+        Diff two sets.
+
+        Parameters:
+        1. path (YAMLPath) YAML Path to the document element under evaluation
+        2. lhs (Any) The left-hand-side (original) document
+        3. rhs (Any) The right-hand-side (altered) document
+
+        Keyword Arguments:
+        * rhs_parent (Any) Parent data node of rhs
+        * parentref (Any) Reference indicating rhs within rhs_parent
+
+        Returns:  N/A
+        """
+        self.logger.debug(
+            "Comparing LHS:",
+            prefix="Differ::_diff_sets:  ",
+            data=lhs)
+        self.logger.debug(
+            "Against RHS:",
+            prefix="Differ::_diff_sets:  ",
+            data=rhs)
+
+        # Sets must allways have a tag of !!set lest PyYAML/ruamel.yaml fail to
+        # load them as set data.  Keep this code commented until a case is
+        # found which proves otherwise.
+        # # Check first for a difference in YAML Tag
+        # lhs_tag = lhs.tag.value if hasattr(lhs, "tag") else None
+        # rhs_tag = rhs.tag.value if hasattr(rhs, "tag") else None
+        # if lhs_tag != rhs_tag:
+        #     self.logger.debug(
+        #         "Sets have different YAML Tags; {} != {}:".format(
+        #             lhs_tag, rhs_tag),
+        #         prefix="Differ::_diff_sets:  ")
+        #     self._diffs.append(
+        #         DiffEntry(
+        #             DiffActions.DELETE, path, lhs, None, key_tag=lhs_tag))
+        #     self._diffs.append(
+        #         DiffEntry(
+        #             DiffActions.ADD, path, None, rhs, key_tag=rhs_tag))
+        #     return
+
+        lhs_keys = set(lhs)
+        rhs_keys = set(rhs)
+        lhs_key_indicies = Differ._get_key_indicies(lhs)
+        rhs_key_indicies = Differ._get_key_indicies(rhs)
+
+        self.logger.debug(
+            "Got LHS key indicies:",
+            prefix="Differ::_diff_sets:  ",
+            data=lhs_key_indicies)
+        self.logger.debug(
+            "Got RHS key indicies:",
+            prefix="Differ::_diff_sets:  ",
+            data=rhs_key_indicies)
+
+        # Look for changes
+        for key in [
+            (key) for key in rhs
+            if key in lhs and key in rhs
+        ]:
+            next_path = (path +
+                YAMLPath.escape_path_section(key, path.seperator))
+            lhs_ele = None
+            rhs_ele = None
+            for ele in lhs:
+                if ele == key:
+                    lhs_ele = ele
+                    break
+            for ele in rhs:
+                if ele == key:
+                    rhs_ele = ele
+                    break
+            self._diff_between(
+                next_path, lhs_ele, rhs_ele,
+                lhs_parent=lhs, lhs_iteration=lhs_key_indicies[key],
+                rhs_parent=rhs, rhs_iteration=rhs_key_indicies[key],
+                parentref=key)
+
+        # Look for deleted keys
+        for key in lhs_keys - rhs_keys:
+            next_path = (path +
+                YAMLPath.escape_path_section(key, path.seperator))
+            self._diffs.append(
+                DiffEntry(
+                    DiffActions.DELETE, next_path, key, None,
+                    lhs_parent=lhs, lhs_iteration=lhs_key_indicies[key],
+                    rhs_parent=rhs,
+                    key_tag=key.tag.value if hasattr(key, "tag") else None))
+
+        # Look for new keys
+        for key in rhs_keys - lhs_keys:
+            next_path = (path +
+                YAMLPath.escape_path_section(key, path.seperator))
+            self._diffs.append(
+                DiffEntry(
+                    DiffActions.ADD, next_path, None, key,
+                    lhs_parent=lhs,
+                    rhs_parent=rhs, rhs_iteration=rhs_key_indicies[key],
+                    key_tag=key.tag.value if hasattr(key, "tag") else None))
+
     def _diff_between(
         self, path: YAMLPath, lhs: Any, rhs: Any, **kwargs
     ) -> None:
@@ -563,13 +684,16 @@ class Differ:
         # If the roots are different, delete all LHS and add all RHS.
         lhs_is_dict = isinstance(lhs, CommentedMap)
         lhs_is_list = isinstance(lhs, CommentedSeq)
-        lhs_is_scalar = not (lhs_is_dict or lhs_is_list)
+        lhs_is_set = isinstance(lhs, CommentedSet)
+        lhs_is_scalar = not (lhs_is_dict or lhs_is_list or lhs_is_set)
         rhs_is_dict = isinstance(rhs, CommentedMap)
         rhs_is_list = isinstance(rhs, CommentedSeq)
-        rhs_is_scalar = not (rhs_is_dict or rhs_is_list)
+        rhs_is_set = isinstance(rhs, CommentedSet)
+        rhs_is_scalar = not (rhs_is_dict or rhs_is_list or rhs_is_set)
         same_types = (
             (lhs_is_dict and rhs_is_dict)
             or (lhs_is_list and rhs_is_list)
+            or (lhs_is_set and rhs_is_set)
             or (lhs_is_scalar and rhs_is_scalar)
         )
         if same_types:
@@ -577,6 +701,8 @@ class Differ:
                 self._diff_dicts(path, lhs, rhs)
             elif lhs_is_list:
                 self._diff_lists(path, lhs, rhs, **kwargs)
+            elif lhs_is_set:
+                self._diff_sets(path, lhs, rhs)
             else:
                 self._diff_scalars(path, lhs, rhs, **kwargs)
         else:
@@ -720,7 +846,9 @@ class Differ:
         return syn_pairs
 
     @classmethod
-    def _get_key_indicies(cls, data: CommentedMap) -> Dict[Any, int]:
+    def _get_key_indicies(
+        cls, data: Union[CommentedMap, CommentedSet]
+    ) -> Dict[Any, int]:
         """
         Get a dictionary mapping of keys to relative positions.
 
@@ -735,5 +863,8 @@ class Differ:
         key_map = {}
         if isinstance(data, CommentedMap):
             for idx, key in enumerate(data.keys()):
+                key_map[key] = idx
+        elif isinstance(data, CommentedSet):
+            for idx, key in enumerate(data):
                 key_map[key] = idx
         return key_map

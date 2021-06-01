@@ -360,8 +360,8 @@ indexes:
         ("/bad_prices_aoh[!min(price)]/price", ["not set", "9.95", "4.99"]),
         ("bad_prices_hash[min(price)][name()]", ["widget"]),
         ("bad_prices_hash[!min(price)][name()]", ["fob", "whatchamacallit", "doohickey", "unknown"]),
-        ("(/bad_prices_hash/*/price)[min()]", ["4.99"]),
-        ("(/bad_prices_hash/*/price)[!min()]", ["not set", "9.95", "True"]),
+        ("(/bad_prices_hash/*/price)[min()]", ["True"]),
+        ("(/bad_prices_hash/*/price)[!min()]", ["not set", "9.95", "4.99"]),
         ("bad_prices_array[min()]", ["0.98"]),
         ("bad_prices_array[!min()]", ["not set", "9.95", "4.99", "\x00"]),
     ])

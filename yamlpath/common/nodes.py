@@ -3,7 +3,7 @@ Implement Nodes, a static library of generally-useful code for data nodes.
 
 Copyright 2020 William W. Kimball, Jr. MBA MSIS
 """
-import ast
+from ast import literal_eval
 from distutils.util import strtobool
 from typing import Any
 
@@ -23,6 +23,7 @@ from yamlpath.enums import (
     PathSegmentTypes,
     YAMLValueFormats,
 )
+from yamlpath.wrappers import NodeCoords
 from yamlpath import YAMLPath
 
 
@@ -257,17 +258,7 @@ class Nodes:
         Raises:  N/A
         """
         wrapped_value = value
-
-        try:
-            cased_value = value
-            if str(value).lower() in ("true", "false"):
-                cased_value = str(value).title()
-            ast_value = ast.literal_eval(cased_value)
-        except ValueError:
-            ast_value = value
-        except SyntaxError:
-            ast_value = value
-
+        ast_value = Nodes.typed_value(value)
         typ = type(ast_value)
         if typ is list:
             wrapped_value = CommentedSeq(value)
@@ -406,15 +397,20 @@ class Nodes:
         return not isinstance(node, (dict, list, set))
 
     @staticmethod
-    def node_is_aoh(node: Any) -> bool:
+    def node_is_aoh(node: Any, **kwargs) -> bool:
         """
         Indicate whether a node is an Array-of-Hashes (List of Dicts).
 
         Parameters:
         1. node (Any) The node under evaluation
 
+        Keyword Arguments:
+        * accept_nulls (bool) When node is enumerable, True = allow elements to
+          be None; False, otherwise; default=False
+
         Returns:  (bool) True = node is a `list` comprised **only** of `dict`s
         """
+        accept_nulls: bool = kwargs.pop("accept_nulls", False)
         if node is None:
             return False
 
@@ -422,6 +418,8 @@ class Nodes:
             return False
 
         for ele in node:
+            if accept_nulls and ele is None:
+                continue
             if not isinstance(ele, dict):
                 return False
 
@@ -458,12 +456,32 @@ class Nodes:
         evalue = value
         if isinstance(value, TaggedScalar):
             evalue = value.value
+        return Nodes.typed_value(evalue)
+
+    @staticmethod
+    def typed_value(value: str) -> Any:
+        """
+        Safely convert a String value to its intrinsic Python data type.
+
+        Parameters:
+        1. value (Any) the value to convert
+        """
+        if value is None:
+            return value
+
+        if isinstance(value, NodeCoords):
+            return Nodes.typed_value(value.node)
+
+        cased_value = value
+        lower_value = str(value).lower()
 
         try:
-            untagged_value = ast.literal_eval(evalue)
+            # Booleans require special handling
+            if lower_value in ("true", "false"):
+                cased_value = str(value).title()
+            typed_value = literal_eval(cased_value)
         except ValueError:
-            untagged_value = value
+            typed_value = value
         except SyntaxError:
-            untagged_value = value
-
-        return untagged_value
+            typed_value = value
+        return typed_value

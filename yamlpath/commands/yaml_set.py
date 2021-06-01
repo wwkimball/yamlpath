@@ -66,8 +66,15 @@ def processcli():
     input_group.add_argument(
         "-A", "--aliasof",
         metavar="ANCHOR",
-        help="set the value as a YAML Alias of an existing Anchor, by name "
-             "(merely copies the target value for non-YAML files)")
+        help="set the value as a YAML Alias of an existing scalar value Anchor"
+             " by its source ANCHOR YAML Path (merely copies the target value"
+             " for non-YAML files)")
+    input_group.add_argument(
+        "-K", "--mergekey",
+        metavar="ANCHOR",
+        help="assign a YAML Merge Key to target Hash(es) by the source Hash's"
+             " ANCHOR YAML Path (merely copies unique key-value pairs from the"
+             " source Hash into the target Hash for non-YAML files)")
     input_group.add_argument(
         "-f", "--file",
         help="read the new value from file (discarding any trailing\
@@ -188,12 +195,12 @@ def validateargs(args, log):
         has_errors = True
         log.error("There must be a YAML_FILE or STDIN document.")
 
-    # At least one of --value, --aliasof, --file, --stdin, or --random must be
-    # set.
+    # One of the input group options must be specified.
     if not (
             args.value
             or args.value == ""
             or args.aliasof
+            or args.mergekey
             or args.file
             or args.stdin
             or args.random
@@ -205,7 +212,8 @@ def validateargs(args, log):
         has_errors = True
         log.error(
             "Exactly one of the following must be set:  --value, --aliasof,"
-            " --file, --stdin, --random, --null, --delete, --anchor, or --tag")
+            " --mergekey, --file, --stdin, --random, --null, --delete,"
+            " --anchor, or --tag")
 
     # --stdin cannot be used with -, explicit or implied
     if args.stdin and in_stream_mode:
@@ -214,7 +222,7 @@ def validateargs(args, log):
             "Impossible to read both document and replacement value from"
             " STDIN!")
 
-    # --anchor can be used only when --aliasof is set; remove illegal chars
+    # Remove potentially-accidental characters from any Anchor
     if args.anchor:
         args.anchor = (
             args.anchor
@@ -222,8 +230,13 @@ def validateargs(args, log):
             .replace("&", "")
             .replace("*", "")
         )
-    if args.anchor and not args.aliasof:
-        args.aliasof = args.change
+
+    # --anchor can be used only when --aliasof or --mergekey are set
+    if args.anchor and not (args.aliasof or args.mergekey):
+        has_errors = True
+        log.error(
+            "The --anchor|-H option may be used only when --aliasof|-A or"
+            " --mergekey|-K are also set.")
 
     # --backup has no meaning when reading the YAML file from STDIN
     if args.backup and in_stream_mode:
@@ -426,6 +439,17 @@ def _alias_nodes(
     except YAMLPathException as ex:
         log.critical(ex, 1)
 
+# pylint: disable=locally-disabled,too-many-arguments
+def _ymk_nodes(
+    log, processor, assign_to_nodes, anchor_path, anchor_name, target_path
+):
+    """Assign YAML Aliases to the target nodes."""
+    try:
+        processor.ymk_gathered_nodes(
+            assign_to_nodes, anchor_path, target_path, anchor_name=anchor_name)
+    except YAMLPathException as ex:
+        log.critical(ex, 1)
+
 # pylint: disable=locally-disabled,too-many-locals,too-many-branches,too-many-statements
 def main():
     """Main code."""
@@ -574,6 +598,12 @@ def main():
         # Assign the change nodes as Aliases of whatever --aliasof points to
         _alias_nodes(
             log, processor, change_node_coordinates, args.aliasof, args.anchor)
+    elif args.mergekey:
+        # Assign to the change nodes a YAML Merge Key to whatever --mergekey
+        # points to.
+        _ymk_nodes(
+            log, processor, change_node_coordinates, args.mergekey,
+            args.anchor, change_path)
     elif args.eyamlcrypt:
         # If the user hasn't specified a format, use the same format as the
         # value being replaced, if known.

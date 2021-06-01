@@ -100,6 +100,52 @@ key: value
         self, quiet_logger, tmp_path, tmp_path_factory
     ):
         lhs_yaml_file = create_temp_yaml_file(tmp_path_factory, """---
+lhs_exclusive: LHS exclusive
+merge_target: LHS original value
+""")
+        rhs_yaml_file = create_temp_yaml_file(tmp_path_factory, """---
+rhs_exclusive: RHS exclusive
+merge_target: RHS override value
+""")
+        merged_yaml = create_temp_yaml_file(tmp_path_factory, """---
+lhs_exclusive: LHS exclusive
+rhs_exclusive: RHS exclusive
+merge_target: RHS override value
+""")
+
+        output_dir = tmp_path / "test_merge_with_defaults_simple_hash"
+        output_dir.mkdir()
+        output_file = output_dir / "output.yaml"
+
+        lhs_yaml = get_yaml_editor()
+        rhs_yaml = get_yaml_editor()
+        (lhs_data, lhs_loaded) = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
+        (rhs_data, rhs_loaded) = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
+
+        args = SimpleNamespace()
+        mc = MergerConfig(quiet_logger, args)
+        merger = Merger(quiet_logger, lhs_data, mc)
+        merger.merge_with(rhs_data)
+
+        with open(output_file, 'w') as yaml_dump:
+            lhs_yaml.dump(merger.data, yaml_dump)
+
+        # DEBUG:
+        # with open(output_file, 'r') as output_fnd, open(merged_yaml, 'r') as merged_fnd:
+        #     print("Expected:")
+        #     print(merged_fnd.read())
+        #     print("Got:")
+        #     print(output_fnd.read())
+
+        assert (
+            (os.path.getsize(output_file) == os.path.getsize(merged_yaml))
+            and (open(output_file,'r').read() == open(merged_yaml,'r').read())
+        )
+
+    def test_merge_with_defaults_nested_hash(
+        self, quiet_logger, tmp_path, tmp_path_factory
+    ):
+        lhs_yaml_file = create_temp_yaml_file(tmp_path_factory, """---
 hash:
   lhs_exclusive: LHS exclusive
   merge_target: LHS original value
@@ -116,7 +162,7 @@ hash:
   merge_target: RHS override value
 """)
 
-        output_dir = tmp_path / "test_merge_with_defaults_simple_hash"
+        output_dir = tmp_path / "test_merge_with_defaults_nested_hash"
         output_dir.mkdir()
         output_file = output_dir / "output.yaml"
 
@@ -149,6 +195,51 @@ hash:
         self, quiet_logger, tmp_path, tmp_path_factory
     ):
         lhs_yaml_file = create_temp_yaml_file(tmp_path_factory, """---
+lhs_exclusive: LHS exclusive
+merge_target: LHS original value
+""")
+        rhs_yaml_file = create_temp_yaml_file(tmp_path_factory, """---
+rhs_exclusive: RHS exclusive
+merge_target: RHS override value
+""")
+        merged_yaml = create_temp_yaml_file(tmp_path_factory, """---
+lhs_exclusive: LHS exclusive
+merge_target: LHS original value
+""")
+
+        output_dir = tmp_path / "test_merge_left_simple_hash"
+        output_dir.mkdir()
+        output_file = output_dir / "output.yaml"
+
+        lhs_yaml = get_yaml_editor()
+        rhs_yaml = get_yaml_editor()
+        (lhs_data, lhs_loaded) = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
+        (rhs_data, rhs_loaded) = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
+
+        args = SimpleNamespace(hashes="left")
+        mc = MergerConfig(quiet_logger, args)
+        merger = Merger(quiet_logger, lhs_data, mc)
+        merger.merge_with(rhs_data)
+
+        with open(output_file, 'w') as yaml_dump:
+            lhs_yaml.dump(merger.data, yaml_dump)
+
+        # DEBUG:
+        # with open(output_file, 'r') as output_fnd, open(merged_yaml, 'r') as merged_fnd:
+        #     print("Expected:")
+        #     print(merged_fnd.read())
+        #     print("Got:")
+        #     print(output_fnd.read())
+
+        assert (
+            (os.path.getsize(output_file) == os.path.getsize(merged_yaml))
+            and (open(output_file,'r').read() == open(merged_yaml,'r').read())
+        )
+
+    def test_merge_left_nested_hash(
+        self, quiet_logger, tmp_path, tmp_path_factory
+    ):
+        lhs_yaml_file = create_temp_yaml_file(tmp_path_factory, """---
 hash:
   lhs_exclusive: LHS exclusive
   merge_target: LHS original value
@@ -164,7 +255,7 @@ hash:
   merge_target: LHS original value
 """)
 
-        output_dir = tmp_path / "test_merge_left_simple_hash"
+        output_dir = tmp_path / "test_merge_left_nested_hash"
         output_dir.mkdir()
         output_file = output_dir / "output.yaml"
 
@@ -197,6 +288,51 @@ hash:
         self, quiet_logger, tmp_path, tmp_path_factory
     ):
         lhs_yaml_file = create_temp_yaml_file(tmp_path_factory, """---
+lhs_exclusive: LHS exclusive
+merge_target: LHS original value
+""")
+        rhs_yaml_file = create_temp_yaml_file(tmp_path_factory, """---
+rhs_exclusive: RHS exclusive
+merge_target: RHS override value
+""")
+        merged_yaml = create_temp_yaml_file(tmp_path_factory, """---
+rhs_exclusive: RHS exclusive
+merge_target: RHS override value
+""")
+
+        output_dir = tmp_path / "test_merge_right_simple_hash"
+        output_dir.mkdir()
+        output_file = output_dir / "output.yaml"
+
+        lhs_yaml = get_yaml_editor()
+        rhs_yaml = get_yaml_editor()
+        (lhs_data, lhs_loaded) = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
+        (rhs_data, rhs_loaded) = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
+
+        args = SimpleNamespace(hashes="right")
+        mc = MergerConfig(quiet_logger, args)
+        merger = Merger(quiet_logger, lhs_data, mc)
+        merger.merge_with(rhs_data)
+
+        with open(output_file, 'w') as yaml_dump:
+            lhs_yaml.dump(merger.data, yaml_dump)
+
+        # DEBUG:
+        # with open(output_file, 'r') as output_fnd, open(merged_yaml, 'r') as merged_fnd:
+        #     print("Expected:")
+        #     print(merged_fnd.read())
+        #     print("Got:")
+        #     print(output_fnd.read())
+
+        assert (
+            (os.path.getsize(output_file) == os.path.getsize(merged_yaml))
+            and (open(output_file,'r').read() == open(merged_yaml,'r').read())
+        )
+
+    def test_merge_right_nested_hash(
+        self, quiet_logger, tmp_path, tmp_path_factory
+    ):
+        lhs_yaml_file = create_temp_yaml_file(tmp_path_factory, """---
 hash:
   lhs_exclusive: LHS exclusive
   merge_target: LHS original value
@@ -212,7 +348,7 @@ hash:
   merge_target: RHS override value
 """)
 
-        output_dir = tmp_path / "test_merge_right_simple_hash"
+        output_dir = tmp_path / "test_merge_right_nested_hash"
         output_dir.mkdir()
         output_file = output_dir / "output.yaml"
 
@@ -336,7 +472,7 @@ hash:
   - 3.3
 """)
 
-        output_dir = tmp_path / "test_merge_with_defaults_simple_array"
+        output_dir = tmp_path / "test_merge_with_defaults_array_of_floats"
         output_dir.mkdir()
         output_file = output_dir / "output.yaml"
 
@@ -370,6 +506,53 @@ hash:
         self, quiet_logger, tmp_path, tmp_path_factory
     ):
         lhs_yaml_file = create_temp_yaml_file(tmp_path_factory, """---
+- one
+- two
+""")
+        rhs_yaml_file = create_temp_yaml_file(tmp_path_factory, """---
+- two
+- three
+""")
+        merged_yaml = create_temp_yaml_file(tmp_path_factory, """---
+  - one
+  - two
+  - two
+  - three
+""")
+
+        output_dir = tmp_path / "test_merge_with_defaults_simple_array"
+        output_dir.mkdir()
+        output_file = output_dir / "output.yaml"
+
+        lhs_yaml = get_yaml_editor()
+        rhs_yaml = get_yaml_editor()
+        (lhs_data, lhs_loaded) = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
+        (rhs_data, rhs_loaded) = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
+
+        args = SimpleNamespace()
+        mc = MergerConfig(quiet_logger, args)
+        merger = Merger(quiet_logger, lhs_data, mc)
+        merger.merge_with(rhs_data)
+
+        with open(output_file, 'w') as yaml_dump:
+            lhs_yaml.dump(merger.data, yaml_dump)
+
+        # DEBUG:
+        # with open(output_file, 'r') as output_fnd, open(merged_yaml, 'r') as merged_fnd:
+        #     print("Expected:")
+        #     print(merged_fnd.read())
+        #     print("Got:")
+        #     print(output_fnd.read())
+
+        assert (
+            (os.path.getsize(output_file) == os.path.getsize(merged_yaml))
+            and (open(output_file,'r').read() == open(merged_yaml,'r').read())
+        )
+
+    def test_merge_with_defaults_hash_array(
+        self, quiet_logger, tmp_path, tmp_path_factory
+    ):
+        lhs_yaml_file = create_temp_yaml_file(tmp_path_factory, """---
 array:
   - one
   - two
@@ -387,7 +570,7 @@ array:
   - three
 """)
 
-        output_dir = tmp_path / "test_merge_with_defaults_simple_array"
+        output_dir = tmp_path / "test_merge_with_defaults_hash_array"
         output_dir.mkdir()
         output_file = output_dir / "output.yaml"
 
@@ -472,7 +655,7 @@ array: []
 array: [1, 2]
 """)
 
-        output_dir = tmp_path / "test_merge_with_defaults_simple_array_no_rhs"
+        output_dir = tmp_path / "test_merge_with_defaults_simple_array_empty_rhs"
         output_dir.mkdir()
         output_file = output_dir / "output.yaml"
 
@@ -505,17 +688,14 @@ array: [1, 2]
         self, quiet_logger, tmp_path, tmp_path_factory
     ):
         lhs_yaml_file = create_temp_yaml_file(tmp_path_factory, """---
-array:
-  - one
-  - two
+- one
+- two
 """)
         rhs_yaml_file = create_temp_yaml_file(tmp_path_factory, """---
-array:
-  - two
-  - three
+- two
+- three
 """)
         merged_yaml = create_temp_yaml_file(tmp_path_factory, """---
-array:
   - one
   - two
 """)
@@ -549,7 +729,7 @@ array:
             and (open(output_file,'r').read() == open(merged_yaml,'r').read())
         )
 
-    def test_merge_right_simple_array(
+    def test_merge_left_hash_array(
         self, quiet_logger, tmp_path, tmp_path_factory
     ):
         lhs_yaml_file = create_temp_yaml_file(tmp_path_factory, """---
@@ -564,6 +744,51 @@ array:
 """)
         merged_yaml = create_temp_yaml_file(tmp_path_factory, """---
 array:
+  - one
+  - two
+""")
+
+        output_dir = tmp_path / "test_merge_left_hash_array"
+        output_dir.mkdir()
+        output_file = output_dir / "output.yaml"
+
+        lhs_yaml = get_yaml_editor()
+        rhs_yaml = get_yaml_editor()
+        (lhs_data, lhs_loaded) = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
+        (rhs_data, rhs_loaded) = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
+
+        args = SimpleNamespace(arrays="left")
+        mc = MergerConfig(quiet_logger, args)
+        merger = Merger(quiet_logger, lhs_data, mc)
+        merger.merge_with(rhs_data)
+
+        with open(output_file, 'w') as yaml_dump:
+            lhs_yaml.dump(merger.data, yaml_dump)
+
+        # DEBUG:
+        # with open(output_file, 'r') as output_fnd, open(merged_yaml, 'r') as merged_fnd:
+        #     print("Expected:")
+        #     print(merged_fnd.read())
+        #     print("Got:")
+        #     print(output_fnd.read())
+
+        assert (
+            (os.path.getsize(output_file) == os.path.getsize(merged_yaml))
+            and (open(output_file,'r').read() == open(merged_yaml,'r').read())
+        )
+
+    def test_merge_right_simple_array(
+        self, quiet_logger, tmp_path, tmp_path_factory
+    ):
+        lhs_yaml_file = create_temp_yaml_file(tmp_path_factory, """---
+- one
+- two
+""")
+        rhs_yaml_file = create_temp_yaml_file(tmp_path_factory, """---
+- two
+- three
+""")
+        merged_yaml = create_temp_yaml_file(tmp_path_factory, """---
   - two
   - three
 """)
@@ -586,11 +811,59 @@ array:
             lhs_yaml.dump(merger.data, yaml_dump)
 
         # DEBUG:
-        with open(output_file, 'r') as output_fnd, open(merged_yaml, 'r') as merged_fnd:
-            print("Expected:")
-            print(merged_fnd.read())
-            print("Got:")
-            print(output_fnd.read())
+        # with open(output_file, 'r') as output_fnd, open(merged_yaml, 'r') as merged_fnd:
+        #     print("Expected:")
+        #     print(merged_fnd.read())
+        #     print("Got:")
+        #     print(output_fnd.read())
+
+        assert (
+            (os.path.getsize(output_file) == os.path.getsize(merged_yaml))
+            and (open(output_file,'r').read() == open(merged_yaml,'r').read())
+        )
+
+    def test_merge_right_hash_array(
+        self, quiet_logger, tmp_path, tmp_path_factory
+    ):
+        lhs_yaml_file = create_temp_yaml_file(tmp_path_factory, """---
+array:
+  - one
+  - two
+""")
+        rhs_yaml_file = create_temp_yaml_file(tmp_path_factory, """---
+array:
+  - two
+  - three
+""")
+        merged_yaml = create_temp_yaml_file(tmp_path_factory, """---
+array:
+  - two
+  - three
+""")
+
+        output_dir = tmp_path / "test_merge_right_hash_array"
+        output_dir.mkdir()
+        output_file = output_dir / "output.yaml"
+
+        lhs_yaml = get_yaml_editor()
+        rhs_yaml = get_yaml_editor()
+        (lhs_data, lhs_loaded) = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
+        (rhs_data, rhs_loaded) = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
+
+        args = SimpleNamespace(arrays="right")
+        mc = MergerConfig(quiet_logger, args)
+        merger = Merger(quiet_logger, lhs_data, mc)
+        merger.merge_with(rhs_data)
+
+        with open(output_file, 'w') as yaml_dump:
+            lhs_yaml.dump(merger.data, yaml_dump)
+
+        # DEBUG:
+        # with open(output_file, 'r') as output_fnd, open(merged_yaml, 'r') as merged_fnd:
+        #     print("Expected:")
+        #     print(merged_fnd.read())
+        #     print("Got:")
+        #     print(output_fnd.read())
 
         assert (
             (os.path.getsize(output_file) == os.path.getsize(merged_yaml))
@@ -598,6 +871,52 @@ array:
         )
 
     def test_merge_unique_simple_array(
+        self, quiet_logger, tmp_path, tmp_path_factory
+    ):
+        lhs_yaml_file = create_temp_yaml_file(tmp_path_factory, """---
+- one
+- two
+""")
+        rhs_yaml_file = create_temp_yaml_file(tmp_path_factory, """---
+- two
+- three
+""")
+        merged_yaml = create_temp_yaml_file(tmp_path_factory, """---
+  - one
+  - two
+  - three
+""")
+
+        output_dir = tmp_path / "test_merge_unique_simple_array"
+        output_dir.mkdir()
+        output_file = output_dir / "output.yaml"
+
+        lhs_yaml = get_yaml_editor()
+        rhs_yaml = get_yaml_editor()
+        (lhs_data, lhs_loaded) = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
+        (rhs_data, rhs_loaded) = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
+
+        args = SimpleNamespace(arrays="unique")
+        mc = MergerConfig(quiet_logger, args)
+        merger = Merger(quiet_logger, lhs_data, mc)
+        merger.merge_with(rhs_data)
+
+        with open(output_file, 'w') as yaml_dump:
+            lhs_yaml.dump(merger.data, yaml_dump)
+
+        # DEBUG:
+        # with open(output_file, 'r') as output_fnd, open(merged_yaml, 'r') as merged_fnd:
+        #     print("Expected:")
+        #     print(merged_fnd.read())
+        #     print("Got:")
+        #     print(output_fnd.read())
+
+        assert (
+            (os.path.getsize(output_file) == os.path.getsize(merged_yaml))
+            and (open(output_file,'r').read() == open(merged_yaml,'r').read())
+        )
+
+    def test_merge_unique_hash_array(
         self, quiet_logger, tmp_path, tmp_path_factory
     ):
         lhs_yaml_file = create_temp_yaml_file(tmp_path_factory, """---
@@ -617,7 +936,7 @@ array:
   - three
 """)
 
-        output_dir = tmp_path / "test_merge_unique_simple_array"
+        output_dir = tmp_path / "test_merge_unique_hash_array"
         output_dir.mkdir()
         output_file = output_dir / "output.yaml"
 
@@ -1439,11 +1758,11 @@ merge_key: *shared_anchor_1
             lhs_yaml.dump(merger.data, yaml_dump)
 
         # DEBUG:
-        with open(output_file, 'r') as output_fnd, open(merged_yaml, 'r') as merged_fnd:
-            print("Expected:")
-            print(merged_fnd.read())
-            print("Got:")
-            print(output_fnd.read())
+        # with open(output_file, 'r') as output_fnd, open(merged_yaml, 'r') as merged_fnd:
+        #     print("Expected:")
+        #     print(merged_fnd.read())
+        #     print("Got:")
+        #     print(output_fnd.read())
 
         assert (
             (os.path.getsize(output_file) == os.path.getsize(merged_yaml))
@@ -1711,6 +2030,49 @@ key: value
         assert -1 < str(ex.value).find(
             "Impossible to add Scalar value,")
 
+    def test_merge_scalar_to_set(
+        self, quiet_logger, tmp_path, tmp_path_factory
+    ):
+        lhs_yaml_file = create_temp_yaml_file(tmp_path_factory, """--- !!set
+? one
+? two
+""")
+        rhs_yaml_file = create_temp_yaml_file(tmp_path_factory, "three")
+        merged_yaml = create_temp_yaml_file(tmp_path_factory, """--- !!set
+? one
+? two
+? three
+""")
+
+        output_dir = tmp_path / "test_merge_scalar_to_set"
+        output_dir.mkdir()
+        output_file = output_dir / "output.yaml"
+
+        lhs_yaml = get_yaml_editor()
+        rhs_yaml = get_yaml_editor()
+        (lhs_data, lhs_loaded) = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
+        (rhs_data, rhs_loaded) = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
+
+        args = SimpleNamespace()
+        mc = MergerConfig(quiet_logger, args)
+        merger = Merger(quiet_logger, lhs_data, mc)
+        merger.merge_with(rhs_data)
+
+        with open(output_file, 'w') as yaml_dump:
+            lhs_yaml.dump(merger.data, yaml_dump)
+
+        # DEBUG:
+        # with open(output_file, 'r') as output_fnd, open(merged_yaml, 'r') as merged_fnd:
+        #     print("Expected:")
+        #     print(merged_fnd.read())
+        #     print("Got:")
+        #     print(output_fnd.read())
+
+        assert (
+            (os.path.getsize(output_file) == os.path.getsize(merged_yaml))
+            and (open(output_file,'r').read() == open(merged_yaml,'r').read())
+        )
+
     def test_merge_with_bad_mergeat(
         self, quiet_logger, tmp_path, tmp_path_factory
     ):
@@ -1764,11 +2126,11 @@ array: [1, 2, key: val]
             lhs_yaml.dump(merger.data, yaml_dump)
 
         # DEBUG:
-        with open(output_file, 'r') as output_fnd, open(merged_yaml, 'r') as merged_fnd:
-            print("Expected:")
-            print(merged_fnd.read())
-            print("Got:")
-            print(output_fnd.read())
+        # with open(output_file, 'r') as output_fnd, open(merged_yaml, 'r') as merged_fnd:
+        #     print("Expected:")
+        #     print(merged_fnd.read())
+        #     print("Got:")
+        #     print(output_fnd.read())
 
         assert (
             (os.path.getsize(output_file) == os.path.getsize(merged_yaml))
@@ -2116,11 +2478,11 @@ implicit:
             lhs_yaml.dump(merger.data, yaml_dump)
 
         # DEBUG:
-        with open(output_file, 'r') as output_fnd, open(merged_yaml, 'r') as merged_fnd:
-            print("Expected:")
-            print(merged_fnd.read())
-            print("Got:")
-            print(output_fnd.read())
+        # with open(output_file, 'r') as output_fnd, open(merged_yaml, 'r') as merged_fnd:
+        #     print("Expected:")
+        #     print(merged_fnd.read())
+        #     print("Got:")
+        #     print(output_fnd.read())
 
         assert (
             (os.path.getsize(output_file) == os.path.getsize(merged_yaml))
@@ -2166,11 +2528,11 @@ implicit:
             lhs_yaml.dump(merger.data, yaml_dump)
 
         # DEBUG:
-        with open(output_file, 'r') as output_fnd, open(merged_yaml, 'r') as merged_fnd:
-            print("Expected:")
-            print(merged_fnd.read())
-            print("Got:")
-            print(output_fnd.read())
+        # with open(output_file, 'r') as output_fnd, open(merged_yaml, 'r') as merged_fnd:
+        #     print("Expected:")
+        #     print(merged_fnd.read())
+        #     print("Got:")
+        #     print(output_fnd.read())
 
         assert (
             (os.path.getsize(output_file) == os.path.getsize(merged_yaml))
@@ -2216,11 +2578,11 @@ implicit:
             lhs_yaml.dump(merger.data, yaml_dump)
 
         # DEBUG:
-        with open(output_file, 'r') as output_fnd, open(merged_yaml, 'r') as merged_fnd:
-            print("Expected:")
-            print(merged_fnd.read())
-            print("Got:")
-            print(output_fnd.read())
+        # with open(output_file, 'r') as output_fnd, open(merged_yaml, 'r') as merged_fnd:
+        #     print("Expected:")
+        #     print(merged_fnd.read())
+        #     print("Got:")
+        #     print(output_fnd.read())
 
         assert (
             (os.path.getsize(output_file) == os.path.getsize(merged_yaml))
@@ -2503,6 +2865,471 @@ rhs_exclusive:
         )
 
 
+    def test_merge_with_defaults_hash_set(
+        self, quiet_logger, tmp_path, tmp_path_factory
+    ):
+        lhs_yaml_file = create_temp_yaml_file(tmp_path_factory, """---
+set: !!set
+  ? one
+  ? two
+""")
+        rhs_yaml_file = create_temp_yaml_file(tmp_path_factory, """---
+set: !!set
+  ? two
+  ? three
+""")
+        merged_yaml = create_temp_yaml_file(tmp_path_factory, """---
+set: !!set
+  ? one
+  ? two
+  ? three
+""")
+
+        output_dir = tmp_path / "test_merge_with_defaults_hash_set"
+        output_dir.mkdir()
+        output_file = output_dir / "output.yaml"
+
+        lhs_yaml = get_yaml_editor()
+        rhs_yaml = get_yaml_editor()
+        (lhs_data, lhs_loaded) = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
+        (rhs_data, rhs_loaded) = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
+
+        args = SimpleNamespace()
+        mc = MergerConfig(quiet_logger, args)
+        merger = Merger(quiet_logger, lhs_data, mc)
+        merger.merge_with(rhs_data)
+
+        with open(output_file, 'w') as yaml_dump:
+            lhs_yaml.dump(merger.data, yaml_dump)
+
+        # DEBUG:
+        # with open(output_file, 'r') as output_fnd, open(merged_yaml, 'r') as merged_fnd:
+        #     print("Expected:")
+        #     print(merged_fnd.read())
+        #     print("Got:")
+        #     print(output_fnd.read())
+
+        assert (
+            (os.path.getsize(output_file) == os.path.getsize(merged_yaml))
+            and (open(output_file,'r').read() == open(merged_yaml,'r').read())
+        )
+
+    def test_merge_left_simple_set(
+        self, quiet_logger, tmp_path, tmp_path_factory
+    ):
+        lhs_yaml_file = create_temp_yaml_file(tmp_path_factory, """--- !!set
+? one
+? two
+""")
+        rhs_yaml_file = create_temp_yaml_file(tmp_path_factory, """--- !!set
+? two
+? three
+""")
+        merged_yaml = create_temp_yaml_file(tmp_path_factory, """--- !!set
+? one
+? two
+""")
+
+        output_dir = tmp_path / "test_merge_left_simple_set"
+        output_dir.mkdir()
+        output_file = output_dir / "output.yaml"
+
+        lhs_yaml = get_yaml_editor()
+        rhs_yaml = get_yaml_editor()
+        (lhs_data, lhs_loaded) = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
+        (rhs_data, rhs_loaded) = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
+
+        args = SimpleNamespace(sets="left")
+        mc = MergerConfig(quiet_logger, args)
+        merger = Merger(quiet_logger, lhs_data, mc)
+        merger.merge_with(rhs_data)
+
+        with open(output_file, 'w') as yaml_dump:
+            lhs_yaml.dump(merger.data, yaml_dump)
+
+        # DEBUG:
+        # with open(output_file, 'r') as output_fnd, open(merged_yaml, 'r') as merged_fnd:
+        #     print("Expected:")
+        #     print(merged_fnd.read())
+        #     print("Got:")
+        #     print(output_fnd.read())
+
+        assert (
+            (os.path.getsize(output_file) == os.path.getsize(merged_yaml))
+            and (open(output_file,'r').read() == open(merged_yaml,'r').read())
+        )
+
+    def test_merge_left_hash_set(
+        self, quiet_logger, tmp_path, tmp_path_factory
+    ):
+        lhs_yaml_file = create_temp_yaml_file(tmp_path_factory, """---
+set: !!set
+  ? one
+  ? two
+""")
+        rhs_yaml_file = create_temp_yaml_file(tmp_path_factory, """---
+set: !!set
+  ? two
+  ? three
+""")
+        merged_yaml = create_temp_yaml_file(tmp_path_factory, """---
+set: !!set
+  ? one
+  ? two
+""")
+
+        output_dir = tmp_path / "test_merge_left_hash_set"
+        output_dir.mkdir()
+        output_file = output_dir / "output.yaml"
+
+        lhs_yaml = get_yaml_editor()
+        rhs_yaml = get_yaml_editor()
+        (lhs_data, lhs_loaded) = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
+        (rhs_data, rhs_loaded) = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
+
+        args = SimpleNamespace(sets="left")
+        mc = MergerConfig(quiet_logger, args)
+        merger = Merger(quiet_logger, lhs_data, mc)
+        merger.merge_with(rhs_data)
+
+        with open(output_file, 'w') as yaml_dump:
+            lhs_yaml.dump(merger.data, yaml_dump)
+
+        # DEBUG:
+        # with open(output_file, 'r') as output_fnd, open(merged_yaml, 'r') as merged_fnd:
+        #     print("Expected:")
+        #     print(merged_fnd.read())
+        #     print("Got:")
+        #     print(output_fnd.read())
+
+        assert (
+            (os.path.getsize(output_file) == os.path.getsize(merged_yaml))
+            and (open(output_file,'r').read() == open(merged_yaml,'r').read())
+        )
+
+    def test_merge_right_simple_set(
+        self, quiet_logger, tmp_path, tmp_path_factory
+    ):
+        lhs_yaml_file = create_temp_yaml_file(tmp_path_factory, """--- !!set
+? one
+? two
+""")
+        rhs_yaml_file = create_temp_yaml_file(tmp_path_factory, """--- !!set
+? two
+? three
+""")
+        merged_yaml = create_temp_yaml_file(tmp_path_factory, """--- !!set
+? two
+? three
+""")
+
+        output_dir = tmp_path / "test_merge_right_simple_set"
+        output_dir.mkdir()
+        output_file = output_dir / "output.yaml"
+
+        lhs_yaml = get_yaml_editor()
+        rhs_yaml = get_yaml_editor()
+        (lhs_data, lhs_loaded) = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
+        (rhs_data, rhs_loaded) = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
+
+        args = SimpleNamespace(sets="right")
+        mc = MergerConfig(quiet_logger, args)
+        merger = Merger(quiet_logger, lhs_data, mc)
+        merger.merge_with(rhs_data)
+
+        with open(output_file, 'w') as yaml_dump:
+            lhs_yaml.dump(merger.data, yaml_dump)
+
+        # DEBUG:
+        # with open(output_file, 'r') as output_fnd, open(merged_yaml, 'r') as merged_fnd:
+        #     print("Expected:")
+        #     print(merged_fnd.read())
+        #     print("Got:")
+        #     print(output_fnd.read())
+
+        assert (
+            (os.path.getsize(output_file) == os.path.getsize(merged_yaml))
+            and (open(output_file,'r').read() == open(merged_yaml,'r').read())
+        )
+
+    def test_merge_right_hash_set(
+        self, quiet_logger, tmp_path, tmp_path_factory
+    ):
+        lhs_yaml_file = create_temp_yaml_file(tmp_path_factory, """---
+set: !!set
+  ? one
+  ? two
+""")
+        rhs_yaml_file = create_temp_yaml_file(tmp_path_factory, """---
+set: !!set
+  ? two
+  ? three
+""")
+        merged_yaml = create_temp_yaml_file(tmp_path_factory, """---
+set: !!set
+  ? two
+  ? three
+""")
+
+        output_dir = tmp_path / "test_merge_right_hash_set"
+        output_dir.mkdir()
+        output_file = output_dir / "output.yaml"
+
+        lhs_yaml = get_yaml_editor()
+        rhs_yaml = get_yaml_editor()
+        (lhs_data, lhs_loaded) = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
+        (rhs_data, rhs_loaded) = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
+
+        args = SimpleNamespace(sets="right")
+        mc = MergerConfig(quiet_logger, args)
+        merger = Merger(quiet_logger, lhs_data, mc)
+        merger.merge_with(rhs_data)
+
+        with open(output_file, 'w') as yaml_dump:
+            lhs_yaml.dump(merger.data, yaml_dump)
+
+        # DEBUG:
+        # with open(output_file, 'r') as output_fnd, open(merged_yaml, 'r') as merged_fnd:
+        #     print("Expected:")
+        #     print(merged_fnd.read())
+        #     print("Got:")
+        #     print(output_fnd.read())
+
+        assert (
+            (os.path.getsize(output_file) == os.path.getsize(merged_yaml))
+            and (open(output_file,'r').read() == open(merged_yaml,'r').read())
+        )
+
+    def test_merge_with_tagged_entries_in_a_set(
+        self, quiet_logger, tmp_path, tmp_path_factory
+    ):
+        lhs_yaml_file = create_temp_yaml_file(tmp_path_factory, """--- !!set
+? !int 5280
+? !bool false
+? !double 3.1415926535856
+? BareVal
+? !string TaggedVal
+""")
+        rhs_yaml_file = create_temp_yaml_file(tmp_path_factory, """--- !!set
+? !double 2.71828
+? !float 3.1415926535856
+? StringVal
+? TaggedVal
+""")
+        merged_yaml = create_temp_yaml_file(tmp_path_factory, """--- !!set
+? !int 5280
+? !bool false
+? !double 3.1415926535856
+? BareVal
+? !string TaggedVal
+? !double 2.71828
+? StringVal
+""")
+
+        output_dir = tmp_path / "test_merge_with_tagged_entries_in_a_set"
+        output_dir.mkdir()
+        output_file = output_dir / "output.yaml"
+
+        lhs_yaml = get_yaml_editor()
+        rhs_yaml = get_yaml_editor()
+        (lhs_data, lhs_loaded) = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
+        (rhs_data, rhs_loaded) = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
+
+        args = SimpleNamespace()
+        mc = MergerConfig(quiet_logger, args)
+        merger = Merger(quiet_logger, lhs_data, mc)
+        merger.merge_with(rhs_data)
+
+        with open(output_file, 'w') as yaml_dump:
+            lhs_yaml.dump(merger.data, yaml_dump)
+
+        # DEBUG:
+        # with open(output_file, 'r') as output_fnd, open(merged_yaml, 'r') as merged_fnd:
+        #     print("Expected:")
+        #     print(merged_fnd.read())
+        #     print("Got:")
+        #     print(output_fnd.read())
+
+        assert (
+            (os.path.getsize(output_file) == os.path.getsize(merged_yaml))
+            and (open(output_file,'r').read() == open(merged_yaml,'r').read())
+        )
+
+    def test_merge_set_into_hash(
+        self, quiet_logger, tmp_path, tmp_path_factory
+    ):
+        lhs_yaml_file = create_temp_yaml_file(tmp_path_factory, """---
+lhs_key_1: value
+lhs_key_2: value
+nested:
+  hash: keys
+override: by merge
+""")
+        rhs_yaml_file = create_temp_yaml_file(tmp_path_factory, """--- !!set
+? set key 1
+? set key 2
+? override
+""")
+        merged_yaml = create_temp_yaml_file(tmp_path_factory, """---
+lhs_key_1: value
+lhs_key_2: value
+set key 1:
+set key 2:
+nested:
+  hash: keys
+override:
+""")
+
+        output_dir = tmp_path / "test_merge_left_simple_hash"
+        output_dir.mkdir()
+        output_file = output_dir / "output.yaml"
+
+        lhs_yaml = get_yaml_editor()
+        rhs_yaml = get_yaml_editor()
+        (lhs_data, lhs_loaded) = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
+        (rhs_data, rhs_loaded) = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
+
+        args = SimpleNamespace(hashes="left")
+        mc = MergerConfig(quiet_logger, args)
+        merger = Merger(quiet_logger, lhs_data, mc)
+        merger.merge_with(rhs_data)
+
+        with open(output_file, 'w') as yaml_dump:
+            lhs_yaml.dump(merger.data, yaml_dump)
+
+        # DEBUG:
+        # with open(output_file, 'r') as output_fnd, open(merged_yaml, 'r') as merged_fnd:
+        #     print("Expected:")
+        #     print(merged_fnd.read())
+        #     print("Got:")
+        #     print(output_fnd.read())
+
+        assert (
+            (os.path.getsize(output_file) == os.path.getsize(merged_yaml))
+            and (open(output_file,'r').read() == open(merged_yaml,'r').read())
+        )
+
+    def test_merge_set_into_array(
+        self, quiet_logger, tmp_path, tmp_path_factory
+    ):
+        lhs_yaml_file = create_temp_yaml_file(tmp_path_factory, """---
+- one
+- two
+""")
+        rhs_yaml_file = create_temp_yaml_file(tmp_path_factory, """--- !!set
+? two
+? three
+""")
+        merged_yaml = create_temp_yaml_file(tmp_path_factory, """---
+  - one
+  - two
+  - two
+  - three
+""")
+
+        output_dir = tmp_path / "test_merge_left_simple_hash"
+        output_dir.mkdir()
+        output_file = output_dir / "output.yaml"
+
+        lhs_yaml = get_yaml_editor()
+        rhs_yaml = get_yaml_editor()
+        (lhs_data, lhs_loaded) = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
+        (rhs_data, rhs_loaded) = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
+
+        args = SimpleNamespace(hashes="left")
+        mc = MergerConfig(quiet_logger, args)
+        merger = Merger(quiet_logger, lhs_data, mc)
+        merger.merge_with(rhs_data)
+
+        with open(output_file, 'w') as yaml_dump:
+            lhs_yaml.dump(merger.data, yaml_dump)
+
+        # DEBUG:
+        # with open(output_file, 'r') as output_fnd, open(merged_yaml, 'r') as merged_fnd:
+        #     print("Expected:")
+        #     print(merged_fnd.read())
+        #     print("Got:")
+        #     print(output_fnd.read())
+
+        assert (
+            (os.path.getsize(output_file) == os.path.getsize(merged_yaml))
+            and (open(output_file,'r').read() == open(merged_yaml,'r').read())
+        )
+
+
+    def test_merge_array_into_set(
+        self, quiet_logger, tmp_path, tmp_path_factory
+    ):
+        lhs_yaml_file = create_temp_yaml_file(tmp_path_factory, """--- !!set
+? one
+? two
+""")
+        rhs_yaml_file = create_temp_yaml_file(tmp_path_factory, """---
+- two
+- three
+""")
+        merged_yaml = create_temp_yaml_file(tmp_path_factory, """--- !!set
+? one
+? two
+? three
+""")
+
+        output_dir = tmp_path / "test_merge_left_simple_hash"
+        output_dir.mkdir()
+        output_file = output_dir / "output.yaml"
+
+        lhs_yaml = get_yaml_editor()
+        rhs_yaml = get_yaml_editor()
+        (lhs_data, lhs_loaded) = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
+        (rhs_data, rhs_loaded) = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
+
+        args = SimpleNamespace(hashes="left")
+        mc = MergerConfig(quiet_logger, args)
+        merger = Merger(quiet_logger, lhs_data, mc)
+        merger.merge_with(rhs_data)
+
+        with open(output_file, 'w') as yaml_dump:
+            lhs_yaml.dump(merger.data, yaml_dump)
+
+        # DEBUG:
+        # with open(output_file, 'r') as output_fnd, open(merged_yaml, 'r') as merged_fnd:
+        #     print("Expected:")
+        #     print(merged_fnd.read())
+        #     print("Got:")
+        #     print(output_fnd.read())
+
+        assert (
+            (os.path.getsize(output_file) == os.path.getsize(merged_yaml))
+            and (open(output_file,'r').read() == open(merged_yaml,'r').read())
+        )
+
+    def test_bad_merge_hash_into_set(
+        self, quiet_logger, tmp_path, tmp_path_factory
+    ):
+        lhs_yaml_file = create_temp_yaml_file(tmp_path_factory, """--- !!set
+? one
+? two
+""")
+        rhs_yaml_file = create_temp_yaml_file(tmp_path_factory, """---
+key: value
+more: values
+""")
+
+        lhs_yaml = get_yaml_editor()
+        rhs_yaml = get_yaml_editor()
+        (lhs_data, lhs_loaded) = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
+        (rhs_data, rhs_loaded) = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
+
+        args = SimpleNamespace(aoh="deep")
+        mc = MergerConfig(quiet_logger, args)
+        merger = Merger(quiet_logger, lhs_data, mc)
+
+        with pytest.raises(MergeException) as ex:
+            merger.merge_with(rhs_data)
+        assert -1 < str(ex.value).find(
+            "Merging a Hash into a Set is destructive")
+
+
     ###
     # set_flow_style
     ###
@@ -2518,7 +3345,7 @@ rhs_exclusive:
         Merger.depwarn_printed = False
         Merger.delete_all_comments(None)
 
-    
+
     ###
     # combine_merge_anchors
     ###

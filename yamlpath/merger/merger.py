@@ -1,15 +1,18 @@
 """
 Implement YAML document Merger.
 
-Copyright 2020 William W. Kimball, Jr. MBA MSIS
+Copyright 2020, 2021 William W. Kimball, Jr. MBA MSIS
 """
-import sys  # For deprecation warnings
-from typing import Any, Dict, List, Set, Tuple
+import sys
+from os.path import basename
+from typing import Any, Dict, List, Set, Tuple, Union
 import json
 from io import StringIO
 from pathlib import Path
 
-from ruamel.yaml.comments import CommentedSeq, CommentedMap, TaggedScalar
+from ruamel.yaml.comments import (
+    CommentedMap, CommentedSet, CommentedSeq, TaggedScalar
+)
 
 from yamlpath.common import Anchors, Nodes, Parsers
 from yamlpath.wrappers import ConsolePrinter, NodeCoords
@@ -20,6 +23,7 @@ from yamlpath.merger.enums import (
     ArrayMergeOpts,
     HashMergeOpts,
     OutputDocTypes,
+    SetMergeOpts,
 )
 from yamlpath.merger import MergerConfig
 from yamlpath import YAMLPath, Processor
@@ -50,16 +54,18 @@ class Merger:
         Raises:  N/A
         """
         self.logger: ConsolePrinter = logger
-        self.data: Any = lhs
         self.config: MergerConfig = config
+        self.data: Any = lhs
 
         # ryamel.yaml unfortunately tracks comments AFTER each YAML node.  As
         # such, it is impossible to copy comments from RHS to LHS in any
         # sensible way.  Trying leads to absurd merge results that are data-
         # accurate but comment-insane.  This ruamel.yaml design decision forces
         # me to simply delete all comments from all merge documents to produce
-        # a sensible result.
-        Parsers.delete_all_comments(self.data)
+        # a sensible result.  That said, enable users to attempt to preserve
+        # LHS comments.
+        if not self.config.is_preserving_lhs_comments():
+            Parsers.delete_all_comments(self.data)
 
     @property
     def data(self) -> Any:
@@ -69,7 +75,8 @@ class Merger:
     @data.setter
     def data(self, value: Any) -> None:
         """Document data being merged into (mutator)."""
-        Parsers.delete_all_comments(value)
+        if not self.config.is_preserving_lhs_comments():
+            Parsers.delete_all_comments(value)
         self._data = value
 
     def _delete_mergeref_keys(self, data: CommentedMap) -> None:
@@ -94,7 +101,7 @@ class Merger:
             )
             del data[key]
 
-    #pylint: disable=too-many-branches
+    #pylint: disable=too-many-branches,too-many-statements
     def _merge_dicts(
         self, lhs: CommentedMap, rhs: CommentedMap, path: YAMLPath
     ) -> CommentedMap:
@@ -106,10 +113,6 @@ class Merger:
         2. rhs (CommentedMap) The merge source.
         3. path (YAMLPath) Location within the DOM where this merge is taking
            place.
-
-        Keyword Arguments:
-        * parent (Any) Parent node of `rhs`
-        * parentref (Any) Child Key or Index of `rhs` within `parent`.
 
         Returns:  (CommentedMap) The merged result.
 
@@ -173,13 +176,19 @@ class Merger:
                 merge_mode = (
                     self.config.hash_merge_mode(node_coord)
                     if isinstance(val, CommentedMap)
+                    else self.config.set_merge_mode(node_coord)
+                    if isinstance(val, CommentedSet)
                     else self.config.aoh_merge_mode(node_coord)
                 )
                 self.logger.debug("Merger::_merge_dicts:  Got merge mode, {}."
                                   .format(merge_mode))
-                if merge_mode in (HashMergeOpts.LEFT, AoHMergeOpts.LEFT):
+                if merge_mode in (
+                    HashMergeOpts.LEFT, AoHMergeOpts.LEFT, SetMergeOpts.LEFT
+                ):
                     continue
-                if merge_mode in (HashMergeOpts.RIGHT, AoHMergeOpts.RIGHT):
+                if merge_mode in (
+                    HashMergeOpts.RIGHT, AoHMergeOpts.RIGHT, SetMergeOpts.RIGHT
+                ):
                     self.logger.debug(
                         "Merger::_merge_dicts:  Overwriting key, {}, at path,"
                         " {}.".format(key, path_next),
@@ -208,6 +217,15 @@ class Merger:
                 elif isinstance(val, CommentedSeq):
                     lhs[key] = self._merge_lists(
                         lhs[key], val, path_next, parent=rhs, parentref=key)
+
+                    # Synchronize any YAML Tag
+                    self.logger.debug(
+                        "Merger::_merge_dicts:  Setting LHS tag from {} to {}."
+                        .format(lhs[key].tag.value, val.tag.value))
+                    lhs[key].yaml_set_tag(val.tag.value)
+                elif isinstance(val, CommentedSet):
+                    lhs[key] = self._merge_sets(
+                        lhs[key], val, path_next, node_coord)
 
                     # Synchronize any YAML Tag
                     self.logger.debug(
@@ -429,6 +447,53 @@ class Merger:
         # No RHS list
         return lhs
 
+    def _merge_sets(
+        self, lhs: CommentedSet, rhs: CommentedSet, path: YAMLPath,
+        node_coord: NodeCoords
+    ) -> CommentedSet:
+        """
+        Merge two YAML sets (CommentedSet-wrapped sets).
+
+        Parameters:
+        1. lhs (CommentedSet) The merge target.
+        2. rhs (CommentedSet) The merge source.
+        3. path (YAMLPath) Location within the DOM where this merge is taking
+           place.
+        4. node_coord (NodeCoords) The RHS root node, its parent, and reference
+           within its parent; used for config lookups.
+
+        Returns:  (CommentedSet) The merged result.
+
+        Raises:
+        - `MergeException` when a clean merge is impossible.
+        """
+        merge_mode = self.config.set_merge_mode(node_coord)
+        if merge_mode is SetMergeOpts.LEFT:
+            return lhs
+        if merge_mode is SetMergeOpts.RIGHT:
+            return rhs
+
+        tagless_lhs = Nodes.tagless_elements(list(lhs))
+        for ele in rhs:
+            path_next = (path +
+                YAMLPath.escape_path_section(ele, path.seperator))
+            self.logger.debug(
+                "Processing set element {} at {}.".format(ele, path_next),
+                prefix="Merger::_merge_sets:  ", data=ele)
+
+            cmp_val = ele
+            if isinstance(ele, TaggedScalar):
+                cmp_val = ele.value
+
+            self.logger.debug(
+                "Looking for comparison value, {}, in:".format(cmp_val),
+                prefix="Merger::_merge_sets:  ", data=tagless_lhs)
+
+            if cmp_val in tagless_lhs:
+                continue
+            lhs.add(ele)
+        return lhs
+
     def _calc_unique_anchor(self, anchor: str, known_anchors: Set[str]) -> str:
         """
         Generate a unique anchor name within a document pair.
@@ -545,6 +610,204 @@ class Merger:
                 # re-definitions.
                 Anchors.replace_anchor(self.data, lhs_anchor, rhs_anchor)
 
+    def _insert_dict(
+        self, insert_at: YAMLPath,
+        lhs: Union[CommentedMap, CommentedSeq, CommentedSet],
+        rhs: CommentedMap
+    ) -> bool:
+        """Insert an RHS dict merge result into the LHS document."""
+        merge_performed = False
+        merged_data: Union[
+            CommentedMap, CommentedSeq, CommentedSet
+        ] = CommentedMap()
+        if isinstance(lhs, CommentedSeq):
+            # Merge a dict into a list
+            self.logger.debug(
+                "Merger::_insert_dict:  Merging a dict into a list.")
+            merged_data = self._merge_lists(
+                lhs, CommentedSeq([rhs]), insert_at)
+            merge_performed = True
+        elif isinstance(lhs, CommentedSet):
+            # Merge a dict into a set; this is destructive
+            raise MergeException(
+                "Merging a Hash into a Set is destructive to the"
+                " source Hash because only the keys would be"
+                " preserved.  Please adjust your merge to target a"
+                " suitable node.", insert_at)
+        else:
+            # Merge a dict into a dict
+            self.logger.debug(
+                "Merger::_insert_dict:  Merging a dict into a dict.")
+
+            merge_mode = self.config.hash_merge_mode(
+                NodeCoords(rhs, None, None))
+            if merge_mode is HashMergeOpts.LEFT:
+                self.logger.debug(
+                    "Configured mode short-circuits the merge; returning LHS:"
+                    , prefix="Merger::_insert_dict:  "
+                    , data=lhs)
+                merged_data = lhs
+            elif merge_mode is HashMergeOpts.RIGHT:
+                self.logger.debug(
+                    "Configured mode short-circuits the merge; returning RHS:"
+                    , prefix="Merger::_insert_dict:  "
+                    , data=rhs)
+                merged_data = rhs
+            else:
+                merged_data = self._merge_dicts(lhs, rhs, insert_at)
+
+            merge_performed = True
+
+        # Synchronize YAML Tags
+        self.logger.debug(
+            "Merger::_insert_dict:  Setting LHS tag from {} to {}."
+            .format(lhs.tag.value, rhs.tag.value))
+        lhs.yaml_set_tag(rhs.tag.value)
+
+        if insert_at.is_root:
+            self.data = merged_data
+        return merge_performed
+
+    def _insert_list(
+        self, insert_at: YAMLPath,
+        lhs: Union[CommentedMap, CommentedSeq, CommentedSet],
+        rhs: CommentedSeq
+    ) -> bool:
+        """Insert an RHS list merge result into the LHS document."""
+        merge_performed = False
+        merged_data: Union[CommentedSeq, CommentedSet, None] = None
+        if isinstance(lhs, CommentedSeq):
+            # Merge list into list
+            self.logger.debug(
+                "Merger::_insert_list:  Merging a list into a list.")
+            merged_data = self._merge_lists(
+                lhs, rhs, insert_at)
+            merge_performed = True
+        elif isinstance(lhs, CommentedSet):
+            # Merge list into set
+            self.logger.debug(
+                "Merger::_insert_list:  Merging a list into a set.")
+            mset = CommentedSet()
+            for ele in rhs:
+                mset.add(ele)
+            merged_data = self._merge_sets(
+                lhs, mset, insert_at, NodeCoords(rhs, None, None))
+            merge_performed = True
+        else:
+            # Merge list into hash
+            raise MergeException(
+                "Impossible to merge an Array into a Hash without a"
+                " key given to receive the new elements.", insert_at)
+
+        # Synchronize any YAML Tag
+        self.logger.debug(
+            "Merger::_insert_list:  Setting LHS tag from {} to {}."
+            .format(lhs.tag.value, rhs.tag.value))
+        lhs.yaml_set_tag(rhs.tag.value)
+
+        if insert_at.is_root:
+            self.data = merged_data
+        return merge_performed
+
+    def _insert_set(
+        self, insert_at: YAMLPath,
+        lhs: Union[CommentedMap, CommentedSeq, CommentedSet],
+        rhs: CommentedSet
+    ) -> bool:
+        """Insert an RHS list merge result into the LHS document."""
+        merge_performed = False
+        merged_data: Union[
+            CommentedSeq, CommentedMap, CommentedSet, None] = None
+        if isinstance(lhs, CommentedSeq):
+            self.logger.debug(
+                "Merger::_insert_set:  Merging a set into a list.")
+            merge_list = []
+            for ele in rhs:
+                merge_list.append(ele)
+            merged_data = self._merge_lists(
+                lhs, CommentedSeq(merge_list), insert_at)
+            merge_performed = True
+        elif isinstance(lhs, CommentedMap):
+            self.logger.debug(
+                "Merger::_insert_set:  Merging a set into a dict.")
+            merge_dict: Dict[str, None] = {}
+            for ele in rhs:
+                merge_dict[ele] = None
+            merged_data = self._merge_dicts(
+                lhs, CommentedMap(merge_dict), insert_at)
+            merge_performed = True
+        else:
+            self.logger.debug(
+                "Merger::_insert_set:  Merging a set into a set.")
+            merged_data = self._merge_sets(lhs, rhs, insert_at, NodeCoords(
+                rhs, None, None
+            ))
+            merge_performed = True
+
+        # Synchronize any YAML Tag
+        self.logger.debug(
+            "Merger::_insert_set:  Setting LHS tag from {} to {}."
+            .format(lhs.tag.value, rhs.tag.value))
+        lhs.yaml_set_tag(rhs.tag.value)
+
+        if insert_at.is_root:
+            self.data = merged_data
+        return merge_performed
+
+    def _insert_scalar(
+        self, insert_at: YAMLPath, lhs: Any, lhs_proc: Processor, rhs: Any
+    ) -> bool:
+        """Insert an RHS scalar into the LHS document."""
+        merge_performed = False
+        if isinstance(lhs, CommentedSeq):
+            self.logger.debug(
+                "Merger::_insert_scalar:  Merging a scalar into a list.")
+            Nodes.append_list_element(lhs, rhs)
+            merge_performed = True
+        elif isinstance(lhs, CommentedSet):
+            self.logger.debug(
+                "Merger::_insert_scalar:  Merging a scalar into a set.")
+            self._merge_sets(
+                lhs, CommentedSet([rhs]), insert_at,
+                NodeCoords(rhs, None, None))
+            merge_performed = True
+        elif isinstance(lhs, CommentedMap):
+            ex_message = (
+                "Impossible to add Scalar value, {}, to a Hash without"
+                " a key.  Change the value to a 'key: value' pair, a"
+                " '{{key: value}}' Hash, or change the merge target to"
+                " an Array or other Scalar value."
+                ).format(rhs)
+            if len(str(rhs)) < 1 and not sys.stdin.isatty():
+                ex_message += (
+                    "  You may be seeing this because your workflow"
+                    " inadvertently opened a STDIN handle to {}.  If"
+                    " this may be the case, try adding --nostdin or -S"
+                    " so as to block unintentional STDIN reading."
+                ).format(basename(sys.argv[0]))
+            raise MergeException(ex_message, insert_at)
+        else:
+            lhs_proc.set_value(insert_at, rhs)
+            merge_performed = True
+        return merge_performed
+
+    def _get_merge_target_nodes(
+        self, insert_at: YAMLPath, lhs_proc: Processor, rhs: Any
+    ) -> List[NodeCoords]:
+        """Get a list of LHS insertion points for merge results."""
+        # Loop through all insertion points and the elements in RHS
+        nodes: List[NodeCoords] = []
+        for node_coord in lhs_proc.get_nodes(
+            insert_at, default_value=rhs
+        ):
+            nodes.append(node_coord)
+
+        self.logger.debug(
+            "Targetting these destinations for merge results:",
+            prefix="Merger::_get_merge_target_nodes:  ",
+            data=nodes)
+        return nodes
+
     def merge_with(self, rhs: Any) -> None:
         """
         Merge this document with another.
@@ -575,7 +838,7 @@ class Merger:
             self.logger.debug(
                 "Merged document is now:", prefix="Merger::merge_with:  ",
                 data=self.data, footer="     ***** ***** *****")
-            if isinstance(rhs, (dict, list)):
+            if isinstance(rhs, (dict, list, CommentedSet, set)):
                 # Only Scalar values need further processing
                 return
 
@@ -585,74 +848,34 @@ class Merger:
         # Prepare the merge rules
         self.config.prepare(rhs)
 
-        # Identify a reasonable default should a DOM need to be built up to
-        # receive the RHS data.
-        default_val = rhs
-        if isinstance(rhs, CommentedMap):
-            default_val = {}
-        elif isinstance(rhs, CommentedSeq):
-            default_val = []
-
-        # Loop through all insertion points and the elements in RHS
+        # Merge into each insertion point
         merge_performed = False
-        nodes: List[NodeCoords] = []
         lhs_proc = Processor(self.logger, self.data)
-        for node_coord in lhs_proc.get_nodes(
-                insert_at, default_value=default_val
+        for node_coord in self._get_merge_target_nodes(
+            insert_at, lhs_proc, rhs
         ):
-            nodes.append(node_coord)
-
-        for node_coord in nodes:
-            target_node = (node_coord.node
-                if isinstance(node_coord.node, (CommentedMap, CommentedSeq))
-                else node_coord.parent)
-
+            target_node = node_coord.node
             Parsers.set_flow_style(
                 rhs, (target_node.fa.flow_style()
                       if hasattr(target_node, "fa")
                       else None))
 
             if isinstance(rhs, CommentedMap):
-                # The RHS document root is a map
-                if isinstance(target_node, CommentedSeq):
-                    # But the destination is a list
-                    self._merge_lists(
-                        target_node, CommentedSeq([rhs]), insert_at)
-                else:
-                    self._merge_dicts(target_node, rhs, insert_at)
-
-                    # Synchronize YAML Tags
-                    self.logger.debug(
-                        "Merger::merge_with:  Setting LHS tag from {} to {}."
-                        .format(target_node.tag.value, rhs.tag.value))
-                    target_node.yaml_set_tag(rhs.tag.value)
-                merge_performed = True
+                # The RHS document root is a dict
+                merge_performed = self._insert_dict(
+                    insert_at, target_node, rhs)
             elif isinstance(rhs, CommentedSeq):
                 # The RHS document root is a list
-                self._merge_lists(target_node, rhs, insert_at)
-                merge_performed = True
-
-                # Synchronize any YAML Tag
-                self.logger.debug(
-                    "Merger::merge_with:  Setting LHS tag from {} to {}."
-                    .format(target_node.tag.value, rhs.tag.value))
-                target_node.yaml_set_tag(rhs.tag.value)
+                merge_performed = self._insert_list(
+                    insert_at, target_node, rhs)
+            elif isinstance(rhs, CommentedSet):
+                # The RHS document is a set
+                merge_performed = self._insert_set(
+                    insert_at, target_node, rhs)
             else:
                 # The RHS document root is a Scalar value
-                target_node = node_coord.node
-                if isinstance(target_node, CommentedSeq):
-                    Nodes.append_list_element(target_node, rhs)
-                    merge_performed = True
-                elif isinstance(target_node, CommentedMap):
-                    raise MergeException(
-                        "Impossible to add Scalar value, {}, to a Hash without"
-                        " a key.  Change the value to a 'key: value' pair, a"
-                        " '{{key: value}}' Hash, or change the merge target to"
-                        " an Array or other Scalar value."
-                        .format(rhs), insert_at)
-                else:
-                    lhs_proc.set_value(insert_at, rhs)
-                    merge_performed = True
+                merge_performed = self._insert_scalar(
+                    insert_at, target_node, lhs_proc, rhs)
 
         self.logger.debug(
             "Completed merge operation, resulting in document:",
@@ -669,7 +892,7 @@ class Merger:
         """
         Prepare this merged document and its writer for final rendering.
 
-        This coallesces the YAML writer's settings to, in particular,
+        This coalesces the YAML writer's settings to, in particular,
         distinguish between YAML and JSON.  It will also force demarcation of
         every String key and value within the document when the output will be
         JSON.

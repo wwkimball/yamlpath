@@ -970,7 +970,7 @@ key: *new_anchor
             filedat = fhnd.read()
         assert filedat == yamlout
 
-    def test_rename_anchor_implicit(self, script_runner, tmp_path_factory):
+    def test_rename_anchor_implicit_no_longer_possible(self, script_runner, tmp_path_factory):
         yamlin = """---
 aliases:
   - &old_anchor Some string
@@ -988,11 +988,8 @@ key: *new_anchor
             "--anchor=new_anchor",
             yaml_file
         )
-        assert result.success, result.stderr
-
-        with open(yaml_file, 'r') as fhnd:
-            filedat = fhnd.read()
-        assert filedat == yamlout
+        assert not result.success, result.stderr
+        assert "The --anchor|-H option may be used only when --aliasof|-A or --mergekey|-K are also set" in result.stderr
 
     def test_auto_anchor(self, script_runner, tmp_path_factory):
         yamlin = """---
@@ -1303,6 +1300,80 @@ devices:
             filedat = fhnd.read()
         assert filedat == yamlout
 
+    def test_yaml_merge_keys_delete(self, script_runner, tmp_path_factory):
+        # Based on contributed data from:  https://github.com/dwapstra
+        yamlin = """---
+device_defaults: &device_defaults
+  os: unknown
+  type: unknown
+  platform: unknown
+  notes: N/A
+
+devices:
+  R1:
+    <<: *device_defaults
+    os: ios
+    type: router
+    platform: asr1k
+  R2:
+    type: switch
+    platform: cat3k
+  R3:
+    <<: *device_defaults
+    type: access-point
+    platform: wrt
+    os:
+  R4:
+    <<: *device_defaults
+    type: tablet
+    os: null
+    platform: java
+  R5:
+    type: tablet
+    os: ""
+    platform: objective-c
+"""
+        yamlout = """---
+device_defaults:
+  os: unknown
+  type: unknown
+  platform: unknown
+  notes: N/A
+
+devices:
+  R1:
+    os: ios
+    type: router
+    platform: asr1k
+  R2:
+    type: switch
+    platform: cat3k
+  R3:
+    type: access-point
+    platform: wrt
+    os:
+  R4:
+    type: tablet
+    os:
+    platform: java
+  R5:
+    type: tablet
+    os: ""
+    platform: objective-c
+"""
+        yaml_file = create_temp_yaml_file(tmp_path_factory, yamlin)
+        result = script_runner.run(
+            self.command,
+            "--change=/devices/*/&device_defaults",
+            "--delete",
+            yaml_file
+        )
+        assert result.success, result.stderr
+
+        with open(yaml_file, 'r') as fhnd:
+            filedat = fhnd.read()
+        assert filedat == yamlout
+
     def test_change_key_name_good(self, script_runner, tmp_path_factory):
         yamlin = """---
 key:  value
@@ -1355,3 +1426,119 @@ another_key: value
         )
         assert not result.success, result.stdout
         assert "already exists at the same document level" in result.stderr
+
+    def test_set_ymk(self, script_runner, tmp_path_factory):
+        yamlin = """---
+device_defaults: &device_defaults
+  os: unknown
+  type: unknown
+  platform: unknown
+  notes: N/A
+
+devices:
+  R1:
+    <<: *device_defaults
+    os: ios
+    type: router
+    platform: asr1k
+  R2:
+    type: switch
+    platform: cat3k
+  R3:
+    <<: *device_defaults
+    type: access-point
+    platform: wrt
+    os:
+  R4:
+    <<: *device_defaults
+    type: tablet
+    os: null
+    platform: java
+  R5:
+    type: tablet
+    os: ""
+    platform: objective-c
+"""
+        yamlout = """---
+device_defaults: &device_defaults
+  os: unknown
+  type: unknown
+  platform: unknown
+  notes: N/A
+
+devices:
+  R1:
+    <<: *device_defaults
+    os: ios
+    type: router
+    platform: asr1k
+  R2:
+    <<: *device_defaults
+    type: switch
+    platform: cat3k
+  R3:
+    <<: *device_defaults
+    type: access-point
+    platform: wrt
+    os:
+  R4:
+    <<: *device_defaults
+    type: tablet
+    os:
+    platform: java
+  R5:
+    <<: *device_defaults
+    type: tablet
+    os: ""
+    platform: objective-c
+"""
+        yaml_file = create_temp_yaml_file(tmp_path_factory, yamlin)
+        result = script_runner.run(
+            self.command,
+            "--change=devices.*",
+            "--mergekey=&device_defaults",
+            yaml_file
+        )
+        assert result.success, result.stderr
+
+        with open(yaml_file, 'r') as fhnd:
+            filedat = fhnd.read()
+        assert filedat == yamlout
+
+    def test_too_many_nodes_to_ymk(self, script_runner, tmp_path_factory):
+        yamlin = """---
+aliases:
+  - &valid_anchor Has validity
+  - &another_valid_anchor Also has validity
+hash:
+  concete_key: Concrete value
+  aliased_key: *valid_anchor
+"""
+        yaml_file = create_temp_yaml_file(tmp_path_factory, yamlin)
+        result = script_runner.run(
+            self.command,
+            "--change=hash",
+            "--mergekey=aliases.*",
+            yaml_file
+        )
+        assert not result.success, result.stderr
+        assert "impossible to Alias more than one Anchor at a time" in result.stderr
+
+    def test_cannot_ymk_non_hashes(self, script_runner, tmp_path_factory):
+        yamlin = """---
+aliases: &all_aliases
+  - &valid_anchor Has validity
+  - &another_valid_anchor Also has validity
+hash:
+  concrete_key: Concrete value
+  aliased_key: *valid_anchor
+"""
+        yaml_file = create_temp_yaml_file(tmp_path_factory, yamlin)
+        result = script_runner.run(
+            self.command,
+            "--change=hash.concrete_key",
+            "--mergekey=&all_aliases",
+            yaml_file
+        )
+        assert not result.success, result.stderr
+        assert "Cannot add YAML Merge Keys to non-Hash" in result.stderr

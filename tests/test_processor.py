@@ -82,6 +82,7 @@ class Test_Processor():
         ("/array_of_hashes/**", [1, "one", 2, "two"], True, None),
         ("products_hash.*[dimensions.weight==4].(availability.start.date)+(availability.stop.date)", [[date(2020, 8, 1), date(2020, 9, 25)], [date(2020, 1, 1), date(2020, 1, 1)]], True, None),
         ("products_array[dimensions.weight==4].product", ["doohickey", "widget"], True, None),
+        ("(products_hash.*.dimensions.weight)[max()][parent(2)].dimensions.weight", [10], True, None)
     ])
     def test_get_nodes(self, quiet_logger, yamlpath, results, mustexist, default):
         yamldata = """---
@@ -232,6 +233,115 @@ products_array:
             assert unwrap_node_coords(node) == results[matchidx]
             matchidx += 1
         assert len(results) == matchidx
+
+    @pytest.mark.parametrize("mustexist,yamlpath,results,yp_error", [
+        (True, "baseball_legends", [set(['Mark McGwire', 'Sammy Sosa', 'Ty Cobb', 'Ken Griff'])], None),
+        (True, "baseball_legends.*bb", ["Ty Cobb"], None),
+        (True, "baseball_legends[A:S]", ["Mark McGwire", "Ken Griff"], None),
+        (True, "baseball_legends[2]", [], "Array indexing is invalid against unordered set"),
+        (True, "baseball_legends[&bl_anchor]", ["Ty Cobb"], None),
+        (True, "baseball_legends([A:M])+([T:Z])", [["Ken Griff", "Ty Cobb"]], None),
+        (True, "baseball_legends([A:Z])-([S:Z])", [["Mark McGwire", "Ken Griff"]], None),
+        (True, "**", ["Ty Cobb", "Mark McGwire", "Sammy Sosa", "Ty Cobb", "Ken Griff"], None),
+        (False, "baseball_legends", [set(['Mark McGwire', 'Sammy Sosa', 'Ty Cobb', 'Ken Griff'])], None),
+        (False, "baseball_legends.*bb", ["Ty Cobb"], None),
+        (False, "baseball_legends[A:S]", ["Mark McGwire", "Ken Griff"], None),
+        (False, "baseball_legends[2]", [], "Array indexing is invalid against unordered set"),
+        (False, "baseball_legends[&bl_anchor]", ["Ty Cobb"], None),
+        (False, "baseball_legends([A:M])+([T:Z])", [["Ken Griff", "Ty Cobb"]], None),
+        (False, "baseball_legends([A:Z])-([S:Z])", [["Mark McGwire", "Ken Griff"]], None),
+        (False, "**", ["Ty Cobb", "Mark McGwire", "Sammy Sosa", "Ty Cobb", "Ken Griff"], None),
+        (False, "baseball_legends(rbi)+(errate)", [], "Cannot add PathSegmentTypes.COLLECTOR subreference to sets"),
+        (False, r"baseball_legends.Ted\ Williams", [set(['Mark McGwire', 'Sammy Sosa', 'Ty Cobb', 'Ken Griff', "Ted Williams"])], None),
+    ])
+    def test_get_from_sets(self, quiet_logger, mustexist, yamlpath, results, yp_error):
+        yamldata = """---
+aliases:
+  - &bl_anchor Ty Cobb
+
+baseball_legends: !!set
+  ? Mark McGwire
+  ? Sammy Sosa
+  ? *bl_anchor
+  ? Ken Griff
+"""
+        yaml = YAML()
+        processor = Processor(quiet_logger, yaml.load(yamldata))
+        matchidx = 0
+
+        try:
+            for node in processor.get_nodes(yamlpath, mustexist=mustexist):
+                assert unwrap_node_coords(node) == results[matchidx]
+                matchidx += 1
+        except YAMLPathException as ex:
+            if yp_error is not None:
+                assert yp_error in str(ex)
+            else:
+                # Unexpected error
+                assert False
+
+        assert len(results) == matchidx
+
+    @pytest.mark.parametrize("setpath,value,verifypath,tally", [
+        ("aliases[&bl_anchor]", "REPLACEMENT", "**.&bl_anchor", 2),
+        (r"baseball_legends.Sammy\ Sosa", "REPLACEMENT", "baseball_legends.REPLACEMENT", 1),
+    ])
+    def test_change_values_in_sets(self, quiet_logger, setpath, value, verifypath, tally):
+        yamldata = """---
+aliases:
+  - &bl_anchor Ty Cobb
+
+baseball_legends: !!set
+  ? Mark McGwire
+  ? Sammy Sosa
+  ? *bl_anchor
+  ? Ken Griff
+"""
+        yaml = YAML()
+        data = yaml.load(yamldata)
+        processor = Processor(quiet_logger, data)
+        processor.set_value(setpath, value)
+        matchtally = 0
+        for node in processor.get_nodes(verifypath):
+            changed_value = unwrap_node_coords(node)
+            if isinstance(changed_value, list):
+                for result in changed_value:
+                    assert result == value
+                    matchtally += 1
+                continue
+            assert changed_value == value
+            matchtally += 1
+        assert matchtally == tally
+
+    @pytest.mark.parametrize("delete_yamlpath,old_deleted_nodes,new_flat_data", [
+        ("**[&bl_anchor]", ["Ty Cobb", "Ty Cobb"], ["Mark McGwire", "Sammy Sosa", "Ken Griff"]),
+        (r"/baseball_legends/Ken\ Griff", ["Ken Griff"], ["Ty Cobb", "Mark McGwire", "Sammy Sosa", "Ty Cobb"]),
+    ])
+    def test_delete_from_sets(self, quiet_logger, delete_yamlpath, old_deleted_nodes, new_flat_data):
+        yamldata = """---
+aliases:
+  - &bl_anchor Ty Cobb
+
+baseball_legends: !!set
+  ? Mark McGwire
+  ? Sammy Sosa
+  ? *bl_anchor
+  ? Ken Griff
+"""
+        yaml = YAML()
+        data = yaml.load(yamldata)
+        processor = Processor(quiet_logger, data)
+
+        # The return set must be received lest no nodes will be deleted
+        deleted_nodes = []
+        for nc in processor.delete_nodes(delete_yamlpath):
+            deleted_nodes.append(nc)
+
+        for (test_value, verify_node_coord) in zip(old_deleted_nodes, deleted_nodes):
+            assert test_value, unwrap_node_coords(verify_node_coord)
+
+        for (test_value, verify_node_coord) in zip(new_flat_data, processor.get_nodes("**")):
+            assert test_value, unwrap_node_coords(verify_node_coord)
 
     def test_enforce_pathsep(self, quiet_logger):
         yamldata = """---
@@ -730,18 +840,18 @@ null_value:
     ])
     def test_scalar_collectors(self, quiet_logger, yamlpath, results):
         yamldata = """---
-        list1:
-          - 1
-          - 2
-          - 3
-        list2:
-          - 4
-          - 5
-          - 6
-        exclude:
-          - 3
-          - 4
-        """
+list1:
+  - 1
+  - 2
+  - 3
+list2:
+  - 4
+  - 5
+  - 6
+exclude:
+  - 3
+  - 4
+"""
         yaml = YAML()
         processor = Processor(quiet_logger, yaml.load(yamldata))
         matchidx = 0
@@ -749,6 +859,70 @@ null_value:
         # be set True.  Otherwise, ephemeral virtual nodes would be created and
         # discarded.  Is this desirable?  Maybe, but not today.  For now, using
         # Collectors without setting mustexist=True will be undefined behavior.
+        for node in processor.get_nodes(yamlpath, mustexist=True):
+            assert unwrap_node_coords(node) == results[matchidx]
+            matchidx += 1
+        assert len(results) == matchidx
+
+    @pytest.mark.parametrize("yamlpath,results", [
+        ("(hash.*)-(array[1])", [["value1", "value3"]]),
+        ("(hash)-(hoh.two.*)", [[{"key1": "value1"}]]),
+        ("(aoa)-(hoa.two)", [[["value1", "value2", "value3"], ["value3"]]]),
+        ("(aoh)-(aoh[max(key1)])", [[{"key2": "value2", "key3": "value3"}, {"key3": "value3"}]]),
+    ])
+    def test_collector_math(self, quiet_logger, yamlpath, results):
+        yamldata = """---
+hash:
+  key1: value1
+  key2: value2
+  key3: value3
+
+array:
+  - value1
+  - value2
+  - vlaue3
+
+hoh:
+  one:
+    key1: value1
+    key2: value2
+    key3: value3
+  two:
+    key2: value2
+    key3: value3
+  three:
+    key3: value3
+
+aoh:
+  - key1: value1
+    key2: value2
+    key3: value3
+  - key2: value2
+    key3: value3
+  - key3: value3
+
+aoa:
+  - - value1
+    - value2
+    - value3
+  - - value2
+    - value3
+  - - value3
+
+hoa:
+  one:
+    - value1
+    - value2
+    - value3
+  two:
+    - value2
+    - value3
+  three:
+    - value3
+"""
+        yaml = YAML()
+        processor = Processor(quiet_logger, yaml.load(yamldata))
+        matchidx = 0
         for node in processor.get_nodes(yamlpath, mustexist=True):
             assert unwrap_node_coords(node) == results[matchidx]
             matchidx += 1
@@ -860,6 +1034,26 @@ records:
         console = capsys.readouterr()
         assert "Refusing to alias nodes in a null document" in console.out
 
+    def test_null_docs_have_nothing_to_gather_and_ymk(self, capsys):
+        args = SimpleNamespace(verbose=False, quiet=False, debug=True)
+        logger = ConsolePrinter(args)
+        processor = Processor(logger, None)
+
+        processor.ymk_nodes("/alias*", "/anchor")
+
+        console = capsys.readouterr()
+        assert "Refusing to set a YAML Merge Key to nodes in a null document" in console.out
+
+    def test_null_docs_have_nothing_to_ymk(self, capsys):
+        args = SimpleNamespace(verbose=False, quiet=False, debug=True)
+        logger = ConsolePrinter(args)
+        processor = Processor(logger, None)
+
+        processor.ymk_gathered_nodes([], "/alias*", "/anchor")
+
+        console = capsys.readouterr()
+        assert "Refusing to set a YAML Merge Key to nodes in a null document" in console.out
+
     def test_null_docs_have_nothing_to_tag(self, capsys):
         args = SimpleNamespace(verbose=False, quiet=False, debug=True)
         logger = ConsolePrinter(args)
@@ -897,6 +1091,62 @@ a_hash:
             match_count += 1
             assert unwrap_node_coords(node) == anchor_value
         assert match_count == 1
+
+    @pytest.mark.parametrize("change_path,ymk_path,anchor_name,pathseperator,validations", [
+        ("target", "source", "", PathSeperators.AUTO, [
+            ("target.target_key", ["other"]),
+            ("target.source_key", ["value"]),
+            ("target[&source].source_key", ["value"]),
+            ("target.override_this", ["overridden"]),
+            ("target[&source].override_this", ["original"]),
+        ]),
+        (YAMLPath("target"), YAMLPath("source"), "", PathSeperators.DOT, [
+            ("target.target_key", ["other"]),
+            ("target.source_key", ["value"]),
+            ("target[&source].source_key", ["value"]),
+            ("target.override_this", ["overridden"]),
+            ("target[&source].override_this", ["original"]),
+        ]),
+        ("/target", "/source", "", PathSeperators.FSLASH, [
+            ("/target/target_key", ["other"]),
+            ("/target/source_key", ["value"]),
+            ("/target/&source/source_key", ["value"]),
+            ("/target/override_this", ["overridden"]),
+            ("/target/&source/override_this", ["original"]),
+        ]),
+        ("target", "source", "custom_name", PathSeperators.DOT, [
+            ("target.target_key", ["other"]),
+            ("target.source_key", ["value"]),
+            ("target[&custom_name].source_key", ["value"]),
+            ("target.override_this", ["overridden"]),
+            ("target[&custom_name].override_this", ["original"]),
+        ]),
+    ])
+    def test_ymk_nodes(self, quiet_logger, change_path, ymk_path, anchor_name, pathseperator, validations):
+        yamlin = """---
+source:
+  source_key: value
+  override_this: original
+
+target:
+  target_key: other
+  override_this: overridden
+"""
+
+        yaml = YAML()
+        data = yaml.load(yamlin)
+        processor = Processor(quiet_logger, data)
+
+        processor.ymk_nodes(
+            change_path, ymk_path,
+            pathsep=pathseperator, anchor_name=anchor_name)
+
+        for (valid_path, valid_values) in validations:
+            match_count = 0
+            for check_node in processor.get_nodes(valid_path, mustexist=True):
+                assert unwrap_node_coords(check_node) == valid_values[match_count]
+                match_count += 1
+            assert len(valid_values) == match_count
 
     @pytest.mark.parametrize("yaml_path,tag,pathseperator", [
         (YAMLPath("/key"), "!taggidy", PathSeperators.FSLASH),
@@ -961,3 +1211,551 @@ Things:
         for node in processor.get_nodes(yamlpath):
             assert unwrap_node_coords(node) == results[match_index]
             match_index += 1
+
+    @pytest.mark.parametrize("yamlpath,results", [
+        ("reuse1.key12", ["overridden value in reuse1 for definition1"]),
+        ("reuse1.&alias_name1.key12", ["value12"]),
+        ("reuse1[&alias_name1].key12", ["value12"]),
+    ])
+    def test_yaml_merge_keys_access(self, quiet_logger, yamlpath, results):
+        yamldata = """---
+definition1: &alias_name1
+  key11: value11
+  key12: value12
+
+definition2: &alias_name2
+  key21: value21
+  key22: value22
+
+compound_definition: &alias_name3
+  <<: [ *alias_name1, *alias_name2 ]
+  key31: value31
+  key32: value32
+
+reuse1: &alias_name4
+  <<: *alias_name1
+  key1: new key in reuse1
+  key12: overridden value in reuse1 for definition1
+
+reuse2: &alias_name5
+  <<: [*alias_name1, *alias_name2 ]
+  key2: new key in reuse2
+
+reuse3: &alias_name6
+  <<: *alias_name3
+  key3: new key3 in reuse3
+  key4: new key4 in reuse3
+
+re_reuse1:
+  <<: *alias_name4
+  re_key1: new key in re_reuse1
+  key1: override key from reuse1
+  key12: override overridden key from reuse1
+
+re_reuse2:
+  <<: *alias_name6
+  re_key2: new key in re_reuse2
+  key3: override key from reuse3
+  key31: override key from compound_definition
+  key12: override key from definition1
+"""
+        yaml = YAML()
+        processor = Processor(quiet_logger, yaml.load(yamldata))
+        matchidx = 0
+        for node in processor.get_nodes(yamlpath, mustexist=True):
+            assert unwrap_node_coords(node) == results[matchidx]
+            matchidx += 1
+        assert len(results) == matchidx
+
+    @pytest.mark.parametrize("yamlpath,results", [
+        ("/list*[has_child(&anchored_value)][name()]", ["list_matches"]),
+        ("/list*[!has_child(&anchored_value)][name()]", ["list_no_match"]),
+        ("/hash*[has_child(&anchored_hash)][name()]", ["hash_ymk_matches"]),
+        ("/hash*[!has_child(&anchored_hash)][name()]", ["hash_key_matches", "hash_val_matches", "hash_no_match"]),
+        ("/hash*[has_child(&anchored_key)][name()]", ["hash_key_matches"]),
+        ("/hash*[!has_child(&anchored_key)][name()]", ["hash_ymk_matches", "hash_val_matches", "hash_no_match"]),
+        ("/hash*[has_child(&anchored_value)][name()]", ["hash_val_matches"]),
+        ("/hash*[!has_child(&anchored_value)][name()]", ["hash_key_matches", "hash_ymk_matches", "hash_no_match"]),
+        ("/aoh[has_child(&anchored_hash)]/intent", ["hash_match"]),
+        ("/aoh[!has_child(&anchored_hash)]/intent", ["no_match"]),
+        ("/aoa/*[has_child(&anchored_value)][name()]", [0]),
+        ("/aoa/*[!has_child(&anchored_value)][name()]", [1]),
+    ])
+    def test_yaml_merge_key_queries(self, quiet_logger, yamlpath, results):
+        yamldata = """---
+aliases:
+  - &anchored_key anchored_key
+  - &anchored_value This value is Anchored
+
+anchored_hash: &anchored_hash
+  default_key_1: Some default value
+  default_key_2: Another default value
+
+list_matches:
+  - l1e1
+  - *anchored_value
+
+list_no_match:
+  - l2e1
+  - l2e2
+
+hash_key_matches:
+  *anchored_key : A dynamic key-name for a static value
+  static_key: A static key-name with a static value
+
+hash_ymk_matches:
+  <<: *anchored_hash
+  h1k1: An implementation value
+
+hash_val_matches:
+  k2k1: *anchored_value
+  k2k2: static value
+
+hash_no_match:
+  h2k1: A value
+  h2k2: Another value
+
+aoh:
+  - intent: hash_match
+    <<: *anchored_hash
+  - intent: no_match
+    aohk1: non-matching value
+  - null
+
+aoa:
+  - - 0.0
+    - *anchored_value
+  - - 1.0
+    - 1.1
+"""
+        yaml = YAML()
+        processor = Processor(quiet_logger, yaml.load(yamldata))
+        matchidx = 0
+        for node in processor.get_nodes(yamlpath, mustexist=True):
+            assert unwrap_node_coords(node) == results[matchidx]
+            matchidx += 1
+        assert len(results) == matchidx
+
+    @pytest.mark.parametrize("yamlpath,results", [
+        (r"temperature[. =~ /\d{3}/]", [110, 100, 114]),
+    ])
+    def test_wiki_array_element_searches(self, quiet_logger, yamlpath, results):
+        yamldata = """---
+temperature:
+  - 32
+  - 0
+  - 110
+  - 100
+  - 72
+  - 68
+  - 114
+  - 34
+  - 36
+"""
+        yaml = YAML()
+        processor = Processor(quiet_logger, yaml.load(yamldata))
+        matchidx = 0
+        for node in processor.get_nodes(yamlpath, mustexist=True):
+            assert unwrap_node_coords(node) == results[matchidx]
+            matchidx += 1
+        assert len(results) == matchidx
+
+    @pytest.mark.parametrize("yamlpath,results", [
+        ("consoles[. % SEGA]", ["SEGA Master System", "SEGA Genesis", "SEGA CD", "SEGA 32X", "SEGA Saturn", "SEGA DreamCast"]),
+    ])
+    def test_wiki_collectors(self, quiet_logger, yamlpath, results):
+        yamldata = """---
+consoles:
+  - ColecoVision
+  - Atari 2600
+  - Atari 4800
+  - Nintendo Entertainment System
+  - SEGA Master System
+  - SEGA Genesis
+  - Nintendo SNES
+  - SEGA CD
+  - TurboGrafx 16
+  - SEGA 32X
+  - NeoGeo
+  - SEGA Saturn
+  - Sony PlayStation
+  - Nintendo 64
+  - SEGA DreamCast
+  - Sony PlayStation 2
+  - Microsoft Xbox
+  - Sony PlayStation 3
+  - Nintendo Wii
+  - Microsoft Xbox 360
+  - Sony PlayStation 4
+  - Nintendo Wii-U
+  - Microsoft Xbox One
+  - Microsoft Xbox One S
+  - Sony PlayStation 4 Pro
+  - Microsoft Xbox One X
+  - Nintendo Switch
+"""
+        yaml = YAML()
+        processor = Processor(quiet_logger, yaml.load(yamldata))
+        matchidx = 0
+        for node in processor.get_nodes(yamlpath, mustexist=True):
+            assert unwrap_node_coords(node) == results[matchidx]
+            matchidx += 1
+        assert len(results) == matchidx
+
+    @pytest.mark.parametrize("yamlpath,results", [
+        ("(/standard/setup/action) + (/standard/teardown/action) + (/change/action)", [["Initialize", "Provision", "Deprovision", "Terminate", "Do something", "Do something else"]]),
+        ("(/standard[.!='']/action) + (/change/action)", [["Initialize", "Provision", "Deprovision", "Terminate", "Do something", "Do something else"]]),
+        ("(/standard[.!='']/id) + (/change/id) - (/disabled_ids)", [[0, 1, 2, 4]]),
+    ])
+    def test_wiki_collector_math(self, quiet_logger, yamlpath, results):
+        yamldata = """---
+standard:
+  setup:
+    - id: 0
+      step: 1
+      action: Initialize
+    - id: 1
+      step: 2
+      action: Provision
+  teardown:
+    - id: 2
+      step: 1
+      action: Deprovision
+    - id: 3
+      step: 2
+      action: Terminate
+
+change:
+  - id: 4
+    step: 1
+    action: Do something
+  - id: 5
+    step: 2
+    action: Do something else
+
+rollback:
+  data_error:
+    - id: 6
+      step: 1
+      action: Flush
+  app_error:
+    - id: 7
+      step: 1
+      action: Abend
+    - id: 8
+      step: 2
+      action: Shutdown
+
+disabled_ids:
+  - 3
+  - 5
+  - 8
+"""
+        yaml = YAML()
+        processor = Processor(quiet_logger, yaml.load(yamldata))
+        matchidx = 0
+        for node in processor.get_nodes(yamlpath, mustexist=True):
+            assert unwrap_node_coords(node) == results[matchidx]
+            matchidx += 1
+        assert len(results) == matchidx
+
+    @pytest.mark.parametrize("yamlpath,results", [
+        ("(/list1) + (/list2)", [[1, 2, 3, 4, 5, 6]]),
+        ("(/list1) - (/exclude)", [[1, 2]]),
+        ("(/list2) - (/exclude)", [[5, 6]]),
+        ("(/list1) + (/list2) - (/exclude)", [[1, 2, 5, 6]]),
+        ("((/list1) - (/exclude)) + (/list2)", [[1, 2, 4, 5, 6]]),
+        ("(/list1) + ((/list2) - (/exclude))", [[1, 2, 3, 5, 6]]),
+    ])
+    def test_wiki_collector_order_of_ops(self, quiet_logger, yamlpath, results):
+        yamldata = """---
+list1:
+  - 1
+  - 2
+  - 3
+list2:
+  - 4
+  - 5
+  - 6
+exclude:
+  - 3
+  - 4
+"""
+        yaml = YAML()
+        processor = Processor(quiet_logger, yaml.load(yamldata))
+        matchidx = 0
+        for node in processor.get_nodes(yamlpath, mustexist=True):
+            assert unwrap_node_coords(node) == results[matchidx]
+            matchidx += 1
+        assert len(results) == matchidx
+
+    @pytest.mark.parametrize("yamlpath,results", [
+        ("warriors[power_level > 9000]", [{"name": "Goku Higashi", "power_level": 9001, "style": "Z fight"}]),
+        ("warriors[power_level = 5280]", [
+            {"name": "Chi-chi Shiranui", "power_level": 5280, "style": "Dragon fury"},
+            {"name": "Krillin Bogard", "power_level": 5280, "style": "Fatal ball"}
+        ]),
+    ])
+    def test_wiki_search_array_of_hashes(self, quiet_logger, yamlpath, results):
+        yamldata = """---
+warriors:
+  - name: Chi-chi Shiranui
+    power_level: 5280
+    style: Dragon fury
+  - name: Goku Higashi
+    power_level: 9001
+    style: Z fight
+  - name: Krillin Bogard
+    power_level: 5280
+    style: Fatal ball
+  - name: Bulma Sakazaki
+    power_level: 1024
+    style: Super final
+"""
+        yaml = YAML()
+        processor = Processor(quiet_logger, yaml.load(yamldata))
+        matchidx = 0
+        for node in processor.get_nodes(yamlpath, mustexist=True):
+            assert unwrap_node_coords(node) == results[matchidx]
+            matchidx += 1
+        assert len(results) == matchidx
+
+    @pytest.mark.parametrize("yamlpath,results", [
+        ("contrast_ct[. % bowel]", [0.095, 0.355]),
+    ])
+    def test_wiki_search_key_names(self, quiet_logger, yamlpath, results):
+        yamldata = """---
+contrast_ct:
+  appendicitis: .009
+  colitis: .002
+  diverticulitis: .015
+  gastroenteritis: .007
+  ileus: .227
+  large_bowel_obstruction: .095
+  peptic_ulcer_disease: .007
+  small_bowel_obstruction: .355
+  ulcerative_colitis: .010
+"""
+        yaml = YAML()
+        processor = Processor(quiet_logger, yaml.load(yamldata))
+        matchidx = 0
+        for node in processor.get_nodes(yamlpath, mustexist=True):
+            assert unwrap_node_coords(node) == results[matchidx]
+            matchidx += 1
+        assert len(results) == matchidx
+
+    @pytest.mark.parametrize("yamlpath,results", [
+        ("hash_of_hashes.*[!has_child(child_two)]", [{"child_one": "value2.1", "child_three": "value2.3"}]),
+        ("/array_of_hashes/*[!has_child(child_two)]", [{"id": "two", "child_one": "value2.1", "child_three": "value2.3"}]),
+        ("/hash_of_hashes/*[!has_child(child_two)][name()]", ["two"]),
+        ("array_of_hashes.*[!has_child(child_two)].id", ["two"]),
+        ("/array_of_arrays/*[!has_child(value2.1)]", [["value1.1", "value1.2"], ["value3.1", "value3.2"]]),
+        ("array_of_arrays[*!=value2.1]", [["value1.1", "value1.2"], ["value3.1", "value3.2"]]),
+        ("array_of_arrays.*[!has_child(value2.1)][name()]", [0, 2]),
+        ("/array_of_arrays[*!=value2.1][name()]", [0, 2]),
+        ("(/array_of_arrays/*[!has_child(value2.1)][name()])[0]", [0]),
+        ("(array_of_arrays[*!=value2.1][name()])[0]", [0]),
+        ("(array_of_arrays.*[!has_child(value2.1)][name()])[-1]", [2]),
+        ("(/array_of_arrays[*!=value2.1][name()])[-1]", [2]),
+        ("/simple_array[has_child(value1.1)]", [["value1.1", "value1.2", "value2.1", "value2.3", "value3.1", "value3.2"]]),
+        ("/simple_array[!has_child(value1.3)]", [["value1.1", "value1.2", "value2.1", "value2.3", "value3.1", "value3.2"]]),
+    ])
+    def test_wiki_has_child(self, quiet_logger, yamlpath, results):
+        yamldata = """---
+hash_of_hashes:
+  one:
+    child_one: value1.1
+    child_two: value1.2
+  two:
+    child_one: value2.1
+    child_three: value2.3
+  three:
+    child_one: value3.1
+    child_two: value3.2
+
+array_of_hashes:
+  - id: one
+    child_one: value1.1
+    child_two: value1.2
+  - id: two
+    child_one: value2.1
+    child_three: value2.3
+  - id: three
+    child_one: value3.1
+    child_two: value3.2
+
+simple_array:
+  - value1.1
+  - value1.2
+  - value2.1
+  - value2.3
+  - value3.1
+  - value3.2
+
+array_of_arrays:
+  - - value1.1
+    - value1.2
+  - - value2.1
+    - value2.3
+  - - value3.1
+    - value3.2
+"""
+        yaml = YAML()
+        processor = Processor(quiet_logger, yaml.load(yamldata))
+        matchidx = 0
+        for node in processor.get_nodes(yamlpath, mustexist=True):
+            assert unwrap_node_coords(node) == results[matchidx]
+            matchidx += 1
+        assert len(results) == matchidx
+
+    @pytest.mark.parametrize("yamlpath,results", [
+        ("/prices_aoh[max(price)]", [{"product": "whatchamacallit", "price": 9.95}]),
+        ("/prices_hash[max(price)]", [{"price": 9.95}]),
+        ("/prices_aoh[max(price)]/price", [9.95]),
+        ("/prices_hash[max(price)]/price", [9.95]),
+        ("/prices_aoh[max(price)]/product", ["whatchamacallit"]),
+        ("/prices_hash[max(price)][name()]", ["whatchamacallit"]),
+        ("prices_array[max()]", [9.95]),
+        ("bad_prices_aoh[max(price)]", [{"product": "fob", "price": "not set"}]),
+        ("bad_prices_hash[max(price)]", [{"price": "not set"}]),
+        ("bad_prices_array[max()]", ["not set"]),
+        ("bare[max()]", ["value"]),
+        ("(prices_aoh[!max(price)])[max(price)]", [{"product": "doohickey", "price": 4.99}, {"product": "fob", "price": 4.99}]),
+        ("(prices_hash[!max(price)])[max(price)]", [{"price": 4.99}, {"price": 4.99}]),
+        ("(prices_aoh)-(prices_aoh[max(price)])[max(price)]", [{"product": "doohickey", "price": 4.99}, {"product": "fob", "price": 4.99}]),
+        ("(prices_hash)-(prices_hash[max(price)]).*[max(price)]", [{"price": 4.99}, {"price": 4.99}]),
+        ("((prices_aoh[!max(price)])[max(price)])[0]", [{"product": "doohickey", "price": 4.99}]),
+        ("((prices_hash[!max(price)])[max(price)])[0]", [{"price": 4.99}]),
+        ("((prices_aoh[!max(price)])[max(price)])[0].price", [4.99]),
+        ("((prices_hash[!max(price)])[max(price)])[0].price", [4.99]),
+        ("/prices_aoh[min(price)]", [{"product": "widget", "price": 0.98}]),
+        ("/prices_hash[min(price)]", [{"price": 0.98}]),
+        ("/prices_aoh[min(price)]/price", [0.98]),
+        ("/prices_hash[min(price)]/price", [0.98]),
+        ("/prices_aoh[min(price)]/product", ["widget"]),
+        ("/prices_hash[min(price)][name()]", ["widget"]),
+        ("prices_array[min()]", [0.98]),
+        ("bad_prices_aoh[min(price)]", [{"product": "widget", "price": True}]),
+        ("bad_prices_hash[min(price)]", [{"price": True}]),
+        ("bad_prices_array[min()]", [0.98]),
+        ("bare[min()]", ["value"]),
+    ])
+    def test_wiki_min_max(self, quiet_logger, yamlpath, results):
+        yamldata = """---
+# Consistent Data Types
+prices_aoh:
+  - product: doohickey
+    price: 4.99
+  - product: fob
+    price: 4.99
+  - product: whatchamacallit
+    price: 9.95
+  - product: widget
+    price: 0.98
+  - product: unknown
+
+prices_hash:
+  doohickey:
+    price: 4.99
+  fob:
+    price: 4.99
+  whatchamacallit:
+    price: 9.95
+  widget:
+    price: 0.98
+  unknown:
+
+prices_array:
+  - 4.99
+  - 4.99
+  - 9.95
+  - 0.98
+  - null
+
+# TODO: Inconsistent Data Types
+bare: value
+
+bad_prices_aoh:
+  - product: doohickey
+    price: 4.99
+  - product: fob
+    price: not set
+  - product: whatchamacallit
+    price: 9.95
+  - product: widget
+    price: true
+  - product: unknown
+
+bad_prices_hash:
+  doohickey:
+    price: 4.99
+  fob:
+    price: not set
+  whatchamacallit:
+    price: 9.95
+  widget:
+    price: true
+  unknown:
+
+bad_prices_array:
+  - 4.99
+  - not set
+  - 9.95
+  - 0.98
+  - null
+"""
+        yaml = YAML()
+        processor = Processor(quiet_logger, yaml.load(yamldata))
+        matchidx = 0
+        for node in processor.get_nodes(yamlpath, mustexist=True):
+            assert unwrap_node_coords(node) == results[matchidx]
+            matchidx += 1
+        assert len(results) == matchidx
+
+    @pytest.mark.parametrize("yamlpath,results", [
+        ("**.Opal[parent()][name()]", ["silicates"]),
+        ("minerals.*.*.mohs_hardness[.>7][parent(2)][name()]", ["Tourmaline", "Uvarovite"]),
+        ("minerals.*.*.[mohs_hardness[1]>7][name()]", ["Tourmaline", "Uvarovite"]),
+        ("minerals.*.*(([mohs_hardness[0]>=4])-([mohs_hardness[1]>5]))[name()]", ["Flourite"]),
+    ])
+    def test_wiki_parent(self, quiet_logger, yamlpath, results):
+        yamldata = """---
+minerals:
+  silicates:
+    Opal:
+      mohs_hardness: [5.5,6]
+      specific_gravity: [2.06,2.23]
+    Tourmaline:
+      mohs_hardness: [7,7.5]
+      specific_gravity: [3,3.26]
+  non-silicates:
+    Azurite:
+      mohs_hardness: [3.5,4]
+      specific_gravity: [3.773,3.78]
+    Bismuth:
+      mohs_hardness: [2.25,2.25]
+      specific_gravity: [9.87]
+    Crocoite:
+      mohs_hardness: [2.5,3]
+      specific_gravity: [6,6]
+    Flourite:
+      mohs_hardness: [4,4]
+      specific_gravity: [3.175,3.184]
+    Rhodochrosite:
+      mohs_hardness: [3.5,4]
+      specific_gravity: [3.5,3.7]
+    "Rose Quartz":
+      mohs_hardness: [7,7]
+      specific_gravity: [2.6,2.7]
+    Uvarovite:
+      mohs_hardness: [6.5,7.5]
+      specific_gravity: [3.77,3.81]
+"""
+        yaml = YAML()
+        processor = Processor(quiet_logger, yaml.load(yamldata))
+        matchidx = 0
+        for node in processor.get_nodes(yamlpath, mustexist=True):
+            assert unwrap_node_coords(node) == results[matchidx]
+            matchidx += 1
+        assert len(results) == matchidx
+

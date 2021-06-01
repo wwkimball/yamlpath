@@ -213,14 +213,18 @@ class ConsolePrinter:
     def _debug_get_anchor(data: Any) -> str:
         """Helper for debug."""
         return ("&{}".format(data.anchor.value)
-                if hasattr(data, "anchor") and data.anchor.value is not None
+                if (hasattr(data, "anchor")
+                    and hasattr(data.anchor, "value")
+                    and data.anchor.value is not None)
                 else "")
 
     @staticmethod
     def _debug_get_tag(data: Any) -> str:
         """Helper for debug."""
         return str(data.tag.value
-                if hasattr(data, "tag") and data.tag.value is not None
+                if (hasattr(data, "tag")
+                    and hasattr(data.tag, "value")
+                    and data.tag.value is not None)
                 else "")
 
     @staticmethod
@@ -232,8 +236,13 @@ class ConsolePrinter:
                 data, prefix=prefix, **kwargs
             ):
                 yield line
-        elif isinstance(data, (list, set, tuple, deque)):
+        elif isinstance(data, (list, tuple, deque)):
             for line in ConsolePrinter._debug_list(
+                data, prefix=prefix, **kwargs
+            ):
+                yield line
+        elif isinstance(data, (set, CommentedSet)):
+            for line in ConsolePrinter._debug_set(
                 data, prefix=prefix, **kwargs
             ):
                 yield line
@@ -278,8 +287,9 @@ class ConsolePrinter:
             dtype += ",folded@{}".format(data.fold_pos)
 
         print_prefix += anchor_prefix
+        print_line = str(data).replace("\n", "\n{}".format(print_prefix))
         return ConsolePrinter._debug_prefix_lines(
-            "{}{}{}".format(print_prefix, data, dtype))
+            "{}{}{}".format(print_prefix, print_line, dtype))
 
     @staticmethod
     def _debug_node_coord(
@@ -407,3 +417,18 @@ class ConsolePrinter:
                 print_anchor=False
             ):
                 yield line
+
+    @staticmethod
+    def _debug_set(
+        data: Union[Set, CommentedSet], **kwargs
+    ) -> Generator[str, None, None]:
+        """Helper for debug."""
+        prefix = kwargs.pop("prefix", "")
+
+        for key in data:
+            display_anchor = ConsolePrinter._debug_get_kv_anchors(key, None)
+            display_tag = ConsolePrinter._debug_get_kv_tags(key, None)
+            line = "{{{}}}{}{}".format(
+                key, display_anchor, display_tag)
+            yield ConsolePrinter._debug_prefix_lines(
+                "{}{}{}".format(prefix, line, type(key)))

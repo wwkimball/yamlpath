@@ -187,6 +187,36 @@ c [2].message
 > "A tout %args[0]!"
 """
 
+    ###
+    # Simple Set comparisons
+    ###
+    lhs_set_content = """--- !!set
+? one
+? two
+? four
+"""
+
+    rhs_set_content = """--- !!set
+? four
+? three
+? two
+"""
+
+    diff_set_defaults = """d one
+< "one"
+
+a three
+> "three"
+"""
+
+    diff_set_verbose = """d0.4.0.0.4.0 one
+< "one"
+
+a0.4.0.0.4.1 three
+> "three"
+"""
+
+
     def test_no_options(self, script_runner):
         result = script_runner.run(self.command)
         assert not result.success, result.stderr
@@ -243,6 +273,69 @@ c [2].message
         )
         assert not result.success, result.stderr
         assert "No accessible eyaml command" in result.stderr
+
+    def test_diff_yaml_parsing_error(self, script_runner, imparsible_yaml_file, badsyntax_yaml_file):
+        result = script_runner.run(
+            self.command,
+            imparsible_yaml_file,
+            badsyntax_yaml_file
+        )
+        assert not result.success, result.stderr
+        assert "YAML parsing error" in result.stderr
+
+    def test_multidoc_missing_lhs_index_error(self, script_runner, tmp_path_factory):
+        lhs_file = create_temp_yaml_file(tmp_path_factory, """---
+key: value
+...
+---
+second_key: second value
+...
+""")
+        rhs_file = create_temp_yaml_file(tmp_path_factory, self.lhs_hash_content)
+
+        result = script_runner.run(
+            self.command,
+            lhs_file,
+            rhs_file
+        )
+        assert not result.success, result.stderr
+        assert "--left-document-index|-L must be set" in result.stderr
+
+    def test_multidoc_missing_rhs_index_error(self, script_runner, tmp_path_factory):
+        lhs_file = create_temp_yaml_file(tmp_path_factory, self.lhs_hash_content)
+        rhs_file = create_temp_yaml_file(tmp_path_factory, """---
+key: value
+...
+---
+second_key: second value
+...
+""")
+
+        result = script_runner.run(
+            self.command,
+            lhs_file,
+            rhs_file
+        )
+        assert not result.success, result.stderr
+        assert "--right-document-index|-R must be set" in result.stderr
+
+    def test_multidoc_index_too_high(self, script_runner, tmp_path_factory):
+        lhs_file = create_temp_yaml_file(tmp_path_factory, self.lhs_hash_content)
+        rhs_file = create_temp_yaml_file(tmp_path_factory, self.lhs_hash_content)
+
+        # DEBUG
+        # print("LHS File:  {}".format(lhs_file))
+        # print("RHS File:  {}".format(rhs_file))
+        # print("Expected Output:")
+        # print(merged_yaml_content)
+
+        result = script_runner.run(
+            self.command
+            , "--left-document-index=1"
+            , lhs_file
+            , rhs_file)
+        assert not result.success, result.stderr
+        assert "DOCUMENT_INDEX is too high" in result.stderr
 
     def test_no_diff_two_hash_files(self, script_runner, tmp_path_factory):
         lhs_file = create_temp_yaml_file(tmp_path_factory, self.lhs_hash_content)
@@ -2033,3 +2126,88 @@ d hash_two
         assert not result.success, result.stderr
         assert stdout_content == result.stdout
 
+
+    def test_diff_set_normal(self, script_runner, tmp_path_factory):
+        lhs_file = create_temp_yaml_file(tmp_path_factory, self.lhs_set_content)
+        rhs_file = create_temp_yaml_file(tmp_path_factory, self.rhs_set_content)
+
+        # DEBUG
+        # print("LHS File:  {}".format(lhs_file))
+        # print("RHS File:  {}".format(rhs_file))
+        # print("Expected Output:")
+        # print(self.diff_set_defaults)
+
+        result = script_runner.run(
+            self.command
+            , lhs_file
+            , rhs_file)
+        assert not result.success, result.stderr
+        assert self.diff_set_defaults == result.stdout
+
+    def test_diff_set_verbose(self, script_runner, tmp_path_factory):
+        lhs_file = create_temp_yaml_file(tmp_path_factory, self.lhs_set_content)
+        rhs_file = create_temp_yaml_file(tmp_path_factory, self.rhs_set_content)
+
+        # DEBUG
+        # print("LHS File:  {}".format(lhs_file))
+        # print("RHS File:  {}".format(rhs_file))
+        # print("Expected Output:")
+        # print(self.diff_set_defaults)
+
+        result = script_runner.run(
+            self.command
+            , "--verbose"
+            , lhs_file
+            , rhs_file)
+        assert not result.success, result.stderr
+        assert self.diff_set_verbose == result.stdout
+
+    def test_simple_diff_set_from_nothing_via_stdin(self, script_runner, tmp_path_factory):
+        import subprocess
+        rhs_file = create_temp_yaml_file(tmp_path_factory, self.rhs_set_content)
+        stdout_content = """a four
+> "four"
+
+a three
+> "three"
+
+a two
+> "two"
+"""
+
+        result = subprocess.run(
+            [self.command
+            , "-"
+            , rhs_file
+            ]
+            , stdout=subprocess.PIPE
+            , input=""
+            , universal_newlines=True
+        )
+        assert 1 == result.returncode, result.stderr
+        assert stdout_content == result.stdout
+
+    def test_simple_diff_set_into_nothing_via_stdin(self, script_runner, tmp_path_factory):
+        import subprocess
+        lhs_file = create_temp_yaml_file(tmp_path_factory, self.lhs_set_content)
+        stdout_content = """d one
+< "one"
+
+d two
+< "two"
+
+d four
+< "four"
+"""
+
+        result = subprocess.run(
+            [self.command
+            , lhs_file
+            , "-"
+            ]
+            , stdout=subprocess.PIPE
+            , input=""
+            , universal_newlines=True
+        )
+        assert 1 == result.returncode, result.stderr
+        assert stdout_content == result.stdout

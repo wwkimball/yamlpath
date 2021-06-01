@@ -11,3 +11,4 @@ exclude_paths:
   - '**/__init__.py'
   - 'README.md'
   - 'yamlpath/func.py'  # Deprecated; the entire file is just relays
+  - 'yamlpath/patches/**' # 3rd Party contributions

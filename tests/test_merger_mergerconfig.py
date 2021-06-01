@@ -7,7 +7,9 @@ from yamlpath.merger.enums import (
     AoHMergeOpts,
     ArrayMergeOpts,
     HashMergeOpts,
-    OutputDocTypes
+    MultiDocModes,
+    OutputDocTypes,
+    SetMergeOpts,
 )
 from yamlpath.wrappers import NodeCoords
 from yamlpath.merger import MergerConfig
@@ -39,6 +41,18 @@ class Test_merger_MergerConfig():
     def test_get_document_format(self, quiet_logger):
         mc = MergerConfig(quiet_logger, SimpleNamespace())
         assert mc.get_document_format() == OutputDocTypes.AUTO
+
+
+    ###
+    # get_multidoc_mode
+    ###
+    def test_get_multidoc_mode_default(self, quiet_logger):
+        mc = MergerConfig(quiet_logger, SimpleNamespace())
+        assert mc.get_multidoc_mode() == MultiDocModes.CONDENSE_ALL
+
+    def test_get_multidoc_mode_cli(self, quiet_logger):
+        mc = MergerConfig(quiet_logger, SimpleNamespace(multi_doc_mode="matrix_merge"))
+        assert mc.get_multidoc_mode() == MultiDocModes.MATRIX_MERGE
 
 
     ###
@@ -511,6 +525,99 @@ class Test_merger_MergerConfig():
 
         assert mc.aoh_merge_key(
             NodeCoords(node, parent, parentref), record) == "prop"
+
+
+    ###
+    # set_merge_mode
+    ###
+    def test_set_merge_mode_default(self, quiet_logger):
+        mc = MergerConfig(quiet_logger, SimpleNamespace(sets=None))
+        assert mc.set_merge_mode(
+            NodeCoords(None, None, None)) == SetMergeOpts.UNIQUE
+
+    @pytest.mark.parametrize("setting, mode", [
+        ("left", SetMergeOpts.LEFT),
+        ("right", SetMergeOpts.RIGHT),
+        ("unique", SetMergeOpts.UNIQUE),
+    ])
+    def test_set_merge_mode_cli(self, quiet_logger, setting, mode):
+        mc = MergerConfig(quiet_logger, SimpleNamespace(sets=setting))
+        assert mc.set_merge_mode(
+            NodeCoords(None, None, None)) == mode
+
+    @pytest.mark.parametrize("setting, mode", [
+        ("left", SetMergeOpts.LEFT),
+        ("right", SetMergeOpts.RIGHT),
+        ("unique", SetMergeOpts.UNIQUE),
+    ])
+    def test_set_merge_mode_ini(
+        self, quiet_logger, tmp_path_factory, setting, mode
+    ):
+        config_file = create_temp_yaml_file(tmp_path_factory, """
+        [defaults]
+        sets = {}
+        """.format(setting))
+        mc = MergerConfig(quiet_logger, SimpleNamespace(
+            config=config_file
+            , sets=None))
+        assert mc.set_merge_mode(
+            NodeCoords(None, None, None)) == mode
+
+    @pytest.mark.parametrize("cli, ini, mode", [
+        ("left", "right", SetMergeOpts.LEFT),
+        ("right", "unique", SetMergeOpts.RIGHT),
+        ("unique", "all", SetMergeOpts.UNIQUE),
+    ])
+    def test_set_merge_mode_cli_overrides_ini_defaults(
+        self, quiet_logger, tmp_path_factory, cli, ini, mode
+    ):
+        config_file = create_temp_yaml_file(tmp_path_factory, """
+        [defaults]
+        sets = {}
+        """.format(ini))
+        mc = MergerConfig(quiet_logger, SimpleNamespace(
+            config=config_file
+            , sets=cli))
+        assert mc.set_merge_mode(
+            NodeCoords(None, None, None)) == mode
+
+    @pytest.mark.parametrize("cli, ini_default, ini_rule, mode", [
+        ("left", "right", "unique", SetMergeOpts.UNIQUE),
+        ("right", "unique", "left", SetMergeOpts.LEFT),
+        ("unique", "left", "right", SetMergeOpts.RIGHT),
+    ])
+    def test_set_merge_mode_ini_rule_overrides_cli(
+        self, quiet_logger, tmp_path_factory, cli, ini_default, ini_rule, mode
+    ):
+        config_file = create_temp_yaml_file(tmp_path_factory, """
+        [defaults]
+        sets = {}
+        [rules]
+        /hash/merge_targets/subset = {}
+        """.format(ini_default, ini_rule))
+        lhs_yaml_file = create_temp_yaml_file(tmp_path_factory, """---
+        hash:
+          lhs_exclusive: lhs value 1
+          merge_targets:
+            subkey: lhs value 2
+            subset:
+              ? one
+              ? two
+        """)
+        lhs_yaml = get_yaml_editor()
+        (lhs_data, lhs_loaded) = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
+
+        mc = MergerConfig(quiet_logger, SimpleNamespace(
+            config=config_file
+            , sets=cli))
+        mc.prepare(lhs_data)
+
+        node = lhs_data["hash"]["merge_targets"]["subset"]
+        parent = lhs_data["hash"]["merge_targets"]
+        parentref = "subset"
+
+        assert mc.set_merge_mode(
+            NodeCoords(node, parent, parentref)) == mode
 
 
     ###

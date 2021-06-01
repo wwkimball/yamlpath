@@ -1,7 +1,7 @@
 """
 Implement MergerConfig.
 
-Copyright 2020 William W. Kimball, Jr. MBA MSIS
+Copyright 2020, 2021 William W. Kimball, Jr. MBA MSIS
 """
 import configparser
 from typing import Any, Dict, Union
@@ -13,7 +13,9 @@ from yamlpath.merger.enums import (
     AoHMergeOpts,
     ArrayMergeOpts,
     HashMergeOpts,
+    MultiDocModes,
     OutputDocTypes,
+    SetMergeOpts,
 )
 from yamlpath import Processor, YAMLPath
 from yamlpath.wrappers import ConsolePrinter, NodeCoords
@@ -134,6 +136,31 @@ class MergerConfig:
             return AoHMergeOpts.from_str(self.config["defaults"]["aoh"])
         return AoHMergeOpts.ALL
 
+    def set_merge_mode(self, node_coord: NodeCoords) -> SetMergeOpts:
+        """
+        Get Set merge mode applicable to the indicated path.
+
+        Parameters:
+        1. node_coord (NodeCoords) The node for which to query.
+
+        Returns:  (SetMergeOpts) Applicable mode.
+        """
+        # Precedence: config[rules] > CLI > config[defaults] > default
+        merge_rule = self._get_rule_for(node_coord)
+        if merge_rule:
+            self.log.debug(
+                "MergerConfig::set_merge_mode:  Matched {}"
+                .format(merge_rule))
+            return SetMergeOpts.from_str(merge_rule)
+        self.log.debug("MergerConfig::set_merge_mode:  NOT Matched")
+        if hasattr(self.args, "sets") and self.args.sets:
+            return SetMergeOpts.from_str(self.args.sets)
+        if (self.config is not None
+                and "defaults" in self.config
+                and "sets" in self.config["defaults"]):
+            return SetMergeOpts.from_str(self.config["defaults"]["sets"])
+        return SetMergeOpts.UNIQUE
+
     def aoh_merge_key(
         self, node_coord: NodeCoords, data: dict
     ) -> str:
@@ -208,6 +235,25 @@ class MergerConfig:
         if hasattr(self.args, "document_format"):
             return OutputDocTypes.from_str(self.args.document_format)
         return OutputDocTypes.AUTO
+
+    def get_multidoc_mode(self) -> MultiDocModes:
+        """
+        Get the user-desired mode for handling multi-document merges.
+
+        Paramerers:  N/A
+
+        Returns:  (MultiDocModes) The condence/merge mode
+        """
+        if hasattr(self.args, "multi_doc_mode"):
+            return MultiDocModes.from_str(self.args.multi_doc_mode)
+        return MultiDocModes.CONDENSE_ALL
+
+    def is_preserving_lhs_comments(self) -> bool:
+        """Indicate whether the user wants LHS comments preserved."""
+        if hasattr(self.args, "preserve_lhs_comments"):
+            is_preserving: bool = self.args.preserve_lhs_comments
+            return is_preserving
+        return False
 
     def _prepare_user_rules(
         self, proc: Processor, merge_path: YAMLPath, section: str,
