@@ -1595,6 +1595,73 @@ class Processor:
         )
         return updated_coords
 
+    def _collector_intersection(
+        self, data: Any, peek_path: YAMLPath, collected_ncs: List[NodeCoords],
+        **kwargs
+    ) -> List[NodeCoords]:
+        """Helper for _get_nodes_by_collector."""
+        def deeply_unwrap_nodes(
+            del_nodes: List[Any], node_coord: NodeCoords
+        ) -> None:
+            unwrapped_node = NodeCoords.unwrap_node_coords(node_coord)
+            if isinstance(unwrapped_node, (list, CommentedSet, set)):
+                for ele in unwrapped_node:
+                    del_nodes.append(ele)
+            elif isinstance(node_coord.parent, dict):
+                del_nodes.append(
+                    {node_coord.parentref: unwrapped_node})
+            else:
+                del_nodes.append(unwrapped_node)
+
+
+        parent: Any = kwargs.pop("parent", None)
+        parentref: Any = kwargs.pop("parentref", None)
+        translated_path: YAMLPath = kwargs.pop("translated_path", YAMLPath(""))
+        ancestry: List[AncestryEntry] = kwargs.pop("ancestry", [])
+        relay_segment: PathSegment = kwargs.pop("relay_segment")
+
+        expression_path = YAMLPath(peek_path)
+
+        self.logger.debug((
+            "Getting required nodes matching collector sub-path, {}, from:"
+            ).format(peek_path),
+            prefix="Processor::_collector_intersection:  ",
+            data={
+                "segments": expression_path.unescaped,
+                "data": data})
+
+        rhs_unwrapped_data: List[Any] = []
+        for node_coord in self._get_required_nodes(
+            data, expression_path, 0, parent=parent, parentref=parentref,
+            translated_path=translated_path, ancestry=ancestry,
+            relay_segment=relay_segment
+        ):
+            self.logger.debug((
+                "Extracting node(s) for intersection from collected result:"
+                ),
+                prefix="Processor::_collector_intersection:  ",
+                data=node_coord)
+            deeply_unwrap_nodes(rhs_unwrapped_data, node_coord)
+
+        self.logger.debug((
+            "Intersecting the following nodes from pre-gathered data:"),
+            prefix="Processor::_collector_intersection:  INTERSECT NODES->",
+            data={
+                "INTERSECTING": rhs_unwrapped_data,
+                "WITH": collected_ncs,
+            })
+
+        updated_coords = [
+            nc for nc in collected_ncs
+            if NodeCoords.unwrap_node_coords(nc) in rhs_unwrapped_data]
+
+        self.logger.debug((
+            "Resulting data:"),
+            prefix="Processor::_collector_intersection:  DONE->",
+            data=updated_coords
+        )
+        return updated_coords
+
     def _get_nodes_by_collector(
         self, data: Any, yaml_path: YAMLPath, segment_index: int,
         terms: CollectorTerms, **kwargs: Any
@@ -1699,6 +1766,12 @@ class Processor:
                         relay_segment=peekseg)
                 elif peek_attrs.operation == CollectorOperators.SUBTRACTION:
                     node_coords = self._collector_subtraction(
+                        data, peek_path, node_coords,
+                        parent=parent, parentref=parentref,
+                        translated_path=translated_path, ancestry=ancestry,
+                        relay_segment=peekseg)
+                elif peek_attrs.operation == CollectorOperators.INTERSECTION:
+                    node_coords = self._collector_intersection(
                         data, peek_path, node_coords,
                         parent=parent, parentref=parentref,
                         translated_path=translated_path, ancestry=ancestry,

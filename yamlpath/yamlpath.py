@@ -390,13 +390,15 @@ class YAMLPath:
                 segment_type = PathSegmentTypes.ANCHOR
                 continue
 
-            elif seeking_collector_operator and char in ['+', '-']:
+            elif seeking_collector_operator and char in ['+', '-', '&']:
                 seeking_collector_operator = False
                 next_char_must_be = '('
                 if char == '+':
                     collector_operator = CollectorOperators.ADDITION
                 elif char == '-':
                     collector_operator = CollectorOperators.SUBTRACTION
+                elif char == '&':
+                    collector_operator = CollectorOperators.INTERSECTION
                 continue
 
             elif next_char_must_be and char != next_char_must_be:
