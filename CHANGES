@@ -1,3 +1,7 @@
+3.6.1:
+Enhancements:
+* Enable verified support for ruamel.yaml up to version 0.17.10.
+
 3.6.0:
 Bug Fixes:
 * Some peculiar data constructions could cause the ConsolePrinter to stack-dump
