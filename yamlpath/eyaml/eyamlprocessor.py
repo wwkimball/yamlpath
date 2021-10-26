@@ -12,8 +12,9 @@ from typing import Any, Generator, List, Optional
 from ruamel.yaml.comments import CommentedSeq, CommentedMap
 
 from yamlpath import YAMLPath
+from yamlpath.common import Anchors
 from yamlpath.eyaml.enums import EYAMLOutputFormats
-from yamlpath.enums import YAMLValueFormats
+from yamlpath.enums import YAMLValueFormats, PathSeperators
 from yamlpath.eyaml.exceptions import EYAMLCommandException
 from yamlpath.wrappers import ConsolePrinter
 from yamlpath import Processor
@@ -52,7 +53,7 @@ class EYAMLProcessor(Processor):
 
     # pylint: disable=locally-disabled,too-many-branches
     def _find_eyaml_paths(
-        self, data: Any, build_path: str = ""
+        self, data: Any, build_path: YAMLPath
     ) -> Generator[YAMLPath, None, None]:
         """
         Find every encrypted value and report each as a YAML Path.
@@ -62,7 +63,7 @@ class EYAMLProcessor(Processor):
 
         Parameters:
         1. data (Any) The parsed YAML data to process
-        2. build_path (str) A YAML Path under construction
+        2. build_path (YAMLPath) A YAML Path under construction
 
         Returns:  (Generator[Path, None, None]) each YAML Path entry as they
             are discovered
@@ -70,27 +71,28 @@ class EYAMLProcessor(Processor):
         Raises:  N/A
         """
         if isinstance(data, CommentedSeq):
-            build_path += "["
             for idx, ele in enumerate(data):
-                if hasattr(ele, "anchor") and ele.anchor.value is not None:
-                    tmp_path = build_path + "&" + ele.anchor.value + "]"
+                node_anchor = Anchors.get_node_anchor(ele)
+                if node_anchor is not None:
+                    escaped_section = YAMLPath.escape_path_section(
+                        node_anchor, PathSeperators.DOT)
+                    tmp_path_segment = f"[&{escaped_section}]"
                 else:
-                    tmp_path = build_path + str(idx) + "]"
+                    tmp_path_segment = f"[{idx}]"
 
+                tmp_path = build_path + tmp_path_segment
                 if self.is_eyaml_value(ele):
-                    yield YAMLPath(tmp_path)
+                    yield tmp_path
                 else:
                     for subpath in self._find_eyaml_paths(ele, tmp_path):
                         yield subpath
 
         elif isinstance(data, CommentedMap):
-            if build_path:
-                build_path += "."
-
             for key, val in data.non_merged_items():
-                tmp_path = build_path + str(key)
+                tmp_path = build_path + YAMLPath.escape_path_section(
+                    key, PathSeperators.DOT)
                 if self.is_eyaml_value(val):
-                    yield YAMLPath(tmp_path)
+                    yield tmp_path
                 else:
                     for subpath in self._find_eyaml_paths(val, tmp_path):
                         yield subpath
@@ -107,7 +109,7 @@ class EYAMLProcessor(Processor):
         Raises:  N/A
         """
         # Initiate the scan from the data root
-        for path in self._find_eyaml_paths(self.data):
+        for path in self._find_eyaml_paths(self.data, YAMLPath()):
             yield path
 
     def decrypt_eyaml(self, value: str) -> str:

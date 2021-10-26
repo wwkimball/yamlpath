@@ -297,7 +297,7 @@ def validateargs(args, log):
 def save_to_json_file(args, log, yaml_data):
     """Save to a JSON file."""
     log.verbose("Writing changed data as JSON to {}.".format(args.yaml_file))
-    with open(args.yaml_file, 'w') as out_fhnd:
+    with open(args.yaml_file, 'w', encoding='utf-8') as out_fhnd:
         json.dump(Parsers.jsonify_yaml_data(yaml_data), out_fhnd)
 
 def save_to_yaml_file(args, log, yaml_parser, yaml_data, backup_file):
@@ -307,7 +307,7 @@ def save_to_yaml_file(args, log, yaml_parser, yaml_data, backup_file):
         with open(args.yaml_file, 'rb') as inhnd:
             copyfileobj(inhnd, tmphnd)
 
-        with open(args.yaml_file, 'w') as yaml_dump:
+        with open(args.yaml_file, 'w', encoding='utf-8') as yaml_dump:
             try:
                 yaml_parser.dump(yaml_data, yaml_dump)
             # Tell pycov to ignore this block because it is impossible to
@@ -471,7 +471,7 @@ def main():
         consumed_stdin = True
         has_new_value = True
     elif args.file:
-        with open(args.file, 'r') as fhnd:
+        with open(args.file, 'r', encoding='utf-8') as fhnd:
             new_value = fhnd.read().rstrip()
         has_new_value = True
     elif args.null:

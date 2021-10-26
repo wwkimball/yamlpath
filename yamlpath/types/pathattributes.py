@@ -6,7 +6,7 @@ Copyright 2020 William W. Kimball, Jr. MBA MSIS
 from typing import Union
 
 from yamlpath.path import CollectorTerms
-import yamlpath.path.searchterms as searchterms
+from yamlpath.path import searchterms
 
 
 PathAttributes = Union[str, int, CollectorTerms, searchterms.SearchTerms, None]
