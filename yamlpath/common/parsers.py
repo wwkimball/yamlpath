@@ -119,7 +119,7 @@ class Parsers:
                     if literal:
                         yaml_data = parser.load(source)
                     else:
-                        with open(source, 'r') as fhnd:
+                        with open(source, 'r', encoding='utf-8') as fhnd:
                             yaml_data = parser.load(fhnd)
         except KeyboardInterrupt:
             logger.error("Aborting data load due to keyboard interrupt!")
@@ -227,7 +227,7 @@ class Parsers:
                         for document in parser.load_all(source):
                             yield (document, True)
                     else:
-                        with open(source, 'r') as fhnd:
+                        with open(source, 'r', encoding='utf-8') as fhnd:
                             for document in parser.load_all(fhnd):
                                 logger.debug(
                                     "Yielding document from {}:"
