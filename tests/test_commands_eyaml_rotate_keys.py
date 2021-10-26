@@ -86,11 +86,10 @@ class Test_eyaml_rotate_keys():
             EurCwzBMBgkqhkiG9w0BBwEwHQYJYIZIAWUDBAEqBBAwcy7jvcOGcMfLEtug
             LEXbgCBkocdckuDe14mVGmUmM++xN34OEVRCeGVWWUnWq1DJ4Q==]
           - &stringStyle ENC[PKCS7,MIIBiQYJKoZIhvcNAQcDoIIBejCCAXYCAQAxggEhMIIBHQIBADAFMAACAQEwDQYJKoZIhvcNAQEBBQAEggEAIu44u62q5sVfzC7kytLi2Z/EzH2DKr4vDsoqDBeSZ71aRku/uSrjyiO4lyoq9Kva+eBAyjBay5fnqPVBaU3Rud2pdEoZEoyofi02jn4hxUKpAO1W0AUgsQolGe53qOdM4U8RbwnTR0gr3gp2mCd18pH3SRMP9ryrsBAxGzJ6mR3RgdZnlTlqVGXCeWUeVpbH+lcHw3uvd+o/xkvJ/3ypxz+rWILiAZ3QlCirzn/qb2fHuKf3VBh8RVFuQDaM5voajZlgjD6KzNCsbATOqOA6eJI4j0ngPdDlIjGHAnahuyluQ5f5SIaIjLC+ZeCOfIYni0MQ+BHO0JNbccjq2Unb7TBMBgkqhkiG9w0BBwEwHQYJYIZIAWUDBAEqBBCYmAI0Ao3Ok1cSmVw0SgQGgCBK62z1r5RfRjf1xKfqDxTsGUHfsUmM3EjGJfnWzCRvuQ==]
-        block1: *blockStyle
-        string1: *stringStyle
-        duplicates:
-          block2: *blockStyle
-          string2: *stringStyle
+        block: *blockStyle
+        string: *stringStyle
+        yet_another:
+          'more.complex.child': *blockStyle
         """
         simple_file = create_temp_yaml_file(tmp_path_factory, simple_content)
         anchored_file = create_temp_yaml_file(tmp_path_factory, anchored_content)
