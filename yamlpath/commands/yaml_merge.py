@@ -295,7 +295,7 @@ def write_output_document(
         dumps.append(doc.data)
 
     if args.output:
-        with open(args.output, 'w') as out_fhnd:
+        with open(args.output, 'w', encoding='utf-8') as out_fhnd:
             if document_is_json:
                 if len(dumps) > 1:
                     for dump in dumps:

@@ -190,7 +190,7 @@ def main():
                 copy2(yaml_file, backup_file)
 
             log.verbose("Writing changed data to {}.".format(yaml_file))
-            with open(yaml_file, 'w') as yaml_dump:
+            with open(yaml_file, 'w', encoding='utf-8') as yaml_dump:
                 yaml.dump(yaml_data, yaml_dump)
 
     sys.exit(exit_state)
