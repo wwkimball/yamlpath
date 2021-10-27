@@ -163,8 +163,7 @@ class Processor:
 
         if mustexist:
             self.logger.debug(
-                "Processor::set_value:  Seeking required node at {}."
-                .format(yaml_path)
+                f"Processor::set_value:  Seeking required node at {yaml_path}."
             )
             found_nodes: int = 0
             for req_node in self._get_required_nodes(self.data, yaml_path):
@@ -216,10 +215,9 @@ class Processor:
                                                     YAMLValueFormats.DEFAULT)
         tag: str = kwargs.pop("tag", None)
 
-        self.logger.debug((
-            "Attempting to change a node coordinate of type {} to value with"
-            " format <{}>:"
-            ).format(type(node_coord), value_format),
+        self.logger.debug(
+            "Attempting to change a node coordinate of type"
+            f" {type(node_coord)} to value with format <{value_format}>:",
             data={
                 "value": value,
                 "node_coord": node_coord
@@ -2349,7 +2347,7 @@ class Processor:
             change_node, value, value_format, tag=value_tag)
 
         self.logger.debug(
-            "Changing the following <{}> formatted node:".format(value_format),
+            f"Changing the following <{value_format}> formatted node:",
             prefix="Processor::_update_node:  ",
             data={ "__FROM__": change_node, "___TO___": new_node })
 

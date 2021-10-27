@@ -1,3 +1,8 @@
+3.6.3
+Bug Fixes:
+* The eyaml-rotate-keys command-line tool failed to preserve block-style EYAML
+  strings after key rotation.
+
 3.6.2:
 Bug Fixes:
 * The eyaml-rotate-keys command-line tool would generate a stack-dump when the
