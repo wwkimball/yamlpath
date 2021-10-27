@@ -131,18 +131,22 @@ class EYAMLProcessor(Processor):
         if not self._can_run_eyaml():
             raise EYAMLCommandException("No accessible eyaml command.")
 
-        cmdstr: str = "{} decrypt --quiet --stdin".format(self.eyaml)
+        cmd: List[str] = [
+            self.eyaml,
+            'decrypt',
+            '--quiet',
+            '--stdin'
+        ]
         if self.publickey:
-            cmdstr += " --pkcs7-public-key={}".format(self.publickey)
+            cmd.append(f"--pkcs7-public-key={self.publickey}")
         if self.privatekey:
-            cmdstr += " --pkcs7-private-key={}".format(self.privatekey)
+            cmd.append(f"--pkcs7-private-key={self.privatekey}")
 
-        cmd: List[str] = cmdstr.split()
         cleanval: str = str(value).replace("\n", "").replace(" ", "").rstrip()
         bval: bytes = cleanval.encode("ascii")
         self.logger.debug(
-            "EYAMLPath::decrypt_eyaml:  About to execute {} against:\n{}"
-            .format(cmdstr, cleanval)
+            f"About to execute {' '.join(cmd)} against:\n{cleanval}",
+            prefix="EYAMLPath::decrypt_eyaml:  "
         )
 
         try:
@@ -157,19 +161,19 @@ class EYAMLProcessor(Processor):
             ).stdout.decode('ascii').rstrip()
         except CalledProcessError as ex:
             raise EYAMLCommandException(
-                "The {} command cannot be run due to exit code:  {}"
-                .format(self.eyaml, ex.returncode)
+                f"The {self.eyaml} command cannot be run due to exit code:"
+                f"  {ex.returncode}"
             ) from ex
 
         # Check for bad decryptions
         self.logger.debug(
-            "EYAMLPath::decrypt_eyaml:  Decrypted result:  {}".format(retval)
+            f"EYAMLPath::decrypt_eyaml:  Decrypted result:  {retval}"
         )
         if not retval or retval == cleanval:
             raise EYAMLCommandException(
                 "Unable to decrypt value!  Please verify you are using the"
-                + " correct old EYAML keys and the value is not corrupt:  {}"
-                .format(cleanval)
+                " correct old EYAML keys and the value is not corrupt:"
+                "    {cleanval}"
             )
 
         return retval
@@ -196,7 +200,7 @@ class EYAMLProcessor(Processor):
 
         if not self._can_run_eyaml():
             raise EYAMLCommandException(
-                f"The eyaml binary is not executable at {self.eyaml}."
+                f"The eyaml binary is not executable at:  {self.eyaml}"
             )
 
         cmd: List[str] = [
@@ -222,13 +226,13 @@ class EYAMLProcessor(Processor):
             retval: str = (
                 run(cmd, stdout=PIPE, input=bval, check=True, shell=False)
                 .stdout
-                .decode('ascii')
+                .decode("ascii")
                 .rstrip()
             )
         except CalledProcessError as ex:
             raise EYAMLCommandException(
                 f"The {self.eyaml} command cannot be run due to exit code:"
-                "  {ex.returncode}"
+                f"  {ex.returncode}"
             ) from ex
 
         # While exceedingly rare and difficult to test for, it is possible
@@ -237,7 +241,7 @@ class EYAMLProcessor(Processor):
         # that works multi-platform.  So, ignore covering this case.
         if not retval: # pragma: no cover
             raise EYAMLCommandException(
-                "The {self.eyaml} command was unable to encrypt your value."
+                f"The {self.eyaml} command was unable to encrypt your value."
                 "  Please verify this process can run that command and read"
                 " your EYAML keys."
             )
@@ -309,9 +313,7 @@ class EYAMLProcessor(Processor):
         Raises:
         - `YAMLPathException` when YAML Path is invalid
         """
-        self.logger.verbose(
-            "Decrypting value(s) at {}.".format(yaml_path)
-        )
+        self.logger.verbose(f"Decrypting value(s) at {yaml_path}.")
         for node in self.get_nodes(yaml_path, mustexist=mustexist,
                                    default_value=default_value):
             plain_text: str = self.decrypt_eyaml(node.node)
