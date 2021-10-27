@@ -243,7 +243,7 @@ class EYAMLProcessor(Processor):
             )
 
         if output is EYAMLOutputFormats.BLOCK:
-            retval = re.sub(r" +", "", retval)
+            retval = re.sub(r" +", "", retval) + "\n"
 
         self.logger.debug(
             f"Encrypted result:\n{retval}",
