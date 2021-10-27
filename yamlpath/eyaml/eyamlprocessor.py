@@ -46,7 +46,7 @@ class EYAMLProcessor(Processor):
 
         Raises:  N/A
         """
-        self.eyaml: Optional[str] = kwargs.pop("binary", "eyaml")
+        self.eyaml: str = str(kwargs.pop("binary", "eyaml"))
         self.publickey: Optional[str] = kwargs.pop("publickey", None)
         self.privatekey: Optional[str] = kwargs.pop("privatekey", None)
         super().__init__(logger, data)
