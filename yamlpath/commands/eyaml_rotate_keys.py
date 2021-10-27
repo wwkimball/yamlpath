@@ -17,6 +17,7 @@ from ruamel.yaml.scalarstring import FoldedScalarString
 from yamlpath import __version__ as YAMLPATH_VERSION
 from yamlpath.common import Anchors, Parsers
 from yamlpath.eyaml.exceptions import EYAMLCommandException
+from yamlpath.eyaml.enums import EYAMLOutputFormats
 from yamlpath.eyaml import EYAMLProcessor
 from yamlpath.wrappers import ConsolePrinter
 
@@ -163,9 +164,9 @@ def main():
 
                 # Prefer block (folded) values unless the original YAML value
                 # was already a massivly long (string) line.
-                output = "block"
+                output = EYAMLOutputFormats.BLOCK
                 if not isinstance(node, FoldedScalarString):
-                    output = "string"
+                    output = EYAMLOutputFormats.STRING
 
                 # Re-encrypt the value with new EYAML keys
                 processor.publickey = args.newpublickey

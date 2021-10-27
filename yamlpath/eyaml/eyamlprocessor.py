@@ -196,20 +196,23 @@ class EYAMLProcessor(Processor):
 
         if not self._can_run_eyaml():
             raise EYAMLCommandException(
-                "The eyaml binary is not executable at {}.".format(self.eyaml)
+                f"The eyaml binary is not executable at {self.eyaml}."
             )
 
-        cmdstr: str = ("{} encrypt --quiet --stdin --output={}"
-                       .format(self.eyaml, output))
+        cmd: List[str] = [
+            self.eyaml,
+            'encrypt',
+            '--quiet',
+            '--stdin',
+            f"--output={output}"
+        ]
         if self.publickey:
-            cmdstr += " --pkcs7-public-key={}".format(self.publickey)
+            cmd.append(f"--pkcs7-public-key={self.publickey}")
         if self.privatekey:
-            cmdstr += " --pkcs7-private-key={}".format(self.privatekey)
+            cmd.append(f"--pkcs7-private-key={self.privatekey}")
 
-        cmd: List[str] = cmdstr.split()
         self.logger.debug(
-            "EYAMLPath::encrypt_eyaml:  About to execute:  {}"
-            .format(" ".join(cmd))
+            f"EYAMLPath::encrypt_eyaml:  About to execute:  {' '.join(cmd)}"
         )
         bval: bytes = value.encode("ascii")
 
@@ -224,8 +227,8 @@ class EYAMLProcessor(Processor):
             )
         except CalledProcessError as ex:
             raise EYAMLCommandException(
-                "The {} command cannot be run due to exit code:  {}"
-                .format(self.eyaml, ex.returncode)
+                f"The {self.eyaml} command cannot be run due to exit code:"
+                "  {ex.returncode}"
             ) from ex
 
         # While exceedingly rare and difficult to test for, it is possible
@@ -234,16 +237,17 @@ class EYAMLProcessor(Processor):
         # that works multi-platform.  So, ignore covering this case.
         if not retval: # pragma: no cover
             raise EYAMLCommandException(
-                ("The {} command was unable to encrypt your value.  Please"
-                 + " verify this process can run that command and read your"
-                 + " EYAML keys.").format(self.eyaml)
+                "The {self.eyaml} command was unable to encrypt your value."
+                "  Please verify this process can run that command and read"
+                " your EYAML keys."
             )
 
         if output is EYAMLOutputFormats.BLOCK:
-            retval = re.sub(r" +", "", retval) + "\n"
+            retval = re.sub(r" +", "", retval)
 
         self.logger.debug(
-            "EYAMLPath::encrypt_eyaml:  Encrypted result:\n{}".format(retval)
+            f"Encrypted result:\n{retval}",
+            prefix="EYAMLPath::encrypt_eyaml:  "
         )
         return retval
 
@@ -269,8 +273,7 @@ class EYAMLProcessor(Processor):
         - `YAMLPathException` when YAML Path is invalid
         """
         self.logger.verbose(
-            "Encrypting value(s) for {}."
-            .format(yaml_path)
+            f"Encrypting value(s) for {yaml_path} using {output} format."
         )
         encval: str = self.encrypt_eyaml(value, output)
         emit_format: YAMLValueFormats = YAMLValueFormats.FOLDED
