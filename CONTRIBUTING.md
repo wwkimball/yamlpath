@@ -56,7 +56,7 @@ number in the comments of your PR, like:  "Adds feature #123" or "Fixes #456".
 ### Unit Testing
 
 Every code contribution must include `pytest` unit tests.  Any contributions which _reduce_ the code coverage of the unit testing suite
-will be blocked until the missing tests are added.  Any contributins which break existing unit tests *must* include updated unit tests
+will be blocked until the missing tests are added.  Any contributions which break existing unit tests *must* include updated unit tests
 along with documentation explaining why the test(s) had to change.  Such documentation must be verbose and rational.
 
 ## Thank You
