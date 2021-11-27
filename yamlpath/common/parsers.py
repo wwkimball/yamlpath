@@ -95,6 +95,7 @@ class Parsers:
         Keyword Arguments:
         * literal (bool) `source` is literal serialized YAML data rather than a
           file-spec, so load it directly
+        * version (str) YAML version to pass to the parser (the default is 1.2)
 
         Returns:  Tuple[Any, bool] A tuple containing the document and its
         success/fail state.  The first field is the parsed document; will be
@@ -103,6 +104,7 @@ class Parsers:
         and False, otherwise.
         """
         literal = kwargs.pop("literal", False)
+        version = kwargs.pop("version", None)
         yaml_data = None
         data_available = True
 
@@ -114,13 +116,13 @@ class Parsers:
             with warnings.catch_warnings():
                 warnings.filterwarnings("error")
                 if source == "-":
-                    yaml_data = parser.load(stdin.read())
+                    yaml_data = parser.load(stdin.read(), version=version)
                 else:
                     if literal:
-                        yaml_data = parser.load(source)
+                        yaml_data = parser.load(source, version=version)
                     else:
                         with open(source, 'r', encoding='utf-8') as fhnd:
-                            yaml_data = parser.load(fhnd)
+                            yaml_data = parser.load(fhnd, version=version)
         except KeyboardInterrupt:
             logger.error("Aborting data load due to keyboard interrupt!")
             data_available = False
@@ -193,6 +195,7 @@ class Parsers:
         Keyword Arguments:
         * literal (bool) `source` is literal serialized YAML data rather than a
           file-spec, so load it directly
+        * version (str) YAML version to pass to the parser (the default is 1.2)
 
         Returns:  Generator[Tuple[Any, bool], None, None] A tuple for each
         document as it is parsed.  The first field is the parsed document; will
@@ -201,6 +204,7 @@ class Parsers:
         and False, otherwise.
         """
         literal = kwargs.pop("literal", False)
+        version = kwargs.pop("version", None)
 
         # This code traps errors and warnings from ruamel.yaml, substituting
         # lengthy stack-dumps with specific, meaningful feedback.  Further,
@@ -212,7 +216,7 @@ class Parsers:
                 warnings.filterwarnings("error")
                 if source == "-":
                     doc_yielded = False
-                    for document in parser.load_all(stdin.read()):
+                    for document in parser.load_all(stdin.read(), version=version):
                         doc_yielded = True
                         logger.debug(
                             "Yielding document from {}:".format(source),
@@ -224,11 +228,11 @@ class Parsers:
                         yield ("", True)
                 else:
                     if literal:
-                        for document in parser.load_all(source):
+                        for document in parser.load_all(source, version=version):
                             yield (document, True)
                     else:
                         with open(source, 'r', encoding='utf-8') as fhnd:
-                            for document in parser.load_all(fhnd):
+                            for document in parser.load_all(fhnd, version=version):
                                 logger.debug(
                                     "Yielding document from {}:"
                                     .format(source),
