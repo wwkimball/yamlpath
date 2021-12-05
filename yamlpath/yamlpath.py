@@ -798,10 +798,9 @@ class YAMLPath:
             segment_len = len(segment_id)
             if splat_count == 1:
                 if segment_len == 1:
-                    # /*/ -> [.=~/.*/]
-                    coal_type = PathSegmentTypes.SEARCH
-                    coal_value = SearchTerms(
-                        False, PathSearchMethods.REGEX, ".", ".*")
+                    # /*/ -> MATCH_ALL
+                    coal_type = PathSegmentTypes.MATCH_ALL
+                    coal_value = None
                 elif splat_pos == 0:
                     # /*text/ -> [.$text]
                     coal_type = PathSegmentTypes.SEARCH

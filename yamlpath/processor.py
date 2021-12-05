@@ -839,6 +839,11 @@ class Processor:
             node_coords = self._get_nodes_by_index(
                 data, yaml_path, segment_index,
                 translated_path=translated_path, ancestry=ancestry)
+        elif segment_type == PathSegmentTypes.MATCH_ALL:
+            node_coords = self._get_nodes_by_match_all(
+                data, parent=parent,
+                parentref=parentref, translated_path=translated_path,
+                ancestry=ancestry)
         elif segment_type == PathSegmentTypes.ANCHOR:
             node_coords = self._get_nodes_by_anchor(
                 data, yaml_path, segment_index,
@@ -1893,6 +1898,75 @@ class Processor:
                             prefix="Processor::_get_nodes_by_traversal:  ",
                             data=node_coord)
                         yield node_coord
+
+    def _get_nodes_by_match_all(
+        self, data: Any, **kwargs: Any
+    ) -> Generator[Any, None, None]:
+        """
+        Yield every immediate child node.
+
+        Parameters:
+        1. data (ruamel.yaml data) The parsed YAML data to process
+
+        Keyword Arguments:
+        * parent (ruamel.yaml node) The parent node from which this query
+          originates
+        * parentref (Any) The Index or Key of data within parent
+        * translated_path (YAMLPath) YAML Path indicating precisely which node
+          is being evaluated
+        * ancestry (List[AncestryEntry]) Stack of ancestors preceding the
+          present node under evaluation
+
+        Returns:  (Generator[Any, None, None]) Each node coordinate as they are
+        matched.
+        """
+        parent: Any = kwargs.pop("parent", None)
+        parentref: Any = kwargs.pop("parentref", None)
+        translated_path: YAMLPath = kwargs.pop("translated_path", YAMLPath(""))
+        ancestry: List[AncestryEntry] = kwargs.pop("ancestry", [])
+
+        if data is None:
+            self.logger.debug((
+                "Yielding a None node."),
+                prefix="Processor::_get_nodes_by_match_all:  ")
+            yield NodeCoords(None, parent, parentref, translated_path,
+                ancestry, pathseg)
+            return
+
+        if Nodes.node_is_leaf(data):
+            self.logger.debug(
+                "Yielding Scalar node:",
+                prefix="Processor::_get_nodes_by_match_all:  ", data=data)
+            yield NodeCoords(
+                data, parent, parentref, translated_path, ancestry)
+            return
+
+        if isinstance(data, (CommentedMap, dict)):
+            for key, val in data.items():
+                next_translated_path = (
+                    translated_path + YAMLPath.escape_path_section(
+                        key, translated_path.seperator))
+                next_ancestry = ancestry + [(data, key)]
+                yield NodeCoords(val, data, key, next_translated_path,
+                    next_ancestry)
+            return
+
+        if isinstance(data, (CommentedSeq, list)):
+            for idx, ele in enumerate(data):
+                next_translated_path = translated_path + f"[{idx}]"
+                next_ancestry = ancestry + [(data, idx)]
+                yield NodeCoords(ele, data, idx, next_translated_path,
+                    next_ancestry)
+            return
+
+        if isinstance(data, (CommentedSet, set)):
+            for ele in data:
+                next_translated_path = (
+                    translated_path + YAMLPath.escape_path_section(
+                        ele, translated_path.seperator))
+                yield NodeCoords(
+                    ele, parent, ele, next_translated_path, ancestry)
+            return
 
     def _get_required_nodes(
         self, data: Any, yaml_path: YAMLPath, depth: int = 0, **kwargs: Any
