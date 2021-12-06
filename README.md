@@ -266,7 +266,7 @@ ephemeral or longer-lasting virtual Python environments.
 ### Requirements
 
 This project requires [Python](https://www.python.org/) 3.  It is rigorously
-tested against Pythons 3.6 through 3.10.  Most operating systems and
+tested against Pythons 3.6 through 3.9.  Most operating systems and
 distributions have access to Python 3 even if only Python 2 -- or no Python, at
 all -- came pre-installed.  It is generally safe to have more than one version
 of Python on your system at the same time, especially when using
