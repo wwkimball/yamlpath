@@ -1,4 +1,7 @@
 3.6.4
+Enhancements:
+* Support ruamel.yaml up to version 0.17.17.
+
 Bug Fixes:
 * Refactored single-star wildcard segment (*) handling to enable filtering
   matches when subsequent segments exist; this fixes Issue #154.
