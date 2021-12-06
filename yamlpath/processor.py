@@ -1945,7 +1945,7 @@ class Processor:
 
         if isinstance(data, (CommentedMap, dict)):
             self.logger.debug(
-                f"Iterating over all keys to find ANY matches in data:",
+                "Iterating over all keys to find ANY matches in data:",
                 prefix=dbg_prefix, data=data)
             for key, val in data.items():
                 next_translated_path = (
@@ -2010,14 +2010,13 @@ class Processor:
         Returns:  (Generator[Any, None, None]) Each node coordinate as they are
         matched.
         """
-        parent: Any = kwargs.pop("parent", None)
+        dbg_prefix="Processor::_get_nodes_by_match_all_filtered:  "
         parentref: Any = kwargs.pop("parentref", None)
         translated_path: YAMLPath = kwargs.pop("translated_path", YAMLPath(""))
         ancestry: List[AncestryEntry] = kwargs.pop("ancestry", [])
         segments = yaml_path.escaped
         pathseg: PathSegment = segments[segment_index]
         next_segment_idx: int = segment_index + 1
-        dbg_prefix="Processor::_get_nodes_by_match_all_filtered:  "
 
         self.logger.debug(
             "FILTERING children in the tree at parentref,"
@@ -2030,7 +2029,7 @@ class Processor:
         # process subsequent path segments to yield them.
         if isinstance(data, dict):
             self.logger.debug(
-                f"Iterating over all keys to find ANY matches in data:",
+                "Iterating over all keys to find ANY matches in data:",
                 prefix=dbg_prefix, data=data)
             for key, val in data.items():
                 next_translated_path = (
@@ -2066,14 +2065,21 @@ class Processor:
                     " next-segment matches...", prefix=dbg_prefix)
                 next_translated_path = translated_path + f"[{idx}]"
                 next_ancestry = ancestry + [(data, idx)]
-                for child_node_coord in self._get_nodes_by_path_segment(
+                for filtered_nc in self._get_nodes_by_path_segment(
                     ele, yaml_path, next_segment_idx, parent=data,
                     parentref=idx, translated_path=next_translated_path,
                     ancestry=next_ancestry
                 ):
                     self.logger.debug(
-                        f"Yielding filtered, matched list ele at idx, {idx}:"
-                        , prefix=dbg_prefix, data=ele)
+                        "Ignoring yielded child node coordinate to yield its"
+                        " successfully matched, filtered list ele parent for"
+                        f" idx, {idx}:"
+                        , prefix=dbg_prefix
+                        , data={
+                            'ELE': ele
+                            , 'OF_DATA': data
+                            , 'IGNORING': filtered_nc
+                        })
                     yield NodeCoords(
                         ele, data, idx, next_translated_path, next_ancestry,
                         pathseg
@@ -2111,7 +2117,6 @@ class Processor:
         ancestry: List[AncestryEntry] = kwargs.pop("ancestry", [])
 
         segments = yaml_path.escaped
-        pathseg: PathSegment = segments[segment_index]
         next_segment_idx: int = segment_index + 1
         filter_results = next_segment_idx < len(segments)
 
