@@ -890,16 +890,7 @@ class YAMLPath:
             elif (segment_type == PathSegmentTypes.SEARCH
                   and isinstance(segment_attrs, SearchTerms)):
                 terms: SearchTerms = segment_attrs
-                if (terms.method == PathSearchMethods.REGEX
-                    and terms.attribute == "."
-                    and terms.term == ".*"
-                    and not terms.inverted
-                ):
-                    if add_sep:
-                        ppath += pathsep
-                    ppath += "*"
-                else:
-                    ppath += str(segment_attrs)
+                ppath += str(segment_attrs)
             elif segment_type == PathSegmentTypes.COLLECTOR:
                 ppath += str(segment_attrs)
             elif segment_type == PathSegmentTypes.TRAVERSE:
