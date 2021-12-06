@@ -876,6 +876,10 @@ class YAMLPath:
                 )
             elif segment_type == PathSegmentTypes.INDEX:
                 ppath += "[{}]".format(segment_attrs)
+            elif segment_type == PathSegmentTypes.MATCH_ALL:
+                if add_sep:
+                    ppath += pathsep
+                ppath += "*"
             elif segment_type == PathSegmentTypes.ANCHOR:
                 if add_sep:
                     ppath += "[&{}]".format(segment_attrs)
