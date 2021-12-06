@@ -2051,8 +2051,6 @@ class Processor:
                         val, data, key, next_translated_path, next_ancestry,
                         pathseg
                     )
-                    break # because we are returning the PARENT of matches
-                return
 
     def _get_nodes_by_match_all(
         self, data: Any, yaml_path: YAMLPath, segment_index: int, **kwargs: Any
