@@ -2019,8 +2019,9 @@ class Processor:
         dbg_prefix="Processor::_get_nodes_by_match_all_filtered:  "
 
         self.logger.debug(
-            "Matching FILTERED immediate children in the tree at parentref:",
-            prefix=dbg_prefix, data=parentref)
+            "Matching FILTERED immediate children in the tree at parentref,"
+            f" {parentref}, of data:",
+            prefix=dbg_prefix, data=data)
 
         # There is a filter on this segment.  Return nodes from the present
         # data if-and-only-if any of their immediate children will match the
@@ -2034,6 +2035,7 @@ class Processor:
 
         # filter_matches = False
         if isinstance(data, dict):
+            yield_parent = False
             for key, val in data.items():
                 next_translated_path = (
                     translated_path + YAMLPath.escape_path_section(
@@ -2051,6 +2053,28 @@ class Processor:
                         val, data, key, next_translated_path, next_ancestry,
                         pathseg
                     )
+            return
+
+        if isinstance(data, list):
+            for idx, ele in enumerate(data):
+                self.logger.debug(
+                    f"Recursing into INDEX '{idx}' at ref '{parentref}' for"
+                    " next-segment matches...", prefix=dbg_prefix)
+                next_translated_path = translated_path + f"[{idx}]"
+                next_ancestry = ancestry + [(data, idx)]
+                for child_node_coord in self._get_nodes_by_path_segment(
+                    ele, yaml_path, next_segment_idx, parent=data,
+                    parentref=idx, translated_path=next_translated_path,
+                    ancestry=next_ancestry
+                ):
+                    self.logger.debug(
+                        f"Yielding filtered, matched list ele at idx, {idx}:"
+                        , prefix=dbg_prefix, data=ele)
+                    yield NodeCoords(
+                        ele, data, idx, next_translated_path, next_ancestry,
+                        pathseg
+                    )
+            return
 
     def _get_nodes_by_match_all(
         self, data: Any, yaml_path: YAMLPath, segment_index: int, **kwargs: Any
