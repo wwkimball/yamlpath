@@ -86,6 +86,7 @@ class Test_Processor():
         ("/Locations/*/*", ["ny", "bstn"], True, None),
         ("/AoH_Locations/*/*/*", ["nyc", "bo"], True, None),
         ("/Weird_AoH_Locations/*/*/*", ["nyc", "bstn"], True, None),
+        ("/Set_Locations/*/*", ["New York", "Boston"], True, None),
     ])
     def test_get_nodes(self, quiet_logger, yamlpath, results, mustexist, default):
         yamldata = """---
@@ -248,6 +249,12 @@ Weird_AoH_Locations:
       New York: nyc
       Boston: bstn
   - Canada: cnd
+
+Set_Locations:
+  United States: !!set
+    ? New York
+    ? Boston
+  Canada:
 """
         yaml = YAML()
         processor = Processor(quiet_logger, yaml.load(yamldata))

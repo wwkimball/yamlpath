@@ -1935,14 +1935,6 @@ class Processor:
             f" {parentref}, in data:",
             prefix=dbg_prefix, data=data)
 
-        if data is None:
-            self.logger.debug((
-                "Yielding a None node."),
-                prefix=dbg_prefix)
-            yield NodeCoords(None, parent, parentref, translated_path,
-                ancestry, pathseg)
-            return
-
         if isinstance(data, (CommentedMap, dict)):
             self.logger.debug(
                 "Iterating over all keys to find ANY matches in data:",

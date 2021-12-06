@@ -889,7 +889,6 @@ class YAMLPath:
                 ppath += str(segment_attrs)
             elif (segment_type == PathSegmentTypes.SEARCH
                   and isinstance(segment_attrs, SearchTerms)):
-                terms: SearchTerms = segment_attrs
                 ppath += str(segment_attrs)
             elif segment_type == PathSegmentTypes.COLLECTOR:
                 ppath += str(segment_attrs)
