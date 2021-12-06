@@ -82,7 +82,11 @@ class Test_Processor():
         ("/array_of_hashes/**", [1, "one", 2, "two"], True, None),
         ("products_hash.*[dimensions.weight==4].(availability.start.date)+(availability.stop.date)", [[date(2020, 8, 1), date(2020, 9, 25)], [date(2020, 1, 1), date(2020, 1, 1)]], True, None),
         ("products_array[dimensions.weight==4].product", ["doohickey", "widget"], True, None),
-        ("(products_hash.*.dimensions.weight)[max()][parent(2)].dimensions.weight", [10], True, None)
+        ("(products_hash.*.dimensions.weight)[max()][parent(2)].dimensions.weight", [10], True, None),
+        ("/Locations/*/*", ["ny", "bstn"], True, None),
+        ("/AoH_Locations/*/*/*", ["nyc", "bo"], True, None),
+        ("/Weird_AoH_Locations/*/*/*", ["nyc", "bstn"], True, None),
+        ("/Set_Locations/*/*", ["New York", "Boston"], True, None),
     ])
     def test_get_nodes(self, quiet_logger, yamlpath, results, mustexist, default):
         yamldata = """---
@@ -222,7 +226,35 @@ products_array:
       height: 10
       depth: 1
       weight: 4
+
 ###############################################################################
+# For wildcard matching (#154)
+Locations:
+  United States:
+    New York: ny
+    Boston: bstn
+  Canada: cnd
+
+AoH_Locations:
+  - United States: us
+    New York:
+      New York City: nyc
+    Massachussets:
+      Boston: bo
+  - Canada: ca
+
+# Weird Array-of-Hashes
+Weird_AoH_Locations:
+  - United States:
+      New York: nyc
+      Boston: bstn
+  - Canada: cnd
+
+Set_Locations:
+  United States: !!set
+    ? New York
+    ? Boston
+  Canada:
 """
         yaml = YAML()
         processor = Processor(quiet_logger, yaml.load(yamldata))
