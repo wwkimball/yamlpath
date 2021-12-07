@@ -901,6 +901,15 @@ exclude:
         ("(hash)-(hoh.two.*)", [[{"key1": "value1"}]]),
         ("(aoa)-(hoa.two)", [[["value1", "value2", "value3"], ["value3"]]]),
         ("(aoh)-(aoh[max(key1)])", [[{"key2": "value2", "key3": "value3"}, {"key3": "value3"}]]),
+        ("(hash.*)&(array[1])", [["value2"]]),
+        ("(hash.*)&(array)", [["value1", "value2", "value3"]]),
+        ("(list1)&(list2)", [[2, 3]]),
+        ("(list2)&(list3)", [[3]]),
+        ("(list1)&(list3)", [[3]]),
+        ("(list1)&(list2)&(list3)", [[3]]),
+        ("(listA)&(listB)", [["B"]]),
+        ("(listB)&(listC)", [["C", "C"]]),
+        ("(listA)&(listC)", [["A", "A"]]),
     ])
     def test_collector_math(self, quiet_logger, yamlpath, results):
         yamldata = """---
@@ -912,7 +921,7 @@ hash:
 array:
   - value1
   - value2
-  - vlaue3
+  - value3
 
 hoh:
   one:
@@ -951,6 +960,31 @@ hoa:
     - value3
   three:
     - value3
+
+# Intersections
+list1:
+  - 1
+  - 2
+  - 3
+list2:
+  - 2
+  - 3
+  - 4
+list3:
+  - 3
+  - 5
+
+listA:
+  - A
+  - A
+  - B
+listB:
+  - B
+  - C
+  - C
+listC:
+  - A
+  - C
 """
         yaml = YAML()
         processor = Processor(quiet_logger, yaml.load(yamldata))
