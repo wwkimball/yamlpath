@@ -1610,9 +1610,6 @@ class Processor:
             if isinstance(unwrapped_node, (list, CommentedSet, set)):
                 for ele in unwrapped_node:
                     del_nodes.append(ele)
-            elif isinstance(node_coord.parent, dict):
-                del_nodes.append(
-                    {node_coord.parentref: unwrapped_node})
             else:
                 del_nodes.append(unwrapped_node)
 
@@ -1624,45 +1621,53 @@ class Processor:
         relay_segment: PathSegment = kwargs.pop("relay_segment")
 
         expression_path = YAMLPath(peek_path)
-
-        self.logger.debug((
-            "Getting required nodes matching collector sub-path, {}, from:"
-            ).format(peek_path),
-            prefix="Processor::_collector_intersection:  ",
-            data={
-                "segments": expression_path.unescaped,
-                "data": data})
-
         rhs_unwrapped_data: List[Any] = []
         for node_coord in self._get_required_nodes(
             data, expression_path, 0, parent=parent, parentref=parentref,
             translated_path=translated_path, ancestry=ancestry,
             relay_segment=relay_segment
         ):
-            self.logger.debug((
+            self.logger.debug(
                 "Extracting node(s) for intersection from collected result:"
-                ),
-                prefix="Processor::_collector_intersection:  ",
-                data=node_coord)
+                , prefix="Processor::_collector_intersection:  "
+                , data=node_coord)
             deeply_unwrap_nodes(rhs_unwrapped_data, node_coord)
 
-        self.logger.debug((
-            "Intersecting the following nodes from pre-gathered data:"),
-            prefix="Processor::_collector_intersection:  INTERSECT NODES->",
-            data={
-                "INTERSECTING": rhs_unwrapped_data,
-                "WITH": collected_ncs,
-            })
+        # self.logger.debug(
+        #     "Intersecting the following nodes from pre-gathered data:"
+        #     , prefix="Processor::_collector_intersection:  INTERSECT NODES->"
+        #     , data={
+        #         "INTERSECTING": rhs_unwrapped_data,
+        #         "WITH": collected_ncs,
+        #     })
 
         updated_coords = [
             nc for nc in collected_ncs
             if NodeCoords.unwrap_node_coords(nc) in rhs_unwrapped_data]
+        # updated_coords = []
+        # for nc in collected_ncs:
+        #     unwrapped_nc = nc.unwrapped_node
+        #     self.logger.debug(
+        #         "Comparing unwrapped_nc against list:"
+        #         , prefix="Processor::_collector_intersection:  EVAL->"
+        #         , data={"UNWRAPPED_NC": unwrapped_nc, "RHS_UNWRAPPED_DATA": rhs_unwrapped_data})
+        #     if unwrapped_nc in rhs_unwrapped_data:
+        #         self.logger.debug(
+        #             "Adding intersected NodeCoords:"
+        #             , prefix="Processor::_collector_intersection:  KEEP->"
+        #             , data=nc)
+        #         updated_coords.append(nc)
+        #     else:
+        #         self.logger.debug(
+        #             "Discarding NON-intersected NodeCoords:"
+        #             , prefix="Processor::_collector_intersection:  DISCARD->"
+        #             , data=nc)
 
-        self.logger.debug((
-            "Resulting data:"),
-            prefix="Processor::_collector_intersection:  DONE->",
-            data=updated_coords
-        )
+        # self.logger.debug((
+        #     "Resulting data:"),
+        #     prefix="Processor::_collector_intersection:  DONE->",
+        #     data=updated_coords
+        # )
         return updated_coords
 
     def _get_nodes_by_collector(

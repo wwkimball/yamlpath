@@ -903,6 +903,7 @@ exclude:
         ("(aoh)-(aoh[max(key1)])", [[{"key2": "value2", "key3": "value3"}, {"key3": "value3"}]]),
         ("(hash.*)&(array[1])", [["value2"]]),
         ("(hash.*)&(array)", [["value1", "value2", "value3"]]),
+        ("(array)&(hash.*)", [["value1", "value2", "value3"]]),
         ("(list1)&(list2)", [[2, 3]]),
         ("(list2)&(list3)", [[3]]),
         ("(list1)&(list3)", [[3]]),
