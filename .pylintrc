@@ -67,8 +67,12 @@ confidence=
 #     false-positives.
 # WWK-2019-05-30: Disable R0801 because similar command-line tools necessarily
 #     share duplicate code.  This is by design so each can stand-alone.
+# WWK-2021-10-26: Disable C0209 because it is merely a performance-enhancing
+#     suggestion, not a breaking issue.  I will be interested in revisiting
+#     this later, but not when I have a critical bug that I'm trying to fix.
 disable=R0401,
-      R0801
+      R0801,
+      C0209
 
 # Enable the message, report, category or checker with the given id(s). You can
 # either give multiple identifier separated by comma (,) or put this option

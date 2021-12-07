@@ -59,7 +59,12 @@ class Test_eyaml_rotate_keys():
         assert "Not a file:" in result.stderr
 
     @requireseyaml
-    def test_good_multi_replacements(self, script_runner, tmp_path_factory, old_eyaml_keys, new_eyaml_keys):
+    def test_good_multi_replacements(self, script_runner, tmp_path_factory, old_eyaml_keys, new_eyaml_keys, quiet_logger):
+        from yamlpath.func import unwrap_node_coords
+        from yamlpath.common import Parsers
+        from yamlpath import Processor
+        from yamlpath.eyaml import EYAMLProcessor
+
         simple_content = """---
         encrypted_string: ENC[PKCS7,MIIBiQYJKoZIhvcNAQcDoIIBejCCAXYCAQAxggEhMIIBHQIBADAFMAACAQEwDQYJKoZIhvcNAQEBBQAEggEAHA4rPcTzvgzPLtnGz3yoyX/kVlQ5TnPXcScXK2bwjguGZLkuzv/JVPAsOm4t6GlnROpy4zb/lUMHRJDChJhPLrSj919B8//huoMgw0EU5XTcaN6jeDDjL+vhjswjvLFOux66UwvMo8sRci/e2tlFiam8VgxzV0hpF2qRrL/l84V04gL45kq4PCYDWrJNynOwYVbSIF+qc5HaF25H8kHq1lD3RB6Ob/J942Q7k5Qt7W9mNm9cKZmxwgtUgIZWXW6mcPJ2dXDB/RuPJJSrLsb1VU/DkhdgxaNzvLCA+MViyoFUkCfHFNZbaHKNkoYXBy7dLmoh/E5tKv99FeG/7CzL3DBMBgkqhkiG9w0BBwEwHQYJYIZIAWUDBAEqBBCVU5Mjt8+4dLkoqB9YArfkgCDkdIhXR9T1M4YYa1qTE6by61VPU3g1aMExRmo4tNZ8FQ==]
         encrypted_block: >
@@ -88,10 +93,12 @@ class Test_eyaml_rotate_keys():
           - &stringStyle ENC[PKCS7,MIIBiQYJKoZIhvcNAQcDoIIBejCCAXYCAQAxggEhMIIBHQIBADAFMAACAQEwDQYJKoZIhvcNAQEBBQAEggEAIu44u62q5sVfzC7kytLi2Z/EzH2DKr4vDsoqDBeSZ71aRku/uSrjyiO4lyoq9Kva+eBAyjBay5fnqPVBaU3Rud2pdEoZEoyofi02jn4hxUKpAO1W0AUgsQolGe53qOdM4U8RbwnTR0gr3gp2mCd18pH3SRMP9ryrsBAxGzJ6mR3RgdZnlTlqVGXCeWUeVpbH+lcHw3uvd+o/xkvJ/3ypxz+rWILiAZ3QlCirzn/qb2fHuKf3VBh8RVFuQDaM5voajZlgjD6KzNCsbATOqOA6eJI4j0ngPdDlIjGHAnahuyluQ5f5SIaIjLC+ZeCOfIYni0MQ+BHO0JNbccjq2Unb7TBMBgkqhkiG9w0BBwEwHQYJYIZIAWUDBAEqBBCYmAI0Ao3Ok1cSmVw0SgQGgCBK62z1r5RfRjf1xKfqDxTsGUHfsUmM3EjGJfnWzCRvuQ==]
         block: *blockStyle
         string: *stringStyle
+        yet_another:
+          'more.complex.child': *blockStyle
         """
         simple_file = create_temp_yaml_file(tmp_path_factory, simple_content)
         anchored_file = create_temp_yaml_file(tmp_path_factory, anchored_content)
-        
+
         result = script_runner.run(
             self.command,
             "--newprivatekey={}".format(new_eyaml_keys[0]),
@@ -112,7 +119,53 @@ class Test_eyaml_rotate_keys():
         assert not simple_data == simple_content
         assert not anchored_data == anchored_content
 
-        # FIXME:  Verify that block and string formatting is correct
+        # Verify that block and string formatting is correct
+        yaml = Parsers.get_yaml_editor()
+
+        (yaml_rotated_data, doc_loaded) = Parsers.get_yaml_data(
+            yaml, quiet_logger,
+            anchored_data, literal=True)
+        if not doc_loaded:
+            # An error message has already been logged
+            assert False, "Rotated anchored data failed to load"
+
+        source_processor = Processor(quiet_logger, yaml_rotated_data)
+        for node in source_processor.get_nodes('/block', mustexist=True):
+            assert not '  ' in unwrap_node_coords(node)
+
+
+        # Test that the pre- and post-rotated values are identical
+        (yaml_anchored_data, doc_loaded) = Parsers.get_yaml_data(
+            yaml, quiet_logger,
+            anchored_content, literal=True)
+        if not doc_loaded:
+            # An error message has already been logged
+            assert False, "Original anchored data failed to load"
+
+        (yaml_rotated_data, doc_loaded) = Parsers.get_yaml_data(
+            yaml, quiet_logger,
+            anchored_data, literal=True)
+        if not doc_loaded:
+            # An error message has already been logged
+            assert False, "Rotated anchored data failed to load"
+
+        source_processor = EYAMLProcessor(
+            quiet_logger, yaml_anchored_data,
+            privatekey=old_eyaml_keys[0],
+            publickey=old_eyaml_keys[1])
+        for node in source_processor.get_eyaml_values(
+            '/block', True
+        ):
+            assert unwrap_node_coords(node) == 'This is a test value.'
+
+        rotated_processor = EYAMLProcessor(
+            quiet_logger, yaml_rotated_data,
+            privatekey=new_eyaml_keys[0],
+            publickey=new_eyaml_keys[1])
+        for node in rotated_processor.get_eyaml_values(
+            '/block', True
+        ):
+            assert unwrap_node_coords(node) == 'This is a test value.'
 
     def test_yaml_parsing_error(self, script_runner, imparsible_yaml_file, old_eyaml_keys, new_eyaml_keys):
         result = script_runner.run(

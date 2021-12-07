@@ -15,8 +15,9 @@ from os.path import isfile, exists
 from ruamel.yaml.scalarstring import FoldedScalarString
 
 from yamlpath import __version__ as YAMLPATH_VERSION
-from yamlpath.common import Parsers
+from yamlpath.common import Anchors, Parsers
 from yamlpath.eyaml.exceptions import EYAMLCommandException
+from yamlpath.eyaml.enums import EYAMLOutputFormats
 from yamlpath.eyaml import EYAMLProcessor
 from yamlpath.wrappers import ConsolePrinter
 
@@ -136,14 +137,14 @@ def main():
         processor.data = yaml_data
         for yaml_path in processor.find_eyaml_paths():
             # Use ::get_nodes() instead of ::get_eyaml_values() here in order
-            # to ignore values that have already been decrypted via their
+            # to ignore values that have already been rotated via their
             # Anchors.
-            for node_coordinate in processor.get_nodes(yaml_path):
-                node = node_coordinate.node
+            for node_coordinate in processor.get_nodes(
+                yaml_path, mustexist=True
+            ):
                 # Ignore values which are Aliases for those already decrypted
-                anchor_name = (
-                    node.anchor.value if hasattr(node, "anchor") else None
-                )
+                node = node_coordinate.node
+                anchor_name = Anchors.get_node_anchor(node)
                 if anchor_name is not None:
                     if anchor_name in seen_anchors:
                         continue
@@ -163,9 +164,9 @@ def main():
 
                 # Prefer block (folded) values unless the original YAML value
                 # was already a massivly long (string) line.
-                output = "block"
+                output = EYAMLOutputFormats.BLOCK
                 if not isinstance(node, FoldedScalarString):
-                    output = "string"
+                    output = EYAMLOutputFormats.STRING
 
                 # Re-encrypt the value with new EYAML keys
                 processor.publickey = args.newpublickey
@@ -190,7 +191,7 @@ def main():
                 copy2(yaml_file, backup_file)
 
             log.verbose("Writing changed data to {}.".format(yaml_file))
-            with open(yaml_file, 'w') as yaml_dump:
+            with open(yaml_file, 'w', encoding='utf-8') as yaml_dump:
                 yaml.dump(yaml_data, yaml_dump)
 
     sys.exit(exit_state)

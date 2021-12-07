@@ -800,10 +800,9 @@ class YAMLPath:
             segment_len = len(segment_id)
             if splat_count == 1:
                 if segment_len == 1:
-                    # /*/ -> [.=~/.*/]
-                    coal_type = PathSegmentTypes.SEARCH
-                    coal_value = SearchTerms(
-                        False, PathSearchMethods.REGEX, ".", ".*")
+                    # /*/ -> MATCH_ALL
+                    coal_type = PathSegmentTypes.MATCH_ALL
+                    coal_value = None
                 elif splat_pos == 0:
                     # /*text/ -> [.$text]
                     coal_type = PathSegmentTypes.SEARCH
@@ -879,6 +878,10 @@ class YAMLPath:
                 )
             elif segment_type == PathSegmentTypes.INDEX:
                 ppath += "[{}]".format(segment_attrs)
+            elif segment_type == PathSegmentTypes.MATCH_ALL:
+                if add_sep:
+                    ppath += pathsep
+                ppath += "*"
             elif segment_type == PathSegmentTypes.ANCHOR:
                 if add_sep:
                     ppath += "[&{}]".format(segment_attrs)
@@ -888,17 +891,7 @@ class YAMLPath:
                 ppath += str(segment_attrs)
             elif (segment_type == PathSegmentTypes.SEARCH
                   and isinstance(segment_attrs, SearchTerms)):
-                terms: SearchTerms = segment_attrs
-                if (terms.method == PathSearchMethods.REGEX
-                    and terms.attribute == "."
-                    and terms.term == ".*"
-                    and not terms.inverted
-                ):
-                    if add_sep:
-                        ppath += pathsep
-                    ppath += "*"
-                else:
-                    ppath += str(segment_attrs)
+                ppath += str(segment_attrs)
             elif segment_type == PathSegmentTypes.COLLECTOR:
                 ppath += str(segment_attrs)
             elif segment_type == PathSegmentTypes.TRAVERSE:

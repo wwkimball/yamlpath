@@ -36,6 +36,9 @@ class PathSegmentTypes(Enum):
         Traverses the document tree deeply.  If there is a next segment, it
         must match or no data is matched.  When there is no next segment, every
         leaf node matches.
+
+    `MATCH_ALL`
+        Matches every immediate child node.
     """
 
     ANCHOR = auto()
@@ -45,3 +48,4 @@ class PathSegmentTypes(Enum):
     SEARCH = auto()
     TRAVERSE = auto()
     KEYWORD_SEARCH = auto()
+    MATCH_ALL = auto()

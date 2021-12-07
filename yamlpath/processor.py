@@ -163,8 +163,7 @@ class Processor:
 
         if mustexist:
             self.logger.debug(
-                "Processor::set_value:  Seeking required node at {}."
-                .format(yaml_path)
+                f"Processor::set_value:  Seeking required node at {yaml_path}."
             )
             found_nodes: int = 0
             for req_node in self._get_required_nodes(self.data, yaml_path):
@@ -216,10 +215,9 @@ class Processor:
                                                     YAMLValueFormats.DEFAULT)
         tag: str = kwargs.pop("tag", None)
 
-        self.logger.debug((
-            "Attempting to change a node coordinate of type {} to value with"
-            " format <{}>:"
-            ).format(type(node_coord), value_format),
+        self.logger.debug(
+            "Attempting to change a node coordinate of type"
+            f" {type(node_coord)} to value with format <{value_format}>:",
             data={
                 "value": value,
                 "node_coord": node_coord
@@ -841,6 +839,11 @@ class Processor:
             node_coords = self._get_nodes_by_index(
                 data, yaml_path, segment_index,
                 translated_path=translated_path, ancestry=ancestry)
+        elif segment_type == PathSegmentTypes.MATCH_ALL:
+            node_coords = self._get_nodes_by_match_all(
+                data, yaml_path, segment_index, parent=parent,
+                parentref=parentref, translated_path=translated_path,
+                ancestry=ancestry)
         elif segment_type == PathSegmentTypes.ANCHOR:
             node_coords = self._get_nodes_by_anchor(
                 data, yaml_path, segment_index,
@@ -1969,6 +1972,244 @@ class Processor:
                             data=node_coord)
                         yield node_coord
 
+    def _get_nodes_by_match_all_unfiltered(
+        self, data: Any, yaml_path: YAMLPath, segment_index: int, **kwargs: Any
+    ) -> Generator[Any, None, None]:
+        """
+        Yield every immediate, non-leaf child node.
+
+        Parameters:
+        1. data (ruamel.yaml data) The parsed YAML data to process
+        2. yaml_path (yamlpath.Path) The YAML Path being processed
+        3. segment_index (int) Segment index of the YAML Path to process
+
+        Keyword Arguments:
+        * parent (ruamel.yaml node) The parent node from which this query
+          originates
+        * parentref (Any) The Index or Key of data within parent
+        * translated_path (YAMLPath) YAML Path indicating precisely which node
+          is being evaluated
+        * ancestry (List[AncestryEntry]) Stack of ancestors preceding the
+          present node under evaluation
+
+        Returns:  (Generator[Any, None, None]) Each node coordinate as they are
+        matched.
+        """
+        dbg_prefix="Processor::_get_nodes_by_match_all_unfiltered:  "
+        parent: Any = kwargs.pop("parent", None)
+        parentref: Any = kwargs.pop("parentref", None)
+        translated_path: YAMLPath = kwargs.pop("translated_path", YAMLPath(""))
+        ancestry: List[AncestryEntry] = kwargs.pop("ancestry", [])
+        segments = yaml_path.escaped
+        pathseg: PathSegment = segments[segment_index]
+
+        self.logger.debug(
+            "Gathering ALL immediate children in the tree at parentref,"
+            f" {parentref}, in data:",
+            prefix=dbg_prefix, data=data)
+
+        if isinstance(data, (CommentedMap, dict)):
+            self.logger.debug(
+                "Iterating over all keys to find ANY matches in data:",
+                prefix=dbg_prefix, data=data)
+            for key, val in data.items():
+                next_translated_path = (
+                    translated_path + YAMLPath.escape_path_section(
+                        key, translated_path.seperator))
+                next_ancestry = ancestry + [(data, key)]
+                self.logger.debug(
+                    f"Yielding dict value at key, {key} from data:",
+                    prefix=dbg_prefix, data={'VAL': val, 'OF_DATA': data})
+                yield NodeCoords(val, data, key, next_translated_path,
+                    next_ancestry, pathseg)
+            return
+
+        if isinstance(data, (CommentedSeq, list)):
+            for idx, ele in enumerate(data):
+                next_translated_path = translated_path + f"[{idx}]"
+                next_ancestry = ancestry + [(data, idx)]
+                self.logger.debug(
+                    f"Yielding list element at index, {idx}:",
+                    prefix=dbg_prefix, data=ele)
+                yield NodeCoords(ele, data, idx, next_translated_path,
+                    next_ancestry, pathseg)
+            return
+
+        if isinstance(data, (CommentedSet, set)):
+            for ele in data:
+                next_translated_path = (
+                    translated_path + YAMLPath.escape_path_section(
+                        ele, translated_path.seperator))
+                self.logger.debug(
+                    "Yielding set element:",
+                    prefix=dbg_prefix, data=ele)
+                yield NodeCoords(
+                    ele, parent, ele, next_translated_path, ancestry, pathseg)
+            return
+
+        self.logger.debug(
+            "NOT yielding Scalar node (* excludes scalars):",
+            prefix=dbg_prefix, data=data)
+        return
+
+    def _get_nodes_by_match_all_filtered(
+        self, data: Any, yaml_path: YAMLPath, segment_index: int, **kwargs: Any
+    ) -> Generator[Any, None, None]:
+        """
+        Yield immediate child nodes whose children match additional filters.
+
+        Parameters:
+        1. data (ruamel.yaml data) The parsed YAML data to process
+        2. yaml_path (yamlpath.Path) The YAML Path being processed
+        3. segment_index (int) Segment index of the YAML Path to process
+
+        Keyword Arguments:
+        * parent (ruamel.yaml node) The parent node from which this query
+          originates
+        * parentref (Any) The Index or Key of data within parent
+        * translated_path (YAMLPath) YAML Path indicating precisely which node
+          is being evaluated
+        * ancestry (List[AncestryEntry]) Stack of ancestors preceding the
+          present node under evaluation
+
+        Returns:  (Generator[Any, None, None]) Each node coordinate as they are
+        matched.
+        """
+        dbg_prefix="Processor::_get_nodes_by_match_all_filtered:  "
+        parentref: Any = kwargs.pop("parentref", None)
+        translated_path: YAMLPath = kwargs.pop("translated_path", YAMLPath(""))
+        ancestry: List[AncestryEntry] = kwargs.pop("ancestry", [])
+        segments = yaml_path.escaped
+        pathseg: PathSegment = segments[segment_index]
+        next_segment_idx: int = segment_index + 1
+
+        self.logger.debug(
+            "FILTERING children in the tree at parentref,"
+            f" {parentref}, of data:",
+            prefix=dbg_prefix, data=data)
+
+        # There is a filter on this segment.  Return nodes from the present
+        # data if-and-only-if any of their immediate children will match the
+        # filter.  Do not return the child nodes; the caller will continue to
+        # process subsequent path segments to yield them.
+        if isinstance(data, dict):
+            self.logger.debug(
+                "Iterating over all keys to find ANY matches in data:",
+                prefix=dbg_prefix, data=data)
+            for key, val in data.items():
+                next_translated_path = (
+                    translated_path + YAMLPath.escape_path_section(
+                        key, translated_path.seperator))
+                next_ancestry = ancestry + [(data, key)]
+                for filtered_nc in self._get_nodes_by_path_segment(
+                    val, yaml_path, next_segment_idx, parent=data,
+                    parentref=key, translated_path=next_translated_path,
+                    ancestry=next_ancestry
+                ):
+                    self.logger.debug(
+                        "Ignoring yielded child node coordinate to yield its"
+                        " successfully matched, filtered dict val parent for"
+                        f" key, {key}:"
+                        , prefix=dbg_prefix
+                        , data={
+                            'VAL': val
+                            , 'OF_DATA': data
+                            , 'IGNORING': filtered_nc
+                        })
+                    yield NodeCoords(
+                        val, data, key, next_translated_path, next_ancestry,
+                        pathseg
+                    )
+                    break # because we need only the matching parent
+            return
+
+        if isinstance(data, list):
+            for idx, ele in enumerate(data):
+                self.logger.debug(
+                    f"Recursing into INDEX '{idx}' at ref '{parentref}' for"
+                    " next-segment matches...", prefix=dbg_prefix)
+                next_translated_path = translated_path + f"[{idx}]"
+                next_ancestry = ancestry + [(data, idx)]
+                for filtered_nc in self._get_nodes_by_path_segment(
+                    ele, yaml_path, next_segment_idx, parent=data,
+                    parentref=idx, translated_path=next_translated_path,
+                    ancestry=next_ancestry
+                ):
+                    self.logger.debug(
+                        "Ignoring yielded child node coordinate to yield its"
+                        " successfully matched, filtered list ele parent for"
+                        f" idx, {idx}:"
+                        , prefix=dbg_prefix
+                        , data={
+                            'ELE': ele
+                            , 'OF_DATA': data
+                            , 'IGNORING': filtered_nc
+                        })
+                    yield NodeCoords(
+                        ele, data, idx, next_translated_path, next_ancestry,
+                        pathseg
+                    )
+                    break # because we need only the matching parent
+            return
+
+    def _get_nodes_by_match_all(
+        self, data: Any, yaml_path: YAMLPath, segment_index: int, **kwargs: Any
+    ) -> Generator[Any, None, None]:
+        """
+        Yield every immediate child node.
+
+        Parameters:
+        1. data (ruamel.yaml data) The parsed YAML data to process
+        2. yaml_path (yamlpath.Path) The YAML Path being processed
+        3. segment_index (int) Segment index of the YAML Path to process
+
+        Keyword Arguments:
+        * parent (ruamel.yaml node) The parent node from which this query
+          originates
+        * parentref (Any) The Index or Key of data within parent
+        * translated_path (YAMLPath) YAML Path indicating precisely which node
+          is being evaluated
+        * ancestry (List[AncestryEntry]) Stack of ancestors preceding the
+          present node under evaluation
+
+        Returns:  (Generator[Any, None, None]) Each node coordinate as they are
+        matched.
+        """
+        dbg_prefix="Processor::_get_nodes_by_match_all:  "
+        parent: Any = kwargs.pop("parent", None)
+        parentref: Any = kwargs.pop("parentref", None)
+        translated_path: YAMLPath = kwargs.pop("translated_path", YAMLPath(""))
+        ancestry: List[AncestryEntry] = kwargs.pop("ancestry", [])
+
+        segments = yaml_path.escaped
+        next_segment_idx: int = segment_index + 1
+        filter_results = next_segment_idx < len(segments)
+
+        self.logger.debug(
+            "Processing either FILTERED or UNFILTERED nodes from data:"
+            , prefix=dbg_prefix, data=data)
+
+        if filter_results:
+            # Of data, yield every node which has children matching next seg
+            all_coords = self._get_nodes_by_match_all_filtered(
+                data, yaml_path, segment_index,
+                parent=parent, parentref=parentref,
+                translated_path=translated_path, ancestry=ancestry
+            )
+        else:
+            # Of data, yield every node
+            all_coords = self._get_nodes_by_match_all_unfiltered(
+                data, yaml_path, segment_index,
+                parent=parent, parentref=parentref,
+                translated_path=translated_path, ancestry=ancestry
+            )
+
+        for all_coord in all_coords:
+            self.logger.debug(
+                "Yielding matched child node of source data:"
+                , prefix=dbg_prefix, data={'NODE': all_coord, 'DATA': data})
+            yield all_coord
+
     def _get_required_nodes(
         self, data: Any, yaml_path: YAMLPath, depth: int = 0, **kwargs: Any
     ) -> Generator[NodeCoords, None, None]:
@@ -2422,7 +2663,7 @@ class Processor:
             change_node, value, value_format, tag=value_tag)
 
         self.logger.debug(
-            "Changing the following <{}> formatted node:".format(value_format),
+            f"Changing the following <{value_format}> formatted node:",
             prefix="Processor::_update_node:  ",
             data={ "__FROM__": change_node, "___TO___": new_node })
 

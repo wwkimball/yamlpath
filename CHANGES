@@ -1,3 +1,24 @@
+3.6.4
+Enhancements:
+* Support ruamel.yaml up to version 0.17.17.
+
+Bug Fixes:
+* Refactored single-star wildcard segment (*) handling to enable filtering
+  matches when subsequent segments exist; this fixes Issue #154.
+
+3.6.3
+Bug Fixes:
+* The eyaml-rotate-keys command-line tool failed to preserve block-style EYAML
+  strings after key rotation.
+
+3.6.2:
+Bug Fixes:
+* The eyaml-rotate-keys command-line tool would generate a stack-dump when the
+  key for an encrypted value contained dots.  The underlying library for this
+  tool now safely generates the internal YAMLPaths it uses.
+* The default encoding when opening files is now set to utf-8 to support
+  extended character sets on Windows.
+
 3.6.1:
 Enhancements:
 * Enable verified support for ruamel.yaml up to version 0.17.10.

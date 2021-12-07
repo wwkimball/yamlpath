@@ -12,8 +12,9 @@ from typing import Any, Generator, List, Optional
 from ruamel.yaml.comments import CommentedSeq, CommentedMap
 
 from yamlpath import YAMLPath
+from yamlpath.common import Anchors
 from yamlpath.eyaml.enums import EYAMLOutputFormats
-from yamlpath.enums import YAMLValueFormats
+from yamlpath.enums import YAMLValueFormats, PathSeperators
 from yamlpath.eyaml.exceptions import EYAMLCommandException
 from yamlpath.wrappers import ConsolePrinter
 from yamlpath import Processor
@@ -45,14 +46,14 @@ class EYAMLProcessor(Processor):
 
         Raises:  N/A
         """
-        self.eyaml: Optional[str] = kwargs.pop("binary", "eyaml")
+        self.eyaml: str = str(kwargs.pop("binary", "eyaml"))
         self.publickey: Optional[str] = kwargs.pop("publickey", None)
         self.privatekey: Optional[str] = kwargs.pop("privatekey", None)
         super().__init__(logger, data)
 
     # pylint: disable=locally-disabled,too-many-branches
     def _find_eyaml_paths(
-        self, data: Any, build_path: str = ""
+        self, data: Any, build_path: YAMLPath
     ) -> Generator[YAMLPath, None, None]:
         """
         Find every encrypted value and report each as a YAML Path.
@@ -62,7 +63,7 @@ class EYAMLProcessor(Processor):
 
         Parameters:
         1. data (Any) The parsed YAML data to process
-        2. build_path (str) A YAML Path under construction
+        2. build_path (YAMLPath) A YAML Path under construction
 
         Returns:  (Generator[Path, None, None]) each YAML Path entry as they
             are discovered
@@ -70,27 +71,28 @@ class EYAMLProcessor(Processor):
         Raises:  N/A
         """
         if isinstance(data, CommentedSeq):
-            build_path += "["
             for idx, ele in enumerate(data):
-                if hasattr(ele, "anchor") and ele.anchor.value is not None:
-                    tmp_path = build_path + "&" + ele.anchor.value + "]"
+                node_anchor = Anchors.get_node_anchor(ele)
+                if node_anchor is not None:
+                    escaped_section = YAMLPath.escape_path_section(
+                        node_anchor, PathSeperators.DOT)
+                    tmp_path_segment = f"[&{escaped_section}]"
                 else:
-                    tmp_path = build_path + str(idx) + "]"
+                    tmp_path_segment = f"[{idx}]"
 
+                tmp_path = build_path + tmp_path_segment
                 if self.is_eyaml_value(ele):
-                    yield YAMLPath(tmp_path)
+                    yield tmp_path
                 else:
                     for subpath in self._find_eyaml_paths(ele, tmp_path):
                         yield subpath
 
         elif isinstance(data, CommentedMap):
-            if build_path:
-                build_path += "."
-
             for key, val in data.non_merged_items():
-                tmp_path = build_path + str(key)
+                tmp_path = build_path + YAMLPath.escape_path_section(
+                    key, PathSeperators.DOT)
                 if self.is_eyaml_value(val):
-                    yield YAMLPath(tmp_path)
+                    yield tmp_path
                 else:
                     for subpath in self._find_eyaml_paths(val, tmp_path):
                         yield subpath
@@ -107,7 +109,7 @@ class EYAMLProcessor(Processor):
         Raises:  N/A
         """
         # Initiate the scan from the data root
-        for path in self._find_eyaml_paths(self.data):
+        for path in self._find_eyaml_paths(self.data, YAMLPath()):
             yield path
 
     def decrypt_eyaml(self, value: str) -> str:
@@ -129,18 +131,22 @@ class EYAMLProcessor(Processor):
         if not self._can_run_eyaml():
             raise EYAMLCommandException("No accessible eyaml command.")
 
-        cmdstr: str = "{} decrypt --quiet --stdin".format(self.eyaml)
+        cmd: List[str] = [
+            self.eyaml,
+            'decrypt',
+            '--quiet',
+            '--stdin'
+        ]
         if self.publickey:
-            cmdstr += " --pkcs7-public-key={}".format(self.publickey)
+            cmd.append(f"--pkcs7-public-key={self.publickey}")
         if self.privatekey:
-            cmdstr += " --pkcs7-private-key={}".format(self.privatekey)
+            cmd.append(f"--pkcs7-private-key={self.privatekey}")
 
-        cmd: List[str] = cmdstr.split()
         cleanval: str = str(value).replace("\n", "").replace(" ", "").rstrip()
         bval: bytes = cleanval.encode("ascii")
         self.logger.debug(
-            "EYAMLPath::decrypt_eyaml:  About to execute {} against:\n{}"
-            .format(cmdstr, cleanval)
+            f"About to execute {' '.join(cmd)} against:\n{cleanval}",
+            prefix="EYAMLPath::decrypt_eyaml:  "
         )
 
         try:
@@ -155,19 +161,19 @@ class EYAMLProcessor(Processor):
             ).stdout.decode('ascii').rstrip()
         except CalledProcessError as ex:
             raise EYAMLCommandException(
-                "The {} command cannot be run due to exit code:  {}"
-                .format(self.eyaml, ex.returncode)
+                f"The {self.eyaml} command cannot be run due to exit code:"
+                f"  {ex.returncode}"
             ) from ex
 
         # Check for bad decryptions
         self.logger.debug(
-            "EYAMLPath::decrypt_eyaml:  Decrypted result:  {}".format(retval)
+            f"EYAMLPath::decrypt_eyaml:  Decrypted result:  {retval}"
         )
         if not retval or retval == cleanval:
             raise EYAMLCommandException(
                 "Unable to decrypt value!  Please verify you are using the"
-                + " correct old EYAML keys and the value is not corrupt:  {}"
-                .format(cleanval)
+                " correct old EYAML keys and the value is not corrupt:"
+                "    {cleanval}"
             )
 
         return retval
@@ -194,20 +200,23 @@ class EYAMLProcessor(Processor):
 
         if not self._can_run_eyaml():
             raise EYAMLCommandException(
-                "The eyaml binary is not executable at {}.".format(self.eyaml)
+                f"The eyaml binary is not executable at:  {self.eyaml}"
             )
 
-        cmdstr: str = ("{} encrypt --quiet --stdin --output={}"
-                       .format(self.eyaml, output))
+        cmd: List[str] = [
+            self.eyaml,
+            'encrypt',
+            '--quiet',
+            '--stdin',
+            f"--output={output}"
+        ]
         if self.publickey:
-            cmdstr += " --pkcs7-public-key={}".format(self.publickey)
+            cmd.append(f"--pkcs7-public-key={self.publickey}")
         if self.privatekey:
-            cmdstr += " --pkcs7-private-key={}".format(self.privatekey)
+            cmd.append(f"--pkcs7-private-key={self.privatekey}")
 
-        cmd: List[str] = cmdstr.split()
         self.logger.debug(
-            "EYAMLPath::encrypt_eyaml:  About to execute:  {}"
-            .format(" ".join(cmd))
+            f"EYAMLPath::encrypt_eyaml:  About to execute:  {' '.join(cmd)}"
         )
         bval: bytes = value.encode("ascii")
 
@@ -217,13 +226,13 @@ class EYAMLProcessor(Processor):
             retval: str = (
                 run(cmd, stdout=PIPE, input=bval, check=True, shell=False)
                 .stdout
-                .decode('ascii')
+                .decode("ascii")
                 .rstrip()
             )
         except CalledProcessError as ex:
             raise EYAMLCommandException(
-                "The {} command cannot be run due to exit code:  {}"
-                .format(self.eyaml, ex.returncode)
+                f"The {self.eyaml} command cannot be run due to exit code:"
+                f"  {ex.returncode}"
             ) from ex
 
         # While exceedingly rare and difficult to test for, it is possible
@@ -232,16 +241,17 @@ class EYAMLProcessor(Processor):
         # that works multi-platform.  So, ignore covering this case.
         if not retval: # pragma: no cover
             raise EYAMLCommandException(
-                ("The {} command was unable to encrypt your value.  Please"
-                 + " verify this process can run that command and read your"
-                 + " EYAML keys.").format(self.eyaml)
+                f"The {self.eyaml} command was unable to encrypt your value."
+                "  Please verify this process can run that command and read"
+                " your EYAML keys."
             )
 
         if output is EYAMLOutputFormats.BLOCK:
             retval = re.sub(r" +", "", retval) + "\n"
 
         self.logger.debug(
-            "EYAMLPath::encrypt_eyaml:  Encrypted result:\n{}".format(retval)
+            f"Encrypted result:\n{retval}",
+            prefix="EYAMLPath::encrypt_eyaml:  "
         )
         return retval
 
@@ -267,8 +277,7 @@ class EYAMLProcessor(Processor):
         - `YAMLPathException` when YAML Path is invalid
         """
         self.logger.verbose(
-            "Encrypting value(s) for {}."
-            .format(yaml_path)
+            f"Encrypting value(s) for {yaml_path} using {output} format."
         )
         encval: str = self.encrypt_eyaml(value, output)
         emit_format: YAMLValueFormats = YAMLValueFormats.FOLDED
@@ -304,9 +313,7 @@ class EYAMLProcessor(Processor):
         Raises:
         - `YAMLPathException` when YAML Path is invalid
         """
-        self.logger.verbose(
-            "Decrypting value(s) at {}.".format(yaml_path)
-        )
+        self.logger.verbose(f"Decrypting value(s) at {yaml_path}.")
         for node in self.get_nodes(yaml_path, mustexist=mustexist,
                                    default_value=default_value):
             plain_text: str = self.decrypt_eyaml(node.node)
