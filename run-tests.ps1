@@ -66,14 +66,14 @@ ForEach ($EnvDir in $EnvDirs) {
     }
 
     Write-Output "...upgrading testing tools"
-    pip install --upgrade mypy pytest pytest-cov pytest-console-scripts pylint coveralls pep257
+    pip install --upgrade mypy pytest pytest-cov pytest-console-scripts pylint coveralls pydocstyle
 
-    Write-Output "`nPEP257..."
-    pep257 yamlpath | Out-String
+    Write-Output "`nPYDOCSTYLE..."
+    pydocstyle yamlpath | Out-String
     if (!$?) {
         & deactivate
         Remove-Item -Recurse -Force $TmpVEnv
-        Write-Error "PEP257 Error: $?"
+        Write-Error "PYDOCSTYLE Error: $?"
         exit 9
     }
 
