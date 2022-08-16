@@ -870,7 +870,10 @@ def process_yaml_file(
     return exit_state
 
 def main():
-    """Main code."""
+    """Perform the work specified via CLI arguments and exit.
+
+    Main code.
+    """
     # Process any command-line arguments
     args = processcli()
     log = ConsolePrinter(args)

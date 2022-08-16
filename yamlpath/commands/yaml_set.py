@@ -452,7 +452,10 @@ def _ymk_nodes(
 
 # pylint: disable=locally-disabled,too-many-locals,too-many-branches,too-many-statements
 def main():
-    """Main code."""
+    """Perform the work specified via CLI arguments and exit.
+
+    Main code.
+    """
     args = processcli()
     log = ConsolePrinter(args)
     validateargs(args, log)
