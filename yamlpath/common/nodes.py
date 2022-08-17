@@ -4,7 +4,6 @@ Implement Nodes, a static library of generally-useful code for data nodes.
 Copyright 2020 William W. Kimball, Jr. MBA MSIS
 """
 from ast import literal_eval
-from distutils.util import strtobool
 from typing import Any
 
 from ruamel.yaml.comments import CommentedSeq, CommentedMap, TaggedScalar
@@ -117,7 +116,7 @@ class Nodes:
             if isinstance(value, bool):
                 new_value = value
             else:
-                new_value = strtobool(value)
+                new_value = Nodes.str_to_truth_int(value)
         elif valform == YAMLValueFormats.FLOAT:
             try:
                 new_value = float(value)
@@ -485,3 +484,22 @@ class Nodes:
         except SyntaxError:
             typed_value = value
         return typed_value
+
+    @staticmethod
+    def str_to_truth_int(value: str) -> int:
+        """
+        Convert a string representation of truth to true (1) or false (0).
+
+        True values are 'y', 'yes', 't', 'true', 'on' and '1';
+        False values are 'n', 'no', 'f', 'false', 'off' and '0'.
+        Raises ValueError if val is anything else.
+
+        As advised by PEP632, this function implements distutils.util.strtobool
+        from the official Python 3.9 documentation.
+        """
+        lower_value = value.lower() if value else value
+        if lower_value in ('y', 'yes', 't', 'true', 'on', '1'):
+            return 1
+        if lower_value in ('n', 'no', 'f', 'false', 'off', '0'):
+            return 0
+        raise ValueError("'{}' is not a representation of truth".format(value))
