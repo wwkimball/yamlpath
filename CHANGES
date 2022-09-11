@@ -1,3 +1,10 @@
+3.7.0
+Enhancements:
+* Add a new Collector Math Operator:  & (intersection)
+  As in set mathematics, this yields only elements of two collections which are
+  common to both collections.  Unlike set methematics, collections allow
+  duplicate elements.
+
 3.6.4
 Enhancements:
 * Support ruamel.yaml up to version 0.17.17.

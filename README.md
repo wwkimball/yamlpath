@@ -242,9 +242,9 @@ YAML Path understands these segment types:
   * `[parent([STEPS])]`, Step up 1-N levels in the document from the present
     node
 * Collectors:  Placing any portion of the YAML Path within parenthesis defines a
-  virtual list collector, like `(YAML Path)`; concatenation and exclusion
-  operators are supported -- `+` and `-`, respectively -- along with nesting,
-  like `(...)-((...)+(...))`
+  virtual list collector, like `(YAML Path)`; concatenation, exclusion, and
+  intersection operators are supported -- `+`, `-`, and `&`, respectively --
+  along with nesting, like `(...)-((...)+(...))&(...)`
 * Complex combinations:
   `some::deep.hierarchy[with!=""].'any.valid'[.=~/(yaml|json)/][data%structure].or.complexity[4].2`
   or `/some::deep/hierarchy[with!=""]/any*.*valid[.=~/(yaml|json)/][data%structure]/or/compl*xity[4]/2/**`

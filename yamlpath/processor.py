@@ -1500,7 +1500,7 @@ class Processor:
         return updated_coords
 
     def _collector_subtraction(
-        self, data: Any, peek_path: YAMLPath, collected_ncs: List[NodeCoords],
+        self, data: Any, peek_path: YAMLPath, lhs_ncs: List[NodeCoords],
         **kwargs
     ) -> List[NodeCoords]:
         """Helper for _get_nodes_by_collector."""
@@ -1552,14 +1552,14 @@ class Processor:
             prefix="Processor::_collector_subtraction:  REMOVAL NODES->",
             data={
                 "REMOVING": rem_data,
-                "FROM": collected_ncs,
+                "FROM": lhs_ncs,
             })
 
         # If LHS in RHS, delete it
         rem_dels = []
         rem_idx = 0
         updated_coords: List[NodeCoords] = []
-        for lhs in collected_ncs:
+        for lhs in lhs_ncs:
             unwrapped_lhs = lhs.unwrapped_node
             deepest_lhs = lhs.deepest_node_coord
             append_node = True
@@ -1599,10 +1599,23 @@ class Processor:
         return updated_coords
 
     def _collector_intersection(
-        self, data: Any, peek_path: YAMLPath, collected_ncs: List[NodeCoords],
+        self, data: Any, peek_path: YAMLPath, lhs_ncs: List[NodeCoords],
         **kwargs
     ) -> List[NodeCoords]:
-        """Helper for _get_nodes_by_collector."""
+        """
+        Helper for _get_nodes_by_collector.
+
+        Defined behaviors for intersection:
+        * list&list:  yield with duplicates
+        * list&set:  yield no duplicates
+        * set&set:  yield no duplicates
+        * hash&hash:  yield only identical key-value pairs (both must match)
+        * list&hash:  yield with duplicates hash values common to list
+        * list&hash[name()]:  yield with duplicates hash keys common to list
+        * set&hash:  yield without duplicates hash values common to set
+        * set&hash[name()]:  yield without duplicates hash keys common to set
+        * hash[name()]&hash[name()]:  yield only key names common to both
+        """
         def deeply_unwrap_nodes(
             del_nodes: List[Any], node_coord: NodeCoords
         ) -> None:
@@ -1619,11 +1632,21 @@ class Processor:
         translated_path: YAMLPath = kwargs.pop("translated_path", YAMLPath(""))
         ancestry: List[AncestryEntry] = kwargs.pop("ancestry", [])
         relay_segment: PathSegment = kwargs.pop("relay_segment")
+        predecessor_segment: PathSegment = kwargs.pop("predecessor_segment")
 
-        expression_path = YAMLPath(peek_path)
+        self.logger.debug(
+            "My segment and my predecessor's segments are:"
+            , prefix="Processor::_collector_intersection:  "
+            , data={
+                'MY_SEGMENT': relay_segment
+                , 'PREDECESSOR': predecessor_segment
+            })
+
+
+
         rhs_unwrapped_data: List[Any] = []
         for node_coord in self._get_required_nodes(
-            data, expression_path, 0, parent=parent, parentref=parentref,
+            data, peek_path, 0, parent=parent, parentref=parentref,
             translated_path=translated_path, ancestry=ancestry,
             relay_segment=relay_segment
         ):
@@ -1633,41 +1656,10 @@ class Processor:
                 , data=node_coord)
             deeply_unwrap_nodes(rhs_unwrapped_data, node_coord)
 
-        # self.logger.debug(
-        #     "Intersecting the following nodes from pre-gathered data:"
-        #     , prefix="Processor::_collector_intersection:  INTERSECT NODES->"
-        #     , data={
-        #         "INTERSECTING": rhs_unwrapped_data,
-        #         "WITH": collected_ncs,
-        #     })
-
         updated_coords = [
-            nc for nc in collected_ncs
+            nc for nc in lhs_ncs
             if NodeCoords.unwrap_node_coords(nc) in rhs_unwrapped_data]
-        # updated_coords = []
-        # for nc in collected_ncs:
-        #     unwrapped_nc = nc.unwrapped_node
-        #     self.logger.debug(
-        #         "Comparing unwrapped_nc against list:"
-        #         , prefix="Processor::_collector_intersection:  EVAL->"
-        #         , data={"UNWRAPPED_NC": unwrapped_nc, "RHS_UNWRAPPED_DATA": rhs_unwrapped_data})
-        #     if unwrapped_nc in rhs_unwrapped_data:
-        #         self.logger.debug(
-        #             "Adding intersected NodeCoords:"
-        #             , prefix="Processor::_collector_intersection:  KEEP->"
-        #             , data=nc)
-        #         updated_coords.append(nc)
-        #     else:
-        #         self.logger.debug(
-        #             "Discarding NON-intersected NodeCoords:"
-        #             , prefix="Processor::_collector_intersection:  DISCARD->"
-        #             , data=nc)
 
-        # self.logger.debug((
-        #     "Resulting data:"),
-        #     prefix="Processor::_collector_intersection:  DONE->",
-        #     data=updated_coords
-        # )
         return updated_coords
 
     def _get_nodes_by_collector(
@@ -1756,8 +1748,8 @@ class Processor:
                         node_coord.path, node_coord.ancestry, pathseg))
             node_coords = flat_nodes
 
-        # As long as each next segment is an ADDITION or SUBTRACTION
-        # COLLECTOR, keep combining the results.
+        # As long as each next segment is an ADDITION, SUBTRACTION, or
+        # INTERSECTION COLLECTOR, keep combining the results.
         while next_segment_idx < len(segments):
             peekseg: PathSegment = segments[next_segment_idx]
             (peek_type, peek_attrs) = peekseg
@@ -1783,7 +1775,8 @@ class Processor:
                         data, peek_path, node_coords,
                         parent=parent, parentref=parentref,
                         translated_path=translated_path, ancestry=ancestry,
-                        relay_segment=peekseg)
+                        relay_segment=peekseg,
+                        predecessor_segment=pathseg)
                 else:
                     raise YAMLPathException(
                         "Adjoining Collectors without an operator has no"
