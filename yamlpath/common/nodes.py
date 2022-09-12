@@ -89,7 +89,7 @@ class Nodes:
             new_value = str(value)
         elif valform == YAMLValueFormats.FOLDED:
             new_type = FoldedScalarString
-            new_value = str(value).rstrip()
+            new_value = str(value)
 
             if hasattr(source_node, "anchor") and source_node.anchor.value:
                 new_node = new_type(new_value, anchor=source_node.anchor.value)
