@@ -3,6 +3,7 @@ Implement Nodes, a static library of generally-useful code for data nodes.
 
 Copyright 2020 William W. Kimball, Jr. MBA MSIS
 """
+import re
 from ast import literal_eval
 from distutils.util import strtobool
 from typing import Any
@@ -89,25 +90,14 @@ class Nodes:
         elif valform == YAMLValueFormats.FOLDED:
             new_type = FoldedScalarString
             new_value = str(value)
-            preserve_folds = []
-
-            # Scan all except the very last character because if that last
-            # character is a newline, ruamel.yaml will crash when told to fold
-            # there.
-            for index, fold_char in enumerate(new_value[:-1]):
-                if fold_char == "\n":
-                    preserve_folds.append(index)
-
-            # Replace all except the very last character
-            new_value = new_value[:-1].replace("\n", " ") + new_value[-1]
 
             if hasattr(source_node, "anchor") and source_node.anchor.value:
                 new_node = new_type(new_value, anchor=source_node.anchor.value)
             else:
                 new_node = new_type(new_value)
 
-            if preserve_folds:
-                new_node.fold_pos = preserve_folds  # type: ignore
+            fold_at = [x.start() for x in re.finditer(' ', new_node)]
+            new_node.fold_pos = fold_at # type: ignore
 
         elif valform == YAMLValueFormats.LITERAL:
             new_type = LiteralScalarString
