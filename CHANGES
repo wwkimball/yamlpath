@@ -5,6 +5,9 @@ Bug Fixes:
   formatted values were unaffected and this issue only affected Windows EYAML
   users.
 * EYAML values were not being decrypted when the result appeared in a list.
+* Deleting hash key-value pairs with white-space or comments on immediately
+  following lines in the YAML file resulted in those following comments and/or
+  white-space being destroyed.
 
 3.6.4
 Enhancements:
