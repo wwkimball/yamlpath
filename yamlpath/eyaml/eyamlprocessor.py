@@ -112,7 +112,9 @@ class EYAMLProcessor(Processor):
         for path in self._find_eyaml_paths(self.data, YAMLPath()):
             yield path
 
-    def decrypt_eyaml(self, value: Union[str, list, NodeCoords]) -> str:
+    def decrypt_eyaml(
+        self, value: Union[str, list, NodeCoords]
+    ) -> Union[str, list]:
         """
         Decrypt an EYAML value.
 
@@ -305,7 +307,7 @@ class EYAMLProcessor(Processor):
     def get_eyaml_values(
         self, yaml_path: YAMLPath, mustexist: bool = False,
         default_value: str = ""
-    ) -> Generator[str, None, None]:
+    ) -> Generator[Union[str, list], None, None]:
         """
         Retrieve and decrypt all EYAML nodes identified via a YAML Path.
 
@@ -327,7 +329,7 @@ class EYAMLProcessor(Processor):
         self.logger.verbose(f"Decrypting value(s) at {yaml_path}.")
         for node in self.get_nodes(yaml_path, mustexist=mustexist,
                                    default_value=default_value):
-            plain_text: str = self.decrypt_eyaml(node.node)
+            plain_text: Union[str, list] = self.decrypt_eyaml(node.node)
             yield plain_text
 
     def _can_run_eyaml(self) -> bool:
