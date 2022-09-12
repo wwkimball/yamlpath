@@ -4,6 +4,7 @@ Bug Fixes:
   was broken when written to YAML, corrupting the YAML file.  Non-block
   formatted values were unaffected and this issue only affected Windows EYAML
   users.
+* EYAML values were not being decrypted when the result appeared in a list.
 
 3.6.4
 Enhancements:
