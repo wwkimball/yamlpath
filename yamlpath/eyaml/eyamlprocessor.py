@@ -7,7 +7,7 @@ import re
 from subprocess import run, PIPE, CalledProcessError
 from os import access, sep, X_OK
 from shutil import which
-from typing import Any, Generator, List, Optional
+from typing import Any, Generator, List, Optional, Union
 
 from ruamel.yaml.comments import CommentedSeq, CommentedMap
 
@@ -16,7 +16,7 @@ from yamlpath.common import Anchors
 from yamlpath.eyaml.enums import EYAMLOutputFormats
 from yamlpath.enums import YAMLValueFormats, PathSeperators
 from yamlpath.eyaml.exceptions import EYAMLCommandException
-from yamlpath.wrappers import ConsolePrinter
+from yamlpath.wrappers import ConsolePrinter, NodeCoords
 from yamlpath import Processor
 
 
@@ -112,7 +112,7 @@ class EYAMLProcessor(Processor):
         for path in self._find_eyaml_paths(self.data, YAMLPath()):
             yield path
 
-    def decrypt_eyaml(self, value: str) -> str:
+    def decrypt_eyaml(self, value: Union[str, list, NodeCoords]) -> str:
         """
         Decrypt an EYAML value.
 
@@ -125,6 +125,16 @@ class EYAMLProcessor(Processor):
         Raises:
         - `EYAMLCommandException` when the eyaml binary cannot be utilized
         """
+        if isinstance(value, NodeCoords):
+            value = self.decrypt_eyaml(value.node)
+
+        # Recursively decrypt lists
+        if isinstance(value, list):
+            decvals: list = []
+            for encval in value:
+                decvals.append(self.decrypt_eyaml(encval))
+            return decvals
+
         if not self.is_eyaml_value(value):
             return value
 
