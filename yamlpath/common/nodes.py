@@ -96,7 +96,8 @@ class Nodes:
             else:
                 new_node = new_type(new_value)
 
-            new_node.fold_pos = [x.start() for x in re.finditer(' ', new_node)]
+            fold_at = [x.start() for x in re.finditer(' ', new_node)]
+            new_node.fold_pos = fold_at # type: ignore
 
         elif valform == YAMLValueFormats.LITERAL:
             new_type = LiteralScalarString
