@@ -247,7 +247,9 @@ class EYAMLProcessor(Processor):
             )
 
         if output is EYAMLOutputFormats.BLOCK:
-            retval = re.sub(r" +", "", retval) + "\n"
+            fixval: str = re.sub(r" ", "", retval.strip())
+            retval = re.sub(r"\r\n", " ", fixval) + "\n"
+            # Linux:  retval = re.sub(r" +", "", retval) + "\n"
 
         self.logger.debug(
             f"Encrypted result:\n{retval}",
