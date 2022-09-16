@@ -403,7 +403,7 @@ class Nodes:
             # Check the preceding node's post-comment for content that is
             # likely meant for the to-be-deleted node.  First, exclude any
             # end-of-line comment.
-            pre_eol_comment = pre_comment.partition("\n")[0]
+            pre_eol_comment = pre_comment.partition("\n")[0] + "\n"
             post_eol_comment = pre_comment.partition("\n")[2]
 
             # DEBUG
@@ -418,6 +418,7 @@ class Nodes:
                 preserve_to = line_count
                 keep_lines = 0
                 for pre_index, pre_line in enumerate(reversed(pre_lines)):
+                    keep_lines = pre_index
                     pre_content = pre_line.partition("#")[2].lstrip()
 
                     # DEBUG
@@ -434,16 +435,14 @@ class Nodes:
                         print(f"EVALUATION HIT POSSIBLE YAML AT {pre_index}")
                         break
 
-                    keep_lines = pre_index
-
-                preserve_to = line_count - keep_lines - 1
-                pre_comment = "\n".join(pre_lines[0:preserve_to]) + "\n"
+                preserve_to = line_count - keep_lines - 2
+                pre_comment = pre_eol_comment + "\n".join(pre_lines[0:preserve_to]) + "\n"
 
                 # DEBUG
                 debug_lines = pre_comment.replace("\n", "\\n")
                 print(f"EVALUATION WOULD PRESERVE TO {preserve_to} LINES: {debug_lines}")
 
-                data.ca.items[prekey][2].value = pre_eol_comment + pre_comment
+                data.ca.items[prekey][2].value = pre_comment
 
             # Check for any comment after an end-of-line comment
             preserve_comment = post_comment.partition("\n")[2]
