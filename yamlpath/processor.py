@@ -738,14 +738,14 @@ class Processor:
                             for (key, val) in merge_node.items():
                                 if key in parent and parent[key] == val:
                                     Nodes.delete_from_dict_with_comments(
-                                        parent, key, None
+                                        parent, key, parent, parentref
                                     )
                             Nodes.delete_from_dict_with_comments(
-                                parent.merge, midx, None)
+                                parent.merge, midx, parent, parentref)
                             break
                 elif parentref in parent:
                     Nodes.delete_from_dict_with_comments(
-                        parent, parentref, None)
+                        parent, parentref, all_data, ancestry[0][1])
             elif isinstance(parent, (CommentedSeq, list)):
                 if len(parent) > parentref:
                     del parent[parentref]

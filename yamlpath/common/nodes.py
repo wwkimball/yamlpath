@@ -339,7 +339,7 @@ class Nodes:
         return new_element
 
     @staticmethod
-    def delete_from_dict_with_comments(data, key, parent):
+    def delete_from_dict_with_comments(data, key, parent, parentref):
         """
         Delete a key-value pair from a dict, correctly removing its comment.
 
@@ -373,9 +373,13 @@ class Nodes:
         import pprint
         pp = pprint.PrettyPrinter(indent=4)
         print("The ca items for data:")
-        pp.pprint(data.ca.items if hasattr(data, "ca") else "Nothing to see here!")
+        pp.pprint(data.ca.items if hasattr(data, "ca") else "DATA HAS NO COMMENTS!")
         print("All data keys:")
         pp.pprint(list(data.keys()))
+        print("The ca items for parent:")
+        pp.pprint(parent.ca.items if hasattr(parent, "ca") else "PARENT HAS NO COMMENTS!")
+        print("All parent keys:")
+        pp.pprint(list(parent.keys()) if hasattr(parent, "keys") else "NO KEYS!")
 
         # In order to preserve the post-node comment, omiting any end-of-line
         # comment, it must be appended/moved to the node preceding the deleted
@@ -390,8 +394,16 @@ class Nodes:
             prekey: Any = (None if predex < 0
                           else keylist[predex])
             pre_comment = (data.ca.items[prekey][2].value
-                           if prekey is not None else None)
+                           if prekey is not None
+                           else None)
             post_comment = data.ca.items[key][2].value
+
+            if pre_comment is None:
+                # Pull the pre node comment from the node's parent
+                print(f"Attempting to pull parent comment for parentref, {parentref}.")
+                pre_comment = (parent.ca.items[parentref][3][0].value
+                               if parentref is not None
+                               else None)
 
             # DEBUG
             debug_pre = pre_comment.replace('\n', '\\n') if pre_comment is not None else "NO PRE COMMENT"
