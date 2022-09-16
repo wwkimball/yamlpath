@@ -737,11 +737,18 @@ class Processor:
                         if merge_node == compare_node:
                             for (key, val) in merge_node.items():
                                 if key in parent and parent[key] == val:
-                                    del parent[key]
-                            del parent.merge[midx]
+                                    # del parent[key]
+                                    Nodes.delete_from_dict_with_comments(
+                                        parent, key, None
+                                    )
+                            #del parent.merge[midx]
+                            Nodes.delete_from_dict_with_comments(
+                                parent.merge, midx, None)
                             break
                 elif parentref in parent:
-                    del parent[parentref]
+                    # del parent[parentref]
+                    Nodes.delete_from_dict_with_comments(
+                        parent, parentref, None)
             elif isinstance(parent, (CommentedSeq, list)):
                 if len(parent) > parentref:
                     del parent[parentref]

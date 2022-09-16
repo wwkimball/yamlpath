@@ -339,6 +339,68 @@ class Nodes:
         return new_element
 
     @staticmethod
+    def delete_from_dict_with_comments(data, key, parent):
+        """
+        Delete a key-value pair from a dict, correctly removing its comment.
+
+        Because ruamel.yaml only associates comments with the node BEFORE them,
+        deleting nodes causes unwanted comment removal behavior:  the node,
+        any end-of-line comment obviously for it, and all whitespace and other
+        comments on lines AFTER the node are destroyed.  Because most comments
+        preceede the node they are intended for, this is almost exactly the
+        opposite of the expected behavior.
+
+        This static method attempts to correct for this unwanted behavior by
+        treating the pre-node comment, its end-of-line comment, and any post-
+        node comments as discrete entities which must be separately handled.
+        This is complex.  While it is obvious that any end-of-line comment must
+        be deleted with the node and any post-node comment must be preserved,
+        the pre-node comment may or may not be related to the deleted node.
+        Some checks will be performed to determine whether or not to delete the
+        pre-node comment.  If it is commented YAML, it will be kept.  If there
+        is an empty-line (handled as a comment by ruamel.yaml) immediately
+        before the node, the entire pre-node comment will be preserved.
+        Otherwise, the pre-node comment will be destroyed up to the first
+        newline or non-commented YAML.
+
+        This is fragile code.  The ruamel.yaml project is subject to change how
+        it handles comments.  Using this method as a central means of treating
+        comment removal from dicts will limit scope of such fagility to this
+        method alone.
+        """
+        import pprint
+        pp = pprint.PrettyPrinter(indent=4)
+
+        # post_comment = data[key].ca
+        # pre_comment = preobj.ca
+
+        pp.pprint(data.ca.items if hasattr(data, "ca") else "Nothing to see here!")
+
+        # In order to preserve the post-node comment, omiting any end-of-line
+        # comment, it must be appended/moved to the node preceding the deleted
+        # node.
+        if hasattr(data, "ca") and key in data.ca.items:
+            # There is an end-of-line comment, post-comment, or both
+            keydex: int = list(data.keys()).index(key)
+            predex: int = keydex - 1
+            # pstdex: int = keydex + 1
+            # preobj: Any = (parent if predex < 0
+            #               else data[list(data.keys())[predex]])
+
+            # DEBUG
+            post_comment = data.ca.items[key][2].value
+
+            print(f"Target object with key, {key}, has comment: {post_comment}")
+
+            # if post_comment is not None:
+            #     data.ca.items[keydex][0] = None
+            #     data.ca.items[pstdex] = [
+            #         post_comment, None, None, None
+            #     ]
+
+        del data[key]
+
+    @staticmethod
     def apply_yaml_tag(node: Any, value_tag: str) -> Any:
         """
         Apply a YAML Tag (AKA Schema) to a node or remove one.
