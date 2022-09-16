@@ -347,56 +347,69 @@ class Nodes:
         deleting nodes causes unwanted comment removal behavior:  the node,
         any end-of-line comment obviously for it, and all whitespace and other
         comments on lines AFTER the node are destroyed.  Because most comments
-        preceede the node they are intended for, this is almost exactly the
-        opposite of the expected behavior.
+        PRECEDE the node they are intended for, this is almost exactly the
+        opposite of the expected behavior except for correctly removing any
+        end-of-line comment.
 
         This static method attempts to correct for this unwanted behavior by
-        treating the pre-node comment, its end-of-line comment, and any post-
+        treating the pre-node comment, the end-of-line comment, and any post-
         node comments as discrete entities which must be separately handled.
         This is complex.  While it is obvious that any end-of-line comment must
-        be deleted with the node and any post-node comment must be preserved,
+        be deleted with the node and any post-node comment must be PRESERVED,
         the pre-node comment may or may not be related to the deleted node.
         Some checks will be performed to determine whether or not to delete the
-        pre-node comment.  If it is commented YAML, it will be kept.  If there
-        is an empty-line (handled as a comment by ruamel.yaml) immediately
-        before the node, the entire pre-node comment will be preserved.
-        Otherwise, the pre-node comment will be destroyed up to the first
-        newline or non-commented YAML.
+        pre-node comment or a part of it.  If it is commented YAML, it will be
+        kept.  If there is an empty-line (handled as a comment by ruamel.yaml)
+        as the last line of the preceding comment, the entire preceding comment
+        will be preserved.  Otherwise, the preceding comment will be destroyed
+        from the end up to the first newline or non-commented YAML.
 
         This is fragile code.  The ruamel.yaml project is subject to change how
         it handles comments.  Using this method as a central means of treating
         comment removal from dicts will limit scope of such fagility to this
         method alone.
         """
+        # DEBUG
         import pprint
         pp = pprint.PrettyPrinter(indent=4)
-
-        # post_comment = data[key].ca
-        # pre_comment = preobj.ca
-
+        print("The ca items for data:")
         pp.pprint(data.ca.items if hasattr(data, "ca") else "Nothing to see here!")
+        print("All data keys:")
+        pp.pprint(list(data.keys()))
 
         # In order to preserve the post-node comment, omiting any end-of-line
         # comment, it must be appended/moved to the node preceding the deleted
         # node.
         if hasattr(data, "ca") and key in data.ca.items:
-            # There is an end-of-line comment, post-comment, or both
-            keydex: int = list(data.keys()).index(key)
+            # There is an end-of-line comment, post-comment (i.e. comment for
+            # the NEXT node which must be attached to the end of the PRECEDING
+            # node's comment), or both.
+            keylist: list[Any] = list(data.keys())
+            keydex: int = keylist.index(key)
             predex: int = keydex - 1
-            # pstdex: int = keydex + 1
-            # preobj: Any = (parent if predex < 0
-            #               else data[list(data.keys())[predex]])
-
-            # DEBUG
+            prekey: Any = (None if predex < 0
+                          else keylist[predex])
+            pre_comment = (data.ca.items[prekey][2].value
+                           if prekey is not None else None)
             post_comment = data.ca.items[key][2].value
 
-            print(f"Target object with key, {key}, has comment: {post_comment}")
+            # DEBUG
+            debug_pre = pre_comment.replace('\n', '\\n') if pre_comment is not None else "NO PRE COMMENT"
+            debug_post = post_comment.replace('\n', '\\n')
+            print(f"Target object with key, {key}, has:")
+            print(f"  pre  comment:  {debug_pre}" )
+            print(f"  post comment:  {debug_post}")
 
-            # if post_comment is not None:
-            #     data.ca.items[keydex][0] = None
-            #     data.ca.items[pstdex] = [
-            #         post_comment, None, None, None
-            #     ]
+            preserve_comment = post_comment.partition("\n")[2]
+            if len(preserve_comment) > 0:
+                # There's something to preserve
+                new_pre_comment = pre_comment + preserve_comment
+
+                # DEBUG
+                debug_new_pre_comment = new_pre_comment.replace('\n', '\\n') if new_pre_comment is not None else "NO NEW PRE COMMENT"
+                print(f"With a preserve_comment lenght of {len(preserve_comment)}, the new pre_comment:  {debug_new_pre_comment}")
+
+                data.ca.items[prekey][2].value = new_pre_comment
 
         del data[key]
 
