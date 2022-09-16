@@ -400,9 +400,56 @@ class Nodes:
             print(f"  pre  comment:  {debug_pre}" )
             print(f"  post comment:  {debug_post}")
 
+            # Check the preceding node's post-comment for content that is
+            # likely meant for the to-be-deleted node.  First, exclude any
+            # end-of-line comment.
+            pre_eol_comment = pre_comment.partition("\n")[0]
+            post_eol_comment = pre_comment.partition("\n")[2]
+
+            # DEBUG
+            debug_pre_eol_comment = pre_eol_comment.replace('\n', '\\n')
+            debug_post_eol_comment = post_eol_comment.replace('\n', '\\n')
+            print(f"  pre_eol_comment:  {debug_pre_eol_comment}" )
+            print(f"  post_eol_comment:  {debug_post_eol_comment}")
+
+            if post_eol_comment is not None:
+                pre_lines = post_eol_comment.split("\n")
+                line_count = len(pre_lines)
+                preserve_to = line_count
+                keep_lines = 0
+                for pre_index, pre_line in enumerate(reversed(pre_lines)):
+                    pre_content = pre_line.partition("#")[2].lstrip()
+
+                    # DEBUG
+                    print(f"Evaluating:  {pre_content}")
+
+                    # Stop preserving lines at the first (last) blank line
+                    if len(pre_content) < 1:
+                        print(f"EVALUATION HIT AN EMPTY LINE AT {pre_index}")
+                        break
+
+                    # Check for possible YAML markup
+                    if pre_content[0] == '-' or ':' in pre_content:
+                        # May be YAML
+                        print(f"EVALUATION HIT POSSIBLE YAML AT {pre_index}")
+                        break
+
+                    keep_lines = pre_index
+
+                preserve_to = line_count - keep_lines - 1
+                pre_comment = "\n".join(pre_lines[0:preserve_to]) + "\n"
+
+                # DEBUG
+                debug_lines = pre_comment.replace("\n", "\\n")
+                print(f"EVALUATION WOULD PRESERVE TO {preserve_to} LINES: {debug_lines}")
+
+                data.ca.items[prekey][2].value = pre_eol_comment + pre_comment
+
+            # Check for any comment after an end-of-line comment
             preserve_comment = post_comment.partition("\n")[2]
             if len(preserve_comment) > 0:
-                # There's something to preserve
+                # There's something to preserve; move it to the preceding
+                # node's post-comment.
                 new_pre_comment = pre_comment + preserve_comment
 
                 # DEBUG
