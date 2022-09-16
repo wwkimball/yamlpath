@@ -436,7 +436,7 @@ class Nodes:
                         break
 
                 preserve_to = line_count - keep_lines - 2
-                pre_comment = pre_eol_comment + "\n".join(pre_lines[0:preserve_to]) + "\n"
+                pre_comment = pre_eol_comment + "\n".join(pre_lines[0:preserve_to]) + ("\n" if preserve_to >= 0 else "")
 
                 # DEBUG
                 debug_lines = pre_comment.replace("\n", "\\n")
