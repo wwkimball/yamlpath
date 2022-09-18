@@ -106,6 +106,12 @@ class Nodes:
             if isinstance(value, bool):
                 new_value = value
             else:
+                allowed_vals = ["true", "false", "yes", "no", "y", "n",
+                                "t", "f", "1", "0"]
+                str_val = str(value).lower()
+                if str_val not in allowed_vals:
+                    raise ValueError("Boolean values must be one of " +
+                                     ", ".join(allowed_vals))
                 new_value = str(value).lower() in (
                     "true", "yes", "y", "t", "1")
         elif valform == YAMLValueFormats.FLOAT:
