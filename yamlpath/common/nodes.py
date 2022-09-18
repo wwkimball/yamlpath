@@ -107,7 +107,7 @@ class Nodes:
                 new_value = value
             else:
                 new_value = str(value).lower() in (
-                    "y", "yes", "true", "t", "1")
+                    "true", "yes", "y", "t", "1")
         elif valform == YAMLValueFormats.FLOAT:
             try:
                 new_value = float(value)
