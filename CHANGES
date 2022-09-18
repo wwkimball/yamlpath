@@ -1,3 +1,9 @@
+3.7.0
+Bug Fixes:
+* Deleting hash key-value pairs with white-space or comments on immediately
+  following lines in the YAML file resulted in those following comments and/or
+  white-space being destroyed.
+
 3.6.5
 Bug Fixes:
 * When using EYAML with block formatted values on Windows, the block formatting
@@ -5,9 +11,11 @@ Bug Fixes:
   formatted values were unaffected and this issue only affected Windows EYAML
   users.
 * EYAML values were not being decrypted when the result appeared in a list.
-* Deleting hash key-value pairs with white-space or comments on immediately
-  following lines in the YAML file resulted in those following comments and/or
-  white-space being destroyed.
+* Boolean values were being unexpectedly output as base-10 representations of
+  the binary values 1 (True) and 0 (False) when emitting to JSON after setting
+  the Boolean.  This change also brings this project into compilance with
+  https://peps.python.org/pep-0632/.  Many thanks to
+  https://github.com/AndydeCleyre!
 
 3.6.4
 Enhancements:
