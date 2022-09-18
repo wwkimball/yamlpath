@@ -95,16 +95,20 @@ has: different data
             "dates": ry.comments.CommentedSeq([
                 dt.date(2020, 10, 31),
                 dt.date(2020, 11, 3)
-            ])
+            ]),
+            "t_bool": ry.scalarbool.ScalarBoolean(1),
+            "f_bool": ry.scalarbool.ScalarBoolean(0)
         })
         jdata = Parsers.jsonify_yaml_data(cdata)
         assert jdata["tagged"] == tagged_value
         assert jdata["null"] == null_value
         assert jdata["dates"][0] == "2020-10-31"
         assert jdata["dates"][1] == "2020-11-03"
+        assert jdata["t_bool"] == 1
+        assert jdata["f_bool"] == 0
 
         jstr = json.dumps(jdata)
-        assert jstr == """{"tagged": "tagged value", "null": null, "dates": ["2020-10-31", "2020-11-03"]}"""
+        assert jstr == """{"tagged": "tagged value", "null": null, "dates": ["2020-10-31", "2020-11-03"], "t_bool": true, "f_bool": false}"""
 
     def test_jsonify_complex_python_data(self):
         cdata = {
@@ -112,11 +116,15 @@ has: different data
                 dt.date(2020, 10, 31),
                 dt.date(2020, 11, 3)
             ],
-            "bytes": b"abc"
+            "bytes": b"abc",
+            "t_bool": True,
+            "f_bool": False
         }
         jdata = Parsers.jsonify_yaml_data(cdata)
         assert jdata["dates"][0] == "2020-10-31"
         assert jdata["dates"][1] == "2020-11-03"
+        assert jdata["t_bool"] == True
+        assert jdata["f_bool"] == False
 
         jstr = json.dumps(jdata)
-        assert jstr == """{"dates": ["2020-10-31", "2020-11-03"], "bytes": "b'abc'"}"""
+        assert jstr == """{"dates": ["2020-10-31", "2020-11-03"], "bytes": "b'abc'", "t_bool": true, "f_bool": false}"""

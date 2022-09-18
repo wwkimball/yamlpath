@@ -14,6 +14,7 @@ from ruamel.yaml.parser import ParserError
 from ruamel.yaml.composer import ComposerError, ReusedAnchorWarning
 from ruamel.yaml.constructor import ConstructorError, DuplicateKeyError
 from ruamel.yaml.scanner import ScannerError
+from ruamel.yaml.scalarbool import ScalarBoolean
 from ruamel.yaml.scalarstring import ScalarString
 from ruamel.yaml.comments import (
     CommentedMap, CommentedSet, CommentedSeq, TaggedScalar
@@ -354,6 +355,8 @@ class Parsers:
             return str(data)
         elif isinstance(data, bytes):
             return str(data)
+        elif isinstance(data, (ScalarBoolean, bool)):
+            return bool(data)
         return data
 
     @staticmethod
