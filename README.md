@@ -106,7 +106,7 @@ expressions:
 5. `aliases[.%string]` (search for any elements containing "string")
 6. `aliases[.$value]` (search for any elements ending with "value")
 7. `aliases[.=~/^(\b[Ss][a-z]+\s){2}[a-z]+$/]` (search for any elements matching
-   a complex Regular Expression, which happens to match the example)
+   a complex Python Regular Expression, which happens to match the example)
 8. `/aliases[0]` (same as 1 but in forward-slash notation)
 9. `/aliases/0` (same as 2 but in forward-slash notation)
 10. `/aliases[&first_anchor]` (same as 3 but in forward-slash notation)
@@ -188,7 +188,8 @@ YAML Path understands these segment types:
   * Greater Than match: `hash[access_level>0]`
   * Less Than or Equal match: `hash[access_level<=100]`
   * Greater Than or Equal match: `hash[access_level>=0]`
-  * Regular Expression matches: `hash[access_level=~/^\D+$/]` (the `/` Regular
+  * [Python Regular Expression](https://docs.python.org/3/library/re.html)
+    matches: `hash[access_level=~/^\D+$/]` (the `/` Regular
     Expression delimiter can be substituted for any character you need, except
     white-space; note that `/` does not interfere with forward-slash notation
     *and it does not need to be escaped* because the entire search expression is
