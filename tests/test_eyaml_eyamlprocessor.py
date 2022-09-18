@@ -137,6 +137,9 @@ class Test_eyaml_EYAMLProcessor():
     @pytest.mark.parametrize("yaml_path,compare", [
         ("aliases[&secretIdentity]", "This is not the identity you are looking for."),
         ("aliases[&secretPhrase]", "There is no secret phrase."),
+        ("aliases", ["This is not the identity you are looking for.", "There is no secret phrase."]),
+        ("(aliases)", ["This is not the identity you are looking for.", "There is no secret phrase."]),
+        ("((aliases)*)[0]", "This is not the identity you are looking for."),
     ])
     def test_happy_get_eyaml_values(self, quiet_logger, eyamldata_f, old_eyaml_keys, yaml_path, compare):
         processor = EYAMLProcessor(quiet_logger, eyamldata_f, privatekey=old_eyaml_keys[0], publickey=old_eyaml_keys[1])
