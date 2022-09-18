@@ -356,7 +356,7 @@ class Parsers:
         elif isinstance(data, bytes):
             return str(data)
         elif isinstance(data, (ScalarBoolean, bool)):
-            return True if data else False
+            return bool(data)
         return data
 
     @staticmethod
