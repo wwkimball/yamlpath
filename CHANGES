@@ -2,7 +2,7 @@
 Enhancements:
 * Add a new Collector Math Operator:  & (intersection)
   As in set mathematics, this yields only elements of two collections which are
-  common to both collections.  Unlike set methematics, collections allow
+  common to both collections.  Unlike set mathematics, collections allow
   duplicate elements.
 
 3.6.5
