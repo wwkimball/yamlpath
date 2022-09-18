@@ -5,7 +5,6 @@ Copyright 2020 William W. Kimball, Jr. MBA MSIS
 """
 import re
 from ast import literal_eval
-from distutils.util import strtobool
 from typing import Any
 
 from ruamel.yaml.comments import CommentedSeq, CommentedMap, TaggedScalar
@@ -107,7 +106,8 @@ class Nodes:
             if isinstance(value, bool):
                 new_value = value
             else:
-                new_value = strtobool(value)
+                new_value = str(value).lower() in (
+                    "y", "yes", "true", "t", "1")
         elif valform == YAMLValueFormats.FLOAT:
             try:
                 new_value = float(value)

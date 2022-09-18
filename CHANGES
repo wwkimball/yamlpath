@@ -5,6 +5,9 @@ Bug Fixes:
   formatted values were unaffected and this issue only affected Windows EYAML
   users.
 * EYAML values were not being decrypted when the result appeared in a list.
+* Boolean values were being unexpectedly output as base-10 representations of
+  the binary values 1 (True) and 0 (False) when emitting to JSON after setting
+  the Boolean.  Thanks to https://github.com/AndydeCleyre!
 
 3.6.4
 Enhancements:
