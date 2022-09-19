@@ -94,6 +94,28 @@ class NodeCoords:
         """Get the deepest wrapped NodeCoord contained within."""
         return NodeCoords._deepest_node_coord(self)
 
+    # Food for thought:
+    # @property
+    # def eol_comment(self) -> str:
+    #     """Gets comment text following this node's data, if any (or None)."""
+    #     comment: str = None
+    #     if hasattr(self.parent, "ca"):
+    #         comment_token = self.parent.ca.items.get(self.parentref)
+    #         if comment_token is not None:
+    #             after_comment: str = comment_token[0].value
+    #             comment = after_comment.partition("\n")[0]
+    #     return comment
+
+    # @eol_comment.setter
+    # def eol_comment(self, value):
+    #     """Sets comment text following this node's data."""
+    #     self.parent.yaml_add_eol_comment(value, key=self.parentref)
+
+    # @eol_comment.deleter
+    # def eol_comment(self):
+    #     """Deletes comment text following this node's data."""
+    #     self.parent.yaml_add_eol_comment(None, key=self.parentref)
+
     def wraps_a(self, compare_type: Type) -> bool:
         """Indicate whether the wrapped node is of a given data-type."""
         if compare_type is None:

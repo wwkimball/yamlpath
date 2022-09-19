@@ -375,6 +375,69 @@ class Nodes:
         comment removal from dicts will limit scope of such fagility to this
         method alone.
         """
+        def merge_with_parent():
+            import pprint
+            pp = pprint.PrettyPrinter(indent=4)
+            print("The ca items for parent:")
+            pp.pprint(parent.ca.items if hasattr(parent, "ca") else "PARENT HAS NO COMMENTS!")
+            print("All parent keys:")
+            pp.pprint(list(parent.keys()) if hasattr(parent, "keys") else "NO KEYS!")
+
+            if pre_comment is None:
+                # Pull the pre node comment from the node's parent
+                print(f"Attempting to pull parent comment for parentref, {parentref}.")
+                pre_comment = (parent.ca.items[parentref][3][0].value
+                            if parentref is not None
+                            else None)
+
+            exit(69)
+
+        def merge_with_preceding_peer(data, post_comment, prekey):
+            pnode_comment = data.ca.items[prekey][2].value
+
+            # Check the preceding node's post-comment for content that is
+            # likely meant for the to-be-deleted node.  First, exclude any
+            # end-of-line comment.
+            pnode_eol_comment = pnode_comment.partition("\n")[0] + "\n"
+            pnode_post_eol_comment = pnode_comment.partition("\n")[2]
+
+            if pnode_post_eol_comment is not None:
+                # Remove the target node's pre-node comment from the
+                # predecessor node's post-eol comment.  Stop removing lines
+                # when an empty-line or possible commented YAML is detected.
+                pnode_comment_lines = pnode_post_eol_comment.split("\n")
+                line_count = len(pnode_comment_lines)
+                preserve_to = line_count
+                keep_lines = 0
+                for pre_index, pre_line in enumerate(reversed(pnode_comment_lines)):
+                    keep_lines = pre_index
+                    pre_content = pre_line.partition("#")[2].lstrip()
+
+                    # Stop preserving lines at the first (last) blank line
+                    if len(pre_content) < 1:
+                        break
+
+                    # Check for possible YAML markup
+                    if pre_content[0] == '-' or ':' in pre_content:
+                        # May be YAML; there room for deeper testing...
+                        break
+
+                preserve_to = line_count - keep_lines - 2
+                pnode_comment = (
+                    pnode_eol_comment +
+                    "\n".join(pnode_comment_lines[0:preserve_to]) +
+                    ("\n" if preserve_to >= 0 else ""))
+
+                data.ca.items[prekey][2].value = pnode_comment
+
+            # Check for any comment after an end-of-line comment of the target
+            # node.  If present, move it to the end of the predecessor node's
+            # post-eol comment.
+            preserve_comment = post_comment.partition("\n")[2]
+            if preserve_comment is not None:
+                data.ca.items[prekey][2].value = (
+                    pnode_comment + preserve_comment)
+
         # DEBUG
         import pprint
         pp = pprint.PrettyPrinter(indent=4)
@@ -382,98 +445,32 @@ class Nodes:
         pp.pprint(data.ca.items if hasattr(data, "ca") else "DATA HAS NO COMMENTS!")
         print("All data keys:")
         pp.pprint(list(data.keys()))
-        print("The ca items for parent:")
-        pp.pprint(parent.ca.items if hasattr(parent, "ca") else "PARENT HAS NO COMMENTS!")
-        print("All parent keys:")
-        pp.pprint(list(parent.keys()) if hasattr(parent, "keys") else "NO KEYS!")
 
         # In order to preserve the post-node comment, omiting any end-of-line
         # comment, it must be appended/moved to the node preceding the deleted
-        # node.
+        # node.  That preceding node will be either an immediate peer or the
+        # parent.  If however the target node has no post-comment -- even if it
+        # does have an EOL comment -- there will be nothing to preserve.
         if hasattr(data, "ca") and key in data.ca.items:
-            # There is an end-of-line comment, post-comment (i.e. comment for
-            # the NEXT node which must be attached to the end of the PRECEDING
-            # node's comment), or both.
+            # There is an end-of-line comment, post-eol-comment (i.e. a comment
+            # after this node's EOL comment that is preceding the NEXT node
+            # which must be attached to the end of the PRECEDING node's
+            # comment), or both.  A comment merge is necessary only when there
+            # is a post-eol-comment.  So, is there a post-eol-comment?
             keylist: list[Any] = list(data.keys())
             keydex: int = keylist.index(key)
             predex: int = keydex - 1
-            prekey: Any = (None if predex < 0
-                          else keylist[predex])
-            pre_comment = (data.ca.items[prekey][2].value
-                           if prekey is not None
-                           else None)
-            post_comment = data.ca.items[key][2].value
+            node_comment = data.ca.items[key][2].value
+            node_post_eol_comment = node_comment.partition("\n")[2]
 
-            if pre_comment is None:
-                # Pull the pre node comment from the node's parent
-                print(f"Attempting to pull parent comment for parentref, {parentref}.")
-                pre_comment = (parent.ca.items[parentref][3][0].value
-                               if parentref is not None
-                               else None)
-
-            # DEBUG
-            debug_pre = pre_comment.replace('\n', '\\n') if pre_comment is not None else "NO PRE COMMENT"
-            debug_post = post_comment.replace('\n', '\\n')
-            print(f"Target object with key, {key}, has:")
-            print(f"  pre  comment:  {debug_pre}" )
-            print(f"  post comment:  {debug_post}")
-
-            # Check the preceding node's post-comment for content that is
-            # likely meant for the to-be-deleted node.  First, exclude any
-            # end-of-line comment.
-            pre_eol_comment = pre_comment.partition("\n")[0] + "\n"
-            post_eol_comment = pre_comment.partition("\n")[2]
-
-            # DEBUG
-            debug_pre_eol_comment = pre_eol_comment.replace('\n', '\\n')
-            debug_post_eol_comment = post_eol_comment.replace('\n', '\\n')
-            print(f"  pre_eol_comment:  {debug_pre_eol_comment}" )
-            print(f"  post_eol_comment:  {debug_post_eol_comment}")
-
-            if post_eol_comment is not None:
-                pre_lines = post_eol_comment.split("\n")
-                line_count = len(pre_lines)
-                preserve_to = line_count
-                keep_lines = 0
-                for pre_index, pre_line in enumerate(reversed(pre_lines)):
-                    keep_lines = pre_index
-                    pre_content = pre_line.partition("#")[2].lstrip()
-
-                    # DEBUG
-                    print(f"Evaluating:  {pre_content}")
-
-                    # Stop preserving lines at the first (last) blank line
-                    if len(pre_content) < 1:
-                        print(f"EVALUATION HIT AN EMPTY LINE AT {pre_index}")
-                        break
-
-                    # Check for possible YAML markup
-                    if pre_content[0] == '-' or ':' in pre_content:
-                        # May be YAML
-                        print(f"EVALUATION HIT POSSIBLE YAML AT {pre_index}")
-                        break
-
-                preserve_to = line_count - keep_lines - 2
-                pre_comment = pre_eol_comment + "\n".join(pre_lines[0:preserve_to]) + ("\n" if preserve_to >= 0 else "")
-
-                # DEBUG
-                debug_lines = pre_comment.replace("\n", "\\n")
-                print(f"EVALUATION WOULD PRESERVE TO {preserve_to} LINES: {debug_lines}")
-
-                data.ca.items[prekey][2].value = pre_comment
-
-            # Check for any comment after an end-of-line comment
-            preserve_comment = post_comment.partition("\n")[2]
-            if len(preserve_comment) > 0:
-                # There's something to preserve; move it to the preceding
-                # node's post-comment.
-                new_pre_comment = pre_comment + preserve_comment
-
-                # DEBUG
-                debug_new_pre_comment = new_pre_comment.replace('\n', '\\n') if new_pre_comment is not None else "NO NEW PRE COMMENT"
-                print(f"With a preserve_comment lenght of {len(preserve_comment)}, the new pre_comment:  {debug_new_pre_comment}")
-
-                data.ca.items[prekey][2].value = new_pre_comment
+            if node_post_eol_comment is not None:
+                # There is a post-eol-comment that must be preserved
+                if predex < 0:
+                    merge_with_parent()
+                else:
+                    preceding_key: Any = keylist[predex]
+                    merge_with_preceding_peer(
+                        data, node_comment, preceding_key)
 
         del data[key]
 
