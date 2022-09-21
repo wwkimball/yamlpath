@@ -24,6 +24,7 @@ from yamlpath.enums import (
     YAMLValueFormats,
 )
 from yamlpath.wrappers import NodeCoords
+from yamlpath.common import Comments
 from yamlpath import YAMLPath
 
 
@@ -348,130 +349,8 @@ class Nodes:
     def delete_from_dict_with_comments(data, key, parent, parentref):
         """
         Delete a key-value pair from a dict, correctly removing its comment.
-
-        Because ruamel.yaml only associates comments with the node BEFORE them,
-        deleting nodes causes unwanted comment removal behavior:  the node,
-        any end-of-line comment obviously for it, and all whitespace and other
-        comments on lines AFTER the node are destroyed.  Because most comments
-        PRECEDE the node they are intended for, this is almost exactly the
-        opposite of the expected behavior except for correctly removing any
-        end-of-line comment.
-
-        This static method attempts to correct for this unwanted behavior by
-        treating the pre-node comment, the end-of-line comment, and any post-
-        node comments as discrete entities which must be separately handled.
-        This is complex.  While it is obvious that any end-of-line comment must
-        be deleted with the node and any post-node comment must be PRESERVED,
-        the pre-node comment may or may not be related to the deleted node.
-        Some checks will be performed to determine whether or not to delete the
-        pre-node comment or a part of it.  If it is commented YAML, it will be
-        kept.  If there is an empty-line (handled as a comment by ruamel.yaml)
-        as the last line of the preceding comment, the entire preceding comment
-        will be preserved.  Otherwise, the preceding comment will be destroyed
-        from the end up to the first newline or non-commented YAML.
-
-        This is fragile code.  The ruamel.yaml project is subject to change how
-        it handles comments.  Using this method as a central means of treating
-        comment removal from dicts will limit scope of such fagility to this
-        method alone.
         """
-        def merge_with_parent():
-            import pprint
-            pp = pprint.PrettyPrinter(indent=4)
-            print("The ca items for parent:")
-            pp.pprint(parent.ca.items if hasattr(parent, "ca") else "PARENT HAS NO COMMENTS!")
-            print("All parent keys:")
-            pp.pprint(list(parent.keys()) if hasattr(parent, "keys") else "NO KEYS!")
-
-            if pre_comment is None:
-                # Pull the pre node comment from the node's parent
-                print(f"Attempting to pull parent comment for parentref, {parentref}.")
-                pre_comment = (parent.ca.items[parentref][3][0].value
-                            if parentref is not None
-                            else None)
-
-            exit(69)
-
-        def merge_with_preceding_peer(data, post_comment, prekey):
-            pnode_comment = data.ca.items[prekey][2].value
-
-            # Check the preceding node's post-comment for content that is
-            # likely meant for the to-be-deleted node.  First, exclude any
-            # end-of-line comment.
-            pnode_eol_comment = pnode_comment.partition("\n")[0] + "\n"
-            pnode_post_eol_comment = pnode_comment.partition("\n")[2]
-
-            if pnode_post_eol_comment is not None:
-                # Remove the target node's pre-node comment from the
-                # predecessor node's post-eol comment.  Stop removing lines
-                # when an empty-line or possible commented YAML is detected.
-                pnode_comment_lines = pnode_post_eol_comment.split("\n")
-                line_count = len(pnode_comment_lines)
-                preserve_to = line_count
-                keep_lines = 0
-                for pre_index, pre_line in enumerate(reversed(pnode_comment_lines)):
-                    keep_lines = pre_index
-                    pre_content = pre_line.partition("#")[2].lstrip()
-
-                    # Stop preserving lines at the first (last) blank line
-                    if len(pre_content) < 1:
-                        break
-
-                    # Check for possible YAML markup
-                    if pre_content[0] == '-' or ':' in pre_content:
-                        # May be YAML; there room for deeper testing...
-                        break
-
-                preserve_to = line_count - keep_lines - 2
-                pnode_comment = (
-                    pnode_eol_comment +
-                    "\n".join(pnode_comment_lines[0:preserve_to]) +
-                    ("\n" if preserve_to >= 0 else ""))
-
-                data.ca.items[prekey][2].value = pnode_comment
-
-            # Check for any comment after an end-of-line comment of the target
-            # node.  If present, move it to the end of the predecessor node's
-            # post-eol comment.
-            preserve_comment = post_comment.partition("\n")[2]
-            if preserve_comment is not None:
-                data.ca.items[prekey][2].value = (
-                    pnode_comment + preserve_comment)
-
-        # DEBUG
-        import pprint
-        pp = pprint.PrettyPrinter(indent=4)
-        print("The ca items for data:")
-        pp.pprint(data.ca.items if hasattr(data, "ca") else "DATA HAS NO COMMENTS!")
-        print("All data keys:")
-        pp.pprint(list(data.keys()))
-
-        # In order to preserve the post-node comment, omiting any end-of-line
-        # comment, it must be appended/moved to the node preceding the deleted
-        # node.  That preceding node will be either an immediate peer or the
-        # parent.  If however the target node has no post-comment -- even if it
-        # does have an EOL comment -- there will be nothing to preserve.
-        if hasattr(data, "ca") and key in data.ca.items:
-            # There is an end-of-line comment, post-eol-comment (i.e. a comment
-            # after this node's EOL comment that is preceding the NEXT node
-            # which must be attached to the end of the PRECEDING node's
-            # comment), or both.  A comment merge is necessary only when there
-            # is a post-eol-comment.  So, is there a post-eol-comment?
-            keylist: list[Any] = list(data.keys())
-            keydex: int = keylist.index(key)
-            predex: int = keydex - 1
-            node_comment = data.ca.items[key][2].value
-            node_post_eol_comment = node_comment.partition("\n")[2]
-
-            if node_post_eol_comment is not None:
-                # There is a post-eol-comment that must be preserved
-                if predex < 0:
-                    merge_with_parent()
-                else:
-                    preceding_key: Any = keylist[predex]
-                    merge_with_preceding_peer(
-                        data, node_comment, preceding_key)
-
+        Comments.del_map_comment_for_entry(data, key, parent, parentref)
         del data[key]
 
     @staticmethod
