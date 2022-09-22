@@ -371,6 +371,10 @@ class Comments:
         keydex: int = keylist.index(key)
         predex: int = keydex - 1
         if 0 == keydex:
+            if data.ca.comment is None:
+                # Nothing to do; there are no comments in this dict
+                return None
+
             # The target key is the first child; delete any obvious comment
             # meant for the target node from the container node's post-EOL
             # comment and merge any post-EOL comment of the target node
