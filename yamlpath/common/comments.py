@@ -287,7 +287,7 @@ class Comments:
 
         preserve_to = line_count - keep_lines - 1
         pnode_post_eol_comment.value = (
-             eol_comment + "\n" +
+             eol_comment +
             "\n".join(pnode_comment_lines[0:preserve_to]) +
             ("\n" if preserve_to >= 0 else ""))
 
@@ -296,7 +296,38 @@ class Comments:
         pnode_post_eol_comments: List[CommentToken]
     ) -> None:
         """Strip text of content that is likely meant for the next node."""
-        pass
+        # DEBUG
+        import pprint
+        pp = pprint.PrettyPrinter(indent=4)
+
+        line_count = len(pnode_post_eol_comments)
+        preserve_to = line_count
+        keep_lines = 0
+        for pre_index, ct in enumerate(reversed(pnode_post_eol_comments)):
+            pre_line = ct.value
+            pre_content = pre_line.partition("#")[2].lstrip()
+            print("\\" * 5 + f"l_EVALUATING CommentToken@{pre_index}:{pre_content}({len(pre_content)})")
+            pp.pprint(ct)
+
+            # Stop preserving lines at the first (last) blank line
+            if len(pre_content) < 1:
+                print("\\" * 5 + f"l_STOPPING on an empty line!")
+                break
+
+            # Check for possible YAML markup
+            if pre_content[0] == '-' or ':' in pre_content:
+                # May be YAML; there's room here for deeper testing...
+                print("\\" * 5 + f"l_STOPPING on potential YAML!")
+                break
+
+            print("\\" * 5 + f"l_TARGETTING CommentToken@{pre_index} for deletion!")
+            keep_lines = pre_index
+
+        preserve_to = line_count - keep_lines - 2
+        print("\\" * 5 + f"l_PREPARING TO DESTROY from index {line_count} to {preserve_to}!")
+        for idx in range(line_count - 1, preserve_to, -1):
+            print("\\" * 5 + f"l_DESTROYING CommentToken@{idx}!")
+            del pnode_post_eol_comments[idx]
 
     @staticmethod
     def del_map_comment_for_entry(
@@ -366,7 +397,9 @@ class Comments:
         #    1.2:  the ca's comment poperty at [Comments.RYCA_COMMENT_POST]
         #          where all lines are stored together in a single
         #          CommentToken separated by \n marks.
-        # 2.
+        # 2. A pre-comment for a node preceded by another dict will have its
+        #    pre-comment in the post-EOL comment of the predecessor node's last
+        #    child.
         keylist: list[Any] = list(data.keys())
         keydex: int = keylist.index(key)
         predex: int = keydex - 1
@@ -383,7 +416,8 @@ class Comments:
                 # The container does NOT have an EOL comment; each pre-node
                 # comment line is in its own CommentToken.
                 print("?1" * 40 + "Need to parse a list of PARENT CommentTokens because this FIRST node's PARENT does /NOT/ have an EOL comment...")
-                exit(41)
+                Comments._strip_next_node_comment_from_lst(
+                    data.ca.comment[Comments.RYCA_COMMENT_PRE_L])
             else:
                 # The container HAS an EOL comment; all pre-node comment
                 # lines are crammed into a single CommentToken.
@@ -429,7 +463,7 @@ class Comments:
             else:
                 if data.ca.items[prekey][Comments.RYCA_DICT_POST_VALUE] is None:
                     print("?5" * 40 + "Need to parse a list of CommentTokens...")
-                    exit(43)
+                    exit(44)
                 else:
                     print("?6" * 40 + "Need to parse a multi-line single token...")
                     Comments._strip_next_node_comment_from_aio(
