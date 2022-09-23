@@ -3,9 +3,12 @@ Implement Nodes, a static library of generally-useful code for data nodes.
 
 Copyright 2020 William W. Kimball, Jr. MBA MSIS
 """
+from datetime import datetime
 import re
 from ast import literal_eval
 from typing import Any
+
+from dateutil import parser
 
 from ruamel.yaml.comments import CommentedSeq, CommentedMap, TaggedScalar
 from ruamel.yaml.scalarbool import ScalarBoolean
@@ -18,6 +21,7 @@ from ruamel.yaml.scalarstring import (
     FoldedScalarString,
     LiteralScalarString,
 )
+from ruamel.yaml.timestamp import TimeStamp
 
 from yamlpath.enums import (
     PathSegmentTypes,
@@ -139,6 +143,21 @@ class Nodes:
                     + " cast to an integer number.")
                     .format(valform, value)
                 ) from wrap_ex
+        elif valform == YAMLValueFormats.TIMESTAMP:
+            new_type = TimeStamp
+
+            try:
+                new_value = parser.parse(value)
+            except ValueError as wrap_ex:
+                raise ValueError(
+                    (f"The requested value format is {valform}, but '{value}'"
+                    + "  cannot be cast to an ISO8601 timestamp.")
+                ) from wrap_ex
+
+            anchor_val = None
+            if hasattr(source_node, "anchor"):
+                anchor_val = source_node.anchor.value
+            new_node = Nodes.make_timestamp_node(new_value, anchor_val)
         else:
             # Punt to whatever the best Scalar type may be
             try:
@@ -169,6 +188,43 @@ class Nodes:
         # Apply a custom tag, if provided
         if "tag" in kwargs:
             new_node = Nodes.apply_yaml_tag(new_node, kwargs.pop("tag"))
+
+        return new_node
+
+    @staticmethod
+    def make_timestamp_node(value: datetime, anchor: str = None) -> TimeStamp:
+        """
+        Create a new TimeStamp data node from a bare datetime.
+
+        An optional anchor may be attached.
+
+        Parameters:
+        1. value (datetime) The bare datetime to wrap.
+        2. anchor (str) OPTIONAL anchor to add.
+
+        Returns: (TimeStamp) The new node
+        """
+        if anchor is None:
+            new_node = TimeStamp(
+                value.year
+                , value.month
+                , value.day
+                , value.hour
+                , value.minute
+                , value.second
+                , value.microsecond
+            )
+        else:
+            new_node = TimeStamp(
+                value.year
+                , value.month
+                , value.day
+                , value.hour
+                , value.minute
+                , value.second
+                , value.microsecond
+                , anchor=anchor
+            )
 
         return new_node
 
@@ -268,6 +324,8 @@ class Nodes:
             wrapped_value = Nodes.make_float_node(ast_value)
         elif typ is bool:
             wrapped_value = ScalarBoolean(bool(value))
+        elif typ is datetime:
+            wrapped_value = TimeStamp(value)
 
         return wrapped_value
 

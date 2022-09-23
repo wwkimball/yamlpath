@@ -16,6 +16,7 @@ from ruamel.yaml.scalarstring import (
 from ruamel.yaml.scalarbool import ScalarBoolean
 from ruamel.yaml.scalarfloat import ScalarFloat
 from ruamel.yaml.scalarint import ScalarInt
+from ruamel.yaml.timestamp import TimeStamp
 
 
 class YAMLValueFormats(Enum):
@@ -56,6 +57,10 @@ class YAMLValueFormats(Enum):
 
     `SQUOTE`
         The value is demarcated via apostrophes (').
+
+    `TIMESTAMP`
+        The value is a timestamp per the supported syntax of ISO8601 by
+        http://yaml.org/type/timestamp.html.
     """
 
     BARE = auto()
@@ -67,6 +72,7 @@ class YAMLValueFormats(Enum):
     INT = auto()
     LITERAL = auto()
     SQUOTE = auto()
+    TIMESTAMP = auto()
 
     @staticmethod
     def get_names() -> List[str]:
@@ -137,5 +143,7 @@ class YAMLValueFormats(Enum):
             best_type = YAMLValueFormats.FLOAT
         elif node_type is ScalarInt:
             best_type = YAMLValueFormats.INT
+        elif node_type is TimeStamp:
+            best_type = YAMLValueFormats.TIMESTAMP
 
         return best_type
