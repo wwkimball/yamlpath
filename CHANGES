@@ -1,3 +1,9 @@
+3.6.6
+Bug Fixes:
+* YAML timestamp values could not be created via yamlpath tools or its library,
+  per http://yaml.org/type/timestamp.html.  Thanks again go to
+  https://github.com/AndydeCleyre!
+
 3.6.5
 Bug Fixes:
 * When using EYAML with block formatted values on Windows, the block formatting
