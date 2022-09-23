@@ -306,11 +306,19 @@ class Comments:
         for pre_index, ct in enumerate(reversed(pnode_post_eol_comments)):
             pre_line = ct.value
             pre_content = pre_line.partition("#")[2].lstrip()
-            print("\\" * 5 + f"l_EVALUATING CommentToken@{pre_index}:{pre_content}({len(pre_content)})")
+
+            dbg_pre_content = pre_content.replace("\n", "\\n")
+            print("\\" * 5 + f"l_EVALUATING CommentToken@{pre_index}:{dbg_pre_content}({len(pre_content)})")
             pp.pprint(ct)
 
-            # Stop preserving lines at the first (last) blank line
+            # Stop preserving lines at the first (last) blank line; but there's
+            # a trick.  Blank lines are hidden at the end of the preceding
+            # CommentToken as a double new-line marker.
             if len(pre_content) < 1:
+                print("\\" * 5 + f"l_STOPPING on an empty line!")
+                break
+
+            if len(pre_content) >= 2 and "\n\n" == pre_content[-2:]:
                 print("\\" * 5 + f"l_STOPPING on an empty line!")
                 break
 
@@ -460,7 +468,7 @@ class Comments:
                         print("?4" * 40 + "Need to parse a multi-line single token...")
                         Comments._strip_next_node_comment_from_aio(
                             prelastcr[Comments.RYCA_DICT_POST_VALUE])
-            else:
+            elif prekey in data.ca.items:
                 if data.ca.items[prekey][Comments.RYCA_DICT_POST_VALUE] is None:
                     print("?5" * 40 + "Need to parse a list of CommentTokens...")
                     exit(44)
