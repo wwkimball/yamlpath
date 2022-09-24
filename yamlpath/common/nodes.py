@@ -229,6 +229,7 @@ class Nodes:
                 , value.minute
                 , value.second
                 , value.microsecond
+                , value.tzinfo
             )
         else:
             new_node = TimeStamp(
@@ -239,6 +240,7 @@ class Nodes:
                 , value.minute
                 , value.second
                 , value.microsecond
+                , value.tzinfo
                 , anchor=anchor
             )
 
