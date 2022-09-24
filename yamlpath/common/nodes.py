@@ -3,7 +3,7 @@ Implement Nodes, a static library of generally-useful code for data nodes.
 
 Copyright 2020 William W. Kimball, Jr. MBA MSIS
 """
-from datetime import datetime
+from datetime import datetime, date
 import re
 from ast import literal_eval
 from typing import Any
@@ -61,10 +61,10 @@ class Nodes:
         - `ValueError' when the new value is not numeric and value_format
         requires it to be so
         """
-        new_node = None
-        new_type = type(source_node)
-        new_value = value
-        valform = YAMLValueFormats.DEFAULT
+        new_node: Any = None
+        new_type: Any = type(source_node)
+        new_value: Any = value
+        valform: YAMLValueFormats = YAMLValueFormats.DEFAULT
 
         if isinstance(value_format, YAMLValueFormats):
             valform = value_format
@@ -151,7 +151,7 @@ class Nodes:
             # and not a TIMESTAMP, this is as close as yamlpath can provide
             # until ruamel.yaml supports date values with an anchor-aware
             # wrapper type.
-            new_type = datetime.date
+            new_type = date
 
             # Enforce matches against http://yaml.org/type/timestamp.html
             yaml_spec_re = re.compile("""(?x)
@@ -385,7 +385,7 @@ class Nodes:
             wrapped_value = Nodes.make_float_node(ast_value)
         elif typ is bool:
             wrapped_value = ScalarBoolean(bool(value))
-        elif typ is datetime.datetime:
+        elif typ is datetime:
             wrapped_value = TimeStamp(
                 value.year, value.month, value.day,
                 value.hour, value.minute, value.second, value.microsecond)
