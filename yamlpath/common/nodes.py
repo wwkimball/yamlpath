@@ -247,7 +247,7 @@ class Nodes:
     def make_timestamp_node(
         value: datetime, t_separator: str, anchor: str = None
     ) -> TimeStamp:
-        """
+        r"""
         Create a new TimeStamp data node from a bare datetime.
 
         An optional anchor may be attached.
