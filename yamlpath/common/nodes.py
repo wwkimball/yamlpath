@@ -143,6 +143,22 @@ class Nodes:
                     + " cast to an integer number.")
                     .format(valform, value)
                 ) from wrap_ex
+        elif valform == YAMLValueFormats.DATE:
+            # BEWARE:  ruamel.yaml doesn't wrap dates, so there is no way
+            # to use anchors/aliases with this data-type!  While a TimeStamp
+            # is the closest native ruamel.yaml type, it forces a " 00:00:00"
+            # time when emitted for date-only value.  Since users want a DATE
+            # and not a TIMESTAMP, this is as close as yamlpath can provide
+            # until ruamel.yaml supports date values with a wrapper type.
+            new_type = datetime.date
+
+            try:
+                new_value = parser.parse(value)
+            except ValueError as wrap_ex:
+                raise ValueError(
+                    (f"The requested value format is {valform}, but '{value}'"
+                    + "  cannot be cast to an ISO8601 date.")
+                ) from wrap_ex
         elif valform == YAMLValueFormats.TIMESTAMP:
             new_type = TimeStamp
 
@@ -324,8 +340,10 @@ class Nodes:
             wrapped_value = Nodes.make_float_node(ast_value)
         elif typ is bool:
             wrapped_value = ScalarBoolean(bool(value))
-        elif typ is datetime:
-            wrapped_value = TimeStamp(value)
+        elif typ is datetime.datetime:
+            wrapped_value = TimeStamp(
+                value.year, value.month, value.day,
+                value.hour, value.minute, value.second, value.microsecond)
 
         return wrapped_value
 

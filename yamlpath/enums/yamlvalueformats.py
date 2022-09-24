@@ -3,6 +3,7 @@ Implements the YAMLValueFormats enumeration.
 
 Copyright 2019, 2020 William W. Kimball, Jr. MBA MSIS
 """
+import datetime
 from enum import Enum, auto
 from typing import Any, List
 
@@ -32,6 +33,9 @@ class YAMLValueFormats(Enum):
 
     `BOOLEAN`
         The value is written as a bare True or False.
+
+    `DATE`
+        The value is written as a bare ISO8601 date without a time component.
 
     `DEFAULT`
         The value is written in whatever format is deemed most appropriate.
@@ -65,6 +69,7 @@ class YAMLValueFormats(Enum):
 
     BARE = auto()
     BOOLEAN = auto()
+    DATE = auto()
     DEFAULT = auto()
     DQUOTE = auto()
     FLOAT = auto()
@@ -143,7 +148,9 @@ class YAMLValueFormats(Enum):
             best_type = YAMLValueFormats.FLOAT
         elif node_type is ScalarInt:
             best_type = YAMLValueFormats.INT
-        elif node_type is TimeStamp:
+        elif node_type is datetime.date:
+            best_type = YAMLValueFormats.DATE
+        elif node_type is TimeStamp or node_type is datetime.datetime:
             best_type = YAMLValueFormats.TIMESTAMP
 
         return best_type
