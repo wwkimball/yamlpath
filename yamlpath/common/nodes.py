@@ -144,13 +144,6 @@ class Nodes:
                     .format(valform, value)
                 ) from wrap_ex
         elif valform == YAMLValueFormats.DATE:
-            # BEWARE:  ruamel.yaml doesn't wrap dates, so there is no way
-            # to use anchors/aliases with this data-type!  While a TimeStamp
-            # is the closest native ruamel.yaml type, it forces a " 00:00:00"
-            # time when emitted for date-only value.  Since users want a DATE
-            # and not a TIMESTAMP, this is as close as yamlpath can provide
-            # until ruamel.yaml supports date values with an anchor-aware
-            # wrapper type.
             new_type = date
 
             # Enforce matches against http://yaml.org/type/timestamp.html

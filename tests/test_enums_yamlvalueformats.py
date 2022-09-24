@@ -1,4 +1,5 @@
 import pytest
+from datetime import datetime, date
 
 from ruamel.yaml.scalarstring import (
     PlainScalarString,
@@ -10,6 +11,7 @@ from ruamel.yaml.scalarstring import (
 from ruamel.yaml.scalarbool import ScalarBoolean
 from ruamel.yaml.scalarfloat import ScalarFloat
 from ruamel.yaml.scalarint import ScalarInt
+from ruamel.yaml.timestamp import TimeStamp
 
 from yamlpath.enums import YAMLValueFormats
 
@@ -20,6 +22,7 @@ class Test_enums_YAMLValueFormats():
 		assert YAMLValueFormats.get_names() == [
 			"BARE",
 			"BOOLEAN",
+			"DATE",
 			"DEFAULT",
 			"DQUOTE",
 			"FLOAT",
@@ -27,11 +30,13 @@ class Test_enums_YAMLValueFormats():
 			"INT",
 			"LITERAL",
 			"SQUOTE",
+			"TIMESTAMP",
 		]
 
 	@pytest.mark.parametrize("input,output", [
 		("BARE", YAMLValueFormats.BARE),
 		("BOOLEAN", YAMLValueFormats.BOOLEAN),
+		("DATE", YAMLValueFormats.DATE),
 		("DEFAULT", YAMLValueFormats.DEFAULT),
 		("DQUOTE", YAMLValueFormats.DQUOTE),
 		("FLOAT", YAMLValueFormats.FLOAT),
@@ -39,6 +44,7 @@ class Test_enums_YAMLValueFormats():
 		("INT", YAMLValueFormats.INT),
 		("LITERAL", YAMLValueFormats.LITERAL),
 		("SQUOTE", YAMLValueFormats.SQUOTE),
+		("TIMESTAMP", YAMLValueFormats.TIMESTAMP),
 	])
 	def test_from_str(self, input, output):
 		assert output == YAMLValueFormats.from_str(input)
@@ -50,12 +56,14 @@ class Test_enums_YAMLValueFormats():
 	@pytest.mark.parametrize("input,output", [
 		(FoldedScalarString(""), YAMLValueFormats.FOLDED),
 		(LiteralScalarString(""), YAMLValueFormats.LITERAL),
+		(date(2022, 9, 24), YAMLValueFormats.DATE),
 		(DoubleQuotedScalarString(''), YAMLValueFormats.DQUOTE),
 		(SingleQuotedScalarString(""), YAMLValueFormats.SQUOTE),
 		(PlainScalarString(""), YAMLValueFormats.BARE),
 		(ScalarBoolean(False), YAMLValueFormats.BOOLEAN),
 		(ScalarFloat(1.01), YAMLValueFormats.FLOAT),
 		(ScalarInt(10), YAMLValueFormats.INT),
+		(TimeStamp(2022, 9, 24, 7, 42, 38), YAMLValueFormats.TIMESTAMP),
 		(None, YAMLValueFormats.DEFAULT),
 	])
 	def test_from_node(self, input, output):
