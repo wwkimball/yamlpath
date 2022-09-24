@@ -149,8 +149,22 @@ class Nodes:
             # is the closest native ruamel.yaml type, it forces a " 00:00:00"
             # time when emitted for date-only value.  Since users want a DATE
             # and not a TIMESTAMP, this is as close as yamlpath can provide
-            # until ruamel.yaml supports date values with a wrapper type.
+            # until ruamel.yaml supports date values with an anchor-aware
+            # wrapper type.
             new_type = datetime.date
+
+            # Enforce matches against http://yaml.org/type/timestamp.html
+            yaml_spec_re = re.compile("""(?x)
+                ^
+                [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9] # (ymd)
+                $""")
+            dt_matches = yaml_spec_re.match(value)
+            if not dt_matches:
+                raise ValueError(
+                    (f"The requested value format is {valform}, but '{value}'"
+                    + " is not a YAML-compatible ISO8601 date per"
+                    + " http://yaml.org/type/timestamp.html")
+                )
 
             try:
                 new_value = parser.parse(value)
@@ -161,6 +175,26 @@ class Nodes:
                 ) from wrap_ex
         elif valform == YAMLValueFormats.TIMESTAMP:
             new_type = TimeStamp
+
+            # Enforce matches against http://yaml.org/type/timestamp.html
+            yaml_spec_re = re.compile("""(?x)
+                ^
+                [0-9][0-9][0-9][0-9] # (year)
+                -[0-9][0-9]? # (month)
+                -[0-9][0-9]? # (day)
+                ([Tt]|[ \t]+)[0-9][0-9]? # (hour)
+                :[0-9][0-9] # (minute)
+                :[0-9][0-9] # (second)
+                (\.[0-9]*)? # (fraction)
+                (([ \t]*)Z|[-+][0-9][0-9]?(:[0-9][0-9])?)? # (time zone)
+                $""")
+            dt_matches = yaml_spec_re.match(value)
+            if not dt_matches:
+                raise ValueError(
+                    (f"The requested value format is {valform}, but '{value}'"
+                    + " is not a YAML-compatible ISO8601 timestamp per"
+                    + " http://yaml.org/type/timestamp.html")
+                )
 
             try:
                 new_value = parser.parse(value)
@@ -173,7 +207,9 @@ class Nodes:
             anchor_val = None
             if hasattr(source_node, "anchor"):
                 anchor_val = source_node.anchor.value
-            new_node = Nodes.make_timestamp_node(new_value, anchor_val)
+
+            new_node = Nodes.make_timestamp_node(
+                new_value, dt_matches.group(1), anchor_val)
         else:
             # Punt to whatever the best Scalar type may be
             try:
@@ -208,7 +244,9 @@ class Nodes:
         return new_node
 
     @staticmethod
-    def make_timestamp_node(value: datetime, anchor: str = None) -> TimeStamp:
+    def make_timestamp_node(
+        value: datetime, t_separator: str, anchor: str = None
+    ) -> TimeStamp:
         """
         Create a new TimeStamp data node from a bare datetime.
 
@@ -216,7 +254,8 @@ class Nodes:
 
         Parameters:
         1. value (datetime) The bare datetime to wrap.
-        2. anchor (str) OPTIONAL anchor to add.
+        2. t_separator (str) One of [Tt\s] to separate date from time
+        3. anchor (str) OPTIONAL anchor to add.
 
         Returns: (TimeStamp) The new node
         """
@@ -243,6 +282,10 @@ class Nodes:
                 , value.tzinfo
                 , anchor=anchor
             )
+
+        # Add a T separator only when set
+        if t_separator in ['T', 't']:
+            new_node._yaml['t'] = t_separator
 
         return new_node
 
