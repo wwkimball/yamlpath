@@ -154,7 +154,7 @@ class Nodes:
             new_type = date
 
             # Enforce matches against http://yaml.org/type/timestamp.html
-            yaml_spec_re = re.compile("""(?x)
+            yaml_spec_re = re.compile(r"""(?x)
                 ^
                 [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9] # (ymd)
                 $""")
@@ -177,7 +177,7 @@ class Nodes:
             new_type = TimeStamp
 
             # Enforce matches against http://yaml.org/type/timestamp.html
-            yaml_spec_re = re.compile("""(?x)
+            yaml_spec_re = re.compile(r"""(?x)
                 ^
                 [0-9][0-9][0-9][0-9] # (year)
                 -[0-9][0-9]? # (month)
@@ -285,6 +285,10 @@ class Nodes:
 
         # Add a T separator only when set
         if t_separator in ['T', 't']:
+            # Ignore W0212 here because there is literally no other way to tell
+            # ruamel.yaml to preserve the T separator for this timestamp at the
+            # time of this writing.  This code is indeed therefore fragile.
+            #pylint: disable=protected-access
             new_node._yaml['t'] = t_separator
 
         return new_node
