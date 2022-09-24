@@ -5,7 +5,7 @@ Copyright 2020, 2021 William W. Kimball, Jr. MBA MSIS
 """
 import warnings
 from sys import maxsize, stdin
-from datetime import date
+from datetime import date, datetime
 from typing import Any, Dict, Generator, Tuple
 
 import ruamel.yaml # type: ignore
@@ -308,8 +308,8 @@ class Parsers:
         elif isinstance(data, CommentedSeq):
             for idx, ele in enumerate(data):
                 data[idx] = Parsers.stringify_dates(ele)
-        elif isinstance(data, date):
-            return str(data)
+        elif isinstance(data, (datetime, date)):
+            return data.isoformat()
         return data
 
     @staticmethod
@@ -351,8 +351,8 @@ class Parsers:
             if data.tag.value == "!null":
                 return None
             return Parsers.jsonify_yaml_data(data.value)
-        elif isinstance(data, date):
-            return str(data)
+        elif isinstance(data, (datetime, date)):
+            return data.isoformat()
         elif isinstance(data, bytes):
             return str(data)
         elif isinstance(data, (ScalarBoolean, bool)):
