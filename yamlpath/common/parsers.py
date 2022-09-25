@@ -19,8 +19,10 @@ from ruamel.yaml.scalarstring import ScalarString
 from ruamel.yaml.comments import (
     CommentedMap, CommentedSet, CommentedSeq, TaggedScalar
 )
+from ruamel.yaml.timestamp import TimeStamp
 
 from yamlpath.wrappers import ConsolePrinter
+from yamlpath.common import Nodes
 
 if ruamel.yaml.version_info < (0, 17, 5):                # pragma: no cover
     from yamlpath.patches.aliasstyle import MySerializer # type: ignore
@@ -351,6 +353,8 @@ class Parsers:
             if data.tag.value == "!null":
                 return None
             return Parsers.jsonify_yaml_data(data.value)
+        elif isinstance(data, TimeStamp):
+            return Nodes.get_timestamp_with_tzinfo(data).isoformat()
         elif isinstance(data, (datetime, date)):
             return data.isoformat()
         elif isinstance(data, bytes):

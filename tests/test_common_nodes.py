@@ -1,6 +1,13 @@
 import pytest
+from datetime import datetime
+from types import SimpleNamespace
 
-import ruamel.yaml as ry
+from ruamel.yaml.comments import CommentedSeq, CommentedMap, TaggedScalar
+from ruamel.yaml.scalarstring import PlainScalarString
+from ruamel.yaml.scalarbool import ScalarBoolean
+from ruamel.yaml.scalarfloat import ScalarFloat
+from ruamel.yaml.scalarint import ScalarInt
+from ruamel.yaml.timestamp import TimeStamp
 
 from yamlpath.enums import YAMLValueFormats
 from yamlpath.common import Nodes
@@ -18,7 +25,7 @@ class Test_common_nodes():
         assert "[]" == Nodes.make_new_node("", "[]", YAMLValueFormats.DEFAULT)
 
     def test_anchored_string(self):
-        node = ry.scalarstring.PlainScalarString("value")
+        node = PlainScalarString("value")
         node.yaml_set_anchor("anchored")
         new_node = Nodes.make_new_node(node, "new", YAMLValueFormats.DEFAULT)
         assert new_node.anchor.value == node.anchor.value
@@ -29,15 +36,15 @@ class Test_common_nodes():
     ###
     def test_tag_map(self):
         new_tag = "!something"
-        old_node = ry.comments.CommentedMap({"key": "value"})
+        old_node = CommentedMap({"key": "value"})
         new_node = Nodes.apply_yaml_tag(old_node, new_tag)
         assert new_node.tag.value == new_tag
 
     def test_update_tag(self):
         old_tag = "!tagged"
         new_tag = "!changed"
-        old_node = ry.scalarstring.PlainScalarString("tagged value")
-        tagged_node = ry.comments.TaggedScalar(old_node, tag=old_tag)
+        old_node = PlainScalarString("tagged value")
+        tagged_node = TaggedScalar(old_node, tag=old_tag)
         new_node = Nodes.apply_yaml_tag(tagged_node, new_tag)
         assert new_node.tag.value == new_tag
         assert new_node.value == old_node
@@ -45,8 +52,8 @@ class Test_common_nodes():
     def test_delete_tag(self):
         old_tag = "!tagged"
         new_tag = ""
-        old_node = ry.scalarstring.PlainScalarString("tagged value")
-        tagged_node = ry.comments.TaggedScalar(old_node, tag=old_tag)
+        old_node = PlainScalarString("tagged value")
+        tagged_node = TaggedScalar(old_node, tag=old_tag)
         new_node = Nodes.apply_yaml_tag(tagged_node, new_tag)
         assert not hasattr(new_node, "tag")
         assert new_node == old_node
@@ -73,3 +80,20 @@ class Test_common_nodes():
             {"key": "value"},
             None
         ])
+
+
+    ###
+    # wrap_type
+    ###
+    @pytest.mark.parametrize("value,checktype", [
+        ([], CommentedSeq),
+        ({}, CommentedMap),
+        ("", PlainScalarString),
+        (1, ScalarInt),
+        (1.1, ScalarFloat),
+        (True, ScalarBoolean),
+        (datetime(2022, 8, 2, 13, 22, 31), TimeStamp),
+        (SimpleNamespace(), SimpleNamespace),
+    ])
+    def test_wrap_type(self, value, checktype):
+        assert isinstance(Nodes.wrap_type(value), checktype)

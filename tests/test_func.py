@@ -9,7 +9,6 @@ from ruamel.yaml.scalarfloat import ScalarFloat
 from ruamel.yaml.scalarint import ScalarInt
 
 from yamlpath.enums import AnchorMatches, PathSearchMethods, YAMLValueFormats
-from yamlpath.types import PathAttributes
 from yamlpath.path import SearchTerms
 from yamlpath import YAMLPath
 from yamlpath.func import (
@@ -31,7 +30,7 @@ from yamlpath.func import (
     wrap_type,
 )
 
-from tests.conftest import create_temp_yaml_file, quiet_logger
+from tests.conftest import create_temp_yaml_file
 
 
 @pytest.fixture

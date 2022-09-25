@@ -23,6 +23,7 @@ from ruamel.yaml.comments import (
     CommentedSet,
     TaggedScalar
 )
+from ruamel.yaml.timestamp import TimeStamp
 
 from yamlpath.wrappers.nodecoords import NodeCoords
 
@@ -287,7 +288,12 @@ class ConsolePrinter:
             dtype += ",folded@{}".format(data.fold_pos)
 
         print_prefix += anchor_prefix
-        print_line = str(data).replace("\n", "\n{}".format(print_prefix))
+
+        if isinstance(data, TimeStamp):
+            from yamlpath.common.nodes import Nodes
+            print_line = Nodes.get_timestamp_with_tzinfo(data).isoformat()
+        else:
+            print_line = str(data).replace("\n", "\n{}".format(print_prefix))
         return ConsolePrinter._debug_prefix_lines(
             "{}{}{}".format(print_prefix, print_line, dtype))
 

@@ -13,11 +13,13 @@ import argparse
 import json
 from os import access, R_OK
 from os.path import isfile
+from datetime import date, datetime
 
 from ruamel.yaml.comments import CommentedSet
+from ruamel.yaml.timestamp import TimeStamp
 
 from yamlpath import __version__ as YAMLPATH_VERSION
-from yamlpath.common import Parsers
+from yamlpath.common import Parsers, Nodes
 from yamlpath import YAMLPath
 from yamlpath.exceptions import YAMLPathException
 from yamlpath.eyaml.exceptions import EYAMLCommandException
@@ -193,6 +195,10 @@ def main():
             else:
                 if node is None:
                     node = "\x00"
+                elif isinstance(node, TimeStamp):
+                    node = Nodes.get_timestamp_with_tzinfo(node).isoformat()
+                elif isinstance(node, (datetime, date)):
+                    node = node.isoformat()
                 print("{}".format(str(node).replace("\n", r"\n")))
     except RecursionError:
         log.critical(

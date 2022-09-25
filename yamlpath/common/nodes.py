@@ -3,8 +3,8 @@ Implement Nodes, a static library of generally-useful code for data nodes.
 
 Copyright 2020 William W. Kimball, Jr. MBA MSIS
 """
-from datetime import datetime, date
 import re
+from datetime import datetime, date, timedelta, timezone
 from ast import literal_eval
 from typing import Any
 
@@ -146,63 +146,73 @@ class Nodes:
         elif valform == YAMLValueFormats.DATE:
             new_type = date
 
-            # Enforce matches against http://yaml.org/type/timestamp.html
-            yaml_spec_re = re.compile(r"""(?x)
-                ^
-                [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9] # (ymd)
-                $""")
-            dt_matches = yaml_spec_re.match(value)
-            if not dt_matches:
-                raise ValueError(
-                    (f"The requested value format is {valform}, but '{value}'"
-                    + " is not a YAML-compatible ISO8601 date per"
-                    + " http://yaml.org/type/timestamp.html")
-                )
+            if isinstance(value, (date, datetime)):
+                new_value = value
+                new_node = date(value.year, value.month, value.day)
+            else:
+                # Enforce matches against http://yaml.org/type/timestamp.html
+                yaml_spec_re = re.compile(r"""(?x)
+                    ^
+                    [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9] # (ymd)
+                    $""")
+                dt_matches = yaml_spec_re.match(value)
+                if not dt_matches:
+                    raise ValueError(
+                        f"The requested value format is {valform}, but"
+                        + f" '{value}' is not a YAML-compatible ISO8601 date"
+                        + " per http://yaml.org/type/timestamp.html")
 
-            try:
-                new_value = parser.parse(value)
-            except ValueError as wrap_ex:
-                raise ValueError(
-                    (f"The requested value format is {valform}, but '{value}'"
-                    + "  cannot be cast to an ISO8601 date.")
-                ) from wrap_ex
+                try:
+                    new_value = parser.parse(value)
+                    new_node = date(
+                        new_value.year, new_value.month, new_value.day)
+                except ValueError as wrap_ex:
+                    raise ValueError(
+                        f"The requested value format is {valform}, but "
+                        + f" {value}' cannot be cast to an ISO8601 date."
+                    ) from wrap_ex
         elif valform == YAMLValueFormats.TIMESTAMP:
             new_type = TimeStamp
+            t_sep = ' '
 
-            # Enforce matches against http://yaml.org/type/timestamp.html
-            yaml_spec_re = re.compile(r"""(?x)
-                ^
-                [0-9][0-9][0-9][0-9] # (year)
-                -[0-9][0-9]? # (month)
-                -[0-9][0-9]? # (day)
-                ([Tt]|[ \t]+)[0-9][0-9]? # (hour)
-                :[0-9][0-9] # (minute)
-                :[0-9][0-9] # (second)
-                (\.[0-9]*)? # (fraction)
-                (([ \t]*)Z|[-+][0-9][0-9]?(:[0-9][0-9])?)? # (time zone)
-                $""")
-            dt_matches = yaml_spec_re.match(value)
-            if not dt_matches:
-                raise ValueError(
-                    (f"The requested value format is {valform}, but '{value}'"
-                    + " is not a YAML-compatible ISO8601 timestamp per"
-                    + " http://yaml.org/type/timestamp.html")
-                )
+            if isinstance(value, (datetime, TimeStamp)):
+                new_value = value
+            else:
+                # Enforce matches against http://yaml.org/type/timestamp.html
+                yaml_spec_re = re.compile(r"""(?x)
+                    ^
+                    [0-9][0-9][0-9][0-9] # (year)
+                    -[0-9][0-9]? # (month)
+                    -[0-9][0-9]? # (day)
+                    ([Tt]|[ \t]+)[0-9][0-9]? # (hour)
+                    :[0-9][0-9] # (minute)
+                    :[0-9][0-9] # (second)
+                    (\.[0-9]*)? # (fraction)
+                    (([ \t]*)Z|[-+][0-9][0-9]?(:[0-9][0-9])?)? # (time zone)
+                    $""")
+                dt_matches = yaml_spec_re.match(value)
+                if not dt_matches:
+                    raise ValueError(
+                        f"The requested value format is {valform}, but"
+                        + f" '{value}' is not a YAML-compatible ISO8601"
+                        + " timestamp per http://yaml.org/type/timestamp.html")
 
-            try:
-                new_value = parser.parse(value)
-            except ValueError as wrap_ex:
-                raise ValueError(
-                    (f"The requested value format is {valform}, but '{value}'"
-                    + "  cannot be cast to an ISO8601 timestamp.")
-                ) from wrap_ex
+                t_sep = dt_matches.group(1)
+
+                try:
+                    new_value = parser.parse(value)
+                except ValueError as wrap_ex:
+                    raise ValueError(
+                        f"The requested value format is {valform}, but"
+                        + f" '{value}' cannot be cast to an ISO8601 timestamp."
+                    ) from wrap_ex
 
             anchor_val = None
             if hasattr(source_node, "anchor"):
                 anchor_val = source_node.anchor.value
 
             new_node = Nodes.make_timestamp_node(
-                new_value, dt_matches.group(1), anchor_val)
+                new_value, t_sep, anchor_val)
         else:
             # Punt to whatever the best Scalar type may be
             try:
@@ -385,7 +395,8 @@ class Nodes:
         elif typ is datetime:
             wrapped_value = TimeStamp(
                 value.year, value.month, value.day,
-                value.hour, value.minute, value.second, value.microsecond)
+                value.hour, value.minute, value.second, value.microsecond,
+                value.tzinfo)
 
         return wrapped_value
 
@@ -599,3 +610,31 @@ class Nodes:
         except SyntaxError:
             typed_value = value
         return typed_value
+
+    @staticmethod
+    def get_timestamp_with_tzinfo(data: TimeStamp) -> TimeStamp:
+        """
+        Gets a TimeStamp with time-zone info correctly applied.
+
+        For whatever reason, ruamel.yaml hides time-zone data in a private
+        dict rather than as a manifest property of the wrapped datetime value.
+        Doing so causes the datetime value to be pre-calculated when emitted,
+        with the time-zone delta applied to the original value.  The net effect
+        is users get a different value out than they put in.  This method
+        rewinds the pre-calculation and combines the time-zone with the
+        original data as befits a complete datetime value.
+
+        Parameters:
+        1. value (TimeStamp) the value to correct
+        """
+        tzinfo_raw = (data._yaml['tz']
+                        if hasattr(data, "_yaml") and 'tz' in data._yaml
+                        else None)
+        if tzinfo_raw:
+            sign_mark, hours, minutes = re.match(
+                '([+\-]?)(\d{1,2}):?(\d{2})', tzinfo_raw).groups()
+            sign = -1 if sign_mark == '-' else 1
+            tdelta = timedelta(hours=int(hours), minutes=int(minutes))
+            tzinfo = timezone(sign * tdelta)
+            return (data + tdelta).replace(tzinfo=tzinfo)
+        return data
