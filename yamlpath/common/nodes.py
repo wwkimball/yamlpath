@@ -291,7 +291,7 @@ class Nodes:
             # Ignore W0212 here because there is literally no other way to tell
             # ruamel.yaml to preserve the T separator for this timestamp at the
             # time of this writing.  This code is indeed therefore fragile.
-            #pylint: disable=protected-access
+            # pylint: disable=protected-access
             new_node._yaml['t'] = t_separator
 
         return new_node
@@ -627,6 +627,10 @@ class Nodes:
         Parameters:
         1. value (TimeStamp) the value to correct
         """
+        # As stated in the method comments, ruamel.yaml hides the time-zone
+        # details in a private dict after forcibly normalizing the datetime;
+        # there is no public accessor for this.
+        # pylint: disable=protected-access
         tzinfo_raw = (data._yaml['tz']
                         if hasattr(data, "_yaml") and 'tz' in data._yaml
                         else None)

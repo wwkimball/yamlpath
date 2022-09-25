@@ -352,15 +352,15 @@ class Parsers:
         elif isinstance(data, TaggedScalar):
             if data.tag.value == "!null":
                 return None
-            return Parsers.jsonify_yaml_data(data.value)
+            data = Parsers.jsonify_yaml_data(data.value)
         elif isinstance(data, TimeStamp):
-            return Nodes.get_timestamp_with_tzinfo(data).isoformat()
+            data = Nodes.get_timestamp_with_tzinfo(data).isoformat()
         elif isinstance(data, (datetime, date)):
-            return data.isoformat()
+            data = data.isoformat()
         elif isinstance(data, bytes):
-            return str(data)
+            data = str(data)
         elif isinstance(data, (ScalarBoolean, bool)):
-            return bool(data)
+            data = bool(data)
         return data
 
     @staticmethod

@@ -290,6 +290,9 @@ class ConsolePrinter:
         print_prefix += anchor_prefix
 
         if isinstance(data, TimeStamp):
+            # Import loop occurs when this import is moved to the top because
+            # NodeCoords uses Nodes which uses NodeCoords
+            #pylint: disable=import-outside-toplevel
             from yamlpath.common.nodes import Nodes
             print_line = Nodes.get_timestamp_with_tzinfo(data).isoformat()
         else:
