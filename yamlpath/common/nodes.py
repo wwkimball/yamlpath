@@ -614,7 +614,7 @@ class Nodes:
     @staticmethod
     def get_timestamp_with_tzinfo(data: TimeStamp) -> TimeStamp:
         """
-        Gets a TimeStamp with time-zone info correctly applied.
+        Get a TimeStamp with time-zone info correctly applied.
 
         For whatever reason, ruamel.yaml hides time-zone data in a private
         dict rather than as a manifest property of the wrapped datetime value.
