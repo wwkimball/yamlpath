@@ -612,7 +612,7 @@ class Nodes:
         return typed_value
 
     @staticmethod
-    def get_timestamp_with_tzinfo(data: TimeStamp) -> TimeStamp:
+    def get_timestamp_with_tzinfo(data: TimeStamp) -> datetime:
         """
         Get a TimeStamp with time-zone info correctly applied.
 
@@ -631,8 +631,11 @@ class Nodes:
                         if hasattr(data, "_yaml") and 'tz' in data._yaml
                         else None)
         if tzinfo_raw:
-            sign_mark, hours, minutes = re.match(
-                '([+\-]?)(\d{1,2}):?(\d{2})', tzinfo_raw).groups()
+            tzre = re.compile(r'([+\-]?)(\d{1,2}):?(\d{2})')
+            tzmatches = tzre.match(tzinfo_raw)
+            if not tzmatches:
+                return data
+            sign_mark, hours, minutes = tzmatches.groups()
             sign = -1 if sign_mark == '-' else 1
             tdelta = timedelta(hours=int(hours), minutes=int(minutes))
             tzinfo = timezone(sign * tdelta)
