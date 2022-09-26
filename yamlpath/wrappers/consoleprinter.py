@@ -30,8 +30,11 @@ if ryversion < (0, 17, 22):                   # pragma: no cover
         AnchoredDate,
     )  # type: ignore
 else:
-    from ruamel.yaml.timestamp import AnchoredTimeStamp
-    # From whence comes AnchoredDate?
+    # Temporarily fool MYPY into resolving the future-case imports
+    from ruamel.yaml.timestamp import TimeStamp as AnchoredTimeStamp
+    AnchoredDate = AnchoredTimeStamp
+    #from ruamel.yaml.timestamp import AnchoredTimeStamp
+    # From whence shall come AnchoredDate?
 
 from yamlpath.wrappers.nodecoords import NodeCoords
 
