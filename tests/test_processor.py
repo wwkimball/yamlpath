@@ -87,7 +87,7 @@ class Test_Processor():
         ("/**/Hey*", ["Hey, Number Two!"], True, None),
         ("lots_of_names.**.name", ["Name 1-1", "Name 2-1", "Name 3-1", "Name 4-1", "Name 4-2", "Name 4-3", "Name 4-4"], True, None),
         ("/array_of_hashes/**", [1, "one", 2, "two"], True, None),
-        ("products_hash.*[dimensions.weight==4].(availability.start.date)+(availability.stop.date)", [[date(2020, 8, 1), date(2020, 9, 25)], [date(2020, 1, 1), date(2020, 1, 1)]], True, None),
+        ("products_hash.*[dimensions.weight==4].(availability.start.date)+(availability.stop.date)", [[AnchoredDate(2020, 8, 1), AnchoredDate(2020, 9, 25)], [AnchoredDate(2020, 1, 1), AnchoredDate(2020, 1, 1)]], True, None),
         ("products_array[dimensions.weight==4].product", ["doohickey", "widget"], True, None),
         ("(products_hash.*.dimensions.weight)[max()][parent(2)].dimensions.weight", [10], True, None),
         ("/Locations/*/*", ["ny", "bstn"], True, None),
@@ -1100,7 +1100,7 @@ datething: 2022-09-24
 timestampthing: 2022-09-24T15:24:32
         """
 
-        results = [6, 6.8, "yes", "no", True, False, None, None, "", "null", date(2022, 9, 24), datetime(2022, 9, 24, 15, 24, 32)]
+        results = [6, 6.8, "yes", "no", True, False, None, None, "", "null", AnchoredDate(2022, 9, 24), AnchoredTimeStamp(2022, 9, 24, 15, 24, 32)]
 
         yaml = YAML()
         data = yaml.load(yamldata)
