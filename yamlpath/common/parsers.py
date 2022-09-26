@@ -19,6 +19,7 @@ from ruamel.yaml.scalarstring import ScalarString
 from ruamel.yaml.comments import (
     CommentedMap, CommentedSet, CommentedSeq, TaggedScalar
 )
+# pylint: disable=wrong-import-position,ungrouped-imports
 from ruamel.yaml import version_info as ryversion
 if ryversion < (0, 17, 22):                   # pragma: no cover
     from yamlpath.patches.timestamp import (
@@ -38,6 +39,7 @@ from yamlpath.common import Nodes
 if ruamel.yaml.version_info < (0, 17, 5):                # pragma: no cover
     from yamlpath.patches.aliasstyle import MySerializer # type: ignore
     from yamlpath.patches.aliasstyle import MyEmitter    # type: ignore
+# pylint: enable=wrong-import-position,ungrouped-imports
 
 
 class Parsers:

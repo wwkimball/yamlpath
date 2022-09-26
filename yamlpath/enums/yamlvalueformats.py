@@ -17,6 +17,7 @@ from ruamel.yaml.scalarstring import (
 from ruamel.yaml.scalarbool import ScalarBoolean
 from ruamel.yaml.scalarfloat import ScalarFloat
 from ruamel.yaml.scalarint import ScalarInt
+# pylint: disable=wrong-import-position,ungrouped-imports
 from ruamel.yaml import version_info as ryversion
 if ryversion < (0, 17, 22):                   # pragma: no cover
     from yamlpath.patches.timestamp import (
@@ -29,6 +30,7 @@ else:
     AnchoredDate = AnchoredTimeStamp
     #from ruamel.yaml.timestamp import AnchoredTimeStamp
     # From whence shall come AnchoredDate?
+# pylint: enable=wrong-import-position,ungrouped-imports
 
 
 class YAMLValueFormats(Enum):

@@ -23,6 +23,7 @@ from ruamel.yaml.comments import (
     CommentedSet,
     TaggedScalar
 )
+# pylint: disable=wrong-import-position,ungrouped-imports
 from ruamel.yaml import version_info as ryversion
 if ryversion < (0, 17, 22):                   # pragma: no cover
     from yamlpath.patches.timestamp import (
@@ -37,6 +38,7 @@ else:
     # From whence shall come AnchoredDate?
 
 from yamlpath.wrappers.nodecoords import NodeCoords
+# pylint: enable=wrong-import-position,ungrouped-imports
 
 
 class ConsolePrinter:

@@ -21,6 +21,7 @@ from ruamel.yaml.scalarstring import (
     FoldedScalarString,
     LiteralScalarString,
 )
+# pylint: disable=wrong-import-position,ungrouped-imports
 from ruamel.yaml import version_info as ryversion
 if ryversion < (0, 17, 22):                   # pragma: no cover
     from yamlpath.patches.timestamp import (
@@ -40,6 +41,7 @@ from yamlpath.enums import (
 )
 from yamlpath.wrappers import NodeCoords
 from yamlpath import YAMLPath
+# pylint: enable=wrong-import-position,ungrouped-imports
 
 
 class Nodes:

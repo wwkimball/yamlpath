@@ -16,6 +16,7 @@ from os.path import isfile
 from datetime import date, datetime
 
 from ruamel.yaml.comments import CommentedSet
+# pylint: disable=wrong-import-position,ungrouped-imports
 from ruamel.yaml import version_info as ryversion
 if ryversion < (0, 17, 22):                   # pragma: no cover
     from yamlpath.patches.timestamp import (
@@ -39,6 +40,7 @@ from yamlpath.wrappers import NodeCoords
 from yamlpath.eyaml import EYAMLProcessor
 
 from yamlpath.wrappers import ConsolePrinter
+# pylint: enable=wrong-import-position,ungrouped-imports
 
 def processcli():
     """Process command-line arguments."""
