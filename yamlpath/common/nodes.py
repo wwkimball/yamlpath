@@ -677,7 +677,12 @@ class Nodes:
         """
         # As stated in the method comments, ruamel.yaml hides the time-zone
         # details in a private dict after forcibly normalizing the datetime;
-        # there is no public accessor for this.
+        # there is no public accessor for this.  Also ignoring the mypy type
+        # check on the various returns because ruamel.yaml defines TimeStamp
+        # as an 'Any' type rather than a 'TimeStamp' or even its superclass of
+        # 'datetime'.  It is perfectly accurate to assert that this method is
+        # correctly returning a 'datetime' despite the ruamel.yaml type
+        # annotation error.
         # pylint: disable=protected-access
         tzinfo_raw = (data._yaml['tz']
                         if hasattr(data, "_yaml") and 'tz' in data._yaml
@@ -686,10 +691,10 @@ class Nodes:
             tzre = re.compile(r'([+\-]?)(\d{1,2}):?(\d{2})')
             tzmatches = tzre.match(tzinfo_raw)
             if not tzmatches:
-                return data
+                return data     # type: ignore
             sign_mark, hours, minutes = tzmatches.groups()
             sign = -1 if sign_mark == '-' else 1
             tdelta = timedelta(hours=int(hours), minutes=int(minutes))
             tzinfo = timezone(sign * tdelta)
-            return (data + tdelta).replace(tzinfo=tzinfo)
-        return data
+            return (data + tdelta).replace(tzinfo=tzinfo)   # type: ignore
+        return data     # type: ignore
