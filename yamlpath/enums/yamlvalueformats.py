@@ -24,7 +24,7 @@ if ryversion < (0, 17, 22):                   # pragma: no cover
         AnchoredTimeStamp,
         AnchoredDate,
     )  # type: ignore
-else:
+else:                                         # pragma: no cover
     # Temporarily fool MYPY into resolving the future-case imports
     from ruamel.yaml.timestamp import TimeStamp as AnchoredTimeStamp
     AnchoredDate = AnchoredTimeStamp
