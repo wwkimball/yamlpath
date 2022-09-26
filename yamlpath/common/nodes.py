@@ -21,7 +21,15 @@ from ruamel.yaml.scalarstring import (
     FoldedScalarString,
     LiteralScalarString,
 )
-from ruamel.yaml.timestamp import TimeStamp
+from ruamel.yaml import version_info as ryversion
+if ryversion < (0, 17, 22):                   # pragma: no cover
+    from yamlpath.patches.timestamp import (
+        AnchoredTimeStamp,
+        AnchoredDate,
+    )  # type: ignore
+else:
+    from ruamel.yaml.timestamp import AnchoredTimeStamp
+    # From whence comes AnchoredDate?
 
 from yamlpath.enums import (
     PathSegmentTypes,
@@ -144,11 +152,10 @@ class Nodes:
                     .format(valform, value)
                 ) from wrap_ex
         elif valform == YAMLValueFormats.DATE:
-            new_type = date
+            new_type = AnchoredDate
 
-            if isinstance(value, (date, datetime)):
+            if isinstance(value, (AnchoredDate, date, datetime)):
                 new_value = value
-                new_node = date(value.year, value.month, value.day)
             else:
                 # Enforce matches against http://yaml.org/type/timestamp.html
                 yaml_spec_re = re.compile(r"""(?x)
@@ -164,18 +171,22 @@ class Nodes:
 
                 try:
                     new_value = parser.parse(value)
-                    new_node = date(
-                        new_value.year, new_value.month, new_value.day)
                 except ValueError as wrap_ex:
                     raise ValueError(
                         f"The requested value format is {valform}, but "
                         + f" {value}' cannot be cast to an ISO8601 date."
                     ) from wrap_ex
+
+            anchor_val = None
+            if hasattr(source_node, "anchor"):
+                anchor_val = source_node.anchor.value
+
+            new_node = Nodes.make_date_node(new_value, anchor_val)
         elif valform == YAMLValueFormats.TIMESTAMP:
-            new_type = TimeStamp
+            new_type = AnchoredTimeStamp
             t_sep = ' '
 
-            if isinstance(value, (datetime, TimeStamp)):
+            if isinstance(value, (datetime, AnchoredTimeStamp)):
                 new_value = value
             else:
                 # Enforce matches against http://yaml.org/type/timestamp.html
@@ -247,11 +258,40 @@ class Nodes:
         return new_node
 
     @staticmethod
+    def make_date_node(value: date, anchor: str = None) -> AnchoredDate:
+        r"""
+        Create a new AnchoredDate data node from a bare date.
+
+        An optional anchor may be attached.
+
+        Parameters:
+        1. value (date) The bare date to wrap.
+        2. anchor (str) OPTIONAL anchor to add.
+
+        Returns: (AnchoredDate) The new node
+        """
+        if anchor is None:
+            new_node = AnchoredDate(
+                value.year
+                , value.month
+                , value.day
+            )
+        else:
+            new_node = AnchoredDate(
+                value.year
+                , value.month
+                , value.day
+                , anchor=anchor
+            )
+
+        return new_node
+
+    @staticmethod
     def make_timestamp_node(
         value: datetime, t_separator: str, anchor: str = None
-    ) -> TimeStamp:
+    ) -> AnchoredTimeStamp:
         r"""
-        Create a new TimeStamp data node from a bare datetime.
+        Create a new AnchoredTimeStamp data node from a bare datetime.
 
         An optional anchor may be attached.
 
@@ -260,10 +300,10 @@ class Nodes:
         2. t_separator (str) One of [Tt\s] to separate date from time
         3. anchor (str) OPTIONAL anchor to add.
 
-        Returns: (TimeStamp) The new node
+        Returns: (AnchoredTimeStamp) The new node
         """
         if anchor is None:
-            new_node = TimeStamp(
+            new_node = AnchoredTimeStamp(
                 value.year
                 , value.month
                 , value.day
@@ -274,7 +314,7 @@ class Nodes:
                 , value.tzinfo
             )
         else:
-            new_node = TimeStamp(
+            new_node = AnchoredTimeStamp(
                 value.year
                 , value.month
                 , value.day
@@ -392,8 +432,11 @@ class Nodes:
             wrapped_value = Nodes.make_float_node(ast_value)
         elif typ is bool:
             wrapped_value = ScalarBoolean(bool(value))
+        elif typ is date:
+            wrapped_value = AnchoredDate(
+                value.year, value.month, value.day)
         elif typ is datetime:
-            wrapped_value = TimeStamp(
+            wrapped_value = AnchoredTimeStamp(
                 value.year, value.month, value.day,
                 value.hour, value.minute, value.second, value.microsecond,
                 value.tzinfo)
@@ -612,9 +655,9 @@ class Nodes:
         return typed_value
 
     @staticmethod
-    def get_timestamp_with_tzinfo(data: TimeStamp) -> datetime:
+    def get_timestamp_with_tzinfo(data: AnchoredTimeStamp) -> datetime:
         """
-        Get a TimeStamp with time-zone info correctly applied.
+        Get an AnchoredTimeStamp with time-zone info correctly applied.
 
         For whatever reason, ruamel.yaml hides time-zone data in a private
         dict rather than as a manifest property of the wrapped datetime value.
@@ -625,7 +668,9 @@ class Nodes:
         original data as befits a complete datetime value.
 
         Parameters:
-        1. value (TimeStamp) the value to correct
+        1. value (AnchoredTimeStamp) the value to correct
+
+        Returns:  (datetime) time-zone aware non-pre-calculated value
         """
         # As stated in the method comments, ruamel.yaml hides the time-zone
         # details in a private dict after forcibly normalizing the datetime;

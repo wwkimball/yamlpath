@@ -19,7 +19,15 @@ from ruamel.yaml.scalarstring import ScalarString
 from ruamel.yaml.comments import (
     CommentedMap, CommentedSet, CommentedSeq, TaggedScalar
 )
-from ruamel.yaml.timestamp import TimeStamp
+from ruamel.yaml import version_info as ryversion
+if ryversion < (0, 17, 22):                   # pragma: no cover
+    from yamlpath.patches.timestamp import (
+        AnchoredTimeStamp,
+        AnchoredDate,
+    )  # type: ignore
+else:
+    from ruamel.yaml.timestamp import AnchoredTimeStamp
+    # From whence comes AnchoredDate?
 
 from yamlpath.wrappers import ConsolePrinter
 from yamlpath.common import Nodes
@@ -353,7 +361,9 @@ class Parsers:
             if data.tag.value == "!null":
                 return None
             data = Parsers.jsonify_yaml_data(data.value)
-        elif isinstance(data, TimeStamp):
+        elif isinstance(data, AnchoredDate):
+            data = data.date().isoformat()
+        elif isinstance(data, AnchoredTimeStamp):
             data = Nodes.get_timestamp_with_tzinfo(data).isoformat()
         elif isinstance(data, (datetime, date)):
             data = data.isoformat()

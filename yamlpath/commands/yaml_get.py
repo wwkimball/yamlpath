@@ -16,7 +16,15 @@ from os.path import isfile
 from datetime import date, datetime
 
 from ruamel.yaml.comments import CommentedSet
-from ruamel.yaml.timestamp import TimeStamp
+from ruamel.yaml import version_info as ryversion
+if ryversion < (0, 17, 22):                   # pragma: no cover
+    from yamlpath.patches.timestamp import (
+        AnchoredTimeStamp,
+        AnchoredDate,
+    )  # type: ignore
+else:
+    from ruamel.yaml.timestamp import AnchoredTimeStamp
+    # From whence comes AnchoredDate?
 
 from yamlpath import __version__ as YAMLPATH_VERSION
 from yamlpath.common import Parsers, Nodes
@@ -195,7 +203,9 @@ def main():
             else:
                 if node is None:
                     node = "\x00"
-                elif isinstance(node, TimeStamp):
+                elif isinstance(node, AnchoredDate):
+                    node = node.date().isoformat()
+                elif isinstance(node, AnchoredTimeStamp):
                     node = Nodes.get_timestamp_with_tzinfo(node).isoformat()
                 elif isinstance(node, (datetime, date)):
                     node = node.isoformat()

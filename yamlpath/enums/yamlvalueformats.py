@@ -17,7 +17,15 @@ from ruamel.yaml.scalarstring import (
 from ruamel.yaml.scalarbool import ScalarBoolean
 from ruamel.yaml.scalarfloat import ScalarFloat
 from ruamel.yaml.scalarint import ScalarInt
-from ruamel.yaml.timestamp import TimeStamp
+from ruamel.yaml import version_info as ryversion
+if ryversion < (0, 17, 22):                   # pragma: no cover
+    from yamlpath.patches.timestamp import (
+        AnchoredTimeStamp,
+        AnchoredDate,
+    )  # type: ignore
+else:
+    from ruamel.yaml.timestamp import AnchoredTimeStamp
+    # From whence comes AnchoredDate?
 
 
 class YAMLValueFormats(Enum):
@@ -148,9 +156,9 @@ class YAMLValueFormats(Enum):
             best_type = YAMLValueFormats.FLOAT
         elif node_type is ScalarInt:
             best_type = YAMLValueFormats.INT
-        elif node_type is datetime.date:
+        elif node_type is AnchoredDate or node_type is datetime.date:
             best_type = YAMLValueFormats.DATE
-        elif node_type is TimeStamp or node_type is datetime.datetime:
+        elif node_type is AnchoredTimeStamp or node_type is datetime.datetime:
             best_type = YAMLValueFormats.TIMESTAMP
 
         return best_type

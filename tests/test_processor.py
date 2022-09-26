@@ -4,6 +4,15 @@ from types import SimpleNamespace
 
 from ruamel.yaml import YAML
 from ruamel.yaml.comments import TaggedScalar
+from ruamel.yaml import version_info as ryversion
+if ryversion < (0, 17, 22):                   # pragma: no cover
+    from yamlpath.patches.timestamp import (
+        AnchoredTimeStamp,
+        AnchoredDate,
+    )  # type: ignore
+else:
+    from ruamel.yaml.timestamp import AnchoredTimeStamp
+    # From whence comes AnchoredDate?
 
 from yamlpath.func import unwrap_node_coords
 from yamlpath.exceptions import YAMLPathException
@@ -15,7 +24,6 @@ from yamlpath.enums import (
 from yamlpath.path import SearchTerms
 from yamlpath.wrappers import ConsolePrinter
 from yamlpath import YAMLPath, Processor
-from tests.conftest import quiet_logger
 
 
 class Test_Processor():
@@ -494,7 +502,7 @@ null_value:
     @pytest.mark.parametrize("yamlpath,value,compare,tally,mustexist,vformat,pathsep", [
         ("/datetimes/date",
           date(2022, 8, 2),
-          date(2022, 8, 2),
+          AnchoredDate(2022, 8, 2),
           1,
           True,
           YAMLValueFormats.DATE,
@@ -502,7 +510,7 @@ null_value:
         ),
         ("datetimes.date",
           '2022-08-02',
-          date(2022, 8, 2),
+          AnchoredDate(2022, 8, 2),
           1,
           True,
           YAMLValueFormats.DATE,
@@ -510,7 +518,7 @@ null_value:
         ),
         ("datetimes.timestamp",
           datetime(2022, 8, 2, 13, 22, 31),
-          datetime(2022, 8, 2, 13, 22, 31),
+          AnchoredTimeStamp(2022, 8, 2, 13, 22, 31),
           1,
           True,
           YAMLValueFormats.TIMESTAMP,
@@ -518,7 +526,7 @@ null_value:
         ),
         ("/datetimes/timestamp",
           '2022-08-02T13:22:31',
-          datetime(2022, 8, 2, 13, 22, 31),
+          AnchoredTimeStamp(2022, 8, 2, 13, 22, 31),
           1,
           True,
           YAMLValueFormats.TIMESTAMP,
@@ -526,7 +534,7 @@ null_value:
         ),
         ("aliases[&date]",
           '2022-08-02',
-          date(2022, 8, 2),
+          AnchoredDate(2022, 8, 2),
           1,
           True,
           YAMLValueFormats.DATE,
@@ -534,7 +542,7 @@ null_value:
         ),
         ("aliases[&timestamp]",
           datetime(2022, 8, 2, 13, 22, 31),
-          datetime(2022, 8, 2, 13, 22, 31),
+          AnchoredTimeStamp(2022, 8, 2, 13, 22, 31),
           1,
           True,
           YAMLValueFormats.TIMESTAMP,

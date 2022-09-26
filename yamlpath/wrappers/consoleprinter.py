@@ -23,7 +23,15 @@ from ruamel.yaml.comments import (
     CommentedSet,
     TaggedScalar
 )
-from ruamel.yaml.timestamp import TimeStamp
+from ruamel.yaml import version_info as ryversion
+if ryversion < (0, 17, 22):                   # pragma: no cover
+    from yamlpath.patches.timestamp import (
+        AnchoredTimeStamp,
+        AnchoredDate,
+    )  # type: ignore
+else:
+    from ruamel.yaml.timestamp import AnchoredTimeStamp
+    # From whence comes AnchoredDate?
 
 from yamlpath.wrappers.nodecoords import NodeCoords
 
@@ -289,7 +297,9 @@ class ConsolePrinter:
 
         print_prefix += anchor_prefix
 
-        if isinstance(data, TimeStamp):
+        if isinstance(data, AnchoredDate):
+            print_line = data.date().isoformat()
+        elif isinstance(data, AnchoredTimeStamp):
             # Import loop occurs when this import is moved to the top because
             # NodeCoords uses Nodes which uses NodeCoords
             #pylint: disable=import-outside-toplevel
@@ -297,6 +307,7 @@ class ConsolePrinter:
             print_line = Nodes.get_timestamp_with_tzinfo(data).isoformat()
         else:
             print_line = str(data).replace("\n", "\n{}".format(print_prefix))
+
         return ConsolePrinter._debug_prefix_lines(
             "{}{}{}".format(print_prefix, print_line, dtype))
 
