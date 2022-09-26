@@ -18,10 +18,14 @@ import copy
 if not hasattr(TimeStamp, 'anchor'):
 
     class AnchoredTimeStamp(TimeStamp):
+        """Extend TimeStamp to track YAML Anchors."""
+
         def __init__(self, *args: Any, **kw: Any) -> None:
+            """Initialize a new instance."""
             self._yaml: Dict[Any, Any] = dict(t=False, tz=None, delta=0)
 
         def __new__(cls, *args: Any, **kw: Any) -> Any:  # datetime is immutable
+            """Create a new, immutable instance."""
             anchor = kw.pop('anchor', None)
             ts = TimeStamp.__new__(cls, *args, **kw)
             if anchor is not None:
@@ -29,17 +33,20 @@ if not hasattr(TimeStamp, 'anchor'):
             return ts
 
         def __deepcopy__(self, memo: Any) -> Any:
+            """Deeply copy this instance to another."""
             ts = AnchoredTimeStamp(self.year, self.month, self.day, self.hour, self.minute, self.second)
             ts._yaml = copy.deepcopy(self._yaml)
             return ts
 
         @property
         def anchor(self) -> Any:
+            """Access the YAML Anchor."""
             if not hasattr(self, Anchor.attrib):
                 setattr(self, Anchor.attrib, Anchor())
             return getattr(self, Anchor.attrib)
 
         def yaml_anchor(self, any: bool = False) -> Any:
+            """Get the YAML Anchor."""
             if not hasattr(self, Anchor.attrib):
                 return None
             if any or self.anchor.always_dump:
@@ -47,17 +54,21 @@ if not hasattr(TimeStamp, 'anchor'):
             return None
 
         def yaml_set_anchor(self, value: Any, always_dump: bool = False) -> None:
+            """Set the YAML Anchor."""
             self.anchor.value = value
             self.anchor.always_dump = always_dump
 
 
     class AnchoredDate(AnchoredTimeStamp):
+        """Define AnchoredDate."""
+
         pass
 
 
     def construct_anchored_timestamp(
         self, node: Any, values: Any = None
     ) -> Union[AnchoredTimeStamp, AnchoredDate]:
+        """Construct an AnchoredTimeStamp."""
         try:
             match = self.timestamp_regexp.match(node.value)
         except TypeError:
@@ -102,6 +113,7 @@ if not hasattr(TimeStamp, 'anchor'):
     ruamel.yaml.constructor.RoundTripConstructor.add_constructor('tag:yaml.org,2002:timestamp', construct_anchored_timestamp)
 
     def represent_anchored_timestamp(self, data: Any):
+        """Render an AnchoredTimeStamp."""
         try:
             anchor = data.yaml_anchor()
         except AttributeError:
