@@ -19,27 +19,13 @@ from ruamel.yaml.scalarstring import ScalarString
 from ruamel.yaml.comments import (
     CommentedMap, CommentedSet, CommentedSeq, TaggedScalar
 )
-# pylint: disable=wrong-import-position,ungrouped-imports
-from ruamel.yaml import version_info as ryversion
-if ryversion < (0, 17, 22):                   # pragma: no cover
-    from yamlpath.patches.timestamp import (
-        AnchoredTimeStamp,
-        AnchoredDate,
-    )  # type: ignore
-else:                                         # pragma: no cover
-    # Temporarily fool MYPY into resolving the future-case imports
-    from ruamel.yaml.timestamp import TimeStamp as AnchoredTimeStamp
-    AnchoredDate = AnchoredTimeStamp
-    #from ruamel.yaml.timestamp import AnchoredTimeStamp
-    # From whence shall come AnchoredDate?
+from yamlpath.patches.timestamp import (
+    AnchoredTimeStamp,
+    AnchoredDate,
+)
 
 from yamlpath.wrappers import ConsolePrinter
 from yamlpath.common import Nodes
-
-if ruamel.yaml.version_info < (0, 17, 5):                # pragma: no cover
-    from yamlpath.patches.aliasstyle import MySerializer # type: ignore
-    from yamlpath.patches.aliasstyle import MyEmitter    # type: ignore
-# pylint: enable=wrong-import-position,ungrouped-imports
 
 
 class Parsers:
@@ -75,12 +61,6 @@ class Parsers:
         # The ruamel.yaml class appears to be missing some typing data, so
         # these valid assignments cannot be type-checked.
         yaml = YAML()
-
-        # Import Anthon's patch for Aliased entries in Unordered Sets per
-        # https://sourceforge.net/p/ruamel-yaml/tickets/384/
-        if ruamel.yaml.version_info < (0, 17, 5):  # pragma: no cover
-            yaml.Serializer = MySerializer         # type: ignore
-            yaml.Emitter = MyEmitter               # type: ignore
 
         yaml.indent(mapping=2, sequence=4, offset=2)
         yaml.explicit_start = explicit_start       # type: ignore
