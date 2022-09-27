@@ -650,7 +650,7 @@ class Nodes:
         return typed_value
 
     @staticmethod
-    def get_timestamp_with_tzinfo(data: AnchoredTimeStamp) -> datetime:
+    def get_timestamp_with_tzinfo(data: AnchoredTimeStamp) -> Any:
         """
         Get an AnchoredTimeStamp with time-zone info correctly applied.
 
@@ -665,7 +665,9 @@ class Nodes:
         Parameters:
         1. value (AnchoredTimeStamp) the value to correct
 
-        Returns:  (datetime) time-zone aware non-pre-calculated value
+        Returns:  One of:
+          * (datetime) time-zone aware non-pre-calculated value
+          * (AnchoredTimeStamp) original value when it had no time-zone data
         """
         # As stated in the method comments, ruamel.yaml hides the time-zone
         # details in a private dict after forcibly normalizing the datetime;
@@ -688,5 +690,5 @@ class Nodes:
                 tdelta = timedelta(hours=int(hours), minutes=int(minutes))
                 tzinfo = timezone(sign * tdelta)
                 return ((data + tdelta * sign).replace(
-                    tzinfo=tzinfo)) # type: ignore
-        return data # type: ignore
+                    tzinfo=tzinfo))
+        return data
