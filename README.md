@@ -106,7 +106,7 @@ expressions:
 5. `aliases[.%string]` (search for any elements containing "string")
 6. `aliases[.$value]` (search for any elements ending with "value")
 7. `aliases[.=~/^(\b[Ss][a-z]+\s){2}[a-z]+$/]` (search for any elements matching
-   a complex Regular Expression, which happens to match the example)
+   a complex Python Regular Expression, which happens to match the example)
 8. `/aliases[0]` (same as 1 but in forward-slash notation)
 9. `/aliases/0` (same as 2 but in forward-slash notation)
 10. `/aliases[&first_anchor]` (same as 3 but in forward-slash notation)
@@ -188,7 +188,8 @@ YAML Path understands these segment types:
   * Greater Than match: `hash[access_level>0]`
   * Less Than or Equal match: `hash[access_level<=100]`
   * Greater Than or Equal match: `hash[access_level>=0]`
-  * Regular Expression matches: `hash[access_level=~/^\D+$/]` (the `/` Regular
+  * [Python Regular Expression](https://docs.python.org/3/library/re.html)
+    matches: `hash[access_level=~/^\D+$/]` (the `/` Regular
     Expression delimiter can be substituted for any character you need, except
     white-space; note that `/` does not interfere with forward-slash notation
     *and it does not need to be escaped* because the entire search expression is
@@ -272,10 +273,11 @@ all -- came pre-installed.  It is generally safe to have more than one version
 of Python on your system at the same time, especially when using
 [virtual Python environments](https://docs.python.org/3/library/venv.html).
 
-*yamlpath* depends on *ruamel.yaml* (derived from and greatly extending PyYAML).
-When using OS-native packages or `pip`, you do not need to pre-install
-*ruamel.yaml* except under extraordinary circumstances like using very old
-versions of `pip` or its own dependency, *setuptools*.
+*yamlpath* depends on *ruamel.yaml* (derived from and greatly extending PyYAML)
+and *python-dateutil*.  When using OS-native packages or `pip`, you do not need
+to pre-install these libraries yourself except under extraordinary
+circumstances like using very old versions of `pip` or its own dependency,
+*setuptools*.
 
 ### Using pip
 
@@ -292,8 +294,8 @@ with Python.  It is your responsibility to keep `pip` and *setuptools*
 up-to-date.  When `pip` or *setuptools* become outdated, _you will experience
 errors_ when trying to install newer Python packages like *yamlpath* **unless
 you preinstall such packages' dependencies**.  In the case of *yamlpath*, this
-means you'd need to preinstall *ruamel.yaml* if you cannot or choose not to
-upgrade `pip` and/or *setuptools*.
+means you'd need to preinstall *ruamel.yaml* and *python-dateutil* if you
+cannot or choose not to upgrade `pip` and/or *setuptools*.
 
 As long as your `pip` and *setuptools* are up-to-date, installing *yamlpath* is
 as simple as a single command (the "3.7" suffix to the `pip` command is
@@ -309,9 +311,9 @@ Very old versions of Python 3 ship with seriously outdated versions of `pip` and
 its *setuptools* dependency.  When using versions of `pip` older than **18.1**
 or *setuptools* older than version **46.4.0**, you will not be able to install
 *yamlpath* with a single command.  In this case, you have two options:  either
-pre-install *ruamel.yaml* before installing *yamlpath* or update `pip` and/or
-*setuptools* to at least the minimum required versions so `pip` can
-auto-determine and install dependencies.  This issue is not unique to
+pre-install *ruamel.yaml* and *python-dateutil* before installing *yamlpath* or
+update `pip` and/or *setuptools* to at least the minimum required versions so
+`pip` can auto-determine and install dependencies.  This issue is not unique to
 *yamlpath*.
 
 Upgrading `pip` and *setuptools* is trivially simple as long as you have
@@ -328,21 +330,22 @@ pip3.7 install --upgrade setuptools
 ```
 
 When you cannot or will not update `pip` or *setuptools*, just pre-install
-*ruamel.yaml* before yamlpath.  Each must be installed seperately and in order,
-like this (you **cannot** combine these installations into a single command):
+*ruamel.yaml* and *python-dateutil* before yamlpath.  Each must be installed
+seperately and in order, like this (you **cannot** combine these installations
+into a single command):
 
 ```shell
-pip3.7 install ruamel.yaml
+pip3.7 install ruamel.yaml python-dateutil
 pip3.7 install yamlpath
 ```
 
 The downside to choosing this manual installation path is that you may end up
-with an incompatible version of *ruamel.yaml*.  This will manifest either as an
-inability to install *yamlpath* at all, or only certain versions of *yamlpath*,
-or *yamlpath* may experience unexpected errors caused by the incompatible code.
-For the best experience, you are strongly encouraged to just keep `pip` and
-*setuptools* up-to-date, particularly as a routine part of installing any new
-Python packages.
+with an incompatible version of *ruamel.yaml* or *python-dateutil*.  This will
+manifest either as an inability to install *yamlpath* at all, or only certain
+versions of *yamlpath*, or *yamlpath* may experience unexpected errors caused
+by the incompatible code.  For the best experience, you are strongly encouraged
+to just keep `pip` and *setuptools* up-to-date, particularly as a routine part
+of installing any new Python packages.
 
 ### Installing EYAML (Optional)
 
