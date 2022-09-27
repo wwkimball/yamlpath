@@ -30,6 +30,7 @@ from yamlpath.wrappers import NodeCoords
 from yamlpath.eyaml import EYAMLProcessor
 
 from yamlpath.wrappers import ConsolePrinter
+# pylint: enable=wrong-import-position,ungrouped-imports
 
 def processcli():
     """Process command-line arguments."""
