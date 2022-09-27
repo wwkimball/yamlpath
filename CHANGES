@@ -1,3 +1,9 @@
+3.6.7
+Bug Fixes:
+* Release 3.6.6 had a broken package; it was unexpectedly missing the required
+  ruamel.yaml patch found in yamlpath.patches.timestamp.  Thanks to
+  https://github.com/tsinggggg and https://github.com/kaniblu for reporting it!
+
 3.6.6
 Enhancements:
 * Support ruamel.yaml up to version 0.17.21.
