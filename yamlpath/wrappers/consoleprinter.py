@@ -23,8 +23,22 @@ from ruamel.yaml.comments import (
     CommentedSet,
     TaggedScalar
 )
+# pylint: disable=wrong-import-position,ungrouped-imports
+from ruamel.yaml import version_info as ryversion
+if ryversion < (0, 17, 22):                   # pragma: no cover
+    from yamlpath.patches.timestamp import (
+        AnchoredTimeStamp,
+        AnchoredDate,
+    )  # type: ignore
+else:                                         # pragma: no cover
+    # Temporarily fool MYPY into resolving the future-case imports
+    from ruamel.yaml.timestamp import TimeStamp as AnchoredTimeStamp
+    AnchoredDate = AnchoredTimeStamp
+    #from ruamel.yaml.timestamp import AnchoredTimeStamp
+    # From whence shall come AnchoredDate?
 
 from yamlpath.wrappers.nodecoords import NodeCoords
+# pylint: enable=wrong-import-position,ungrouped-imports
 
 
 class ConsolePrinter:
@@ -287,7 +301,18 @@ class ConsolePrinter:
             dtype += ",folded@{}".format(data.fold_pos)
 
         print_prefix += anchor_prefix
-        print_line = str(data).replace("\n", "\n{}".format(print_prefix))
+
+        if isinstance(data, AnchoredDate):
+            print_line = data.date().isoformat()
+        elif isinstance(data, AnchoredTimeStamp):
+            # Import loop occurs when this import is moved to the top because
+            # NodeCoords uses Nodes which uses NodeCoords
+            #pylint: disable=import-outside-toplevel
+            from yamlpath.common.nodes import Nodes
+            print_line = Nodes.get_timestamp_with_tzinfo(data).isoformat()
+        else:
+            print_line = str(data).replace("\n", "\n{}".format(print_prefix))
+
         return ConsolePrinter._debug_prefix_lines(
             "{}{}{}".format(print_prefix, print_line, dtype))
 

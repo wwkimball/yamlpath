@@ -15,9 +15,22 @@ from os import access, R_OK
 from os.path import isfile
 
 from ruamel.yaml.comments import CommentedSet
+# pylint: disable=wrong-import-position,ungrouped-imports
+from ruamel.yaml import version_info as ryversion
+if ryversion < (0, 17, 22):                   # pragma: no cover
+    from yamlpath.patches.timestamp import (
+        AnchoredTimeStamp,
+        AnchoredDate,
+    )  # type: ignore
+else:                                         # pragma: no cover
+    # Temporarily fool MYPY into resolving the future-case imports
+    from ruamel.yaml.timestamp import TimeStamp as AnchoredTimeStamp
+    AnchoredDate = AnchoredTimeStamp
+    #from ruamel.yaml.timestamp import AnchoredTimeStamp
+    # From whence shall come AnchoredDate?
 
 from yamlpath import __version__ as YAMLPATH_VERSION
-from yamlpath.common import Parsers
+from yamlpath.common import Parsers, Nodes
 from yamlpath import YAMLPath
 from yamlpath.exceptions import YAMLPathException
 from yamlpath.eyaml.exceptions import EYAMLCommandException
@@ -26,6 +39,7 @@ from yamlpath.wrappers import NodeCoords
 from yamlpath.eyaml import EYAMLProcessor
 
 from yamlpath.wrappers import ConsolePrinter
+# pylint: enable=wrong-import-position,ungrouped-imports
 
 def processcli():
     """Process command-line arguments."""
@@ -193,6 +207,10 @@ def main():
             else:
                 if node is None:
                     node = "\x00"
+                elif isinstance(node, AnchoredDate):
+                    node = node.date().isoformat()
+                elif isinstance(node, AnchoredTimeStamp):
+                    node = Nodes.get_timestamp_with_tzinfo(node).isoformat()
                 print("{}".format(str(node).replace("\n", r"\n")))
     except RecursionError:
         log.critical(

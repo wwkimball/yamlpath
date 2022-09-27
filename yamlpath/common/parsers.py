@@ -5,7 +5,7 @@ Copyright 2020, 2021 William W. Kimball, Jr. MBA MSIS
 """
 import warnings
 from sys import maxsize, stdin
-from datetime import date
+from datetime import date, datetime
 from typing import Any, Dict, Generator, Tuple
 
 import ruamel.yaml # type: ignore
@@ -19,12 +19,27 @@ from ruamel.yaml.scalarstring import ScalarString
 from ruamel.yaml.comments import (
     CommentedMap, CommentedSet, CommentedSeq, TaggedScalar
 )
+# pylint: disable=wrong-import-position,ungrouped-imports
+from ruamel.yaml import version_info as ryversion
+if ryversion < (0, 17, 22):                   # pragma: no cover
+    from yamlpath.patches.timestamp import (
+        AnchoredTimeStamp,
+        AnchoredDate,
+    )  # type: ignore
+else:                                         # pragma: no cover
+    # Temporarily fool MYPY into resolving the future-case imports
+    from ruamel.yaml.timestamp import TimeStamp as AnchoredTimeStamp
+    AnchoredDate = AnchoredTimeStamp
+    #from ruamel.yaml.timestamp import AnchoredTimeStamp
+    # From whence shall come AnchoredDate?
 
 from yamlpath.wrappers import ConsolePrinter
+from yamlpath.common import Nodes
 
 if ruamel.yaml.version_info < (0, 17, 5):                # pragma: no cover
     from yamlpath.patches.aliasstyle import MySerializer # type: ignore
     from yamlpath.patches.aliasstyle import MyEmitter    # type: ignore
+# pylint: enable=wrong-import-position,ungrouped-imports
 
 
 class Parsers:
@@ -308,8 +323,8 @@ class Parsers:
         elif isinstance(data, CommentedSeq):
             for idx, ele in enumerate(data):
                 data[idx] = Parsers.stringify_dates(ele)
-        elif isinstance(data, date):
-            return str(data)
+        elif isinstance(data, (datetime, date)):
+            return data.isoformat()
         return data
 
     @staticmethod
@@ -350,13 +365,17 @@ class Parsers:
         elif isinstance(data, TaggedScalar):
             if data.tag.value == "!null":
                 return None
-            return Parsers.jsonify_yaml_data(data.value)
-        elif isinstance(data, date):
-            return str(data)
+            data = Parsers.jsonify_yaml_data(data.value)
+        elif isinstance(data, AnchoredDate):
+            data = data.date().isoformat()
+        elif isinstance(data, AnchoredTimeStamp):
+            data = Nodes.get_timestamp_with_tzinfo(data).isoformat()
+        elif isinstance(data, (datetime, date)):
+            data = data.isoformat()
         elif isinstance(data, bytes):
-            return str(data)
+            data = str(data)
         elif isinstance(data, (ScalarBoolean, bool)):
-            return bool(data)
+            data = bool(data)
         return data
 
     @staticmethod
