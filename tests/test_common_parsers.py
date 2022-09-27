@@ -3,6 +3,18 @@ import json
 import datetime as dt
 
 import ruamel.yaml as ry
+from ruamel.yaml import version_info as ryversion
+if ryversion < (0, 17, 22):                   # pragma: no cover
+    from yamlpath.patches.timestamp import (
+        AnchoredTimeStamp,
+        AnchoredDate,
+    )  # type: ignore
+else:                                         # pragma: no cover
+    # Temporarily fool MYPY into resolving the future-case imports
+    from ruamel.yaml.timestamp import TimeStamp as AnchoredTimeStamp
+    AnchoredDate = AnchoredTimeStamp
+    #from ruamel.yaml.timestamp import AnchoredTimeStamp
+    # From whence shall come AnchoredDate?
 
 from yamlpath.enums import YAMLValueFormats
 from yamlpath.common import Parsers
@@ -94,7 +106,9 @@ has: different data
             "null": null_node,
             "dates": ry.comments.CommentedSeq([
                 dt.date(2020, 10, 31),
-                dt.date(2020, 11, 3)
+                dt.date(2020, 11, 3),
+                AnchoredDate(2020, 12, 1),
+                AnchoredTimeStamp(2021, 1, 13, 1, 2, 3)
             ]),
             "t_bool": ry.scalarbool.ScalarBoolean(1),
             "f_bool": ry.scalarbool.ScalarBoolean(0)
@@ -104,11 +118,13 @@ has: different data
         assert jdata["null"] == null_value
         assert jdata["dates"][0] == "2020-10-31"
         assert jdata["dates"][1] == "2020-11-03"
+        assert jdata["dates"][2] == "2020-12-01"
+        assert jdata["dates"][3] == "2021-01-13T01:02:03"
         assert jdata["t_bool"] == 1
         assert jdata["f_bool"] == 0
 
         jstr = json.dumps(jdata)
-        assert jstr == """{"tagged": "tagged value", "null": null, "dates": ["2020-10-31", "2020-11-03"], "t_bool": true, "f_bool": false}"""
+        assert jstr == """{"tagged": "tagged value", "null": null, "dates": ["2020-10-31", "2020-11-03", "2020-12-01", "2021-01-13T01:02:03"], "t_bool": true, "f_bool": false}"""
 
     def test_jsonify_complex_python_data(self):
         cdata = {
