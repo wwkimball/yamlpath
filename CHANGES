@@ -1,4 +1,7 @@
 3.6.6
+Enhancements:
+* Support ruamel.yaml up to version 0.17.21.
+
 Bug Fixes:
 * YAML timestamp values could not be created via yamlpath tools or its library,
   per http://yaml.org/type/timestamp.html.
