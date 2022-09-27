@@ -5,10 +5,15 @@ Enhancements:
 Bug Fixes:
 * YAML timestamp values could not be created via yamlpath tools or its library,
   per http://yaml.org/type/timestamp.html.
-  * CAUTION 1:  ruamel.yaml seems to force all timestamps to UTC, so even if
-    you specify timezone data, it will be converted and then stripped.  This is
-    a decision by the author of ruamel.yaml that I don't see any way around in
-    the code, for now.
+  * CAUTION 1:  ruamel.yaml seems to force all timestamps to UTC while it loads
+    YAML/JSON/Compatible data.  So, when the timestamp value contains time-zone
+    data, it will be stripped off after it is applied to the timestamp value.
+    The yamlpath library reverses this when emitting the affected values but if
+    you attempt to load the timestamp values directly in the DOM, you'll end up
+    with the UTC-converted value, stripped of any time-zone specification.  If
+    you need the original, unmodified data as a time-zone aware
+    datetime.datetime value, pass it through the helper method,
+    Nodes.get_timestamp_with_tzinfo(data: AnchoredTimeStamp).
   * CAUTION 2:  In order to support timestamp parsing, this project now depends
     on the python-dateutil library.  Be sure to install it!
   Thanks again go to https://github.com/AndydeCleyre!
