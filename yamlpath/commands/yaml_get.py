@@ -13,7 +13,6 @@ import argparse
 import json
 from os import access, R_OK
 from os.path import isfile
-from datetime import date, datetime
 
 from ruamel.yaml.comments import CommentedSet
 # pylint: disable=wrong-import-position,ungrouped-imports
@@ -212,8 +211,6 @@ def main():
                     node = node.date().isoformat()
                 elif isinstance(node, AnchoredTimeStamp):
                     node = Nodes.get_timestamp_with_tzinfo(node).isoformat()
-                elif isinstance(node, (datetime, date)):
-                    node = node.isoformat()
                 print("{}".format(str(node).replace("\n", r"\n")))
     except RecursionError:
         log.critical(

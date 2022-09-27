@@ -692,11 +692,11 @@ class Nodes:
         if tzinfo_raw:
             tzre = re.compile(r'([+\-]?)(\d{1,2}):?(\d{2})')
             tzmatches = tzre.match(tzinfo_raw)
-            if not tzmatches:
-                return data     # type: ignore
-            sign_mark, hours, minutes = tzmatches.groups()
-            sign = -1 if sign_mark == '-' else 1
-            tdelta = timedelta(hours=int(hours), minutes=int(minutes))
-            tzinfo = timezone(sign * tdelta)
-            return (data + tdelta).replace(tzinfo=tzinfo)   # type: ignore
-        return data     # type: ignore
+            if tzmatches:
+                sign_mark, hours, minutes = tzmatches.groups()
+                sign = -1 if sign_mark == '-' else 1
+                tdelta = timedelta(hours=int(hours), minutes=int(minutes))
+                tzinfo = timezone(sign * tdelta)
+                data = (data + tdelta * sign).replace(
+                    tzinfo=tzinfo)
+        return data # type: ignore

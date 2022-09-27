@@ -1,5 +1,5 @@
 import pytest
-from datetime import datetime
+from datetime import date, datetime
 from types import SimpleNamespace
 
 from ruamel.yaml.comments import CommentedSeq, CommentedMap, TaggedScalar
@@ -7,7 +7,18 @@ from ruamel.yaml.scalarstring import PlainScalarString
 from ruamel.yaml.scalarbool import ScalarBoolean
 from ruamel.yaml.scalarfloat import ScalarFloat
 from ruamel.yaml.scalarint import ScalarInt
-from ruamel.yaml.timestamp import TimeStamp
+from ruamel.yaml import version_info as ryversion
+if ryversion < (0, 17, 22):                   # pragma: no cover
+    from yamlpath.patches.timestamp import (
+        AnchoredTimeStamp,
+        AnchoredDate,
+    )  # type: ignore
+else:                                         # pragma: no cover
+    # Temporarily fool MYPY into resolving the future-case imports
+    from ruamel.yaml.timestamp import TimeStamp as AnchoredTimeStamp
+    AnchoredDate = AnchoredTimeStamp
+    #from ruamel.yaml.timestamp import AnchoredTimeStamp
+    # From whence shall come AnchoredDate?
 
 from yamlpath.enums import YAMLValueFormats
 from yamlpath.common import Nodes
@@ -92,7 +103,8 @@ class Test_common_nodes():
         (1, ScalarInt),
         (1.1, ScalarFloat),
         (True, ScalarBoolean),
-        (datetime(2022, 8, 2, 13, 22, 31), TimeStamp),
+        (date(2022, 8, 2), AnchoredDate),
+        (datetime(2022, 8, 2, 13, 22, 31), AnchoredTimeStamp),
         (SimpleNamespace(), SimpleNamespace),
     ])
     def test_wrap_type(self, value, checktype):
