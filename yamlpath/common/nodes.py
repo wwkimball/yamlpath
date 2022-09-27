@@ -21,19 +21,10 @@ from ruamel.yaml.scalarstring import (
     FoldedScalarString,
     LiteralScalarString,
 )
-# pylint: disable=wrong-import-position,ungrouped-imports
-from ruamel.yaml import version_info as ryversion
-if ryversion < (0, 17, 22):                   # pragma: no cover
-    from yamlpath.patches.timestamp import (
-        AnchoredTimeStamp,
-        AnchoredDate,
-    )  # type: ignore
-else:                                         # pragma: no cover
-    # Temporarily fool MYPY into resolving the future-case imports
-    from ruamel.yaml.timestamp import TimeStamp as AnchoredTimeStamp
-    AnchoredDate = AnchoredTimeStamp
-    #from ruamel.yaml.timestamp import AnchoredTimeStamp
-    # From whence shall come AnchoredDate?
+from yamlpath.patches.timestamp import (
+    AnchoredTimeStamp,
+    AnchoredDate,
+)
 
 from yamlpath.enums import (
     PathSegmentTypes,
@@ -41,7 +32,6 @@ from yamlpath.enums import (
 )
 from yamlpath.wrappers import NodeCoords
 from yamlpath import YAMLPath
-# pylint: enable=wrong-import-position,ungrouped-imports
 
 
 class Nodes:
@@ -660,7 +650,7 @@ class Nodes:
         return typed_value
 
     @staticmethod
-    def get_timestamp_with_tzinfo(data: AnchoredTimeStamp) -> datetime:
+    def get_timestamp_with_tzinfo(data: AnchoredTimeStamp) -> Any:
         """
         Get an AnchoredTimeStamp with time-zone info correctly applied.
 
@@ -675,7 +665,9 @@ class Nodes:
         Parameters:
         1. value (AnchoredTimeStamp) the value to correct
 
-        Returns:  (datetime) time-zone aware non-pre-calculated value
+        Returns:  One of:
+          * (datetime) time-zone aware non-pre-calculated value
+          * (AnchoredTimeStamp) original value when it had no time-zone data
         """
         # As stated in the method comments, ruamel.yaml hides the time-zone
         # details in a private dict after forcibly normalizing the datetime;
@@ -697,6 +689,6 @@ class Nodes:
                 sign = -1 if sign_mark == '-' else 1
                 tdelta = timedelta(hours=int(hours), minutes=int(minutes))
                 tzinfo = timezone(sign * tdelta)
-                data = (data + tdelta * sign).replace(
-                    tzinfo=tzinfo)
-        return data # type: ignore
+                return ((data + tdelta * sign).replace(
+                    tzinfo=tzinfo))
+        return data
