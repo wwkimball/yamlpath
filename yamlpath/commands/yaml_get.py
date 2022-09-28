@@ -15,9 +15,13 @@ from os import access, R_OK
 from os.path import isfile
 
 from ruamel.yaml.comments import CommentedSet
+from yamlpath.patches.timestamp import (
+    AnchoredTimeStamp,
+    AnchoredDate,
+)
 
 from yamlpath import __version__ as YAMLPATH_VERSION
-from yamlpath.common import Parsers
+from yamlpath.common import Parsers, Nodes
 from yamlpath import YAMLPath
 from yamlpath.exceptions import YAMLPathException
 from yamlpath.eyaml.exceptions import EYAMLCommandException
@@ -26,6 +30,7 @@ from yamlpath.wrappers import NodeCoords
 from yamlpath.eyaml import EYAMLProcessor
 
 from yamlpath.wrappers import ConsolePrinter
+# pylint: enable=wrong-import-position,ungrouped-imports
 
 def processcli():
     """Process command-line arguments."""
@@ -196,6 +201,10 @@ def main():
             else:
                 if node is None:
                     node = "\x00"
+                elif isinstance(node, AnchoredDate):
+                    node = node.date().isoformat()
+                elif isinstance(node, AnchoredTimeStamp):
+                    node = Nodes.get_timestamp_with_tzinfo(node).isoformat()
                 print("{}".format(str(node).replace("\n", r"\n")))
     except RecursionError:
         log.critical(

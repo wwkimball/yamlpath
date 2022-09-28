@@ -3,8 +3,12 @@ Implement Nodes, a static library of generally-useful code for data nodes.
 
 Copyright 2020 William W. Kimball, Jr. MBA MSIS
 """
+import re
+from datetime import datetime, date, timedelta, timezone
 from ast import literal_eval
 from typing import Any
+
+from dateutil import parser
 
 from ruamel.yaml.comments import CommentedSeq, CommentedMap, TaggedScalar
 from ruamel.yaml.scalarbool import ScalarBoolean
@@ -16,6 +20,10 @@ from ruamel.yaml.scalarstring import (
     SingleQuotedScalarString,
     FoldedScalarString,
     LiteralScalarString,
+)
+from yamlpath.patches.timestamp import (
+    AnchoredTimeStamp,
+    AnchoredDate,
 )
 
 from yamlpath.enums import (
@@ -56,10 +64,10 @@ class Nodes:
         - `ValueError' when the new value is not numeric and value_format
         requires it to be so
         """
-        new_node = None
-        new_type = type(source_node)
-        new_value = value
-        valform = YAMLValueFormats.DEFAULT
+        new_node: Any = None
+        new_type: Any = type(source_node)
+        new_value: Any = value
+        valform: YAMLValueFormats = YAMLValueFormats.DEFAULT
 
         if isinstance(value_format, YAMLValueFormats):
             valform = value_format
@@ -88,25 +96,14 @@ class Nodes:
         elif valform == YAMLValueFormats.FOLDED:
             new_type = FoldedScalarString
             new_value = str(value)
-            preserve_folds = []
-
-            # Scan all except the very last character because if that last
-            # character is a newline, ruamel.yaml will crash when told to fold
-            # there.
-            for index, fold_char in enumerate(new_value[:-1]):
-                if fold_char == "\n":
-                    preserve_folds.append(index)
-
-            # Replace all except the very last character
-            new_value = new_value[:-1].replace("\n", " ") + new_value[-1]
 
             if hasattr(source_node, "anchor") and source_node.anchor.value:
                 new_node = new_type(new_value, anchor=source_node.anchor.value)
             else:
                 new_node = new_type(new_value)
 
-            if preserve_folds:
-                new_node.fold_pos = preserve_folds  # type: ignore
+            fold_at = [x.start() for x in re.finditer(' ', new_node)]
+            new_node.fold_pos = fold_at # type: ignore
 
         elif valform == YAMLValueFormats.LITERAL:
             new_type = LiteralScalarString
@@ -116,7 +113,14 @@ class Nodes:
             if isinstance(value, bool):
                 new_value = value
             else:
-                new_value = Nodes.str_to_truth_int(value)
+                allowed_vals = ["true", "false", "yes", "no", "y", "n",
+                                "t", "f", "1", "0"]
+                str_val = str(value).lower()
+                if str_val not in allowed_vals:
+                    raise ValueError("Boolean values must be one of " +
+                                     ", ".join(allowed_vals))
+                new_value = str(value).lower() in (
+                    "true", "yes", "y", "t", "1")
         elif valform == YAMLValueFormats.FLOAT:
             try:
                 new_value = float(value)
@@ -142,6 +146,79 @@ class Nodes:
                     + " cast to an integer number.")
                     .format(valform, value)
                 ) from wrap_ex
+        elif valform == YAMLValueFormats.DATE:
+            new_type = AnchoredDate
+
+            if isinstance(value, (AnchoredDate, date, datetime)):
+                new_value = value
+            else:
+                # Enforce matches against http://yaml.org/type/timestamp.html
+                yaml_spec_re = re.compile(r"""(?x)
+                    ^
+                    [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9] # (ymd)
+                    $""")
+                dt_matches = yaml_spec_re.match(value)
+                if not dt_matches:
+                    raise ValueError(
+                        f"The requested value format is {valform}, but"
+                        + f" '{value}' is not a YAML-compatible ISO8601 date"
+                        + " per http://yaml.org/type/timestamp.html")
+
+                try:
+                    new_value = parser.parse(value)
+                except ValueError as wrap_ex:
+                    raise ValueError(
+                        f"The requested value format is {valform}, but "
+                        + f" {value}' cannot be cast to an ISO8601 date."
+                    ) from wrap_ex
+
+            anchor_val = None
+            if hasattr(source_node, "anchor"):
+                anchor_val = source_node.anchor.value
+
+            new_node = Nodes.make_date_node(new_value, anchor_val)
+        elif valform == YAMLValueFormats.TIMESTAMP:
+            new_type = AnchoredTimeStamp
+            t_sep = ' '
+
+            if isinstance(value, (datetime, AnchoredTimeStamp)):
+                new_value = value
+            else:
+                # Enforce matches against http://yaml.org/type/timestamp.html
+                yaml_spec_re = re.compile(r"""(?x)
+                    ^
+                    [0-9][0-9][0-9][0-9] # (year)
+                    -[0-9][0-9]? # (month)
+                    -[0-9][0-9]? # (day)
+                    ([Tt]|[ \t]+)[0-9][0-9]? # (hour)
+                    :[0-9][0-9] # (minute)
+                    :[0-9][0-9] # (second)
+                    (\.[0-9]*)? # (fraction)
+                    (([ \t]*)Z|[-+][0-9][0-9]?(:[0-9][0-9])?)? # (time zone)
+                    $""")
+                dt_matches = yaml_spec_re.match(value)
+                if not dt_matches:
+                    raise ValueError(
+                        f"The requested value format is {valform}, but"
+                        + f" '{value}' is not a YAML-compatible ISO8601"
+                        + " timestamp per http://yaml.org/type/timestamp.html")
+
+                t_sep = dt_matches.group(1)
+
+                try:
+                    new_value = parser.parse(value)
+                except ValueError as wrap_ex:
+                    raise ValueError(
+                        f"The requested value format is {valform}, but"
+                        + f" '{value}' cannot be cast to an ISO8601 timestamp."
+                    ) from wrap_ex
+
+            anchor_val = None
+            if hasattr(source_node, "anchor"):
+                anchor_val = source_node.anchor.value
+
+            new_node = Nodes.make_timestamp_node(
+                new_value, t_sep, anchor_val)
         else:
             # Punt to whatever the best Scalar type may be
             try:
@@ -172,6 +249,85 @@ class Nodes:
         # Apply a custom tag, if provided
         if "tag" in kwargs:
             new_node = Nodes.apply_yaml_tag(new_node, kwargs.pop("tag"))
+
+        return new_node
+
+    @staticmethod
+    def make_date_node(value: date, anchor: str = None) -> AnchoredDate:
+        r"""
+        Create a new AnchoredDate data node from a bare date.
+
+        An optional anchor may be attached.
+
+        Parameters:
+        1. value (date) The bare date to wrap.
+        2. anchor (str) OPTIONAL anchor to add.
+
+        Returns: (AnchoredDate) The new node
+        """
+        if anchor is None:
+            new_node = AnchoredDate(
+                value.year
+                , value.month
+                , value.day
+            )
+        else:
+            new_node = AnchoredDate(
+                value.year
+                , value.month
+                , value.day
+                , anchor=anchor
+            )
+
+        return new_node
+
+    @staticmethod
+    def make_timestamp_node(
+        value: datetime, t_separator: str, anchor: str = None
+    ) -> AnchoredTimeStamp:
+        r"""
+        Create a new AnchoredTimeStamp data node from a bare datetime.
+
+        An optional anchor may be attached.
+
+        Parameters:
+        1. value (datetime) The bare datetime to wrap.
+        2. t_separator (str) One of [Tt\s] to separate date from time
+        3. anchor (str) OPTIONAL anchor to add.
+
+        Returns: (AnchoredTimeStamp) The new node
+        """
+        if anchor is None:
+            new_node = AnchoredTimeStamp(
+                value.year
+                , value.month
+                , value.day
+                , value.hour
+                , value.minute
+                , value.second
+                , value.microsecond
+                , value.tzinfo
+            )
+        else:
+            new_node = AnchoredTimeStamp(
+                value.year
+                , value.month
+                , value.day
+                , value.hour
+                , value.minute
+                , value.second
+                , value.microsecond
+                , value.tzinfo
+                , anchor=anchor
+            )
+
+        # Add a T separator only when set
+        if t_separator in ['T', 't']:
+            # Ignore W0212 here because there is literally no other way to tell
+            # ruamel.yaml to preserve the T separator for this timestamp at the
+            # time of this writing.  This code is indeed therefore fragile.
+            # pylint: disable=protected-access
+            new_node._yaml['t'] = t_separator
 
         return new_node
 
@@ -271,6 +427,14 @@ class Nodes:
             wrapped_value = Nodes.make_float_node(ast_value)
         elif typ is bool:
             wrapped_value = ScalarBoolean(bool(value))
+        elif typ is date:
+            wrapped_value = AnchoredDate(
+                value.year, value.month, value.day)
+        elif typ is datetime:
+            wrapped_value = AnchoredTimeStamp(
+                value.year, value.month, value.day,
+                value.hour, value.minute, value.second, value.microsecond,
+                value.tzinfo)
 
         return wrapped_value
 
@@ -486,20 +650,45 @@ class Nodes:
         return typed_value
 
     @staticmethod
-    def str_to_truth_int(value: str) -> int:
+    def get_timestamp_with_tzinfo(data: AnchoredTimeStamp) -> Any:
         """
-        Convert a string representation of truth to true (1) or false (0).
+        Get an AnchoredTimeStamp with time-zone info correctly applied.
 
-        True values are 'y', 'yes', 't', 'true', 'on' and '1';
-        False values are 'n', 'no', 'f', 'false', 'off' and '0'.
-        Raises ValueError if val is anything else.
+        For whatever reason, ruamel.yaml hides time-zone data in a private
+        dict rather than as a manifest property of the wrapped datetime value.
+        Doing so causes the datetime value to be pre-calculated when emitted,
+        with the time-zone delta applied to the original value.  The net effect
+        is users get a different value out than they put in.  This method
+        rewinds the pre-calculation and combines the time-zone with the
+        original data as befits a complete datetime value.
 
-        As advised by PEP632, this function implements distutils.util.strtobool
-        from the official Python 3.9 documentation.
+        Parameters:
+        1. value (AnchoredTimeStamp) the value to correct
+
+        Returns:  One of:
+          * (datetime) time-zone aware non-pre-calculated value
+          * (AnchoredTimeStamp) original value when it had no time-zone data
         """
-        lower_value = value.lower() if value else value
-        if lower_value in ('y', 'yes', 't', 'true', 'on', '1'):
-            return 1
-        if lower_value in ('n', 'no', 'f', 'false', 'off', '0'):
-            return 0
-        raise ValueError("'{}' is not a representation of truth".format(value))
+        # As stated in the method comments, ruamel.yaml hides the time-zone
+        # details in a private dict after forcibly normalizing the datetime;
+        # there is no public accessor for this.  Also ignoring the mypy type
+        # check on the various returns because ruamel.yaml defines TimeStamp
+        # as an 'Any' type rather than a 'TimeStamp' or even its superclass of
+        # 'datetime'.  It is perfectly accurate to assert that this method is
+        # correctly returning a 'datetime' despite the ruamel.yaml type
+        # annotation error.
+        # pylint: disable=protected-access
+        tzinfo_raw = (data._yaml['tz']
+                        if hasattr(data, "_yaml") and 'tz' in data._yaml
+                        else None)
+        if tzinfo_raw:
+            tzre = re.compile(r'([+\-]?)(\d{1,2}):?(\d{2})')
+            tzmatches = tzre.match(tzinfo_raw)
+            if tzmatches:
+                sign_mark, hours, minutes = tzmatches.groups()
+                sign = -1 if sign_mark == '-' else 1
+                tdelta = timedelta(hours=int(hours), minutes=int(minutes))
+                tzinfo = timezone(sign * tdelta)
+                return ((data + tdelta * sign).replace(
+                    tzinfo=tzinfo))
+        return data

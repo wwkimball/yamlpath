@@ -1,3 +1,42 @@
+3.6.7
+Bug Fixes:
+* Release 3.6.6 had a broken package; it was unexpectedly missing the required
+  ruamel.yaml patch found in yamlpath.patches.timestamp.  Thanks to
+  https://github.com/tsinggggg and https://github.com/kaniblu for reporting it!
+
+3.6.6
+Enhancements:
+* Support ruamel.yaml up to version 0.17.21.
+
+Bug Fixes:
+* YAML timestamp values could not be created via yamlpath tools or its library,
+  per http://yaml.org/type/timestamp.html.
+  * CAUTION 1:  ruamel.yaml seems to force all timestamps to UTC while it loads
+    YAML/JSON/Compatible data.  So, when the timestamp value contains time-zone
+    data, it will be stripped off after it is applied to the timestamp value.
+    The yamlpath library reverses this when emitting the affected values but if
+    you attempt to load the timestamp values directly in the DOM, you'll end up
+    with the UTC-converted value, stripped of any time-zone specification.  If
+    you need the original, unmodified data as a time-zone aware
+    datetime.datetime value, pass it through the helper method,
+    Nodes.get_timestamp_with_tzinfo(data: AnchoredTimeStamp).
+  * CAUTION 2:  In order to support timestamp parsing, this project now depends
+    on the python-dateutil library.  Be sure to install it!
+  Thanks again go to https://github.com/AndydeCleyre!
+
+3.6.5
+Bug Fixes:
+* When using EYAML with block formatted values on Windows, the block formatting
+  was broken when written to YAML, corrupting the YAML file.  Non-block
+  formatted values were unaffected and this issue only affected Windows EYAML
+  users.
+* EYAML values were not being decrypted when the result appeared in a list.
+* Boolean values were being unexpectedly output as base-10 representations of
+  the binary values 1 (True) and 0 (False) when emitting to JSON after setting
+  the Boolean.  This change also brings this project into compilance with
+  https://peps.python.org/pep-0632/.  Many thanks to
+  https://github.com/AndydeCleyre!
+
 3.6.4
 Enhancements:
 * Support ruamel.yaml up to version 0.17.17.

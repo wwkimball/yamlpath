@@ -861,6 +861,9 @@ def process_yaml_file(
                         all_anchors=all_anchors):
                     for entry in yaml_paths:
                         if str(result) == str(entry[1]):
+                            # Disable modified-iterating-list because the loop
+                            # is exited immediately upon container change.
+                            # pylint: disable=modified-iterating-list
                             yaml_paths.remove(entry)
                             break  # Entries are already unique
 

@@ -4,6 +4,18 @@ from types import SimpleNamespace
 
 from ruamel.yaml.comments import CommentedMap, CommentedSeq, CommentedSet, TaggedScalar
 from ruamel.yaml.scalarstring import PlainScalarString, FoldedScalarString
+from ruamel.yaml import version_info as ryversion
+if ryversion < (0, 17, 22):                   # pragma: no cover
+    from yamlpath.patches.timestamp import (
+        AnchoredTimeStamp,
+        AnchoredDate,
+    )  # type: ignore
+else:                                         # pragma: no cover
+    # Temporarily fool MYPY into resolving the future-case imports
+    from ruamel.yaml.timestamp import TimeStamp as AnchoredTimeStamp
+    AnchoredDate = AnchoredTimeStamp
+    #from ruamel.yaml.timestamp import AnchoredTimeStamp
+    # From whence shall come AnchoredDate?
 
 from yamlpath.enums import PathSegmentTypes
 from yamlpath.wrappers import NodeCoords, ConsolePrinter
@@ -73,6 +85,13 @@ class Test_wrappers_ConsolePrinter():
         assert "\n".join([
             "DEBUG:  [0]test<class 'str'>",
             "DEBUG:  [1](&Anchor)TestVal<class 'ruamel.yaml.scalarstring.PlainScalarString'>",
+        ]) + "\n" == console.out
+
+        logger.debug({"date": AnchoredDate(2022, 9, 23), "timestamp": AnchoredTimeStamp(2022, 9, 25, 1, 2, 3, 40000)})
+        console = capsys.readouterr()
+        assert "\n".join([
+            "DEBUG:  [date]2022-09-23<class 'yamlpath.patches.timestamp.AnchoredDate'>",
+            "DEBUG:  [timestamp]2022-09-25T01:02:03.040000<class 'yamlpath.patches.timestamp.AnchoredTimeStamp'>",
         ]) + "\n" == console.out
 
         logger.debug({"ichi": 1, anchoredkey: anchoredval})

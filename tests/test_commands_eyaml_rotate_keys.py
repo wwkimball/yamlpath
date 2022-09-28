@@ -66,36 +66,36 @@ class Test_eyaml_rotate_keys():
         from yamlpath.eyaml import EYAMLProcessor
 
         simple_content = """---
-        encrypted_string: ENC[PKCS7,MIIBiQYJKoZIhvcNAQcDoIIBejCCAXYCAQAxggEhMIIBHQIBADAFMAACAQEwDQYJKoZIhvcNAQEBBQAEggEAHA4rPcTzvgzPLtnGz3yoyX/kVlQ5TnPXcScXK2bwjguGZLkuzv/JVPAsOm4t6GlnROpy4zb/lUMHRJDChJhPLrSj919B8//huoMgw0EU5XTcaN6jeDDjL+vhjswjvLFOux66UwvMo8sRci/e2tlFiam8VgxzV0hpF2qRrL/l84V04gL45kq4PCYDWrJNynOwYVbSIF+qc5HaF25H8kHq1lD3RB6Ob/J942Q7k5Qt7W9mNm9cKZmxwgtUgIZWXW6mcPJ2dXDB/RuPJJSrLsb1VU/DkhdgxaNzvLCA+MViyoFUkCfHFNZbaHKNkoYXBy7dLmoh/E5tKv99FeG/7CzL3DBMBgkqhkiG9w0BBwEwHQYJYIZIAWUDBAEqBBCVU5Mjt8+4dLkoqB9YArfkgCDkdIhXR9T1M4YYa1qTE6by61VPU3g1aMExRmo4tNZ8FQ==]
-        encrypted_block: >
-          ENC[PKCS7,MIIBeQYJKoZIhvcNAQcDoIIBajCCAWYCAQAxggEhMIIBHQIBADAFMAACAQEw
-          DQYJKoZIhvcNAQEBBQAEggEAnxQVqyIgRTb/+VP4Q+DLJcnlS8YPouXEW8+z
-          it9uwUA02CEPxCEU944GcHpgTY3EEtkm+2Z/jgXI119VMML+OOQ1NkwUiAw/
-          wq0vwz2D16X31XzhedQN5FZbfZ1C+2tWSQfCjE0bu7IeHfyR+k2ssD11kNZh
-          JDEr2bM2dwOdT0y7VGcQ06vI9gw6UXcwYAgS6FoLm7WmFftjcYiNB+0EJSW0
-          VcTn2gveaw9iOQcum/Grby+9Ybs28fWd8BoU+ZWDpoIMEceujNa9okIXNPJO
-          jcvv1sgauwJ3RX6WFQIy/beS2RT5EOLhWIZCAQCcgJWgovu3maB7dEUZ0NLG
-          OYUR7zA8BgkqhkiG9w0BBwEwHQYJYIZIAWUDBAEqBBAbO16EzQ5/cdcvgB0g
-          tpKIgBAEgTLT5n9Jtc9venK0CKso]
-        """
+encrypted_string: ENC[PKCS7,MIIBiQYJKoZIhvcNAQcDoIIBejCCAXYCAQAxggEhMIIBHQIBADAFMAACAQEwDQYJKoZIhvcNAQEBBQAEggEAHA4rPcTzvgzPLtnGz3yoyX/kVlQ5TnPXcScXK2bwjguGZLkuzv/JVPAsOm4t6GlnROpy4zb/lUMHRJDChJhPLrSj919B8//huoMgw0EU5XTcaN6jeDDjL+vhjswjvLFOux66UwvMo8sRci/e2tlFiam8VgxzV0hpF2qRrL/l84V04gL45kq4PCYDWrJNynOwYVbSIF+qc5HaF25H8kHq1lD3RB6Ob/J942Q7k5Qt7W9mNm9cKZmxwgtUgIZWXW6mcPJ2dXDB/RuPJJSrLsb1VU/DkhdgxaNzvLCA+MViyoFUkCfHFNZbaHKNkoYXBy7dLmoh/E5tKv99FeG/7CzL3DBMBgkqhkiG9w0BBwEwHQYJYIZIAWUDBAEqBBCVU5Mjt8+4dLkoqB9YArfkgCDkdIhXR9T1M4YYa1qTE6by61VPU3g1aMExRmo4tNZ8FQ==]
+encrypted_block: >
+  ENC[PKCS7,MIIBeQYJKoZIhvcNAQcDoIIBajCCAWYCAQAxggEhMIIBHQIBADAFMAACAQEw
+  DQYJKoZIhvcNAQEBBQAEggEAnxQVqyIgRTb/+VP4Q+DLJcnlS8YPouXEW8+z
+  it9uwUA02CEPxCEU944GcHpgTY3EEtkm+2Z/jgXI119VMML+OOQ1NkwUiAw/
+  wq0vwz2D16X31XzhedQN5FZbfZ1C+2tWSQfCjE0bu7IeHfyR+k2ssD11kNZh
+  JDEr2bM2dwOdT0y7VGcQ06vI9gw6UXcwYAgS6FoLm7WmFftjcYiNB+0EJSW0
+  VcTn2gveaw9iOQcum/Grby+9Ybs28fWd8BoU+ZWDpoIMEceujNa9okIXNPJO
+  jcvv1sgauwJ3RX6WFQIy/beS2RT5EOLhWIZCAQCcgJWgovu3maB7dEUZ0NLG
+  OYUR7zA8BgkqhkiG9w0BBwEwHQYJYIZIAWUDBAEqBBAbO16EzQ5/cdcvgB0g
+  tpKIgBAEgTLT5n9Jtc9venK0CKso]
+"""
         anchored_content = """---
-        aliases:
-          - &blockStyle >
-            ENC[PKCS7,MIIBiQYJKoZIhvcNAQcDoIIBejCCAXYCAQAxggEhMIIBHQIBADAFMAACAQEw
-            DQYJKoZIhvcNAQEBBQAEggEArvk6OYa1gACTdrWq2SpCrtGRlc61la5AGU7L
-            aLTyKfqD9vqx71RDjobfOF96No07kLsEpoAJ+LKKHNjdG6kjvpGPmttj9Dkm
-            XVoU6A+YCmm4iYFKD/NkoSOEyAkoDOXSqdjrgt0f37GefEsXt6cqAavDpUJm
-            pmc0KI4TCG5zpfCxqttMs+stOY3Y+0WokkulQujZ7K3SdWUSHIysgMrWiect
-            Wdg5unxN1A/aeyvhgvYSNPjU9KBco7SDnigSs9InW/QghJFrZRrDhTp1oTUc
-            qK5lKvaseHkVGi91vPWeLQxZt1loJB5zL6j5BxMbvRfJK+wc3ax2u4x8WTAB
-            EurCwzBMBgkqhkiG9w0BBwEwHQYJYIZIAWUDBAEqBBAwcy7jvcOGcMfLEtug
-            LEXbgCBkocdckuDe14mVGmUmM++xN34OEVRCeGVWWUnWq1DJ4Q==]
-          - &stringStyle ENC[PKCS7,MIIBiQYJKoZIhvcNAQcDoIIBejCCAXYCAQAxggEhMIIBHQIBADAFMAACAQEwDQYJKoZIhvcNAQEBBQAEggEAIu44u62q5sVfzC7kytLi2Z/EzH2DKr4vDsoqDBeSZ71aRku/uSrjyiO4lyoq9Kva+eBAyjBay5fnqPVBaU3Rud2pdEoZEoyofi02jn4hxUKpAO1W0AUgsQolGe53qOdM4U8RbwnTR0gr3gp2mCd18pH3SRMP9ryrsBAxGzJ6mR3RgdZnlTlqVGXCeWUeVpbH+lcHw3uvd+o/xkvJ/3ypxz+rWILiAZ3QlCirzn/qb2fHuKf3VBh8RVFuQDaM5voajZlgjD6KzNCsbATOqOA6eJI4j0ngPdDlIjGHAnahuyluQ5f5SIaIjLC+ZeCOfIYni0MQ+BHO0JNbccjq2Unb7TBMBgkqhkiG9w0BBwEwHQYJYIZIAWUDBAEqBBCYmAI0Ao3Ok1cSmVw0SgQGgCBK62z1r5RfRjf1xKfqDxTsGUHfsUmM3EjGJfnWzCRvuQ==]
-        block: *blockStyle
-        string: *stringStyle
-        yet_another:
-          'more.complex.child': *blockStyle
-        """
+aliases:
+  - &blockStyle >
+    ENC[PKCS7,MIIBiQYJKoZIhvcNAQcDoIIBejCCAXYCAQAxggEhMIIBHQIBADAFMAACAQEw
+    DQYJKoZIhvcNAQEBBQAEggEArvk6OYa1gACTdrWq2SpCrtGRlc61la5AGU7L
+    aLTyKfqD9vqx71RDjobfOF96No07kLsEpoAJ+LKKHNjdG6kjvpGPmttj9Dkm
+    XVoU6A+YCmm4iYFKD/NkoSOEyAkoDOXSqdjrgt0f37GefEsXt6cqAavDpUJm
+    pmc0KI4TCG5zpfCxqttMs+stOY3Y+0WokkulQujZ7K3SdWUSHIysgMrWiect
+    Wdg5unxN1A/aeyvhgvYSNPjU9KBco7SDnigSs9InW/QghJFrZRrDhTp1oTUc
+    qK5lKvaseHkVGi91vPWeLQxZt1loJB5zL6j5BxMbvRfJK+wc3ax2u4x8WTAB
+    EurCwzBMBgkqhkiG9w0BBwEwHQYJYIZIAWUDBAEqBBAwcy7jvcOGcMfLEtug
+    LEXbgCBkocdckuDe14mVGmUmM++xN34OEVRCeGVWWUnWq1DJ4Q==]
+  - &stringStyle ENC[PKCS7,MIIBiQYJKoZIhvcNAQcDoIIBejCCAXYCAQAxggEhMIIBHQIBADAFMAACAQEwDQYJKoZIhvcNAQEBBQAEggEAIu44u62q5sVfzC7kytLi2Z/EzH2DKr4vDsoqDBeSZ71aRku/uSrjyiO4lyoq9Kva+eBAyjBay5fnqPVBaU3Rud2pdEoZEoyofi02jn4hxUKpAO1W0AUgsQolGe53qOdM4U8RbwnTR0gr3gp2mCd18pH3SRMP9ryrsBAxGzJ6mR3RgdZnlTlqVGXCeWUeVpbH+lcHw3uvd+o/xkvJ/3ypxz+rWILiAZ3QlCirzn/qb2fHuKf3VBh8RVFuQDaM5voajZlgjD6KzNCsbATOqOA6eJI4j0ngPdDlIjGHAnahuyluQ5f5SIaIjLC+ZeCOfIYni0MQ+BHO0JNbccjq2Unb7TBMBgkqhkiG9w0BBwEwHQYJYIZIAWUDBAEqBBCYmAI0Ao3Ok1cSmVw0SgQGgCBK62z1r5RfRjf1xKfqDxTsGUHfsUmM3EjGJfnWzCRvuQ==]
+block: *blockStyle
+string: *stringStyle
+yet_another:
+  'more.complex.child': *blockStyle
+"""
         simple_file = create_temp_yaml_file(tmp_path_factory, simple_content)
         anchored_file = create_temp_yaml_file(tmp_path_factory, anchored_content)
 
@@ -115,6 +115,9 @@ class Test_eyaml_rotate_keys():
 
         with open(anchored_file, 'r') as fhnd:
             anchored_data = fhnd.read()
+            # print("=== DEBUG: START anchored_data ===")
+            # print(anchored_data)
+            # print("=== DEBUG: STOP anchored_data ===")
 
         assert not simple_data == simple_content
         assert not anchored_data == anchored_content
@@ -127,7 +130,7 @@ class Test_eyaml_rotate_keys():
             anchored_data, literal=True)
         if not doc_loaded:
             # An error message has already been logged
-            assert False, "Rotated anchored data failed to load"
+            assert False, "Rotated anchored data failed to load (verify formatting)"
 
         source_processor = Processor(quiet_logger, yaml_rotated_data)
         for node in source_processor.get_nodes('/block', mustexist=True):
@@ -140,14 +143,14 @@ class Test_eyaml_rotate_keys():
             anchored_content, literal=True)
         if not doc_loaded:
             # An error message has already been logged
-            assert False, "Original anchored data failed to load"
+            assert False, "Original anchored data failed to load (verify values)"
 
         (yaml_rotated_data, doc_loaded) = Parsers.get_yaml_data(
             yaml, quiet_logger,
             anchored_data, literal=True)
         if not doc_loaded:
             # An error message has already been logged
-            assert False, "Rotated anchored data failed to load"
+            assert False, "Rotated anchored data failed to load (verify values)"
 
         source_processor = EYAMLProcessor(
             quiet_logger, yaml_anchored_data,

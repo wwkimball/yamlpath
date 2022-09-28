@@ -160,11 +160,13 @@ nullthing: null
 nothingthing:
 emptystring: ""
 nullstring: "null"
+datething: 2022-09-23
+timestampthing: 2022-09-24T14:13:12-7:30
         """
 
         # Note that true nulls are translated as "\x00" (hexadecimal NULL
         # control-characters).
-        results = ["6", "6.8", "yes", "no", "True", "False", "\x00", "\x00", "", "null"]
+        results = ["6", "6.8", "yes", "no", "True", "False", "\x00", "\x00", "", "null", "2022-09-23", "2022-09-24T14:13:12-07:30"]
 
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
         result = script_runner.run(self.command, "--query=*", yaml_file)
