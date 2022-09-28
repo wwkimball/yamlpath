@@ -374,23 +374,23 @@ class Comments:
         import pprint
         pp = pprint.PrettyPrinter(indent=4)
         print("*" * 80 + "\n" + "The ca items for data:")
-        pp.pprint(data.ca.items if hasattr(data, "ca") else "DATA HAS NO COMMENTS!")
+        pp.pprint(data.ca.items if hasattr(data, "ca") else "DATA HAS NO CA ITEMS!")
         print("*-" * 40 + "The ca comment for data:")
-        pp.pprint(data.ca.comment if hasattr(data, "ca") else "DATA HAS NO COMMENTS!")
+        pp.pprint(data.ca.comment if hasattr(data, "ca") else "DATA HAS NO CA COMMENTS!")
         print("*=" * 40 + "All data keys:")
         pp.pprint(list(data.keys()))
 
         print("+" * 80 + "\n" + "The ca items for parent:")
-        pp.pprint(parent.ca.items if hasattr(parent, "ca") else "PARENT HAS NO COMMENTS!")
+        pp.pprint(parent.ca.items if hasattr(parent, "ca") else "PARENT HAS NO CA ITEMS!")
         print("+-" * 40 + "The ca comment for parent:")
-        pp.pprint(parent.ca.comment if hasattr(parent, "ca") else "PARENT HAS NO COMMENTS!")
+        pp.pprint(parent.ca.comment if hasattr(parent, "ca") else "PARENT HAS NO CA COMMENTS!")
         print("+=" * 40 + "All parent keys:")
         pp.pprint(list(parent.keys()) if hasattr(parent, "keys") and callable(getattr(parent, "keys")) else "PARENT HAS NO KEYS METHOD")
 
         print("@" * 80 + "\n" + "The ca items for data[key]:")
-        pp.pprint(data[key].ca.items if hasattr(data[key], "ca") else "data[key] HAS NO COMMENTS!")
+        pp.pprint(data[key].ca.items if hasattr(data[key], "ca") else "data[key] HAS NO CA ITEMS!")
         print("@-" * 40 + "The ca comment for data[key]:")
-        pp.pprint(data[key].ca.comment if hasattr(data[key], "ca") else "data[key] HAS NO COMMENTS!")
+        pp.pprint(data[key].ca.comment if hasattr(data[key], "ca") else "data[key] HAS NO CA COMMENTS!")
         print("@=" * 40 + "All data[key] keys:")
         pp.pprint(list(data[key].keys()) if hasattr(data[key], "keys") and callable(getattr(data[key], "keys")) else "data[key] HAS NO KEYS METHOD")
 
@@ -422,7 +422,8 @@ class Comments:
         # node.  That preceding node will be either an immediate peer or the
         # parent.  If however the target node has no post-comment -- even if it
         # does have an EOL comment -- there will be nothing to preserve.
-        #if hasattr(data, "ca") and key in data.ca.items:
+        node_post_eol_comment = None
+        if hasattr(data, "ca") and key in data.ca.items:
             # There is an end-of-line comment, post-eol-comment (i.e. a comment
             # after this node's EOL comment that is preceding the NEXT node
             # which must be attached to the end of the PRECEDING node's
@@ -431,13 +432,12 @@ class Comments:
 
             # Merge any target node post-EOL comment with the predecessor
             # node's post-EOL comment.
-
-            # if data.ca.items[key][Comments.RYCA_DICT_POST_VALUE] is not None:
-            #     node_comment = data.ca.items[key][Comments.RYCA_DICT_POST_VALUE].value
-            #     node_post_eol_comment = node_comment.partition("\n")[2]
-            # else:
-            #     node_comment = data.ca.items[key][Comments.RYCA_DICT_PRE_VALUE_L][-1].value
-            #     node_post_eol_comment = node_comment.partition("\n")[2]
+            if data.ca.items[key][Comments.RYCA_DICT_POST_VALUE] is not None:
+                node_comment = data.ca.items[key][Comments.RYCA_DICT_POST_VALUE].value
+                node_post_eol_comment = node_comment.partition("\n")[2]
+            else:
+                node_comment = data.ca.items[key][Comments.RYCA_DICT_PRE_VALUE_L][-1].value
+                node_post_eol_comment = node_comment.partition("\n")[2]
 
             # if node_post_eol_comment is not None:
             #     # There is a post-eol-comment that must be preserved
@@ -448,6 +448,11 @@ class Comments:
             #         preceding_key: Any = keylist[predex]
             #         Comments._merge_with_preceding_map_peer(
             #             data, node_comment, preceding_key)
+
+        dbg_node_post_eol_comment = node_post_eol_comment.replace("\n", "\\n") if node_post_eol_comment else None
+        print("X"*80)
+        print(f"Preserving: {dbg_node_post_eol_comment}" if node_post_eol_comment else "NO POST-EOL COMMENT TO PRESERVE!")
+        print("X"*80)
 
         # Then, delete any obvious comment meant for the target node.  Such
         # a comment will be at any of:
@@ -468,11 +473,15 @@ class Comments:
         predex: int = keydex - 1
         if 0 == keydex:
             if data.ca.comment is None:
-                # Nothing to do; there are no comments in this dict
+                if node_post_eol_comment:
+                    # Add a novel comment to the node's container
+                    data.ca.comment = CommentToken(node_post_eol_comment)
+
+                # Nothing more to do; there are no comments in this dict
                 return None
 
             # The target key is the first child; delete any obvious comment
-            # meant for the target node from the container node's post-EOL
+            # meant for the target node from the node's container's post-EOL
             # comment and merge any post-EOL comment of the target node
             # with the remainder of the container's post-EOL comment.
             if data.ca.comment[Comments.RYCA_COMMENT_POST] is None:
@@ -496,7 +505,7 @@ class Comments:
             #
             # If the predecessor peer node is another map, then this node's
             # pre-comment will be hidden in the post-EOL comment of the
-            # predecessor node's last child.  Are we having fun, yet?
+            # predecessor node's last, deepest child.  Are we having fun, yet?
             prekey: Any = keylist[predex]
             predata: Any = data[prekey]
             if isinstance(predata, dict) and hasattr(predata, "ca"):
