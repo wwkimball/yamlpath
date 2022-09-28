@@ -97,7 +97,10 @@ def validateargs(args, log):
 
 # pylint: disable=locally-disabled,too-many-locals,too-many-branches,too-many-statements
 def main():
-    """Main code."""
+    """Perform the work specified via CLI arguments and exit.
+
+    Main code.
+    """
     # Process any command-line arguments
     args = processcli()
     log = ConsolePrinter(args)

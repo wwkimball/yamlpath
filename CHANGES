@@ -1,4 +1,7 @@
 3.7.0
+Enhancements:
+* Support for Python 3.10 has been added, thanks to https://github.com/mechie!
+
 Bug Fixes:
 * Deleting hash key-value pairs with white-space or comments on immediately
   following lines in the YAML file resulted in those following comments and/or

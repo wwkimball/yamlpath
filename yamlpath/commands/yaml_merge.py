@@ -456,7 +456,10 @@ def merge_docs(
     return return_state
 
 def main():
-    """Main code."""
+    """Perform the work specified via CLI arguments and exit.
+
+    Main code.
+    """
     args = processcli()
     log = ConsolePrinter(args)
     validateargs(args, log)
