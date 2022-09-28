@@ -158,7 +158,10 @@ def validateargs(args, log):
         sys.exit(1)
 
 def main():
-    """Main code."""
+    """Perform the work specified via CLI arguments and exit.
+
+    Main code.
+    """
     args = processcli()
     log = ConsolePrinter(args)
     validateargs(args, log)

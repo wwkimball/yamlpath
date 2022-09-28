@@ -267,7 +267,10 @@ def get_doc(log, docs, index):
 
 # pylint: disable=locally-disabled,too-many-locals
 def main():
-    """Main code."""
+    """Perform the work specified via CLI arguments and exit.
+
+    Main code.
+    """
     args = processcli()
     log = ConsolePrinter(args)
     validateargs(args, log)

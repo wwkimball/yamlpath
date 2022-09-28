@@ -1465,7 +1465,10 @@ class Processor:
         self, data: Any, peek_path: YAMLPath, node_coords: List[NodeCoords],
         **kwargs
     ) -> List[NodeCoords]:
-        """Helper for _get_nodes_by_collector."""
+        """List nodes matching the given path of an Addition Collector.
+
+        Helper for _get_nodes_by_collector.
+        """
         updated_coords = node_coords
         parent: Any = kwargs.pop("parent", None)
         parentref: Any = kwargs.pop("parentref", None)
@@ -1503,7 +1506,10 @@ class Processor:
         self, data: Any, peek_path: YAMLPath, collected_ncs: List[NodeCoords],
         **kwargs
     ) -> List[NodeCoords]:
-        """Helper for _get_nodes_by_collector."""
+        """List nodes matching the given path of a Subtraction Collector.
+
+        Helper for _get_nodes_by_collector.
+        """
         def get_del_nodes(
             del_nodes: List[Any], node_coord: NodeCoords
         ) -> None:
