@@ -394,8 +394,63 @@ class Comments:
         print("@=" * 40 + "All data[key] keys:")
         pp.pprint(list(data[key].keys()) if hasattr(data[key], "keys") and callable(getattr(data[key], "keys")) else "data[key] HAS NO KEYS METHOD")
 
-        # First, delete any obvious comment meant for the target node.  Such a
-        # comment will be at any of:
+        # In order to handle the comments just once on a single pass, these
+        # steps will be taken:
+        # 1. Gather up the post-node comment, discarding any EOL comment.  This
+        #    may yield a single CommentToken or a list of CommentTokens.
+        # 2. Remove obvious for-node pre-node comment line(s) or CommentTokens
+        #    from the predecessor node's container's ca collection.
+        # 3. Append the preserved post-node comment to the predecessor node's
+        #    container's ca collection (which may require creation of a novel
+        #    ca entry).
+
+        # First, delete any EOL comment for the target node but PRESERVE any
+        # post-EOL comment attached to it by merging that content to the node's
+        # predecessor, which may be either a peer node or the node's parent.
+        # Such additional text will be either:
+        # 1. At [Comments.RYCA_DICT_POST_VALUE] and will have all lines of
+        #    the post-value comment (end-of-line comment AND ALL FOLLOWING
+        #    COMMENTED AND WHITESPACE LINES) in a single CommenToken,
+        #    separated by \n markers.  This is most comments, excluding the
+        #    first child of a dict.
+        # 2. At [Comments.RYCA_DICT_PRE_VALUE_L] and will have a discrete
+        #    CommentToken for each line of the comment text, each still
+        #    terminated by \n markers.
+
+        # In order to preserve the post-node comment, omiting any end-of-line
+        # comment, it must be appended/moved to the node preceding the deleted
+        # node.  That preceding node will be either an immediate peer or the
+        # parent.  If however the target node has no post-comment -- even if it
+        # does have an EOL comment -- there will be nothing to preserve.
+        #if hasattr(data, "ca") and key in data.ca.items:
+            # There is an end-of-line comment, post-eol-comment (i.e. a comment
+            # after this node's EOL comment that is preceding the NEXT node
+            # which must be attached to the end of the PRECEDING node's
+            # comment), or both.  A comment merge is necessary only when there
+            # is a post-eol-comment.  So, is there a post-eol-comment?
+
+            # Merge any target node post-EOL comment with the predecessor
+            # node's post-EOL comment.
+
+            # if data.ca.items[key][Comments.RYCA_DICT_POST_VALUE] is not None:
+            #     node_comment = data.ca.items[key][Comments.RYCA_DICT_POST_VALUE].value
+            #     node_post_eol_comment = node_comment.partition("\n")[2]
+            # else:
+            #     node_comment = data.ca.items[key][Comments.RYCA_DICT_PRE_VALUE_L][-1].value
+            #     node_post_eol_comment = node_comment.partition("\n")[2]
+
+            # if node_post_eol_comment is not None:
+            #     # There is a post-eol-comment that must be preserved
+            #     if predex < 0:
+            #         Comments._merge_with_map_parent(
+            #             parent, parentref, node_comment)
+            #     else:
+            #         preceding_key: Any = keylist[predex]
+            #         Comments._merge_with_preceding_map_peer(
+            #             data, node_comment, preceding_key)
+
+        # Then, delete any obvious comment meant for the target node.  Such
+        # a comment will be at any of:
         # 1. Any pre-comment for the FIRST child of a dict will have that
         #    comment stuffed in EITHER:
         #    1.1:  the ca's comment property at
@@ -476,48 +531,3 @@ class Comments:
                     print("?6" * 40 + "Need to parse a multi-line single token...")
                     Comments._strip_next_node_comment_from_aio(
                         data.ca.items[prekey][Comments.RYCA_DICT_POST_VALUE])
-
-        # Then, delete any EOL comment for the target node but PRESERVE any
-        # post-EOL comment attached to it by merging that content to the node's
-        # predecessor, which may be either a peer node or the node's parent.
-        # Such additional text will be either:
-        # 1. At [Comments.RYCA_DICT_POST_VALUE] and will have all lines of
-        #    the post-value comment (end-of-line comment AND ALL FOLLOWING
-        #    COMMENTED AND WHITESPACE LINES) in a single CommenToken,
-        #    separated by \n markers.  This is most comments, excluding the
-        #    first child of a dict.
-        # 2. At [Comments.RYCA_DICT_PRE_VALUE_L] and will have a discrete
-        #    CommentToken for each line of the comment text, each still
-        #    terminated by \n markers.
-
-        # In order to preserve the post-node comment, omiting any end-of-line
-        # comment, it must be appended/moved to the node preceding the deleted
-        # node.  That preceding node will be either an immediate peer or the
-        # parent.  If however the target node has no post-comment -- even if it
-        # does have an EOL comment -- there will be nothing to preserve.
-        #if hasattr(data, "ca") and key in data.ca.items:
-            # There is an end-of-line comment, post-eol-comment (i.e. a comment
-            # after this node's EOL comment that is preceding the NEXT node
-            # which must be attached to the end of the PRECEDING node's
-            # comment), or both.  A comment merge is necessary only when there
-            # is a post-eol-comment.  So, is there a post-eol-comment?
-
-            # Merge any target node post-EOL comment with the predecessor
-            # node's post-EOL comment.
-
-            # if data.ca.items[key][Comments.RYCA_DICT_POST_VALUE] is not None:
-            #     node_comment = data.ca.items[key][Comments.RYCA_DICT_POST_VALUE].value
-            #     node_post_eol_comment = node_comment.partition("\n")[2]
-            # else:
-            #     node_comment = data.ca.items[key][Comments.RYCA_DICT_PRE_VALUE_L][-1].value
-            #     node_post_eol_comment = node_comment.partition("\n")[2]
-
-            # if node_post_eol_comment is not None:
-            #     # There is a post-eol-comment that must be preserved
-            #     if predex < 0:
-            #         Comments._merge_with_map_parent(
-            #             parent, parentref, node_comment)
-            #     else:
-            #         preceding_key: Any = keylist[predex]
-            #         Comments._merge_with_preceding_map_peer(
-            #             data, node_comment, preceding_key)
