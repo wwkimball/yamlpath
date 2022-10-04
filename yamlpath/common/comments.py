@@ -373,6 +373,29 @@ class Comments:
         return node_comment
 
     @staticmethod
+    def strip_eol_comment(
+        comment: Union[None, CommentToken, list(CommentToken)]
+    ) -> Union[None, CommentToken, list(CommentToken)]:
+        """
+        Delete an EOL comment from a given comment.
+        """
+        if comment is None:
+            return None
+
+        if isinstance(comment, CommentToken):
+            # Got an all-in-one comment
+            return CommentToken(
+                comment.value.partition("\n")[2],
+                comment.start_mark,
+                comment.end_mark,
+                comment.column)
+
+        # Got a list of comments; preserve all but the first
+        if len(comment) > 1:
+            return comment[1:]
+        return [None]
+
+    @staticmethod
     def del_map_comment_for_entry(
         data: CommentedMap, key: Any, parent: Any, parentref: Any
     ) -> None:
@@ -457,22 +480,22 @@ class Comments:
         # node.  That preceding node will be either an immediate peer or the
         # parent.  If however the target node has no post-comment -- even if it
         # does have an EOL comment -- there will be nothing to preserve.
-        node_post_eol_comment = None
-        if hasattr(data, "ca") and key in data.ca.items:
-            # There is an end-of-line comment, post-eol-comment (i.e. a comment
-            # after this node's EOL comment that is preceding the NEXT node
-            # which must be attached to the end of the PRECEDING node's
-            # comment), or both.  A comment merge is necessary only when there
-            # is a post-eol-comment.  So, is there a post-eol-comment?
+        # node_post_eol_comment = None
+        # if hasattr(data, "ca") and key in data.ca.items:
+        #     # There is an end-of-line comment, post-eol-comment (i.e. a comment
+        #     # after this node's EOL comment that is preceding the NEXT node
+        #     # which must be attached to the end of the PRECEDING node's
+        #     # comment), or both.  A comment merge is necessary only when there
+        #     # is a post-eol-comment.  So, is there a post-eol-comment?
 
-            # Merge any target node post-EOL comment with the predecessor
-            # node's post-EOL comment.
-            if data.ca.items[key][Comments.RYCA_DICT_POST_VALUE] is not None:
-                node_comment = data.ca.items[key][Comments.RYCA_DICT_POST_VALUE].value
-                node_post_eol_comment = node_comment.partition("\n")[2]
-            else:
-                node_comment = data.ca.items[key][Comments.RYCA_DICT_PRE_VALUE_L][-1].value
-                node_post_eol_comment = node_comment.partition("\n")[2]
+        #     # Merge any target node post-EOL comment with the predecessor
+        #     # node's post-EOL comment.
+        #     if data.ca.items[key][Comments.RYCA_DICT_POST_VALUE] is not None:
+        #         node_comment = data.ca.items[key][Comments.RYCA_DICT_POST_VALUE].value
+        #         node_post_eol_comment = node_comment.partition("\n")[2]
+        #     else:
+        #         node_comment = data.ca.items[key][Comments.RYCA_DICT_PRE_VALUE_L][-1].value
+        #         node_post_eol_comment = node_comment.partition("\n")[2]
 
             # if node_post_eol_comment is not None:
             #     # There is a post-eol-comment that must be preserved
@@ -483,6 +506,11 @@ class Comments:
             #         preceding_key: Any = keylist[predex]
             #         Comments._merge_with_preceding_map_peer(
             #             data, node_comment, preceding_key)
+
+        node_comment: Union[
+            None, CommentToken, list(CommentToken)
+        ] = Comments._get_map_node_comment(data, key)
+        # node_post_eol_comment =
 
         dbg_node_post_eol_comment = node_post_eol_comment.replace("\n", "\\n") if node_post_eol_comment else None
         print("X"*80)
