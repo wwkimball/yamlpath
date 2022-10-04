@@ -5,6 +5,7 @@ Copyright 2022 William W. Kimball, Jr. MBA MSIS
 """
 from typing import Any, Iterable, List, Tuple, Union
 
+from ruamel.yaml.comments import CommentedMap
 from ruamel.yaml.tokens import CommentToken
 
 
@@ -338,8 +339,42 @@ class Comments:
             del pnode_post_eol_comments[idx]
 
     @staticmethod
+    def _get_map_node_comment(
+        data: CommentedMap,
+        key: Any
+    ) -> Union[None, CommentToken, list(CommentToken)]:
+        r"""
+        Get the comment(s) for a given map node, if any exist.
+
+        Remember that the comment -- when not None -- will include any EOL
+        comment *and* all commented lines following the node, if any.  You will
+        get either a single CommentToken (an all-in-one comment value where
+        each line of the commented text is terminated with a \n) or a list of
+        CommentTokens where each CommentToken's value is terminated with a \n
+        mark.
+        """
+        node_comment = None
+        if hasattr(data, "ca") and key in data.ca.items:
+            # There is an end-of-line comment, post-eol-comment (i.e. a comment
+            # after this node's EOL comment that is preceding the NEXT node's
+            # comment), or both.
+            if data.ca.items[key][Comments.RYCA_DICT_POST_VALUE] is not None:
+                # There is an all-in-one comment
+                # node_comment = data.ca.items[key][Comments.RYCA_DICT_POST_VALUE].value
+                # node_post_eol_comment = node_comment.partition("\n")[2]
+                node_comment = data.ca.items[key][Comments.RYCA_DICT_POST_VALUE]
+            else:
+                # There MAY BE a list of comment tokens (while not likely,
+                # it could still be None).
+                # node_comment = data.ca.items[key][Comments.RYCA_DICT_PRE_VALUE_L][-1].value
+                # node_post_eol_comment = node_comment.partition("\n")[2]
+                node_comment = data.ca.items[key][Comments.RYCA_DICT_PRE_VALUE_L]
+
+        return node_comment
+
+    @staticmethod
     def del_map_comment_for_entry(
-        data: Any, key: Any, parent: Any, parentref: Any
+        data: CommentedMap, key: Any, parent: Any, parentref: Any
     ) -> None:
         """
         Delete comments for a key-value pair from a map.
