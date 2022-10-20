@@ -44,7 +44,7 @@ setup(
     },
     python_requires=">3.6.0",
     install_requires=[
-        "ruamel.yaml>0.17.5,!=0.17.18,<=0.17.21",
+        "ruamel.yaml==0.17.21",
         "python-dateutil<=3"
     ],
     tests_require=[
