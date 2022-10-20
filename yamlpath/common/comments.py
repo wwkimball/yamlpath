@@ -4,8 +4,9 @@ Implement Comments, a static lib of generally-useful code for YAML Comments.
 Copyright 2022 William W. Kimball, Jr. MBA MSIS
 """
 from typing import Any, Iterable, List, Sequence, Tuple, Union
+from charset_normalizer import from_bytes
 
-from ruamel.yaml.comments import CommentedMap
+from ruamel.yaml.comments import CommentedMap, CommentedSeq, CommentedSet
 from ruamel.yaml.tokens import CommentToken
 
 
@@ -69,38 +70,86 @@ class Comments:
     #         comment_text.partition("\n")[0],
     #         comment_text.partition("\n")[2])
 
-    # @staticmethod
-    # def _strip_next_node_comment(pnode_post_eol_comment: str) -> str:
-    #     """Strip text of content that is likely meant for the next node."""
-    #     if pnode_post_eol_comment is None:
-    #         return None
+    @staticmethod
+    def _strip_next_node_comment(
+        comment: Union[None, CommentToken, List[CommentToken], List[None]]
+    ) -> Union[None, CommentToken, List[CommentToken], List[None]]:
+        """
+        Strip comment text that is likely meant for the next node.
+        """
+        # Delete any obvious comment meant for the target node.  Such
+        # a comment will be at any of:
+        # 1. Any pre-comment for the FIRST child of a dict will have that
+        #    comment stuffed in EITHER:
+        #    1.1:  the ca's comment property at
+        #          [Comments.RYCA_COMMENT_PRE_L] where each line is its own
+        #          CommentToken ONLY WHEN THE PARENT DOES *NOT* HAVE AN EOL
+        #          COMMENT; or
+        #    1.2:  the ca's comment poperty at [Comments.RYCA_COMMENT_POST]
+        #          where all lines are stored together in a single
+        #          CommentToken separated by \n marks.
+        # 2. A pre-comment for a node preceded by another dict will have its
+        #    pre-comment in the post-EOL comment of the predecessor node's last
+        #    child.
+        if comment is None:
+            return None
 
-    #     # Remove the target node's pre-node comment from the
-    #     # predecessor node's post-eol comment.  Stop removing lines
-    #     # when an empty-line or possible commented YAML is detected.
-    #     pnode_comment_lines = pnode_post_eol_comment.split("\n")
-    #     line_count = len(pnode_comment_lines)
-    #     preserve_to = line_count
-    #     keep_lines = 0
-    #     for pre_index, pre_line in enumerate(
-    #         reversed(pnode_comment_lines)
-    #     ):
-    #         keep_lines = pre_index
-    #         pre_content = pre_line.partition("#")[2].lstrip()
+        if isinstance(comment, CommentToken):
+            # Got an all-in-one comment:
+            # Remove the target node's pre-node comment from the
+            # predecessor node's post-eol comment.  Stop removing lines
+            # when an empty-line or possible commented YAML is detected.
+            comment_lines = comment.value.split("\n")
+            line_count = len(comment_lines)
+            preserve_to = line_count
+            keep_lines = 0
+            for line_index, comment_line in enumerate(
+                reversed(comment_lines)
+            ):
+                keep_lines = line_index
+                pre_content = comment_line.partition("#")[2].lstrip()
 
-    #         # Stop preserving lines at the first (last) blank line
-    #         if len(pre_content) < 1:
-    #             break
+                # Stop preserving lines at the first (last) blank line
+                if len(pre_content) < 1:
+                    break
 
-    #         # Check for possible YAML markup
-    #         if pre_content[0] == '-' or ':' in pre_content:
-    #             # May be YAML; there's room here for deeper testing...
-    #             break
+                # Check for possible YAML markup
+                if pre_content[0] == '-' or ':' in pre_content:
+                    # May be YAML; there's room here for deeper testing...
+                    break
 
-    #     preserve_to = line_count - keep_lines - 2
-    #     return (
-    #         "\n".join(pnode_comment_lines[0:preserve_to]) +
-    #         ("\n" if preserve_to >= 0 else ""))
+            preserve_to = line_count - keep_lines - 2
+            return CommentToken(
+                ("\n".join(comment_lines[0:preserve_to]) +
+                 ("\n" if preserve_to >= 0 else "")),
+                comment.start_mark,
+                comment.end_mark,
+                comment.column)
+
+        if len(comment) > 1:
+            # Got a list of comments:
+            # Process the lines from bottom-up, removing them until an empty-
+            # line or possible commented YAML is detected.
+            line_count = len(comment)
+            preserve_to = line_count
+            keep_lines = 0
+            for line_index, comment_line in enumerate(
+                reversed(comment)
+            ):
+                keep_lines = line_index
+                pre_content = comment_line.value.partition("#")[2].lstrip() if comment_line is not None else ""
+
+                # Stop preserving lines at the first (last) blank line
+                if len(pre_content) < 1:
+                    break
+
+                # Check for possible YAML markup
+                if pre_content[0] == '-' or ':' in pre_content:
+                    # May be YAML; there's room here for deeper testing...
+                    break
+
+            return comment[0:preserve_to]
+        return [None]
 
     # # def merge_with_parent_having_eolc(parent, post_comment) -> None:
     # #     # Pull the pre node comment from the node's parent; it will be in
@@ -375,7 +424,134 @@ class Comments:
         return node_comment
 
     @staticmethod
-    def strip_eol_comment(
+    def _find_tail_comment_in_map(
+        data: CommentedMap
+    ) -> Tuple[Any, Any]:
+        """
+        Find the last, deepest comment ref in a map.
+        """
+        tail_comment: Tuple[Any, Any] = (None, None)
+        key_list: list[Any] = list(data.keys())
+        last_key: Any = key_list[-1]
+        last_data = data[last_key]
+
+        # Recursively find the last, deepest child's ref.  If and only
+        # if it is in the container's ca, then and only then will there
+        # be a tail comment to return.
+        if isinstance(last_data, CommentedMap):
+            tail_comment = Comments._find_tail_comment_in_map(last_data)
+        # TODO
+        # elif isinstance(last_data, CommentedSeq):
+        #     tail_comment = Comments._find_tail_comment_in_seq(last_data)
+        # elif isinstance(last_data, CommentedSet):
+        #     tail_comment = Comments._find_tail_comment_in_set(last_data)
+        elif last_key in data.ca.keys():
+            tail_comment = (data.ca, last_key)
+
+        return tail_comment
+
+    @staticmethod
+    def _find_preceding_map_node_comment(
+        # parent: Union[CommentedMap, CommentedSeq, CommentedSet],
+        # parentref: Any,
+        data: CommentedMap,
+        key: Any
+    ) -> Tuple[Any, Any]:
+        """
+        Find the comment container and ref for the comment preceding key node.
+
+        The result may be a reference to the comment of the key node's
+        preceding peer node, immediate parent, or the very last node in a
+        preceding container (map, sequence, or set).
+        """
+        node_comment: Tuple[Any, Any] = (None, None)
+        keylist: list[Any] = list(data.keys())
+        keydex: int = keylist.index(key)
+        predex: int = keydex - 1
+        if 0 == keydex:
+            # The target node is the first child of its container, which means
+            # its predecessor comment -- if there is one -- is to be found in
+            # the container's ca.comment property.
+            if data.ca.comment is None:
+                # Signal with a None ref that the container's comment is unset
+                node_comment = (data.ca, None)
+
+            # The target key is the first child; delete any obvious comment
+            # meant for the target node from the node's container's post-EOL
+            # comment and merge any post-EOL comment of the target node
+            # with the remainder of the container's post-EOL comment.
+            elif data.ca.comment[Comments.RYCA_COMMENT_POST] is None:
+                # The container does NOT have an EOL comment; each pre-node
+                # comment line is in its own CommentToken.
+                node_comment = (data.ca.comment, Comments.RYCA_COMMENT_PRE_L)
+                # print("?1" * 40 + "Need to parse a list of PARENT CommentTokens because this FIRST node's PARENT does /NOT/ have an EOL comment...")
+                # Comments._strip_next_node_comment_from_lst(
+                #     data.ca.comment[Comments.RYCA_COMMENT_PRE_L])
+            else:
+                # The container HAS an EOL comment; all pre-node comment
+                # lines are crammed into a single CommentToken.
+                node_comment = (data.ca.comment, Comments.RYCA_COMMENT_POST)
+                # print("?2" * 40 + "Need to parse a multi-line single token because this FIRST node's PARENT /HAS/ an EOL comment...")
+                # Comments._strip_next_node_comment_from_aio(
+                #     data.ca.comment[Comments.RYCA_COMMENT_POST])
+        else:
+            # The target key is any child except the first; delete any
+            # obvious comment meant for the target node from the
+            # predecessor peer node's post-EOL comment and merge any post-
+            # EOL comment of the target node with the remainder of its
+            # predecessor peer node's post-EOL comment.
+            #
+            # If the predecessor peer node is another container (map, sequence,
+            # or set), then this node's pre-comment will be hidden in the post-
+            # EOL comment of the container's last, deepest child.
+            prekey: Any = keylist[predex]
+            predata: Any = data[prekey]
+            if isinstance(predata, CommentedMap):
+                node_comment = Comments._find_tail_comment_in_map(predata)
+            # TODO
+            # elif isinstance(predata, CommentedSeq):
+            #     node_comment = Comments._find_tail_comment_in_seq(predata)
+            # elif isinstance(predata, CommentedSet):
+            #     node_comment = Comments._find_tail_comment_in_set(predata)
+
+            #     # prekeylist: list[Any] = list(predata.keys())
+            #     # prelastkey: Any = prekeylist[-1] if len(prekeylist) > 0 else None
+            #     # prelastcr: Any = predata.ca.items[prelastkey] if prelastkey is not None and prelastkey in predata.ca.items else None
+
+            #     # # print("^" * 80 + "\n" + "The ca items for predata:")
+            #     # # pp.pprint(predata.ca.items if hasattr(predata, "ca") else "predata HAS NO COMMENTS!")
+            #     # # print("^-" * 40 + "The ca comment for predata:")
+            #     # # pp.pprint(predata.ca.comment if hasattr(predata, "ca") else "predata HAS NO COMMENTS!")
+            #     # # print("^=" * 40 + "All predata keys:")
+            #     # # pp.pprint(list(predata.keys()) if hasattr(predata, "keys") and callable(getattr(predata, "keys")) else "predata HAS NO KEYS METHOD")
+            #     # # print("^_" * 40 + f"Identified last key: {prelastkey}")
+            #     # # print("^." * 40 + "Got comment record from prelastkey:")
+            #     # # pp.pprint(prelastcr)
+
+            #     # if prelastcr is not None:
+            #     #     # There is a predecessor comment to parse
+            #     #     if prelastcr[Comments.RYCA_DICT_POST_VALUE] is None:
+            #     #         print("?3" * 40 + "Need to parse a list of CommentTokens...")
+            #     #         exit(43)
+            #     #     else:
+            #     #         print("?4" * 40 + "Need to parse a multi-line single token...")
+            #     #         Comments._strip_next_node_comment_from_aio(
+            #     #             prelastcr[Comments.RYCA_DICT_POST_VALUE])
+            elif prekey in data.ca.items:
+                if data.ca.items[prekey][Comments.RYCA_DICT_POST_VALUE] is None:
+                    # print("?5" * 40 + "Need to parse a list of CommentTokens...")
+                    # exit(44)
+                    node_comment = (data.ca.items[prekey], Comments.RYCA_DICT_PRE_VALUE_L)
+                else:
+                    # print("?6" * 40 + "Need to parse a multi-line single token...")
+                    # Comments._strip_next_node_comment_from_aio(
+                    #     data.ca.items[prekey][Comments.RYCA_DICT_POST_VALUE])
+                    node_comment = (data.ca.items[prekey], Comments.RYCA_DICT_POST_VALUE)
+
+        return node_comment
+
+    @staticmethod
+    def _strip_eol_comment(
         comment: Union[None, CommentToken, List[CommentToken], List[None]]
     ) -> Union[None, CommentToken, List[CommentToken], List[None]]:
         """
@@ -396,6 +572,51 @@ class Comments:
         if len(comment) > 1:
             return comment[1:]
         return [None]
+
+    @staticmethod
+    def _merge_comments(
+        from_cmt: Union[None, CommentToken, List[CommentToken], List[None]],
+        into_cmt: Union[None, CommentToken, List[CommentToken], List[None]]
+    ) -> Union[None, CommentToken, List[CommentToken], List[None]]:
+        """
+        Merge comment text together, if possible.
+        """
+        if from_cmt is None:
+            return into_cmt
+        if into_cmt is None:
+            return from_cmt
+
+        if isinstance(into_cmt, list):
+            # PyLance fails to comprehend that this filters out Nones
+            keep_into: List[CommentToken] = list(filter(
+                lambda item: item is not None, into_cmt))  # type: ignore
+            if len(keep_into) < 1:
+                return from_cmt
+
+            if isinstance(from_cmt, list):
+                # PyLance fails to comprehend that this filters out Nones
+                keep_from: List[CommentToken] = list(filter(
+                    lambda item: item is not None, from_cmt))  # type: ignore
+                if len(keep_from) < 1:
+                    return into_cmt
+                return [*keep_into, *keep_from]
+            else:
+                # INTO is a list while FROM is not
+                return keep_into.append(from_cmt)
+        else:
+            if isinstance(from_cmt, list):
+                # PyLance fails to comprehend that this filters out Nones
+                keep_from: List[CommentToken] = list(filter(
+                    lambda item: item is not None, from_cmt))  # type: ignore
+                if len(keep_from) < 1:
+                    return into_cmt
+
+                into_cmt.value += "\n".join(item.value for item in keep_from)
+                return
+
+        # Both are strings
+        into_cmt.value += from_cmt.value
+        return into_cmt
 
     @staticmethod
     def del_map_comment_for_entry(
@@ -431,28 +652,28 @@ class Comments:
         method alone.
         """
         # DEBUG
-        import pprint
-        pp = pprint.PrettyPrinter(indent=4)
-        print("*" * 80 + "\n" + "The ca items for data:")
-        pp.pprint(data.ca.items if hasattr(data, "ca") else "DATA HAS NO CA ITEMS!")
-        print("*-" * 40 + "The ca comment for data:")
-        pp.pprint(data.ca.comment if hasattr(data, "ca") else "DATA HAS NO CA COMMENTS!")
-        print("*=" * 40 + "All data keys:")
-        pp.pprint(list(data.keys()))
+        # import pprint
+        # pp = pprint.PrettyPrinter(indent=4)
+        # print("*" * 80 + "\n" + "The ca items for data:")
+        # pp.pprint(data.ca.items if hasattr(data, "ca") else "DATA HAS NO CA ITEMS!")
+        # print("*-" * 40 + "The ca comment for data:")
+        # pp.pprint(data.ca.comment if hasattr(data, "ca") else "DATA HAS NO CA COMMENTS!")
+        # print("*=" * 40 + "All data keys:")
+        # pp.pprint(list(data.keys()))
 
-        print("+" * 80 + "\n" + "The ca items for parent:")
-        pp.pprint(parent.ca.items if hasattr(parent, "ca") else "PARENT HAS NO CA ITEMS!")
-        print("+-" * 40 + "The ca comment for parent:")
-        pp.pprint(parent.ca.comment if hasattr(parent, "ca") else "PARENT HAS NO CA COMMENTS!")
-        print("+=" * 40 + "All parent keys:")
-        pp.pprint(list(parent.keys()) if hasattr(parent, "keys") and callable(getattr(parent, "keys")) else "PARENT HAS NO KEYS METHOD")
+        # print("+" * 80 + "\n" + "The ca items for parent:")
+        # pp.pprint(parent.ca.items if hasattr(parent, "ca") else "PARENT HAS NO CA ITEMS!")
+        # print("+-" * 40 + "The ca comment for parent:")
+        # pp.pprint(parent.ca.comment if hasattr(parent, "ca") else "PARENT HAS NO CA COMMENTS!")
+        # print("+=" * 40 + "All parent keys:")
+        # pp.pprint(list(parent.keys()) if hasattr(parent, "keys") and callable(getattr(parent, "keys")) else "PARENT HAS NO KEYS METHOD")
 
-        print("@" * 80 + "\n" + "The ca items for data[key]:")
-        pp.pprint(data[key].ca.items if hasattr(data[key], "ca") else "data[key] HAS NO CA ITEMS!")
-        print("@-" * 40 + "The ca comment for data[key]:")
-        pp.pprint(data[key].ca.comment if hasattr(data[key], "ca") else "data[key] HAS NO CA COMMENTS!")
-        print("@=" * 40 + "All data[key] keys:")
-        pp.pprint(list(data[key].keys()) if hasattr(data[key], "keys") and callable(getattr(data[key], "keys")) else "data[key] HAS NO KEYS METHOD")
+        # print("@" * 80 + "\n" + "The ca items for data[key]:")
+        # pp.pprint(data[key].ca.items if hasattr(data[key], "ca") else "data[key] HAS NO CA ITEMS!")
+        # print("@-" * 40 + "The ca comment for data[key]:")
+        # pp.pprint(data[key].ca.comment if hasattr(data[key], "ca") else "data[key] HAS NO CA COMMENTS!")
+        # print("@=" * 40 + "All data[key] keys:")
+        # pp.pprint(list(data[key].keys()) if hasattr(data[key], "keys") and callable(getattr(data[key], "keys")) else "data[key] HAS NO KEYS METHOD")
 
         # In order to handle the comments just once on a single pass, these
         # steps will be taken:
@@ -512,129 +733,71 @@ class Comments:
         node_comment: Union[
             None, CommentToken, List[CommentToken], List[None]
         ] = Comments._get_map_node_comment(data, key)
-        node_post_eol_comment = Comments.strip_eol_comment(node_comment)
+        node_post_eol_comment = Comments._strip_eol_comment(node_comment)
 
-        # DEBUG
-        if isinstance(node_comment, list):
-            print("X1"*40)
-            for dbg_comment in node_comment:
-                print(type(dbg_comment.value) if dbg_comment and dbg_comment.value else "type(None)")
-                dbg_node_comment = dbg_comment.value.replace("\n", "\\n") if dbg_comment and dbg_comment.value else None
-                print(f"Got LIST comment: {dbg_node_comment}" if dbg_node_comment else "NO COMMENT TO EVALUATE!")
-            print("X1"*40)
+        # # DEBUG
+        # if isinstance(node_comment, list):
+        #     print("X1"*40)
+        #     for dbg_comment in node_comment:
+        #         print(type(dbg_comment.value) if dbg_comment and dbg_comment.value else "type(None)")
+        #         dbg_node_comment = dbg_comment.value.replace("\n", "\\n") if dbg_comment and dbg_comment.value else None
+        #         print(f"Got LIST comment: {dbg_node_comment}" if dbg_node_comment else "NO COMMENT TO EVALUATE!")
+        #     print("X1"*40)
+        # else:
+        #     print("X2"*40)
+        #     print(type(node_comment.value) if node_comment and node_comment.value else "type(None)")
+        #     dbg_node_comment = node_comment.value.replace("\n", "\\n") if node_comment and node_comment.value else None
+        #     print(f"Got scalar comment: {dbg_node_comment}" if dbg_node_comment else "NO COMMENT TO EVALUATE!")
+        #     print("X2"*40)
+
+        # if isinstance(node_post_eol_comment, list):
+        #     print("Y1"*40)
+        #     for dbg_comment in node_post_eol_comment:
+        #         dbg_node_post_eol_comment = dbg_comment.value.replace("\n", "\\n") if dbg_comment and dbg_comment.value else None
+        #         print(f"Preserving LIST comment: {dbg_node_post_eol_comment}" if dbg_node_post_eol_comment else "NO POST-EOL COMMENT TO PRESERVE!")
+        #     print("Y2"*40)
+        # else:
+        #     print("Y2"*40)
+        #     dbg_node_post_eol_comment = node_post_eol_comment.value.replace("\n", "\\n") if node_post_eol_comment and node_post_eol_comment.value else None
+        #     print(f"Preserving scalar comment: {dbg_node_post_eol_comment}" if dbg_node_post_eol_comment else "NO POST-EOL COMMENT TO PRESERVE!")
+        #     print("Y2"*40)
+
+        # Next, get a ref to the preceding node's comment, if there is one
+        pre_cmt: Tuple[Any, Any] = Comments._find_preceding_map_node_comment(
+            data, key)
+        old_pre_comment = None
+        if pre_cmt[1] is None:
+            old_pre_comment = pre_cmt[0].comment
         else:
-            print("X2"*40)
-            print(type(node_comment.value) if node_comment and node_comment.value else "type(None)")
-            dbg_node_comment = node_comment.value.replace("\n", "\\n") if node_comment and node_comment.value else None
-            print(f"Got scalar comment: {dbg_node_comment}" if dbg_node_comment else "NO COMMENT TO EVALUATE!")
-            print("X2"*40)
+            old_pre_comment = pre_cmt[0][pre_cmt[1]]
 
-        if isinstance(node_post_eol_comment, list):
-            print("Y1"*40)
-            for dbg_comment in node_post_eol_comment:
-                dbg_node_post_eol_comment = dbg_comment.value.replace("\n", "\\n") if dbg_comment and dbg_comment.value else None
-                print(f"Preserving LIST comment: {dbg_node_post_eol_comment}" if dbg_node_post_eol_comment else "NO POST-EOL COMMENT TO PRESERVE!")
-            print("Y2"*40)
-        else:
-            print("Y2"*40)
-            dbg_node_post_eol_comment = node_post_eol_comment.value.replace("\n", "\\n") if node_post_eol_comment and node_post_eol_comment.value else None
-            print(f"Preserving scalar comment: {dbg_node_post_eol_comment}" if dbg_node_post_eol_comment else "NO POST-EOL COMMENT TO PRESERVE!")
-            print("Y2"*40)
-
-        # Next, get a reference to the preceding node.  It may be a reference
-        # to the target node's immediate parent, the very last node in a
-        # preceding container (map, sequence, or set), or a preceding peer
-        # node.
-
-        # Then, from the preceding node (parent or peer), remove any comment
-        # text that is obviously the preceding comment for the target node.
+        # Then, from the preceding comment, remove any comment text that is
+        # obviously the preceding comment for the target node.
+        new_pre_comment = Comments._strip_next_node_comment(old_pre_comment)
 
         # Finally, merge the preserved comment with the preceding node's
         # remaining comment.
+        merged_comment = Comments._merge_comments(
+            node_post_eol_comment, new_pre_comment)
+        if merged_comment is None:
+            return
 
-        # Then, delete any obvious comment meant for the target node.  Such
-        # a comment will be at any of:
-        # 1. Any pre-comment for the FIRST child of a dict will have that
-        #    comment stuffed in EITHER:
-        #    1.1:  the ca's comment property at
-        #          [Comments.RYCA_COMMENT_PRE_L] where each line is its own
-        #          CommentToken ONLY WHEN THE PARENT DOES *NOT* HAVE AN EOL
-        #          COMMENT; or
-        #    1.2:  the ca's comment poperty at [Comments.RYCA_COMMENT_POST]
-        #          where all lines are stored together in a single
-        #          CommentToken separated by \n marks.
-        # 2. A pre-comment for a node preceded by another dict will have its
-        #    pre-comment in the post-EOL comment of the predecessor node's last
-        #    child.
-        # keylist: list[Any] = list(data.keys())
-        # keydex: int = keylist.index(key)
-        # predex: int = keydex - 1
-        # if 0 == keydex:
-        #     if data.ca.comment is None:
-        #         if node_post_eol_comment:
-        #             # Add a novel comment to the node's container
-        #             data.ca.comment = CommentToken(node_post_eol_comment)
+        if pre_cmt[1] is None:
+            # Must create a new comment property for a CommentedMap which
+            # has no leading EOL or "pre" (confusingly-named) comments.  As
+            # such, the merged comment must be a list of CommentTokens stored
+            # at ca.comment[RYCA_COMMENT_PRE_L], which is assignable via the
+            # add_pre_comments method (which is NOT additive).
+            if not isinstance(merged_comment, list):
+                merged_comment = [merged_comment]
+            pre_cmt[0].add_pre_comments(merged_comment)
 
-        #         # Nothing more to do; there are no comments in this dict
-        #         return None
-
-        #     # The target key is the first child; delete any obvious comment
-        #     # meant for the target node from the node's container's post-EOL
-        #     # comment and merge any post-EOL comment of the target node
-        #     # with the remainder of the container's post-EOL comment.
-        #     if data.ca.comment[Comments.RYCA_COMMENT_POST] is None:
-        #         # The container does NOT have an EOL comment; each pre-node
-        #         # comment line is in its own CommentToken.
-        #         print("?1" * 40 + "Need to parse a list of PARENT CommentTokens because this FIRST node's PARENT does /NOT/ have an EOL comment...")
-        #         Comments._strip_next_node_comment_from_lst(
-        #             data.ca.comment[Comments.RYCA_COMMENT_PRE_L])
-        #     else:
-        #         # The container HAS an EOL comment; all pre-node comment
-        #         # lines are crammed into a single CommentToken.
-        #         print("?2" * 40 + "Need to parse a multi-line single token because this FIRST node's PARENT /HAS/ an EOL comment...")
-        #         Comments._strip_next_node_comment_from_aio(
-        #             data.ca.comment[Comments.RYCA_COMMENT_POST])
-        # else:
-        #     # The target key is any child except the first; delete any
-        #     # obvious comment meant for the target node from the
-        #     # predecessor peer node's post-EOL comment and merge any post-
-        #     # EOL comment of the target node with the remainder of its
-        #     # predecessor peer node's post-EOL comment.
-        #     #
-        #     # If the predecessor peer node is another map, then this node's
-        #     # pre-comment will be hidden in the post-EOL comment of the
-        #     # predecessor node's last, deepest child.  Are we having fun, yet?
-        #     prekey: Any = keylist[predex]
-        #     predata: Any = data[prekey]
-        #     if isinstance(predata, dict) and hasattr(predata, "ca"):
-        #         prekeylist: list[Any] = list(predata.keys())
-        #         prelastkey: int = prekeylist[-1] if len(prekeylist) > 0 else None
-        #         prelastcr: Any = predata.ca.items[prelastkey] if prelastkey is not None and prelastkey in predata.ca.items else None
-
-        #         print("^" * 80 + "\n" + "The ca items for predata:")
-        #         pp.pprint(predata.ca.items if hasattr(predata, "ca") else "predata HAS NO COMMENTS!")
-        #         print("^-" * 40 + "The ca comment for predata:")
-        #         pp.pprint(predata.ca.comment if hasattr(predata, "ca") else "predata HAS NO COMMENTS!")
-        #         print("^=" * 40 + "All predata keys:")
-        #         pp.pprint(list(predata.keys()) if hasattr(predata, "keys") and callable(getattr(predata, "keys")) else "predata HAS NO KEYS METHOD")
-        #         print("^_" * 40 + f"Identified last key: {prelastkey}")
-        #         print("^." * 40 + "Got comment record from prelastkey:")
-        #         pp.pprint(prelastcr)
-
-        #         if prelastcr is not None:
-        #             # There is a predecessor comment to parse
-        #             if prelastcr[Comments.RYCA_DICT_POST_VALUE] is None:
-        #                 print("?3" * 40 + "Need to parse a list of CommentTokens...")
-        #                 exit(43)
-        #             else:
-        #                 print("?4" * 40 + "Need to parse a multi-line single token...")
-        #                 Comments._strip_next_node_comment_from_aio(
-        #                     prelastcr[Comments.RYCA_DICT_POST_VALUE])
-        #     elif prekey in data.ca.items:
-        #         if data.ca.items[prekey][Comments.RYCA_DICT_POST_VALUE] is None:
-        #             print("?5" * 40 + "Need to parse a list of CommentTokens...")
-        #             exit(44)
-        #         else:
-        #             print("?6" * 40 + "Need to parse a multi-line single token...")
-        #             Comments._strip_next_node_comment_from_aio(
-        #                 data.ca.items[prekey][Comments.RYCA_DICT_POST_VALUE])
+            # For ruamel.yaml > 0.17.x, where add_comment_pre replaces
+            # add_pre_comments -- writing to RYCA_COMMENT_POST rather than
+            # RYCA_COMMENT_PRE_L -- and IS additive, so the list must first be
+            # purged.
+            # pre_cmt[0].comment[0] = []
+            # for comment in merged_comment:
+            #     pre_cmt[0].add_comment_pre(comment)
+        else:
+            pre_cmt[0][pre_cmt[1]] = merged_comment
