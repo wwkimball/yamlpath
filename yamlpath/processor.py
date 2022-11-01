@@ -2564,7 +2564,7 @@ class Processor:
                         if key is reference_node
                 ]:
                     data.insert(i, replacement_node, data.pop(k))
-                for k, val in data.items():
+                for k, val in data.non_merged_items():
                     if val is reference_node:
                         if (hasattr(val, "anchor") or
                                 (data is parent and k == parentref)):
