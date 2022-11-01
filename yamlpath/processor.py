@@ -991,17 +991,15 @@ class Processor:
 
         elif isinstance(data, (set, CommentedSet)):
             for ele in data:
-                if ele == stripped_attrs or (
-                    isinstance(ele, TaggedScalar)
-                    and ele.value == stripped_attrs
-                ):
+                ele_val = ele.value if isinstance(ele, TaggedScalar) else ele
+                if ele_val == stripped_attrs:
                     self.logger.debug((
                         "Processor::_get_nodes_by_key:  FOUND set node by"
                         " name at {}."
                         ).format(str_stripped))
                     next_translated_path = (translated_path +
                         YAMLPath.escape_path_section(
-                            ele, translated_path.seperator))
+                            ele_val, translated_path.seperator))
                     next_ancestry = ancestry + [(data, ele)]
                     yield NodeCoords(
                         ele, data, stripped_attrs,
@@ -2528,7 +2526,7 @@ class Processor:
     # pylint: disable=too-many-arguments
     def _update_node(
         self, parent: Any, parentref: Any, value: Any,
-        value_format: YAMLValueFormats, value_tag: str = None
+        value_format: YAMLValueFormats, value_tag: Union[str, None] = None
     ) -> None:
         """
         Set the value of a data node.
@@ -2560,13 +2558,13 @@ class Processor:
         # author of ruamel.yaml, to resolve how to update all references to an
         # Anchor throughout the parsed data structure.
         def recurse(data, parent, parentref, reference_node, replacement_node):
-            if isinstance(data, (CommentedMap, dict)):
+            if isinstance(data, CommentedMap):
                 for i, k in [
                         (idx, key) for idx, key in enumerate(data.keys())
                         if key is reference_node
                 ]:
                     data.insert(i, replacement_node, data.pop(k))
-                for k, val in data.items():
+                for k, val in data.non_merged_items():
                     if val is reference_node:
                         if (hasattr(val, "anchor") or
                                 (data is parent and k == parentref)):
@@ -2585,6 +2583,7 @@ class Processor:
                 data.discard(reference_node)
                 data.add(replacement_node)
 
+        change_node = None
         if isinstance(parent, (set, CommentedSet)):
             for ele in parent:
                 if ele == parentref:
