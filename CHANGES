@@ -1,4 +1,10 @@
-3.7.0
+3.6.8
+Bug Fixes:
+* Changes to format and value of child nodes under Anchored Hashes (maps/dicts)
+  caused unexpected expansion of the same key-value pair wherever a YAML Merge
+  Key Aliased the affected Anchored Hash.  Thanks to
+  https://github.com/hemnstill for finding and reporting this issue!
+
 Enhancements:
 * Support for Python 3.10 has been added, thanks to https://github.com/mechie!
 
