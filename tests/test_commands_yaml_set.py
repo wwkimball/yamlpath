@@ -347,24 +347,6 @@ boolean: false
         assert "Cannot add" in result.stderr
 
     @requireseyaml
-    def test_bad_decryption(self, script_runner, tmp_path_factory, old_eyaml_keys):
-        content = """---
-        encrypted: ENC[PKCS7,MIIx...broken-on-purpose...==]
-        """
-        yaml_file = create_temp_yaml_file(tmp_path_factory, content)
-        result = script_runner.run(
-            self.command,
-            "--change=encrypted",
-            "--random=1",
-            "--check=n/a",
-            "--privatekey={}".format(old_eyaml_keys[0]),
-            "--publickey={}".format(old_eyaml_keys[1]),
-            yaml_file
-        )
-        assert not result.success, result.stderr
-        assert "Unable to decrypt value!" in result.stderr
-
-    @requireseyaml
     def test_good_encryption(self, script_runner, tmp_path_factory, old_eyaml_keys):
         import re
 
@@ -1542,3 +1524,35 @@ hash:
         )
         assert not result.success, result.stderr
         assert "Cannot add YAML Merge Keys to non-Hash" in result.stderr
+
+    def test_ymk_anchor_child_format_change(self, script_runner, tmp_path_factory):
+        """
+        Test that changing the FORMAT and value of an anchored Hash node does
+        not cause unexpected expansion at the YAML Merge Key anchor of the
+        Hash.
+        """
+        # Thanks to https://github.com/hemnstill!
+        yamlin = """---
+common: &base
+  TEST_COMMON_SETTING: 'a1'
+TestService:
+  <<: *base
+"""
+        yamlout = """---
+common: &base
+  TEST_COMMON_SETTING: a2
+TestService:
+  <<: *base
+"""
+        yaml_file = create_temp_yaml_file(tmp_path_factory, yamlin)
+        result = script_runner.run(
+            self.command,
+            "--change=common.TEST_COMMON_SETTING",
+            "--value=a2",
+            yaml_file
+        )
+        assert result.success, result.stderr
+
+        with open(yaml_file, 'r') as fhnd:
+            filedat = fhnd.read()
+        assert filedat == yamlout
