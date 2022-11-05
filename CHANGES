@@ -1,3 +1,16 @@
+3.6.9:
+Enhancements:
+* Partial support for updating bare Python dict and Python's native
+  collections.OrderedDict data structures was removed in version 3.6.8 because
+  compatible YAML/EYAML/JSON data never presented as these data types and if
+  anyone ever attempted to update a key by reference in a dict or
+  collections.OrderedDict, it would cause a Python stack dump due to neither
+  supporting the required insert method, which is provided only by ruamel.yaml.
+  This version not only restores this capability, but also solves the issue of
+  missing support for the insert logic, where applicable.  It also adds support
+  for the ruamel.yaml.compat.ordereddict type.  Thanks to
+  https://github.com/tsinggggg for requesting this feature be added!
+
 3.6.8
 Bug Fixes:
 * Changes to format and value of child nodes under Anchored Hashes (maps/dicts)
