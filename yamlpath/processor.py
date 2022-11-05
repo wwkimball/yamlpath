@@ -7,6 +7,7 @@ Copyright 2018, 2019, 2020, 2021 William W. Kimball, Jr. MBA MSIS
 from collections import OrderedDict
 from typing import Any, Dict, Generator, List, Union
 
+from ruamel.yaml.compat import ordereddict as ryod
 from ruamel.yaml.comments import (
     CommentedMap,
     CommentedSeq,
@@ -2558,7 +2559,7 @@ class Processor:
         # author of ruamel.yaml, to resolve how to update all references to an
         # Anchor throughout the parsed data structure.
         def recurse(data, parent, parentref, reference_node, replacement_node):
-            if isinstance(data, CommentedMap):
+            if isinstance(data, (CommentedMap, ryod)):
                 for i, k in [
                         (idx, key) for idx, key in enumerate(data.keys())
                         if key is reference_node
@@ -2582,6 +2583,46 @@ class Processor:
             elif isinstance(data, (CommentedSet, set)):
                 data.discard(reference_node)
                 data.add(replacement_node)
+            elif isinstance(data, OrderedDict):
+                # Manual key (re)ordering is necessary and YMKs are not
+                # supported.
+                push_to_end = False
+                found_key = None
+                push_keys = []
+                for k, val in data.items():
+                    if push_to_end:
+                        push_keys.append(k)
+                    elif k is reference_node:
+                        found_key = k
+                        push_to_end = True
+                if push_to_end:
+                    data[replacement_node] = data.pop(found_key)
+                    for key in push_keys:
+                        data.move_to_end(key)
+
+                for k, val in data.items():
+                    if val is reference_node:
+                        if (hasattr(val, "anchor") or
+                                (data is parent and k == parentref)):
+                            data[k] = replacement_node
+                    else:
+                        recurse(val, parent, parentref, reference_node,
+                                replacement_node)
+            elif isinstance(data, dict):
+                # Key ordering is irrelevant and YMKs are not supported
+                for i, k in [
+                        (idx, key) for idx, key in enumerate(data.keys())
+                        if key is reference_node
+                ]:
+                    data[replacement_node] = data.pop(k)
+                for k, val in data.items():
+                    if val is reference_node:
+                        if (hasattr(val, "anchor") or
+                                (data is parent and k == parentref)):
+                            data[k] = replacement_node
+                    else:
+                        recurse(val, parent, parentref, reference_node,
+                                replacement_node)
 
         change_node = None
         if isinstance(parent, (set, CommentedSet)):

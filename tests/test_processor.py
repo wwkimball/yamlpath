@@ -1,18 +1,14 @@
 import pytest
 from datetime import date, datetime
 from types import SimpleNamespace
+from collections import OrderedDict
 
 from ruamel.yaml import YAML
 from ruamel.yaml.comments import TaggedScalar
-from ruamel.yaml import version_info as ryversion
-if ryversion < (0, 17, 22):                   # pragma: no cover
-    from yamlpath.patches.timestamp import (
-        AnchoredTimeStamp,
-        AnchoredDate,
-    )  # type: ignore
-else:
-    from ruamel.yaml.timestamp import AnchoredTimeStamp
-    # From whence comes AnchoredDate?
+from yamlpath.patches.timestamp import (
+    AnchoredTimeStamp,
+    AnchoredDate,
+)
 
 from yamlpath.func import unwrap_node_coords
 from yamlpath.exceptions import YAMLPathException
@@ -1916,3 +1912,79 @@ minerals:
             matchidx += 1
         assert len(results) == matchidx
 
+
+    ###
+    # Test non-standard use-cases
+    ###
+    def test_raw_dict_updates_195(self, quiet_logger):
+        # Contributed by https://github.com/tsinggggg
+        config = {"key1": [1, 2, 3],
+                  "key2": {
+                    "key3": "value1",
+                    "key4": "value2",
+                  }
+                }
+        processor = Processor(quiet_logger, config)
+        processor.set_value("key2.key3", "asdf", value_format=YAMLValueFormats.DEFAULT)
+        assert list(processor.get_nodes("key2.key3"))[0].node == "asdf"
+
+    def test_raw_dict_updates_to_key(self, quiet_logger):
+        key_ref = "key2"
+        config = {
+                    "referential_key": key_ref,
+                    "key1": [1, 2, 3],
+                    key_ref: {
+                        "key3": "value1",
+                        "key4": "value2",
+                    }
+                }
+        processor = Processor(quiet_logger, config)
+        processor.set_value("referential_key", "key2_new", value_format=YAMLValueFormats.DEFAULT)
+        assert list(processor.get_nodes("key2_new.key4"))[0].node == "value2"
+
+    def test_raw_dict_updates_195_od(self, quiet_logger):
+        config = OrderedDict({"key1": [1, 2, 3],
+                  "key2": OrderedDict({
+                    "key3": "value1",
+                    "key4": "value2",
+                  })
+                })
+        expected = OrderedDict({"key1": [1, 2, 3],
+                  "key2": OrderedDict({
+                    "key3": "asdf",
+                    "key4": "value2",
+                  })
+                })
+        processor = Processor(quiet_logger, config)
+        processor.set_value("key2.key3", "asdf", value_format=YAMLValueFormats.DEFAULT)
+        diff = [x for x, y in zip(config.items(), expected.items()) if x != y]
+        assert 0 == len(diff)
+
+    def test_raw_dict_updates_to_key_od(self, quiet_logger):
+        key_ref = "key2"
+        new_ref = "key2_new"
+        config = OrderedDict({
+                    "referential_key": key_ref,
+                    "key1": [1, 2, 3],
+                    key_ref: OrderedDict({
+                        "key3": "value1",
+                        "key4": "value2",
+                    }),
+                    "tail": "value",
+                })
+        expected = OrderedDict({
+                    "referential_key": new_ref,
+                    "key1": [1, 2, 3],
+                    new_ref: OrderedDict({
+                        "key3": "value1",
+                        "key4": "value2",
+                    }),
+                    "tail": "value",
+                })
+
+        processor = Processor(quiet_logger, config)
+        processor.set_value("referential_key", new_ref, value_format=YAMLValueFormats.DEFAULT)
+        assert list(processor.get_nodes(f"{new_ref}.key4"))[0].node == "value2"
+
+        diff = [x for x, y in zip(config.items(), expected.items()) if x != y]
+        assert 0 == len(diff)
