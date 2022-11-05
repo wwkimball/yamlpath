@@ -2588,15 +2588,17 @@ class Processor:
                 # supported.
                 push_to_end = False
                 found_key = None
+                push_keys = []
                 for k, val in data.items():
                     if push_to_end:
-                        data.move_to_end(k)
+                        push_keys.append(k)
                     elif k is reference_node:
-                        data[replacement_node] = val
                         found_key = k
                         push_to_end = True
                 if push_to_end:
-                    data.pop(found_key)
+                    data[replacement_node] = data.pop(found_key)
+                    for key in push_keys:
+                        data.move_to_end(key)
 
                 for k, val in data.items():
                     if val is reference_node:
