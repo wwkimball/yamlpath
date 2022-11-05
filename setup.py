@@ -30,7 +30,7 @@ setup(
     author_email="github-yamlpath@kimballstuff.com",
     license="ISC",
     keywords="yaml eyaml json yaml-path diff merge",
-    packages=find_packages(),
+    packages=find_packages(exclude=["tests"]),
     entry_points={
         "console_scripts": [
             "eyaml-rotate-keys = yamlpath.commands.eyaml_rotate_keys:main",
