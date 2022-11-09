@@ -3,6 +3,7 @@ Implements the YAMLValueFormats enumeration.
 
 Copyright 2019, 2020 William W. Kimball, Jr. MBA MSIS
 """
+import datetime
 from enum import Enum, auto
 from typing import Any, List
 
@@ -16,6 +17,10 @@ from ruamel.yaml.scalarstring import (
 from ruamel.yaml.scalarbool import ScalarBoolean
 from ruamel.yaml.scalarfloat import ScalarFloat
 from ruamel.yaml.scalarint import ScalarInt
+from yamlpath.patches.timestamp import (
+    AnchoredTimeStamp,
+    AnchoredDate,
+)
 
 
 class YAMLValueFormats(Enum):
@@ -31,6 +36,9 @@ class YAMLValueFormats(Enum):
 
     `BOOLEAN`
         The value is written as a bare True or False.
+
+    `DATE`
+        The value is written as a bare ISO8601 date without a time component.
 
     `DEFAULT`
         The value is written in whatever format is deemed most appropriate.
@@ -56,10 +64,15 @@ class YAMLValueFormats(Enum):
 
     `SQUOTE`
         The value is demarcated via apostrophes (').
+
+    `TIMESTAMP`
+        The value is a timestamp per the supported syntax of ISO8601 by
+        http://yaml.org/type/timestamp.html.
     """
 
     BARE = auto()
     BOOLEAN = auto()
+    DATE = auto()
     DEFAULT = auto()
     DQUOTE = auto()
     FLOAT = auto()
@@ -67,6 +80,7 @@ class YAMLValueFormats(Enum):
     INT = auto()
     LITERAL = auto()
     SQUOTE = auto()
+    TIMESTAMP = auto()
 
     @staticmethod
     def get_names() -> List[str]:
@@ -137,5 +151,9 @@ class YAMLValueFormats(Enum):
             best_type = YAMLValueFormats.FLOAT
         elif node_type is ScalarInt:
             best_type = YAMLValueFormats.INT
+        elif node_type is AnchoredDate or node_type is datetime.date:
+            best_type = YAMLValueFormats.DATE
+        elif node_type is AnchoredTimeStamp or node_type is datetime.datetime:
+            best_type = YAMLValueFormats.TIMESTAMP
 
         return best_type

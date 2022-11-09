@@ -23,6 +23,10 @@ from ruamel.yaml.comments import (
     CommentedSet,
     TaggedScalar
 )
+from yamlpath.patches.timestamp import (
+    AnchoredTimeStamp,
+    AnchoredDate,
+)
 
 from yamlpath.wrappers.nodecoords import NodeCoords
 
@@ -206,12 +210,10 @@ class ConsolePrinter:
 
     @staticmethod
     def _debug_prefix_lines(line: str) -> str:
-        """Helper for debug."""
         return "DEBUG:  {}".format(str(line).replace("\n", "\nDEBUG:  "))
 
     @staticmethod
     def _debug_get_anchor(data: Any) -> str:
-        """Helper for debug."""
         return ("&{}".format(data.anchor.value)
                 if (hasattr(data, "anchor")
                     and hasattr(data.anchor, "value")
@@ -220,7 +222,6 @@ class ConsolePrinter:
 
     @staticmethod
     def _debug_get_tag(data: Any) -> str:
-        """Helper for debug."""
         return str(data.tag.value
                 if (hasattr(data, "tag")
                     and hasattr(data.tag, "value")
@@ -229,7 +230,6 @@ class ConsolePrinter:
 
     @staticmethod
     def _debug_dump(data: Any, **kwargs) -> Generator[str, None, None]:
-        """Helper for debug."""
         prefix = kwargs.pop("prefix", "")
         if isinstance(data, dict):
             for line in ConsolePrinter._debug_dict(
@@ -256,7 +256,6 @@ class ConsolePrinter:
 
     @staticmethod
     def _debug_scalar(data: Any, **kwargs) -> str:
-        """Helper for debug."""
         prefix = kwargs.pop("prefix", "")
         print_anchor = kwargs.pop("print_anchor", True)
         print_tag = kwargs.pop("print_tag", True)
@@ -287,7 +286,18 @@ class ConsolePrinter:
             dtype += ",folded@{}".format(data.fold_pos)
 
         print_prefix += anchor_prefix
-        print_line = str(data).replace("\n", "\n{}".format(print_prefix))
+
+        if isinstance(data, AnchoredDate):
+            print_line = data.date().isoformat()
+        elif isinstance(data, AnchoredTimeStamp):
+            # Import loop occurs when this import is moved to the top because
+            # NodeCoords uses Nodes which uses NodeCoords
+            #pylint: disable=import-outside-toplevel
+            from yamlpath.common.nodes import Nodes
+            print_line = Nodes.get_timestamp_with_tzinfo(data).isoformat()
+        else:
+            print_line = str(data).replace("\n", "\n{}".format(print_prefix))
+
         return ConsolePrinter._debug_prefix_lines(
             "{}{}{}".format(print_prefix, print_line, dtype))
 
@@ -295,7 +305,6 @@ class ConsolePrinter:
     def _debug_node_coord(
         data: NodeCoords, **kwargs
     ) -> Generator[str, None, None]:
-        """Helper method for debug."""
         prefix = kwargs.pop("prefix", "")
         path_prefix = "{}(path)".format(prefix)
         segment_prefix = "{}(segment)".format(prefix)
@@ -334,7 +343,6 @@ class ConsolePrinter:
     def _debug_list(
         data: Union[List[Any], Set[Any], Tuple[Any, ...], Deque[Any]], **kwargs
     ) -> Generator[str, None, None]:
-        """Helper for debug."""
         prefix = kwargs.pop("prefix", "")
         print_tag = kwargs.pop("print_tag", True)
 
@@ -362,7 +370,6 @@ class ConsolePrinter:
 
     @staticmethod
     def _debug_get_kv_anchors(key: Any, value: Any) -> str:
-        """Helper for debug."""
         key_anchor = ConsolePrinter._debug_get_anchor(key)
         val_anchor = ConsolePrinter._debug_get_anchor(value)
         display_anchor = ""
@@ -376,7 +383,6 @@ class ConsolePrinter:
 
     @staticmethod
     def _debug_get_kv_tags(key: Any, value: Any) -> str:
-        """Helper for debug."""
         key_tag = ConsolePrinter._debug_get_tag(key)
         val_tag = ConsolePrinter._debug_get_tag(value)
         display_tag = ""
@@ -392,7 +398,6 @@ class ConsolePrinter:
     def _debug_dict(
         data: Union[Dict, CommentedMap], **kwargs
     ) -> Generator[str, None, None]:
-        """Helper for debug."""
         prefix = kwargs.pop("prefix", "")
 
         local_keys = []
@@ -422,7 +427,6 @@ class ConsolePrinter:
     def _debug_set(
         data: Union[Set, CommentedSet], **kwargs
     ) -> Generator[str, None, None]:
-        """Helper for debug."""
         prefix = kwargs.pop("prefix", "")
 
         for key in data:

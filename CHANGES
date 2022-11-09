@@ -5,6 +5,55 @@ Enhancements:
   common to both collections.  Unlike set mathematics, collections allow
   duplicate elements.
 
+3.6.9:
+Enhancements:
+* Partial support for updating bare Python dict and Python's native
+  collections.OrderedDict data structures was removed in version 3.6.8 because
+  compatible YAML/EYAML/JSON data never presented as these data types and if
+  anyone ever attempted to update a key by reference in a dict or
+  collections.OrderedDict, it would cause a Python stack dump due to neither
+  supporting the required insert method, which is provided only by ruamel.yaml.
+  This version not only restores this capability, but also solves the issue of
+  missing support for the insert logic, where applicable.  It also adds support
+  for the ruamel.yaml.compat.ordereddict type.  Thanks to
+  https://github.com/tsinggggg for requesting this feature be added!
+
+3.6.8
+Bug Fixes:
+* Changes to format and value of child nodes under Anchored Hashes (maps/dicts)
+  caused unexpected expansion of the same key-value pair wherever a YAML Merge
+  Key Aliased the affected Anchored Hash.  Thanks to
+  https://github.com/hemnstill for finding and reporting this issue!
+
+Enhancements:
+* Support for Python 3.10 has been added, thanks to https://github.com/mechie!
+
+3.6.7
+Bug Fixes:
+* Release 3.6.6 had a broken package; it was unexpectedly missing the required
+  ruamel.yaml patch found in yamlpath.patches.timestamp.  Thanks to
+  https://github.com/tsinggggg and https://github.com/kaniblu for reporting it!
+
+3.6.6
+Enhancements:
+* Support ruamel.yaml up to version 0.17.21.
+
+Bug Fixes:
+* YAML timestamp values could not be created via yamlpath tools or its library,
+  per http://yaml.org/type/timestamp.html.
+  * CAUTION 1:  ruamel.yaml seems to force all timestamps to UTC while it loads
+    YAML/JSON/Compatible data.  So, when the timestamp value contains time-zone
+    data, it will be stripped off after it is applied to the timestamp value.
+    The yamlpath library reverses this when emitting the affected values but if
+    you attempt to load the timestamp values directly in the DOM, you'll end up
+    with the UTC-converted value, stripped of any time-zone specification.  If
+    you need the original, unmodified data as a time-zone aware
+    datetime.datetime value, pass it through the helper method,
+    Nodes.get_timestamp_with_tzinfo(data: AnchoredTimeStamp).
+  * CAUTION 2:  In order to support timestamp parsing, this project now depends
+    on the python-dateutil library.  Be sure to install it!
+  Thanks again go to https://github.com/AndydeCleyre!
+
 3.6.5
 Bug Fixes:
 * When using EYAML with block formatted values on Windows, the block formatting

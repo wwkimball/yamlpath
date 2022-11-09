@@ -7,6 +7,7 @@ Copyright 2018, 2019, 2020, 2021 William W. Kimball, Jr. MBA MSIS
 from collections import OrderedDict
 from typing import Any, Dict, Generator, List, Union
 
+from ruamel.yaml.compat import ordereddict as ryod
 from ruamel.yaml.comments import (
     CommentedMap,
     CommentedSeq,
@@ -991,17 +992,15 @@ class Processor:
 
         elif isinstance(data, (set, CommentedSet)):
             for ele in data:
-                if ele == stripped_attrs or (
-                    isinstance(ele, TaggedScalar)
-                    and ele.value == stripped_attrs
-                ):
+                ele_val = ele.value if isinstance(ele, TaggedScalar) else ele
+                if ele_val == stripped_attrs:
                     self.logger.debug((
                         "Processor::_get_nodes_by_key:  FOUND set node by"
                         " name at {}."
                         ).format(str_stripped))
                     next_translated_path = (translated_path +
                         YAMLPath.escape_path_section(
-                            ele, translated_path.seperator))
+                            ele_val, translated_path.seperator))
                     next_ancestry = ancestry + [(data, ele)]
                     yield NodeCoords(
                         ele, data, stripped_attrs,
@@ -1465,7 +1464,10 @@ class Processor:
         self, data: Any, peek_path: YAMLPath, node_coords: List[NodeCoords],
         **kwargs
     ) -> List[NodeCoords]:
-        """Helper for _get_nodes_by_collector."""
+        """List nodes matching the given path of an Addition Collector.
+
+        Helper for _get_nodes_by_collector.
+        """
         updated_coords = node_coords
         parent: Any = kwargs.pop("parent", None)
         parentref: Any = kwargs.pop("parentref", None)
@@ -1503,7 +1505,10 @@ class Processor:
         self, data: Any, peek_path: YAMLPath, lhs_ncs: List[NodeCoords],
         **kwargs
     ) -> List[NodeCoords]:
-        """Helper for _get_nodes_by_collector."""
+        """List nodes matching the given path of a Subtraction Collector.
+
+        Helper for _get_nodes_by_collector.
+        """
         def get_del_nodes(
             del_nodes: List[Any], node_coord: NodeCoords
         ) -> None:
@@ -2593,7 +2598,7 @@ class Processor:
     # pylint: disable=too-many-arguments
     def _update_node(
         self, parent: Any, parentref: Any, value: Any,
-        value_format: YAMLValueFormats, value_tag: str = None
+        value_format: YAMLValueFormats, value_tag: Union[str, None] = None
     ) -> None:
         """
         Set the value of a data node.
@@ -2625,13 +2630,13 @@ class Processor:
         # author of ruamel.yaml, to resolve how to update all references to an
         # Anchor throughout the parsed data structure.
         def recurse(data, parent, parentref, reference_node, replacement_node):
-            if isinstance(data, (CommentedMap, dict)):
+            if isinstance(data, (CommentedMap, ryod)):
                 for i, k in [
                         (idx, key) for idx, key in enumerate(data.keys())
                         if key is reference_node
                 ]:
                     data.insert(i, replacement_node, data.pop(k))
-                for k, val in data.items():
+                for k, val in data.non_merged_items():
                     if val is reference_node:
                         if (hasattr(val, "anchor") or
                                 (data is parent and k == parentref)):
@@ -2649,7 +2654,48 @@ class Processor:
             elif isinstance(data, (CommentedSet, set)):
                 data.discard(reference_node)
                 data.add(replacement_node)
+            elif isinstance(data, OrderedDict):
+                # Manual key (re)ordering is necessary and YMKs are not
+                # supported.
+                push_to_end = False
+                found_key = None
+                push_keys = []
+                for k, val in data.items():
+                    if push_to_end:
+                        push_keys.append(k)
+                    elif k is reference_node:
+                        found_key = k
+                        push_to_end = True
+                if push_to_end:
+                    data[replacement_node] = data.pop(found_key)
+                    for key in push_keys:
+                        data.move_to_end(key)
 
+                for k, val in data.items():
+                    if val is reference_node:
+                        if (hasattr(val, "anchor") or
+                                (data is parent and k == parentref)):
+                            data[k] = replacement_node
+                    else:
+                        recurse(val, parent, parentref, reference_node,
+                                replacement_node)
+            elif isinstance(data, dict):
+                # Key ordering is irrelevant and YMKs are not supported
+                for i, k in [
+                        (idx, key) for idx, key in enumerate(data.keys())
+                        if key is reference_node
+                ]:
+                    data[replacement_node] = data.pop(k)
+                for k, val in data.items():
+                    if val is reference_node:
+                        if (hasattr(val, "anchor") or
+                                (data is parent and k == parentref)):
+                            data[k] = replacement_node
+                    else:
+                        recurse(val, parent, parentref, reference_node,
+                                replacement_node)
+
+        change_node = None
         if isinstance(parent, (set, CommentedSet)):
             for ele in parent:
                 if ele == parentref:

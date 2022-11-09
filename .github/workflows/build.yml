@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.6', '3.7', '3.8', '3.9']
+        python-version: ['3.6', '3.7', '3.8', '3.9', '3.10']
 
     steps:
     - uses: actions/checkout@v2
@@ -32,11 +32,11 @@ jobs:
         python -m pip install --upgrade pip
         python -m pip install --upgrade setuptools
         python -m pip install --upgrade wheel
-        python -m pip install --upgrade mypy pytest pytest-cov pytest-console-scripts pylint coveralls pep257
+        python -m pip install --upgrade mypy pytest pytest-cov pytest-console-scripts pylint coveralls pydocstyle
         python -m pip install --editable .
-    - name: Validate Compliance with PEP257
+    - name: Validate Compliance with pydocstyle
       run: |
-        pep257 yamlpath
+        pydocstyle yamlpath
     - name: Validate Compliance with MyPY
       run: |
         mypy yamlpath

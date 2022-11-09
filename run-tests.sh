@@ -67,13 +67,13 @@ EOF
 
 	echo "...upgrading testing tools"
 	pip install --upgrade mypy pytest pytest-cov pytest-console-scripts \
-		pylint coveralls pep257 >/dev/null
+		pylint coveralls pydocstyle >/dev/null
 
-	echo -e "\nPEP257..."
-	if ! pep257 yamlpath; then
+	echo -e "\nPYDOCSTYLE..."
+	if ! pydocstyle yamlpath; then
 		deactivate
 		rm -rf "$tmpVEnv"
-		echo "PEP257 Error: $?"
+		echo "PYDOCSTYLE Error: $?"
 		exit 9
 	fi
 

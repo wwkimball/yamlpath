@@ -19,6 +19,7 @@ setup(
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
         "Operating System :: OS Independent",
         "Environment :: Console",
         "Topic :: Utilities",
@@ -29,7 +30,7 @@ setup(
     author_email="github-yamlpath@kimballstuff.com",
     license="ISC",
     keywords="yaml eyaml json yaml-path diff merge",
-    packages=find_packages(),
+    packages=find_packages(exclude=["tests"]),
     entry_points={
         "console_scripts": [
             "eyaml-rotate-keys = yamlpath.commands.eyaml_rotate_keys:main",
@@ -43,7 +44,8 @@ setup(
     },
     python_requires=">3.6.0",
     install_requires=[
-        "ruamel.yaml>=0.15.96,!=0.17.0,!=0.17.1,!=0.17.2,!=0.17.5,<=0.17.17",
+        "ruamel.yaml>0.17.5,!=0.17.18,<=0.17.21",
+        "python-dateutil<=3"
     ],
     tests_require=[
         "pytest",

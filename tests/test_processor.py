@@ -1,9 +1,14 @@
 import pytest
-from datetime import date
+from datetime import date, datetime
 from types import SimpleNamespace
+from collections import OrderedDict
 
 from ruamel.yaml import YAML
 from ruamel.yaml.comments import TaggedScalar
+from yamlpath.patches.timestamp import (
+    AnchoredTimeStamp,
+    AnchoredDate,
+)
 
 from yamlpath.func import unwrap_node_coords
 from yamlpath.exceptions import YAMLPathException
@@ -16,7 +21,6 @@ from yamlpath.enums import (
 from yamlpath.path import SearchTerms
 from yamlpath.wrappers import ConsolePrinter
 from yamlpath import YAMLPath, Processor
-from tests.conftest import quiet_logger
 
 
 class Test_Processor():
@@ -80,7 +84,7 @@ class Test_Processor():
         ("/**/Hey*", ["Hey, Number Two!"], True, None),
         ("lots_of_names.**.name", ["Name 1-1", "Name 2-1", "Name 3-1", "Name 4-1", "Name 4-2", "Name 4-3", "Name 4-4"], True, None),
         ("/array_of_hashes/**", [1, "one", 2, "two"], True, None),
-        ("products_hash.*[dimensions.weight==4].(availability.start.date)+(availability.stop.date)", [[date(2020, 8, 1), date(2020, 9, 25)], [date(2020, 1, 1), date(2020, 1, 1)]], True, None),
+        ("products_hash.*[dimensions.weight==4].(availability.start.date)+(availability.stop.date)", [[AnchoredDate(2020, 8, 1), AnchoredDate(2020, 9, 25)], [AnchoredDate(2020, 1, 1), AnchoredDate(2020, 1, 1)]], True, None),
         ("products_array[dimensions.weight==4].product", ["doohickey", "widget"], True, None),
         ("(products_hash.*.dimensions.weight)[max()][parent(2)].dimensions.weight", [10], True, None),
         ("/Locations/*/*", ["ny", "bstn"], True, None),
@@ -491,6 +495,122 @@ null_value:
             assert changed_value == value
             matchtally += 1
         assert matchtally == tally
+
+    @pytest.mark.parametrize("yamlpath,value,compare,tally,mustexist,vformat,pathsep", [
+        ("/datetimes/date",
+          date(2022, 8, 2),
+          AnchoredDate(2022, 8, 2),
+          1,
+          True,
+          YAMLValueFormats.DATE,
+          PathSeperators.FSLASH,
+        ),
+        ("datetimes.date",
+          '2022-08-02',
+          AnchoredDate(2022, 8, 2),
+          1,
+          True,
+          YAMLValueFormats.DATE,
+          PathSeperators.DOT,
+        ),
+        ("datetimes.timestamp",
+          datetime(2022, 8, 2, 13, 22, 31),
+          AnchoredTimeStamp(2022, 8, 2, 13, 22, 31),
+          1,
+          True,
+          YAMLValueFormats.TIMESTAMP,
+          PathSeperators.DOT,
+        ),
+        ("/datetimes/timestamp",
+          '2022-08-02T13:22:31',
+          AnchoredTimeStamp(2022, 8, 2, 13, 22, 31),
+          1,
+          True,
+          YAMLValueFormats.TIMESTAMP,
+          PathSeperators.FSLASH,
+        ),
+        ("aliases[&date]",
+          '2022-08-02',
+          AnchoredDate(2022, 8, 2),
+          1,
+          True,
+          YAMLValueFormats.DATE,
+          PathSeperators.DOT,
+        ),
+        ("aliases[&timestamp]",
+          datetime(2022, 8, 2, 13, 22, 31),
+          AnchoredTimeStamp(2022, 8, 2, 13, 22, 31),
+          1,
+          True,
+          YAMLValueFormats.TIMESTAMP,
+          PathSeperators.DOT,
+        ),
+    ])
+    def test_set_datetimes(self, quiet_logger, yamlpath, value, compare, tally, mustexist, vformat, pathsep):
+        yamldata = """---
+aliases:
+  - &date 2022-02-21
+  - &timestamp 2022-11-20T15:14:13
+datetimes:
+  date: 2022-09-23
+  timestamp: 2022-09-24T01:02:03.04000
+reused:
+  date: *date
+  timestamp: *timestamp
+"""
+        yaml = YAML()
+        data = yaml.load(yamldata)
+        processor = Processor(quiet_logger, data)
+        processor.set_value(yamlpath, value, mustexist=mustexist, value_format=vformat, pathsep=pathsep)
+        matchtally = 0
+        for node in processor.get_nodes(yamlpath, mustexist=mustexist):
+            changed_value = unwrap_node_coords(node)
+            if isinstance(changed_value, list):
+                compare_idx = 0
+                for result in changed_value:
+                    assert result == compare[compare_idx]
+                    compare_idx += 1
+                    matchtally += 1
+                continue
+            assert changed_value == compare
+            matchtally += 1
+        assert matchtally == tally
+
+    @pytest.mark.parametrize("yamlpath,value,vformat,exmsg", [
+        ("/datetimes/date",
+          "2022.9.24",
+          YAMLValueFormats.DATE,
+          "not a YAML-compatible ISO8601 date"
+        ),
+        ("/datetimes/date",
+          "2022-90-24",
+          YAMLValueFormats.DATE,
+          "cannot be cast to an ISO8601 date"
+        ),
+        ("/datetimes/timestamp",
+          "2022-9-24 @ 7:41am",
+          YAMLValueFormats.TIMESTAMP,
+          "not a YAML-compatible ISO8601 timestamp"
+        ),
+        ("/datetimes/timestamp",
+          "2022-90-24T07:41:00",
+          YAMLValueFormats.TIMESTAMP,
+          "cannot be cast to an ISO8601 timestamp"
+        ),
+    ])
+    def test_cannot_set_impossible_datetimes(self, quiet_logger, yamlpath, value, vformat, exmsg):
+        yamldata = """---
+datetimes:
+  date: 2022-09-23
+  timestamp: 2022-09-24T01:02:03.04000
+"""
+        yaml = YAML()
+        data = yaml.load(yamldata)
+        processor = Processor(quiet_logger, data)
+
+        with pytest.raises(YAMLPathException) as ex:
+            processor.set_value(yamlpath, value, value_format=vformat)
+        assert -1 < str(ex.value).find(exmsg)
 
     def test_cannot_set_nonexistent_required_node_error(self, quiet_logger):
         yamldata = """---
@@ -1008,9 +1128,11 @@ nullthing: null
 nothingthing:
 emptystring: ""
 nullstring: "null"
+datething: 2022-09-24
+timestampthing: 2022-09-24T15:24:32
         """
 
-        results = [6, 6.8, "yes", "no", True, False, None, None, "", "null"]
+        results = [6, 6.8, "yes", "no", True, False, None, None, "", "null", AnchoredDate(2022, 9, 24), AnchoredTimeStamp(2022, 9, 24, 15, 24, 32)]
 
         yaml = YAML()
         data = yaml.load(yamldata)
@@ -1826,3 +1948,79 @@ minerals:
             matchidx += 1
         assert len(results) == matchidx
 
+
+    ###
+    # Test non-standard use-cases
+    ###
+    def test_raw_dict_updates_195(self, quiet_logger):
+        # Contributed by https://github.com/tsinggggg
+        config = {"key1": [1, 2, 3],
+                  "key2": {
+                    "key3": "value1",
+                    "key4": "value2",
+                  }
+                }
+        processor = Processor(quiet_logger, config)
+        processor.set_value("key2.key3", "asdf", value_format=YAMLValueFormats.DEFAULT)
+        assert list(processor.get_nodes("key2.key3"))[0].node == "asdf"
+
+    def test_raw_dict_updates_to_key(self, quiet_logger):
+        key_ref = "key2"
+        config = {
+                    "referential_key": key_ref,
+                    "key1": [1, 2, 3],
+                    key_ref: {
+                        "key3": "value1",
+                        "key4": "value2",
+                    }
+                }
+        processor = Processor(quiet_logger, config)
+        processor.set_value("referential_key", "key2_new", value_format=YAMLValueFormats.DEFAULT)
+        assert list(processor.get_nodes("key2_new.key4"))[0].node == "value2"
+
+    def test_raw_dict_updates_195_od(self, quiet_logger):
+        config = OrderedDict({"key1": [1, 2, 3],
+                  "key2": OrderedDict({
+                    "key3": "value1",
+                    "key4": "value2",
+                  })
+                })
+        expected = OrderedDict({"key1": [1, 2, 3],
+                  "key2": OrderedDict({
+                    "key3": "asdf",
+                    "key4": "value2",
+                  })
+                })
+        processor = Processor(quiet_logger, config)
+        processor.set_value("key2.key3", "asdf", value_format=YAMLValueFormats.DEFAULT)
+        diff = [x for x, y in zip(config.items(), expected.items()) if x != y]
+        assert 0 == len(diff)
+
+    def test_raw_dict_updates_to_key_od(self, quiet_logger):
+        key_ref = "key2"
+        new_ref = "key2_new"
+        config = OrderedDict({
+                    "referential_key": key_ref,
+                    "key1": [1, 2, 3],
+                    key_ref: OrderedDict({
+                        "key3": "value1",
+                        "key4": "value2",
+                    }),
+                    "tail": "value",
+                })
+        expected = OrderedDict({
+                    "referential_key": new_ref,
+                    "key1": [1, 2, 3],
+                    new_ref: OrderedDict({
+                        "key3": "value1",
+                        "key4": "value2",
+                    }),
+                    "tail": "value",
+                })
+
+        processor = Processor(quiet_logger, config)
+        processor.set_value("referential_key", new_ref, value_format=YAMLValueFormats.DEFAULT)
+        assert list(processor.get_nodes(f"{new_ref}.key4"))[0].node == "value2"
+
+        diff = [x for x, y in zip(config.items(), expected.items()) if x != y]
+        assert 0 == len(diff)
