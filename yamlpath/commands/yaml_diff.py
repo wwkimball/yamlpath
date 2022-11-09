@@ -10,7 +10,7 @@ from os.path import isfile
 
 from yamlpath import __version__ as YAMLPATH_VERSION
 from yamlpath.common import Parsers
-from yamlpath.enums import PathSeperators
+from yamlpath.enums import PathSeparators
 from yamlpath.differ.enums import AoHDiffOpts, ArrayDiffOpts
 from yamlpath.wrappers import ConsolePrinter
 from yamlpath.differ import DifferConfig, Differ
@@ -106,10 +106,10 @@ https://github.com/wwkimball/yamlpath/issues.
     parser.add_argument(
         "-t", "--pathsep",
         default="dot",
-        choices=PathSeperators,
-        metavar=PathSeperators.get_choices(),
-        type=PathSeperators.from_str,
-        help="indicate which YAML Path seperator to use when\nrendering"
+        choices=PathSeparators,
+        metavar=PathSeparators.get_choices(),
+        type=PathSeparators.from_str,
+        help="indicate which YAML Path separator to use when\nrendering"
              " results; default=dot")
 
     eyaml_group = parser.add_argument_group(

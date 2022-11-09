@@ -26,7 +26,7 @@ from yamlpath.enums import (
     PathSegmentTypes,
     PathSearchKeywords,
     CollectorOperators,
-    PathSeperators,
+    PathSeparators,
 )
 
 
@@ -64,9 +64,9 @@ class Processor:
         * default_value (Any) The value to set at yaml_path should
           it not already exist in data and mustexist is False;
           default=None
-        * pathsep (PathSeperators) Forced YAML Path segment seperator; set
+        * pathsep (PathSeparators) Forced YAML Path segment separator; set
           only when automatic inference fails;
-          default = PathSeperators.AUTO
+          default = PathSeparators.AUTO
 
         Returns:  (Generator) The requested YAML nodes as they are matched
 
@@ -75,7 +75,7 @@ class Processor:
         """
         mustexist: bool = kwargs.pop("mustexist", False)
         default_value: Any = kwargs.pop("default_value", None)
-        pathsep: PathSeperators = kwargs.pop("pathsep", PathSeperators.AUTO)
+        pathsep: PathSeparators = kwargs.pop("pathsep", PathSeparators.AUTO)
 
         if self.data is None:
             self.logger.debug(
@@ -85,8 +85,8 @@ class Processor:
 
         if isinstance(yaml_path, str):
             yaml_path = YAMLPath(yaml_path, pathsep)
-        elif pathsep is not PathSeperators.AUTO:
-            yaml_path.seperator = pathsep
+        elif pathsep is not PathSeparators.AUTO:
+            yaml_path.separator = pathsep
 
         self.logger.debug(
             "Processing YAML Path:",
@@ -135,9 +135,9 @@ class Processor:
         * value_format (YAMLValueFormats) The demarcation or visual
           representation to use when writing the data;
           default=YAMLValueFormats.DEFAULT
-        * pathsep (PathSeperators) Forced YAML Path segment seperator; set
+        * pathsep (PathSeparators) Forced YAML Path segment separator; set
           only when automatic inference fails;
-          default = PathSeperators.AUTO
+          default = PathSeparators.AUTO
         * tag (str) Custom data-type tag to assign
 
         Returns:  N/A
@@ -154,13 +154,13 @@ class Processor:
         mustexist: bool = kwargs.pop("mustexist", False)
         value_format: YAMLValueFormats = kwargs.pop("value_format",
                                                     YAMLValueFormats.DEFAULT)
-        pathsep: PathSeperators = kwargs.pop("pathsep", PathSeperators.AUTO)
+        pathsep: PathSeparators = kwargs.pop("pathsep", PathSeparators.AUTO)
         tag: str = kwargs.pop("tag", None)
 
         if isinstance(yaml_path, str):
             yaml_path = YAMLPath(yaml_path, pathsep)
-        elif pathsep is not PathSeperators.AUTO:
-            yaml_path.seperator = pathsep
+        elif pathsep is not PathSeparators.AUTO:
+            yaml_path.separator = pathsep
 
         if mustexist:
             self.logger.debug(
@@ -316,13 +316,13 @@ class Processor:
             - `YAMLPathException` when YAML Path is invalid or a supplied
                anchor_name is illegal
         """
-        pathsep: PathSeperators = kwargs.pop("pathsep", PathSeperators.AUTO)
+        pathsep: PathSeparators = kwargs.pop("pathsep", PathSeparators.AUTO)
         anchor_name: str = kwargs.pop("anchor_name", "")
 
         if isinstance(anchor_path, str):
             anchor_path = YAMLPath(anchor_path, pathsep)
-        elif pathsep is not PathSeperators.AUTO:
-            anchor_path.seperator = pathsep
+        elif pathsep is not PathSeparators.AUTO:
+            anchor_path.separator = pathsep
 
         anchor_node_coordinates: List[NodeCoords] = []
         for node_coords in self._get_required_nodes(self.data, anchor_path):
@@ -370,7 +370,7 @@ class Processor:
         anchor_path: Union[YAMLPath, str], **kwargs: Any
     ) -> None:
         """Add a YAML Merge Key to YAML Path specified nodes."""
-        pathsep: PathSeperators = kwargs.pop("pathsep", PathSeperators.AUTO)
+        pathsep: PathSeparators = kwargs.pop("pathsep", PathSeparators.AUTO)
         anchor_name: str = kwargs.pop("anchor_name", "")
 
         if self.data is None:
@@ -382,8 +382,8 @@ class Processor:
 
         if isinstance(yaml_path, str):
             yaml_path = YAMLPath(yaml_path, pathsep)
-        elif pathsep is not PathSeperators.AUTO:
-            yaml_path.seperator = pathsep
+        elif pathsep is not PathSeparators.AUTO:
+            yaml_path.separator = pathsep
 
         anchor_node = self._get_anchor_node(
             anchor_path, pathsep=pathsep, anchor_name=anchor_name)
@@ -404,7 +404,7 @@ class Processor:
         **kwargs: Any
     ) -> None:
         """Add a YAML Merge Key to pre-gathered nodes."""
-        pathsep: PathSeperators = kwargs.pop("pathsep", PathSeperators.AUTO)
+        pathsep: PathSeparators = kwargs.pop("pathsep", PathSeparators.AUTO)
         anchor_name: str = kwargs.pop("anchor_name", "")
 
         if self.data is None:
@@ -467,9 +467,9 @@ class Processor:
            Aliases for more than one Anchor.
 
         Keyword Arguments:
-        * pathsep (PathSeperators) Forced YAML Path segment seperator; set
+        * pathsep (PathSeparators) Forced YAML Path segment separator; set
           only when automatic inference fails;
-          default = PathSeperators.AUTO
+          default = PathSeparators.AUTO
         * anchor_name (str) Override the Alias name to any non-empty name you
           set; attempts to re-use an existing Anchor name will result in a
           YAMLPathException.
@@ -479,7 +479,7 @@ class Processor:
         Raises:
             - `YAMLPathException` when YAML Path is invalid
         """
-        pathsep: PathSeperators = kwargs.pop("pathsep", PathSeperators.AUTO)
+        pathsep: PathSeparators = kwargs.pop("pathsep", PathSeparators.AUTO)
         anchor_name: str = kwargs.pop("anchor_name", "")
 
         if self.data is None:
@@ -490,8 +490,8 @@ class Processor:
 
         if isinstance(yaml_path, str):
             yaml_path = YAMLPath(yaml_path, pathsep)
-        elif pathsep is not PathSeperators.AUTO:
-            yaml_path.seperator = pathsep
+        elif pathsep is not PathSeparators.AUTO:
+            yaml_path.separator = pathsep
 
         anchor_node = self._get_anchor_node(
             anchor_path, pathsep=pathsep, anchor_name=anchor_name)
@@ -518,16 +518,16 @@ class Processor:
         2. anchor_path (Union[YAMLPath, str]) YAML Path to the source Anchor
 
         Keyword Arguments:
-        * pathsep (PathSeperators) Forced YAML Path segment seperator; set
+        * pathsep (PathSeparators) Forced YAML Path segment separator; set
           only when automatic inference fails;
-          default = PathSeperators.AUTO
+          default = PathSeparators.AUTO
         * anchor_name (str) Override automatic anchor name; use this, instead
 
         Returns:  N/A
 
         Raises:  N/A
         """
-        pathsep: PathSeperators = kwargs.pop("pathsep", PathSeperators.AUTO)
+        pathsep: PathSeparators = kwargs.pop("pathsep", PathSeparators.AUTO)
         anchor_name: str = kwargs.pop("anchor_name", "")
 
         if self.data is None:
@@ -574,16 +574,16 @@ class Processor:
         2. tag (str) The tag to assign
 
         Keyword Arguments:
-        * pathsep (PathSeperators) Forced YAML Path segment seperator; set
+        * pathsep (PathSeparators) Forced YAML Path segment separator; set
           only when automatic inference fails;
-          default = PathSeperators.AUTO
+          default = PathSeparators.AUTO
 
         Returns:  N/A
 
         Raises:
         - `YAMLPathException` when YAML Path is invalid
         """
-        pathsep: PathSeperators = kwargs.pop("pathsep", PathSeperators.AUTO)
+        pathsep: PathSeparators = kwargs.pop("pathsep", PathSeparators.AUTO)
 
         if self.data is None:
             self.logger.debug(
@@ -593,8 +593,8 @@ class Processor:
 
         if isinstance(yaml_path, str):
             yaml_path = YAMLPath(yaml_path, pathsep)
-        elif pathsep is not PathSeperators.AUTO:
-            yaml_path.seperator = pathsep
+        elif pathsep is not PathSeparators.AUTO:
+            yaml_path.separator = pathsep
 
         gathered_nodes: List[NodeCoords] = []
         for node_coords in self._get_required_nodes(self.data, yaml_path):
@@ -644,16 +644,16 @@ class Processor:
         1. yaml_path (Union[YAMLPath, str]) The YAML Path to evaluate
 
         Keyword Arguments:
-        * pathsep (PathSeperators) Forced YAML Path segment seperator; set
+        * pathsep (PathSeparators) Forced YAML Path segment separator; set
           only when automatic inference fails;
-          default = PathSeperators.AUTO
+          default = PathSeparators.AUTO
 
         Returns:  (Generator) Affected NodeCoords before they are deleted
 
         Raises:
             - `YAMLPathException` when YAML Path is invalid
         """
-        pathsep: PathSeperators = kwargs.pop("pathsep", PathSeperators.AUTO)
+        pathsep: PathSeparators = kwargs.pop("pathsep", PathSeparators.AUTO)
 
         if self.data is None:
             self.logger.debug(
@@ -663,8 +663,8 @@ class Processor:
 
         if isinstance(yaml_path, str):
             yaml_path = YAMLPath(yaml_path, pathsep)
-        elif pathsep is not PathSeperators.AUTO:
-            yaml_path.seperator = pathsep
+        elif pathsep is not PathSeparators.AUTO:
+            yaml_path.separator = pathsep
 
         # Nodes must be processed in reverse order while deleting them to avoid
         # corrupting list element indecies, thereby deleting the wrong nodes.
@@ -931,7 +931,7 @@ class Processor:
         if isinstance(data, dict):
             next_translated_path = (translated_path +
                 YAMLPath.escape_path_section(
-                    str_stripped, translated_path.seperator))
+                    str_stripped, translated_path.separator))
             next_ancestry = ancestry + [(data, stripped_attrs)]
             if stripped_attrs in data:
                 self.logger.debug(
@@ -1000,7 +1000,7 @@ class Processor:
                         ).format(str_stripped))
                     next_translated_path = (translated_path +
                         YAMLPath.escape_path_section(
-                            ele_val, translated_path.seperator))
+                            ele_val, translated_path.separator))
                     next_ancestry = ancestry + [(data, ele)]
                     yield NodeCoords(
                         ele, data, stripped_attrs,
@@ -1086,7 +1086,7 @@ class Processor:
                         yield NodeCoords(
                             val, data, key,
                             translated_path + YAMLPath.escape_path_section(
-                                key, translated_path.seperator),
+                                key, translated_path.separator),
                             ancestry + [(data, key)], pathseg)
 
             elif isinstance(data, (CommentedSet, set)):
@@ -1095,7 +1095,7 @@ class Processor:
                         yield NodeCoords(
                             ele, data, ele,
                             translated_path + YAMLPath.escape_path_section(
-                                ele, translated_path.seperator),
+                                ele, translated_path.separator),
                             ancestry + [(data, ele)], pathseg)
         else:
             try:
@@ -1155,7 +1155,7 @@ class Processor:
         (_, stripped_attrs) = pathseg
         next_translated_path = translated_path + "[&{}]".format(
             YAMLPath.escape_path_section(
-                str(stripped_attrs), translated_path.seperator))
+                str(stripped_attrs), translated_path.separator))
 
         self.logger.debug(
             "Processor::_get_nodes_by_anchor:  Seeking ANCHOR node at {}."
@@ -1365,7 +1365,7 @@ class Processor:
                         yield NodeCoords(
                             val, data, key,
                             translated_path + YAMLPath.escape_path_section(
-                                key, translated_path.seperator),
+                                key, translated_path.separator),
                             ancestry + [(data, key)], pathseg)
 
             elif attr in data:
@@ -1385,7 +1385,7 @@ class Processor:
                     yield NodeCoords(
                         value, data, attr,
                         translated_path + YAMLPath.escape_path_section(
-                            attr, translated_path.seperator),
+                            attr, translated_path.separator),
                         ancestry + [(data, attr)], pathseg)
 
             else:
@@ -1439,7 +1439,7 @@ class Processor:
                     yield NodeCoords(
                         ele, data, ele,
                         translated_path + YAMLPath.escape_path_section(
-                            ele, translated_path.seperator),
+                            ele, translated_path.separator),
                         ancestry + [(data, ele)], pathseg)
 
         else:
@@ -1783,7 +1783,7 @@ class Processor:
                 for key, val in data.items():
                     next_translated_path = (
                         translated_path + YAMLPath.escape_path_section(
-                            key, translated_path.seperator))
+                            key, translated_path.separator))
                     next_ancestry = ancestry + [(data, key)]
                     for node_coord in self._get_nodes_by_traversal(
                         val, yaml_path, segment_index,
@@ -1814,7 +1814,7 @@ class Processor:
                 for ele in data:
                     next_translated_path = (
                         translated_path + YAMLPath.escape_path_section(
-                            ele, translated_path.seperator))
+                            ele, translated_path.separator))
                     self.logger.debug(
                         "Yielding unfiltered Set value:",
                         prefix="Processor::_get_nodes_by_traversal:  ",
@@ -1869,7 +1869,7 @@ class Processor:
                         .format(key, parentref))
                     next_translated_path = (
                         translated_path + YAMLPath.escape_path_section(
-                            key, translated_path.seperator))
+                            key, translated_path.separator))
                     next_ancestry = ancestry + [(data, key)]
                     for node_coord in self._get_nodes_by_traversal(
                         val, yaml_path, segment_index,
@@ -1947,7 +1947,7 @@ class Processor:
             for key, val in data.items():
                 next_translated_path = (
                     translated_path + YAMLPath.escape_path_section(
-                        key, translated_path.seperator))
+                        key, translated_path.separator))
                 next_ancestry = ancestry + [(data, key)]
                 self.logger.debug(
                     f"Yielding dict value at key, {key} from data:",
@@ -1971,7 +1971,7 @@ class Processor:
             for ele in data:
                 next_translated_path = (
                     translated_path + YAMLPath.escape_path_section(
-                        ele, translated_path.seperator))
+                        ele, translated_path.separator))
                 self.logger.debug(
                     "Yielding set element:",
                     prefix=dbg_prefix, data=ele)
@@ -2031,7 +2031,7 @@ class Processor:
             for key, val in data.items():
                 next_translated_path = (
                     translated_path + YAMLPath.escape_path_section(
-                        key, translated_path.seperator))
+                        key, translated_path.separator))
                 next_ancestry = ancestry + [(data, key)]
                 for filtered_nc in self._get_nodes_by_path_segment(
                     val, yaml_path, next_segment_idx, parent=data,
@@ -2461,7 +2461,7 @@ class Processor:
                         next_translated_path = (
                             translated_path + YAMLPath.escape_path_section(
                                 str(stripped_attrs),
-                                translated_path.seperator))
+                                translated_path.separator))
                         next_ancestry = ancestry + [(data, stripped_attrs)]
                         for node_coord in self._get_optional_nodes(
                                 data[stripped_attrs], yaml_path, value,

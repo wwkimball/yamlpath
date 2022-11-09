@@ -90,7 +90,7 @@ class Differ:
             for key, val in data.items():
                 lhs_iteration += 1
                 next_path = (path +
-                    YAMLPath.escape_path_section(key, path.seperator))
+                    YAMLPath.escape_path_section(key, path.separator))
                 self._diffs.append(
                     DiffEntry(
                         DiffActions.DELETE, next_path, val, None,
@@ -105,7 +105,7 @@ class Differ:
         elif isinstance(data, CommentedSet):
             for idx, ele in enumerate(data):
                 next_path = (path +
-                    YAMLPath.escape_path_section(ele, path.seperator))
+                    YAMLPath.escape_path_section(ele, path.separator))
                 self._diffs.append(
                     DiffEntry(
                         DiffActions.DELETE, next_path, ele, None,
@@ -131,7 +131,7 @@ class Differ:
             for key, val in data.items():
                 rhs_iteration += 1
                 next_path = (path +
-                    YAMLPath.escape_path_section(key, path.seperator))
+                    YAMLPath.escape_path_section(key, path.separator))
                 self._diffs.append(
                     DiffEntry(
                         DiffActions.ADD, next_path, None, val,
@@ -146,7 +146,7 @@ class Differ:
         elif isinstance(data, CommentedSet):
             for idx, ele in enumerate(data):
                 next_path = (path +
-                    YAMLPath.escape_path_section(ele, path.seperator))
+                    YAMLPath.escape_path_section(ele, path.separator))
                 self._diffs.append(
                     DiffEntry(
                         DiffActions.ADD, next_path, None, ele,
@@ -258,7 +258,7 @@ class Differ:
             if key in lhs and key in rhs
         ]:
             next_path = (path +
-                YAMLPath.escape_path_section(key, path.seperator))
+                YAMLPath.escape_path_section(key, path.separator))
             self._diff_between(
                 next_path, lhs[key], val,
                 lhs_parent=lhs, lhs_iteration=lhs_key_indicies[key],
@@ -268,7 +268,7 @@ class Differ:
         # Look for deleted keys
         for key in lhs_keys - rhs_keys:
             next_path = (path +
-                YAMLPath.escape_path_section(key, path.seperator))
+                YAMLPath.escape_path_section(key, path.separator))
             self._diffs.append(
                 DiffEntry(
                     DiffActions.DELETE, next_path, lhs[key], None,
@@ -279,7 +279,7 @@ class Differ:
         # Look for new keys
         for key in rhs_keys - lhs_keys:
             next_path = (path +
-                YAMLPath.escape_path_section(key, path.seperator))
+                YAMLPath.escape_path_section(key, path.separator))
             self._diffs.append(
                 DiffEntry(
                     DiffActions.ADD, next_path, None, rhs[key],
@@ -620,7 +620,7 @@ class Differ:
             if key in lhs and key in rhs
         ]:
             next_path = (path +
-                YAMLPath.escape_path_section(key, path.seperator))
+                YAMLPath.escape_path_section(key, path.separator))
             lhs_ele = None
             rhs_ele = None
             for ele in lhs:
@@ -640,7 +640,7 @@ class Differ:
         # Look for deleted keys
         for key in lhs_keys - rhs_keys:
             next_path = (path +
-                YAMLPath.escape_path_section(key, path.seperator))
+                YAMLPath.escape_path_section(key, path.separator))
             self._diffs.append(
                 DiffEntry(
                     DiffActions.DELETE, next_path, key, None,
@@ -651,7 +651,7 @@ class Differ:
         # Look for new keys
         for key in rhs_keys - lhs_keys:
             next_path = (path +
-                YAMLPath.escape_path_section(key, path.seperator))
+                YAMLPath.escape_path_section(key, path.separator))
             self._diffs.append(
                 DiffEntry(
                     DiffActions.ADD, next_path, None, key,

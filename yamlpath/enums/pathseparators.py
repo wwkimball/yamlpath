@@ -1,5 +1,5 @@
 """
-Implements the PathSeperators enumeration.
+Implements the PathSeparators enumeration.
 
 Copyright 2019, 2020 William W. Kimball, Jr. MBA MSIS
 """
@@ -7,14 +7,14 @@ from enum import Enum, auto
 from typing import List
 
 
-class PathSeperators(Enum):
+class PathSeparators(Enum):
     """
-    Supported YAML Path segment seperators.
+    Supported YAML Path segment separators.
 
-    Seperators include:
+    Separators include:
 
     `AUTO`
-        The seperator must be manually dictated or automatically inferred from
+        The separator must be manually dictated or automatically inferred from
         the YAML Path being evaluated.
 
     `DOT`
@@ -30,10 +30,10 @@ class PathSeperators(Enum):
 
     def __str__(self) -> str:
         """Get a String representation of this employed enum's value."""
-        seperator = '.'
-        if self is PathSeperators.FSLASH:
-            seperator = '/'
-        return seperator
+        separator = '.'
+        if self is PathSeparators.FSLASH:
+            separator = '/'
+        return separator
 
     @staticmethod
     def get_names() -> List[str]:
@@ -46,7 +46,7 @@ class PathSeperators(Enum):
 
         Raises:  N/A
         """
-        return [entry.name.upper() for entry in PathSeperators]
+        return [entry.name.upper() for entry in PathSeparators]
 
     @staticmethod
     def get_choices() -> List[str]:
@@ -62,26 +62,26 @@ class PathSeperators(Enum):
 
         Raises:  N/A
         """
-        names = [l.lower() for l in PathSeperators.get_names()]
-        symbols = [str(e) for e in PathSeperators]
+        names = [l.lower() for l in PathSeparators.get_names()]
+        symbols = [str(e) for e in PathSeparators]
         choices = list(set(names + symbols))
         choices.sort()
         return choices
 
     @staticmethod
-    def from_str(name: str) -> "PathSeperators":
+    def from_str(name: str) -> "PathSeparators":
         """
         Convert a string value to a value of this enumeration, if valid.
 
         Parameters:
             1. name (str) The name to convert
 
-        Returns:  (PathSeperators) the converted enumeration value
+        Returns:  (PathSeparators) the converted enumeration value
 
         Raises:
             - `NameError` when name doesn't match any enumeration values
         """
-        if isinstance(name, PathSeperators):
+        if isinstance(name, PathSeparators):
             return name
 
         check: str = str(name).upper()
@@ -90,31 +90,34 @@ class PathSeperators(Enum):
         elif check == '/':
             check = "FSLASH"
 
-        if check in PathSeperators.get_names():
-            return PathSeperators[check]
-        raise NameError("PathSeperators has no such item, {}.".format(check))
+        if check in PathSeparators.get_names():
+            return PathSeparators[check]
+        raise NameError("PathSeparators has no such item, {}.".format(check))
 
     @staticmethod
-    def infer_seperator(yaml_path: str) -> "PathSeperators":
+    def infer_separator(yaml_path: str) -> "PathSeparators":
         """
-        Infer the seperator used within a sample YAML Path.
+        Infer the separator used within a sample YAML Path.
 
-        Will attempt to return the best PathSeperators match.  Always returns
-        `PathSeperators.AUTO` when the sample is empty.
+        Will attempt to return the best PathSeparators match.  Always returns
+        `PathSeparators.AUTO` when the sample is empty.
 
         Parameters:
             1. yaml_path (str) The sample YAML Path to evaluate
 
-        Returns: (PathSeperators) the inferred PathSeperators value
+        Returns: (PathSeparators) the inferred PathSeparators value
 
         Raises:  N/A
         """
-        seperator: PathSeperators = PathSeperators.AUTO
+        separator: PathSeparators = PathSeparators.AUTO
 
         if yaml_path:
             if yaml_path[0] == '/':
-                seperator = PathSeperators.FSLASH
+                separator = PathSeparators.FSLASH
             else:
-                seperator = PathSeperators.DOT
+                separator = PathSeparators.DOT
 
-        return seperator
+        return separator
+
+
+PathSeperators = PathSeparators  # compat

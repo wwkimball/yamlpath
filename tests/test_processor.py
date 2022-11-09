@@ -13,7 +13,7 @@ from yamlpath.patches.timestamp import (
 from yamlpath.func import unwrap_node_coords
 from yamlpath.exceptions import YAMLPathException
 from yamlpath.enums import (
-    PathSeperators,
+    PathSeparators,
     PathSegmentTypes,
     YAMLValueFormats,
 )
@@ -386,7 +386,7 @@ baseball_legends: !!set
         yaml = YAML()
         processor = Processor(quiet_logger, yaml.load(yamldata))
         yamlpath = YAMLPath("aliases[&aliasAnchorOne]")
-        for node in processor.get_nodes(yamlpath, pathsep=PathSeperators.FSLASH):
+        for node in processor.get_nodes(yamlpath, pathsep=PathSeparators.FSLASH):
             assert unwrap_node_coords(node) == "Anchored Scalar Value"
 
     @pytest.mark.parametrize("yamlpath,mustexist", [
@@ -452,16 +452,16 @@ baseball_legends: !!set
         assert -1 == capsys.readouterr().out.find("abc")
 
     @pytest.mark.parametrize("yamlpath,value,tally,mustexist,vformat,pathsep", [
-        ("aliases[&testAnchor]", "Updated Value", 1, True, YAMLValueFormats.DEFAULT, PathSeperators.AUTO),
-        (YAMLPath("top_scalar"), "New top-level value", 1, False, YAMLValueFormats.DEFAULT, PathSeperators.DOT),
-        ("/top_array/2", 42, 1, False, YAMLValueFormats.INT, PathSeperators.FSLASH),
-        ("/top_hash/positive_float", 0.009, 1, True, YAMLValueFormats.FLOAT, PathSeperators.FSLASH),
-        ("/top_hash/negative_float", -0.009, 1, True, YAMLValueFormats.FLOAT, PathSeperators.FSLASH),
-        ("/top_hash/positive_float", -2.71828, 1, True, YAMLValueFormats.FLOAT, PathSeperators.FSLASH),
-        ("/top_hash/negative_float", 5283.4, 1, True, YAMLValueFormats.FLOAT, PathSeperators.FSLASH),
-        ("/null_value", "No longer null", 1, True, YAMLValueFormats.DEFAULT, PathSeperators.FSLASH),
-        ("(top_array[0])+(top_hash.negative_float)+(/null_value)", "REPLACEMENT", 3, True, YAMLValueFormats.DEFAULT, PathSeperators.FSLASH),
-        ("(((top_array[0])+(top_hash.negative_float))+(/null_value))", "REPLACEMENT", 3, False, YAMLValueFormats.DEFAULT, PathSeperators.FSLASH),
+        ("aliases[&testAnchor]", "Updated Value", 1, True, YAMLValueFormats.DEFAULT, PathSeparators.AUTO),
+        (YAMLPath("top_scalar"), "New top-level value", 1, False, YAMLValueFormats.DEFAULT, PathSeparators.DOT),
+        ("/top_array/2", 42, 1, False, YAMLValueFormats.INT, PathSeparators.FSLASH),
+        ("/top_hash/positive_float", 0.009, 1, True, YAMLValueFormats.FLOAT, PathSeparators.FSLASH),
+        ("/top_hash/negative_float", -0.009, 1, True, YAMLValueFormats.FLOAT, PathSeparators.FSLASH),
+        ("/top_hash/positive_float", -2.71828, 1, True, YAMLValueFormats.FLOAT, PathSeparators.FSLASH),
+        ("/top_hash/negative_float", 5283.4, 1, True, YAMLValueFormats.FLOAT, PathSeparators.FSLASH),
+        ("/null_value", "No longer null", 1, True, YAMLValueFormats.DEFAULT, PathSeparators.FSLASH),
+        ("(top_array[0])+(top_hash.negative_float)+(/null_value)", "REPLACEMENT", 3, True, YAMLValueFormats.DEFAULT, PathSeparators.FSLASH),
+        ("(((top_array[0])+(top_hash.negative_float))+(/null_value))", "REPLACEMENT", 3, False, YAMLValueFormats.DEFAULT, PathSeparators.FSLASH),
     ])
     def test_set_value(self, quiet_logger, yamlpath, value, tally, mustexist, vformat, pathsep):
         yamldata = """---
@@ -502,7 +502,7 @@ null_value:
           1,
           True,
           YAMLValueFormats.DATE,
-          PathSeperators.FSLASH,
+          PathSeparators.FSLASH,
         ),
         ("datetimes.date",
           '2022-08-02',
@@ -510,7 +510,7 @@ null_value:
           1,
           True,
           YAMLValueFormats.DATE,
-          PathSeperators.DOT,
+          PathSeparators.DOT,
         ),
         ("datetimes.timestamp",
           datetime(2022, 8, 2, 13, 22, 31),
@@ -518,7 +518,7 @@ null_value:
           1,
           True,
           YAMLValueFormats.TIMESTAMP,
-          PathSeperators.DOT,
+          PathSeparators.DOT,
         ),
         ("/datetimes/timestamp",
           '2022-08-02T13:22:31',
@@ -526,7 +526,7 @@ null_value:
           1,
           True,
           YAMLValueFormats.TIMESTAMP,
-          PathSeperators.FSLASH,
+          PathSeparators.FSLASH,
         ),
         ("aliases[&date]",
           '2022-08-02',
@@ -534,7 +534,7 @@ null_value:
           1,
           True,
           YAMLValueFormats.DATE,
-          PathSeperators.DOT,
+          PathSeparators.DOT,
         ),
         ("aliases[&timestamp]",
           datetime(2022, 8, 2, 13, 22, 31),
@@ -542,7 +542,7 @@ null_value:
           1,
           True,
           YAMLValueFormats.TIMESTAMP,
-          PathSeperators.DOT,
+          PathSeparators.DOT,
         ),
     ])
     def test_set_datetimes(self, quiet_logger, yamlpath, value, compare, tally, mustexist, vformat, pathsep):
@@ -798,10 +798,10 @@ datetimes:
         assert -1 < str(ex.value).find("Cannot add")
 
     @pytest.mark.parametrize("yamlpath,value,tally,mustexist,vformat,pathsep", [
-        ("/anchorKeys[&keyOne]", "Set self-destruct", 1, True, YAMLValueFormats.DEFAULT, PathSeperators.AUTO),
-        ("/hash[&keyTwo]", "Confirm", 1, True, YAMLValueFormats.DEFAULT, PathSeperators.AUTO),
-        ("/anchorKeys[&recursiveAnchorKey]", "Recurse more", 1, True, YAMLValueFormats.DEFAULT, PathSeperators.AUTO),
-        ("/hash[&recursiveAnchorKey]", "Recurse even more", 1, True, YAMLValueFormats.DEFAULT, PathSeperators.AUTO),
+        ("/anchorKeys[&keyOne]", "Set self-destruct", 1, True, YAMLValueFormats.DEFAULT, PathSeparators.AUTO),
+        ("/hash[&keyTwo]", "Confirm", 1, True, YAMLValueFormats.DEFAULT, PathSeparators.AUTO),
+        ("/anchorKeys[&recursiveAnchorKey]", "Recurse more", 1, True, YAMLValueFormats.DEFAULT, PathSeparators.AUTO),
+        ("/hash[&recursiveAnchorKey]", "Recurse even more", 1, True, YAMLValueFormats.DEFAULT, PathSeparators.AUTO),
     ])
     def test_key_anchor_changes(self, quiet_logger, yamlpath, value, tally, mustexist, vformat, pathsep):
         yamldata = """---
@@ -1108,11 +1108,11 @@ timestampthing: 2022-09-24T15:24:32
             assert unwrap_node_coords(node) == results[match_index]
             match_index += 1
 
-    @pytest.mark.parametrize("delete_yamlpath,pathseperator,old_deleted_nodes,new_flat_data", [
-        (YAMLPath("/**[&alias_number]"), PathSeperators.FSLASH, [1, 1, 1], [1,1,True,1,1,True,1,1,True,1,"ABC",123,"BCD",987,"CDE","8B8"]),
-        ("records[1]", PathSeperators.AUTO, ["ABC",123,"BCD",987], [1,1,1,True,1,1,1,True,1,1,1,True,1,1,"CDE","8B8"]),
+    @pytest.mark.parametrize("delete_yamlpath,pathseparator,old_deleted_nodes,new_flat_data", [
+        (YAMLPath("/**[&alias_number]"), PathSeparators.FSLASH, [1, 1, 1], [1,1,True,1,1,True,1,1,True,1,"ABC",123,"BCD",987,"CDE","8B8"]),
+        ("records[1]", PathSeparators.AUTO, ["ABC",123,"BCD",987], [1,1,1,True,1,1,1,True,1,1,1,True,1,1,"CDE","8B8"]),
     ])
-    def test_delete_nodes(self, quiet_logger, delete_yamlpath, pathseperator, old_deleted_nodes, new_flat_data):
+    def test_delete_nodes(self, quiet_logger, delete_yamlpath, pathseparator, old_deleted_nodes, new_flat_data):
         yamldata = """---
 aliases:
   - &alias_number 1
@@ -1146,7 +1146,7 @@ records:
 
         # The return set must be received lest no nodes will be deleted
         deleted_nodes = []
-        for nc in processor.delete_nodes(delete_yamlpath, pathsep=pathseperator):
+        for nc in processor.delete_nodes(delete_yamlpath, pathsep=pathseparator):
             deleted_nodes.append(nc)
 
         for (test_value, verify_node_coord) in zip(old_deleted_nodes, deleted_nodes):
@@ -1217,11 +1217,11 @@ records:
         console = capsys.readouterr()
         assert "Refusing to tag nodes from a null document" in console.out
 
-    @pytest.mark.parametrize("alias_path,anchor_path,anchor_name,pathseperator", [
-        (YAMLPath("/a_hash/a_key"), YAMLPath("/some_key"), "", PathSeperators.FSLASH),
-        ("a_hash.a_key", "some_key", "", PathSeperators.AUTO),
+    @pytest.mark.parametrize("alias_path,anchor_path,anchor_name,pathseparator", [
+        (YAMLPath("/a_hash/a_key"), YAMLPath("/some_key"), "", PathSeparators.FSLASH),
+        ("a_hash.a_key", "some_key", "", PathSeparators.AUTO),
     ])
-    def test_anchor_nodes(self, quiet_logger, alias_path, anchor_path, anchor_name, pathseperator):
+    def test_anchor_nodes(self, quiet_logger, alias_path, anchor_path, anchor_name, pathseparator):
         anchor_value = "This is the Anchored value!"
         yamlin = """---
 some_key: {}
@@ -1235,7 +1235,7 @@ a_hash:
 
         processor.alias_nodes(
             alias_path, anchor_path,
-            pathsep=pathseperator, anchor_name=anchor_name)
+            pathsep=pathseparator, anchor_name=anchor_name)
 
         match_count = 0
         for node in processor.get_nodes(
@@ -1245,29 +1245,29 @@ a_hash:
             assert unwrap_node_coords(node) == anchor_value
         assert match_count == 1
 
-    @pytest.mark.parametrize("change_path,ymk_path,anchor_name,pathseperator,validations", [
-        ("target", "source", "", PathSeperators.AUTO, [
+    @pytest.mark.parametrize("change_path,ymk_path,anchor_name,pathseparator,validations", [
+        ("target", "source", "", PathSeparators.AUTO, [
             ("target.target_key", ["other"]),
             ("target.source_key", ["value"]),
             ("target[&source].source_key", ["value"]),
             ("target.override_this", ["overridden"]),
             ("target[&source].override_this", ["original"]),
         ]),
-        (YAMLPath("target"), YAMLPath("source"), "", PathSeperators.DOT, [
+        (YAMLPath("target"), YAMLPath("source"), "", PathSeparators.DOT, [
             ("target.target_key", ["other"]),
             ("target.source_key", ["value"]),
             ("target[&source].source_key", ["value"]),
             ("target.override_this", ["overridden"]),
             ("target[&source].override_this", ["original"]),
         ]),
-        ("/target", "/source", "", PathSeperators.FSLASH, [
+        ("/target", "/source", "", PathSeparators.FSLASH, [
             ("/target/target_key", ["other"]),
             ("/target/source_key", ["value"]),
             ("/target/&source/source_key", ["value"]),
             ("/target/override_this", ["overridden"]),
             ("/target/&source/override_this", ["original"]),
         ]),
-        ("target", "source", "custom_name", PathSeperators.DOT, [
+        ("target", "source", "custom_name", PathSeparators.DOT, [
             ("target.target_key", ["other"]),
             ("target.source_key", ["value"]),
             ("target[&custom_name].source_key", ["value"]),
@@ -1275,7 +1275,7 @@ a_hash:
             ("target[&custom_name].override_this", ["original"]),
         ]),
     ])
-    def test_ymk_nodes(self, quiet_logger, change_path, ymk_path, anchor_name, pathseperator, validations):
+    def test_ymk_nodes(self, quiet_logger, change_path, ymk_path, anchor_name, pathseparator, validations):
         yamlin = """---
 source:
   source_key: value
@@ -1292,7 +1292,7 @@ target:
 
         processor.ymk_nodes(
             change_path, ymk_path,
-            pathsep=pathseperator, anchor_name=anchor_name)
+            pathsep=pathseparator, anchor_name=anchor_name)
 
         for (valid_path, valid_values) in validations:
             match_count = 0
@@ -1301,11 +1301,11 @@ target:
                 match_count += 1
             assert len(valid_values) == match_count
 
-    @pytest.mark.parametrize("yaml_path,tag,pathseperator", [
-        (YAMLPath("/key"), "!taggidy", PathSeperators.FSLASH),
-        ("key", "taggidy", PathSeperators.AUTO),
+    @pytest.mark.parametrize("yaml_path,tag,pathseparator", [
+        (YAMLPath("/key"), "!taggidy", PathSeparators.FSLASH),
+        ("key", "taggidy", PathSeparators.AUTO),
     ])
-    def test_tag_nodes(self, quiet_logger, yaml_path, tag, pathseperator):
+    def test_tag_nodes(self, quiet_logger, yaml_path, tag, pathseparator):
         yamlin = """---
 key: value
 """
@@ -1314,7 +1314,7 @@ key: value
         data = yaml.load(yamlin)
         processor = Processor(quiet_logger, data)
 
-        processor.tag_nodes(yaml_path, tag, pathsep=pathseperator)
+        processor.tag_nodes(yaml_path, tag, pathsep=pathseparator)
 
         if tag and not tag[0] == "!":
             tag = "!{}".format(tag)

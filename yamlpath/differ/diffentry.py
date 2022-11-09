@@ -9,7 +9,7 @@ from typing import Any
 from ruamel.yaml.comments import CommentedBase, TaggedScalar
 
 from yamlpath.common import Parsers
-from yamlpath.enums import PathSeperators
+from yamlpath.enums import PathSeparators
 from yamlpath import YAMLPath
 from .enums.diffactions import DiffActions
 
@@ -122,16 +122,16 @@ class DiffEntry:
         return self._index
 
     @property
-    def pathsep(self) -> PathSeperators:
-        """Seperator used to delimit reported YAML Paths (accessor)."""
-        return self._path.seperator
+    def pathsep(self) -> PathSeparators:
+        """Separator used to delimit reported YAML Paths (accessor)."""
+        return self._path.separator
 
     @pathsep.setter
-    def pathsep(self, value: PathSeperators) -> None:
-        """Seperator used to delimit reported YAML Paths (mutator)."""
+    def pathsep(self, value: PathSeparators) -> None:
+        """Separator used to delimit reported YAML Paths (mutator)."""
         # No unnecessary changes
         if value is not self.pathsep:
-            self._path.seperator = value
+            self._path.separator = value
 
     @property
     def verbose(self) -> bool:

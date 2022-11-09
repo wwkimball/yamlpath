@@ -12,7 +12,7 @@ from yamlpath.enums import (
     PathSegmentTypes,
     PathSearchKeywords,
     PathSearchMethods,
-    PathSeperators,
+    PathSeparators,
     CollectorOperators,
 )
 from yamlpath.path import SearchKeywordTerms, SearchTerms, CollectorTerms
@@ -24,7 +24,7 @@ class YAMLPath:
 
     This will keep track of:
       * the original, unparsed, and unmodified YAML Path;
-      * its segment seperator (inferred or manually specified);
+      * its segment separator (inferred or manually specified);
       * the unescaped, parsed representation of the YAML Path; and
       * the escaped, parsed representation of the YAML Path.
 
@@ -33,21 +33,21 @@ class YAMLPath:
     """
 
     def __init__(self, yaml_path: Union["YAMLPath", str, None] = "",
-                 pathsep: PathSeperators = PathSeperators.AUTO) -> None:
+                 pathsep: PathSeparators = PathSeparators.AUTO) -> None:
         """
         Instantiate this class into an object.
 
         Parameters:
         1. yaml_path (Union["YAMLPath", str, None]) The YAML Path to parse or
            copy
-        2. pathsep (PathSeperators) Forced YAML Path segment separator; set
+        2. pathsep (PathSeparators) Forced YAML Path segment separator; set
            only when automatic inference fails
 
         Returns:  N/A
 
         Raises:  N/A
         """
-        self._seperator: PathSeperators = pathsep
+        self._separator: PathSeparators = pathsep
         self._original: str = ""
         self._unescaped: deque = deque()
         self._escaped: deque = deque()
@@ -64,13 +64,13 @@ class YAMLPath:
             return self._stringified
 
         self._stringified = YAMLPath._stringify_yamlpath_segments(
-            self.unescaped, self.seperator)
+            self.unescaped, self.separator)
         return self._stringified
 
     def __repr__(self) -> str:
         """Generate an eval()-safe representation of this object."""
         return ("{}('{}', '{}')".format(self.__class__.__name__,
-                                        self.original, self.seperator))
+                                        self.original, self.separator))
 
     def __len__(self) -> int:
         """Indicate how many segments comprise this YAML Path."""
@@ -80,7 +80,7 @@ class YAMLPath:
         """
         Indicate equivalence of two YAMLPaths.
 
-        The path seperator is ignored for this comparison.  This is deliberate
+        The path separator is ignored for this comparison.  This is deliberate
         and allows "some.path[1]" == "/some/path[1]" because both forms of the
         same path yield exactly the same data.
 
@@ -93,11 +93,11 @@ class YAMLPath:
             return False
 
         equiv_this = YAMLPath(self)
-        equiv_this.seperator = PathSeperators.FSLASH
+        equiv_this.separator = PathSeparators.FSLASH
         cmp_this = str(equiv_this)
 
         equiv_that = YAMLPath(other)
-        equiv_that.seperator = PathSeperators.FSLASH
+        equiv_that.separator = PathSeparators.FSLASH
         cmp_that = str(equiv_that)
 
         return cmp_this == cmp_that
@@ -117,19 +117,19 @@ class YAMLPath:
 
         Parameters:
         1. segment (str) The new -- pre-escaped -- segment to append to this
-           YAML Path.  Do NOT include any seperator with this value; it will be
+           YAML Path.  Do NOT include any separator with this value; it will be
            added for you.
 
         Returns:  (YAMLPath) The adjusted YAMLPath
         """
-        seperator = (
-            PathSeperators.FSLASH
-            if self.seperator is PathSeperators.AUTO
-            else self.seperator)
+        separator = (
+            PathSeparators.FSLASH
+            if self.separator is PathSeparators.AUTO
+            else self.separator)
         if len(self._original) < 1:
             self.original = segment
         else:
-            self.original += "{}{}".format(seperator, segment)
+            self.original += "{}{}".format(separator, segment)
         return self
 
     def pop(self) -> PathSegment:
@@ -150,8 +150,8 @@ class YAMLPath:
         popped_segment: PathSegment = segments.pop()
         popped_queue.append(popped_segment)
         removable_segment = YAMLPath._stringify_yamlpath_segments(
-            popped_queue, self.seperator)
-        prefixed_segment = "{}{}".format(self.seperator, removable_segment)
+            popped_queue, self.separator)
+        prefixed_segment = "{}{}".format(self.separator, removable_segment)
         path_now = self.original
 
         if path_now.endswith(prefixed_segment):
@@ -159,7 +159,7 @@ class YAMLPath:
         elif path_now.endswith(removable_segment):
             self.original = path_now[0:len(path_now) - len(removable_segment)]
         elif (
-            self.seperator == PathSeperators.FSLASH
+            self.separator == PathSeparators.FSLASH
             and path_now.endswith(removable_segment[1:])
         ):
             self.original = path_now[
@@ -204,49 +204,57 @@ class YAMLPath:
             str_val = ""
 
         self._original = str_val
-        self._seperator = PathSeperators.AUTO
+        self._separator = PathSeparators.AUTO
         self._unescaped = deque()
         self._escaped = deque()
         self._stringified = ""
 
     @property
-    def seperator(self) -> PathSeperators:
+    def separator(self) -> PathSeparators:
         """
-        Get the seperator used to demarcate YAML Path segments.
+        Get the separator used to demarcate YAML Path segments.
 
         Parameters:  N/A
 
-        Returns:  (PathSeperators) The segment demarcation symbol
+        Returns:  (PathSeparators) The segment demarcation symbol
 
         Raises:  N/A
         """
-        if self._seperator is PathSeperators.AUTO:
-            self._seperator = PathSeperators.infer_seperator(self._original)
+        if self._separator is PathSeparators.AUTO:
+            self._separator = PathSeparators.infer_separator(self._original)
 
-        return self._seperator
+        return self._separator
 
-    @seperator.setter
-    def seperator(self, value: PathSeperators) -> None:
+    @property
+    def seperator(self) -> PathSeparators:  # compat
+        return self.separator
+
+    @separator.setter
+    def separator(self, value: PathSeparators) -> None:
         """
-        Set the seperator used to demarcate YAML Path segments.
+        Set the separator used to demarcate YAML Path segments.
 
         This only affects __str__ and only when the new value differs from the
-        seperator already inferred from the original YAML Path.
+        separator already inferred from the original YAML Path.
 
         Parameters:
-        1. value (PathSeperators) The segment demarcation symbol
+        1. value (PathSeparators) The segment demarcation symbol
 
         Returns:  N/A
 
         Raises:  N/A
         """
-        old_value: PathSeperators = self._seperator
+        old_value: PathSeparators = self._separator
 
         # This changes only the stringified representation
         if not value == old_value:
             self._stringified = YAMLPath._stringify_yamlpath_segments(
                 self.unescaped, value)
-            self._seperator = value
+            self._separator = value
+
+    @seperator.setter
+    def seperator(self, value: PathSeparators) -> None:  # compat
+        self.separator = value
 
     @property
     def escaped(self) -> Deque[PathSegment]:
@@ -319,7 +327,7 @@ class YAMLPath:
         search_keyword: Optional[PathSearchKeywords] = None
         seeking_regex_delim: bool = False
         capturing_regex: bool = False
-        pathsep: str = str(self.seperator)
+        pathsep: str = str(self.separator)
         collector_level: int = 0
         collector_operator: CollectorOperators = CollectorOperators.NONE
         seeking_collector_operator: bool = False
@@ -331,7 +339,7 @@ class YAMLPath:
 
         # Infer the first possible position for a top-level Anchor mark
         first_anchor_pos = 0
-        if self.seperator is PathSeperators.FSLASH and len(yaml_path) > 1:
+        if self.separator is PathSeparators.FSLASH and len(yaml_path) > 1:
             first_anchor_pos = 1
         seeking_anchor_mark = yaml_path[first_anchor_pos] == "&"
 
@@ -851,15 +859,15 @@ class YAMLPath:
 
     @staticmethod
     def _stringify_yamlpath_segments(
-        segments: Deque[PathSegment], seperator: PathSeperators
+        segments: Deque[PathSegment], separator: PathSeparators
     ) -> str:
         """Stringify segments of a YAMLPath."""
-        pathsep: str = str(seperator)
+        pathsep: str = str(separator)
         add_sep: bool = False
         ppath: str = ""
 
-        # FSLASH seperator requires a path starting with a /
-        if seperator is PathSeperators.FSLASH:
+        # FSLASH separator requires a path starting with a /
+        if separator is PathSeparators.FSLASH:
             ppath = pathsep
 
         for (segment_type, segment_attrs) in segments:
@@ -915,11 +923,11 @@ class YAMLPath:
         if prefix is None:
             return path
 
-        prefix.seperator = PathSeperators.FSLASH
+        prefix.separator = PathSeparators.FSLASH
         if str(prefix) == "/":
             return path
 
-        path.seperator = PathSeperators.FSLASH
+        path.separator = PathSeparators.FSLASH
         prefix_str = str(prefix)
         path_str = str(path)
         if path_str.startswith(prefix_str):
@@ -953,7 +961,7 @@ class YAMLPath:
         return escaped
 
     @staticmethod
-    def escape_path_section(section: str, pathsep: PathSeperators) -> str:
+    def escape_path_section(section: str, pathsep: PathSeparators) -> str:
         """
         Escape all special symbols present within a YAML Path segment.
 
@@ -963,7 +971,7 @@ class YAMLPath:
 
         Parameters:
         1. section (str) The portion of a YAML Path segment to escape
-        2. pathsep (PathSeperators) The YAML Path segment seperator symbol to
+        2. pathsep (PathSeparators) The YAML Path segment separator symbol to
            also escape, when present
 
         Returns:  (str) `section` with all special symbols escaped
