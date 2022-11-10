@@ -1,7 +1,7 @@
 """
 Implements the PathSearchKeywords enumeration.
 
-Copyright 2021 William W. Kimball, Jr. MBA MSIS
+Copyright 2021, 2022 William W. Kimball, Jr. MBA MSIS
 """
 from enum import Enum, auto
 from typing import List
@@ -35,6 +35,9 @@ class PathSearchKeywords(Enum):
 
     `PARENT`
         Access the parent(s) of the present node.
+
+    `UNIQUE`
+        Remove duplicate values from a collection.
     """
 
     HAS_CHILD = auto()
@@ -42,6 +45,7 @@ class PathSearchKeywords(Enum):
     MAX = auto()
     MIN = auto()
     PARENT = auto()
+    UNIQUE = auto()
 
     def __str__(self) -> str:
         """Get a String representation of an employed value of this enum."""
@@ -56,6 +60,8 @@ class PathSearchKeywords(Enum):
             keyword = 'min'
         elif self is PathSearchKeywords.PARENT:
             keyword = 'parent'
+        elif self is PathSearchKeywords.UNIQUE:
+            keyword = 'unique'
 
         return keyword
 

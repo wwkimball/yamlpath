@@ -4,9 +4,9 @@ Implement KeywordSearches.
 This is a static library of generally-useful code for searching data based on
 pre-defined keywords (in the programming language sense).
 
-Copyright 2020 William W. Kimball, Jr. MBA MSIS
+Copyright 2020, 2022 William W. Kimball, Jr. MBA MSIS
 """
-from typing import Any, Dict, Generator, List
+from typing import Any, Dict, Generator, List, Optional
 
 from ruamel.yaml.comments import CommentedMap
 
@@ -58,6 +58,9 @@ class KeywordSearches:
                 haystack, invert, parameters, yaml_path, **kwargs)
         elif keyword is PathSearchKeywords.PARENT:
             nc_matches = KeywordSearches.parent(
+                haystack, invert, parameters, yaml_path, **kwargs)
+        elif keyword is PathSearchKeywords.UNIQUE:
+            nc_matches = KeywordSearches.unique(
                 haystack, invert, parameters, yaml_path, **kwargs)
         else:
             raise YAMLPathException(
@@ -874,3 +877,140 @@ class KeywordSearches:
             yield NodeCoords(
                 data, parent, parentref, translated_path, ancestry,
                 relay_segment)
+
+
+    @staticmethod
+    # pylint: disable=locally-disabled,too-many-locals,too-many-branches,too-many-statements
+    def unique(
+        data: Any, invert: bool, parameters: List[str], yaml_path: YAMLPath,
+        **kwargs: Any
+    ) -> Generator[NodeCoords, None, None]:
+        """
+        Find unique values.
+
+        Parameters:
+        1. data (Any) The data to evaluate
+        2. invert (bool) Invert the evaluation
+        3. parameters (List[str]) Parsed parameters
+        4. yaml_path (YAMLPath) YAML Path begetting this operation
+
+        Keyword Arguments:
+        * parent (ruamel.yaml node) The parent node from which this query
+          originates
+        * parentref (Any) The Index or Key of data within parent
+        * relay_segment (PathSegment) YAML Path segment presently under
+          evaluation
+        * translated_path (YAMLPath) YAML Path indicating precisely which node
+          is being evaluated
+        * ancestry (List[AncestryEntry]) Stack of ancestors preceding the
+          present node under evaluation
+
+        Returns:  (Generator[NodeCoords, None, None]) each result as it is
+            generated
+        """
+        parent: Any = kwargs.pop("parent", None)
+        parentref: Any = kwargs.pop("parentref", None)
+        translated_path: YAMLPath = kwargs.pop("translated_path", YAMLPath(""))
+        ancestry: List[AncestryEntry] = kwargs.pop("ancestry", [])
+        relay_segment: PathSegment = kwargs.pop("relay_segment", None)
+
+        # There may be 0 or 1 parameters
+        max_params: int = 1
+        param_count: int = len(parameters)
+        if param_count > max_params:
+            raise YAMLPathException(
+                "Invalid parameter count to"
+                f" {PathSearchKeywords.UNIQUE}([NAME]); up to {max_params}"
+                f" permitted, got {param_count} in YAML Path", str(yaml_path))
+
+        scan_node: Optional[str] = parameters[0] if param_count > 0 else None
+        unwrapped_data: Any = NodeCoords.unwrap_node_coords(data)
+        seen_values: Dict[Any, List[NodeCoords]] = {}
+        if Nodes.node_is_aoh(
+            unwrapped_data, accept_nulls=True
+        ):
+            # A named child node is mandatory
+            if scan_node is None:
+                raise YAMLPathException(
+                    f"The {PathSearchKeywords.UNIQUE}([NAME]) Search Keyword"
+                    " requires a key name to scan when evaluating an"
+                    " Array-of-Hashes (sequence/list of maps/dicts) in"
+                    " YAML Path", str(yaml_path))
+
+            for wrapped_ele in data:
+                ele = NodeCoords.unwrap_node_coords(wrapped_ele)
+                if ele is not None and scan_node in ele:
+                    eval_val = ele[scan_node]
+                    if (eval_val in seen_values):
+                        seen_values[eval_val].append(wrapped_ele)
+                    else:
+                        seen_values[eval_val] = [wrapped_ele]
+
+        elif isinstance(data, dict):
+            # A named child node is mandatory
+            if scan_node is None:
+                raise YAMLPathException(
+                    f"The {PathSearchKeywords.UNIQUE}([NAME]) Search Keyword"
+                    " requires a key name to scan when evaluating Hash"
+                    " (map/dict) children in YAML Path", str(yaml_path))
+
+            for key, val in data.items():
+                next_path = (
+                    translated_path + YAMLPath.escape_path_section(
+                        key, translated_path.seperator))
+                next_ancestry = ancestry + [(data, key)]
+                if isinstance(val, dict):
+                    if val is not None and scan_node in val:
+                        wrapped_ele = NodeCoords(
+                            val, data, key, next_path, next_ancestry,
+                            relay_segment)
+                        eval_val = val[scan_node]
+                        if (eval_val in seen_values):
+                            seen_values[eval_val].append(wrapped_ele)
+                        else:
+                            seen_values[eval_val] = [wrapped_ele]
+
+                elif scan_node in data:
+                    # The user probably meant to operate against the parent
+                    raise YAMLPathException(
+                        f"The {PathSearchKeywords.UNIQUE}([NAME]) Search"
+                        " Keyword operates against collections of data which"
+                        " share a common attribute yet there is only a single"
+                        " node to consider.  Did you mean to evaluate the"
+                        " parent of the selected node?  Please review your"
+                        " YAML Path", str(yaml_path))
+
+        elif isinstance(data, list):
+            # A named child node is useless
+            if scan_node is not None:
+                raise YAMLPathException(
+                    f"The {PathSearchKeywords.UNIQUE}([NAME]) Search Keyword"
+                    " cannot utilize a key name when comparing Array"
+                    " (sequence/list) elements to one another in YAML Path",
+                    str(yaml_path))
+
+            for idx, ele in enumerate(data):
+                next_path = translated_path + f"[{idx}]"
+                next_ancestry = ancestry + [(data, idx)]
+                wrapped_ele = NodeCoords(
+                    ele, data, idx, next_path, next_ancestry,
+                    relay_segment)
+                if (ele in seen_values):
+                    seen_values[ele].append(wrapped_ele)
+                else:
+                    seen_values[ele] = [wrapped_ele]
+
+        else:
+            # Non-complex data is always unique
+            seen_values[data] = [NodeCoords(
+                data, parent, parentref, translated_path, ancestry,
+                relay_segment)]
+
+        # Yield the non/unique matches
+        if invert:
+            yield_nodes = [v for v in seen_values.values() if 1 < len(v)]
+        else:
+            yield_nodes = [v for v in seen_values.values() if 1 == len(v)]
+
+        for node_coord in [i for v in yield_nodes for i in v]:
+            yield node_coord
