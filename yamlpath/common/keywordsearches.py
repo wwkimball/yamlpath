@@ -992,13 +992,16 @@ class KeywordSearches:
             for idx, ele in enumerate(data):
                 next_path = translated_path + f"[{idx}]"
                 next_ancestry = ancestry + [(data, idx)]
-                wrapped_ele = NodeCoords(
-                    ele, data, idx, next_path, next_ancestry,
-                    relay_segment)
-                if (ele in seen_values):
-                    seen_values[ele].append(wrapped_ele)
+                eval_val = (NodeCoords.unwrap_node_coords(ele)
+                    if isinstance(ele, NodeCoords) else ele)
+                wrapped_ele = (ele
+                    if isinstance(ele, NodeCoords) else NodeCoords(
+                        ele, data, idx, next_path, next_ancestry,
+                        relay_segment))
+                if (eval_val in seen_values):
+                    seen_values[eval_val].append(wrapped_ele)
                 else:
-                    seen_values[ele] = [wrapped_ele]
+                    seen_values[eval_val] = [wrapped_ele]
 
         else:
             # Non-complex data is always unique
