@@ -144,7 +144,7 @@ class Anchors:
     @staticmethod
     def generate_unique_anchor_name(
         document: Any, node_coord: NodeCoords,
-        known_anchors: Dict[str, Any] = None
+        known_anchors: Optional[Dict[str, Any]] = None
     ) -> str:
         """
         Generate a unique Anchor name to a given node.
