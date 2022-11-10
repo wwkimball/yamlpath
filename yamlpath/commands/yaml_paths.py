@@ -784,8 +784,9 @@ def print_results(
         print(resline)
 
 def process_yaml_file(
-    args, yaml, log, yaml_file, processor, search_values, search_keys,
-    include_key_aliases, include_value_aliases, file_tally = 0
+    args: Any, yaml: Any, log: ConsolePrinter, yaml_file: str,
+    processor: EYAMLProcessor, search_values: bool, search_keys: bool,
+    include_key_aliases: bool, include_value_aliases: bool, file_tally: int = 0
 ):
     """Process a (potentially multi-doc) YAML file."""
     # Try to open the file
@@ -807,7 +808,7 @@ def process_yaml_file(
         processor.data = yaml_data
         all_anchors: Dict[str, Any] = {}
         Anchors.scan_for_anchors(yaml_data, all_anchors)
-        yaml_paths = []
+        yaml_paths: List[Tuple[str, YAMLPath]] = []
         for expression in args.search:
             exterm = get_search_term(log, expression)
             log.debug(("yaml_paths::process_yaml_file:"

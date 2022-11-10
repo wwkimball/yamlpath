@@ -6,7 +6,7 @@ Copyright 2020 William W. Kimball, Jr. MBA MSIS
 import re
 from datetime import datetime, date, timedelta, timezone
 from ast import literal_eval
-from typing import Any
+from typing import Any, Optional
 
 from dateutil import parser
 
@@ -253,7 +253,9 @@ class Nodes:
         return new_node
 
     @staticmethod
-    def make_date_node(value: date, anchor: str = None) -> AnchoredDate:
+    def make_date_node(
+        value: date, anchor: Optional[str] = None
+    ) -> AnchoredDate:
         r"""
         Create a new AnchoredDate data node from a bare date.
 
@@ -283,7 +285,7 @@ class Nodes:
 
     @staticmethod
     def make_timestamp_node(
-        value: datetime, t_separator: str, anchor: str = None
+        value: datetime, t_separator: str, anchor: Optional[str] = None
     ) -> AnchoredTimeStamp:
         r"""
         Create a new AnchoredTimeStamp data node from a bare datetime.
@@ -332,7 +334,7 @@ class Nodes:
         return new_node
 
     @staticmethod
-    def make_float_node(value: float, anchor: str = None):
+    def make_float_node(value: float, anchor: Optional[str] = None):
         """
         Create a new ScalarFloat data node from a bare float.
 
@@ -469,7 +471,7 @@ class Nodes:
 
     @staticmethod
     def append_list_element(
-        data: Any, value: Any = None, anchor: str = None
+        data: Any, value: Any = None, anchor: Optional[str] = None
     ) -> Any:
         """
         Append a new element to an ruamel.yaml List.
