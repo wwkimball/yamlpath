@@ -13,6 +13,10 @@ class PathSearchKeywords(Enum):
 
     These include:
 
+    `DISTINCT`
+        Match exactly one of every value within collections, discarding
+        duplicates.
+
     `HAS_CHILD`
         Matches when the node has a direct child with a given name.
 
@@ -37,9 +41,10 @@ class PathSearchKeywords(Enum):
         Access the parent(s) of the present node.
 
     `UNIQUE`
-        Remove duplicate values from a collection.
+        Match only values which have no duplicates within collections.
     """
 
+    DISTINCT = auto()
     HAS_CHILD = auto()
     NAME = auto()
     MAX = auto()
@@ -50,7 +55,9 @@ class PathSearchKeywords(Enum):
     def __str__(self) -> str:
         """Get a String representation of an employed value of this enum."""
         keyword = ''
-        if self is PathSearchKeywords.HAS_CHILD:
+        if self is PathSearchKeywords.DISTINCT:
+            keyword = 'distinct'
+        elif self is PathSearchKeywords.HAS_CHILD:
             keyword = 'has_child'
         elif self is PathSearchKeywords.NAME:
             keyword = 'name'
