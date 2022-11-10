@@ -2,7 +2,7 @@
 """
 YAML Path processor based on ruamel.yaml.
 
-Copyright 2018, 2019, 2020, 2021 William W. Kimball, Jr. MBA MSIS
+Copyright 2018, 2019, 2020, 2021, 2022 William W. Kimball, Jr. MBA MSIS
 """
 from collections import OrderedDict
 from typing import Any, Dict, Generator, List, Union
@@ -1608,24 +1608,15 @@ class Processor:
         **kwargs
     ) -> List[NodeCoords]:
         """
-        Helper for _get_nodes_by_collector.
+        Calculate the intersection between two collections.
 
-        Defined behaviors for intersection:
-        * list&list:  yield with duplicates
-        * list&set:  yield no duplicates
-        * set&set:  yield no duplicates
-        * hash&hash:  yield only identical key-value pairs (both must match)
-        * list&hash:  yield with duplicates hash values common to list
-        * list&hash[name()]:  yield with duplicates hash keys common to list
-        * set&hash:  yield without duplicates hash values common to set
-        * set&hash[name()]:  yield without duplicates hash keys common to set
-        * hash[name()]&hash[name()]:  yield only key names common to both
+        Helper for _get_nodes_by_collector.
         """
         def deeply_unwrap_nodes(
             del_nodes: List[Any], node_coord: NodeCoords
         ) -> None:
             unwrapped_node = NodeCoords.unwrap_node_coords(node_coord)
-            if isinstance(unwrapped_node, (list, CommentedSet, set)):
+            if isinstance(unwrapped_node, (list, set)):
                 for ele in unwrapped_node:
                     del_nodes.append(ele)
             else:
@@ -1637,18 +1628,6 @@ class Processor:
         translated_path: YAMLPath = kwargs.pop("translated_path", YAMLPath(""))
         ancestry: List[AncestryEntry] = kwargs.pop("ancestry", [])
         relay_segment: PathSegment = kwargs.pop("relay_segment")
-        predecessor_segment: PathSegment = kwargs.pop("predecessor_segment")
-
-        self.logger.debug(
-            "My segment and my predecessor's segments are:"
-            , prefix="Processor::_collector_intersection:  "
-            , data={
-                'MY_SEGMENT': relay_segment
-                , 'PREDECESSOR': predecessor_segment
-            })
-
-
-
         rhs_unwrapped_data: List[Any] = []
         for node_coord in self._get_required_nodes(
             data, peek_path, 0, parent=parent, parentref=parentref,
