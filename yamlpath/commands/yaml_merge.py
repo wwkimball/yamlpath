@@ -12,7 +12,7 @@ import json
 from os import access, R_OK, remove
 from os.path import isfile, exists
 from shutil import copy2
-from typing import List, Tuple
+from typing import Any, List, Tuple
 
 from ruamel.yaml import YAML
 
@@ -455,13 +455,13 @@ def merge_docs(
 
     return return_state
 
-def main():
+def main() -> None:
     """Perform the work specified via CLI arguments and exit.
 
     Main code.
     """
-    args = processcli()
-    log = ConsolePrinter(args)
+    args: argparse.Namespace = processcli()
+    log: ConsolePrinter = ConsolePrinter(args)
     validateargs(args, log)
 
     # For the remainder of processing, overwrite overwrites output
@@ -469,12 +469,12 @@ def main():
         args.output = args.overwrite
 
     # Merge all input files
-    yaml_editor = Parsers.get_yaml_editor()
-    merge_config = MergerConfig(log, args)
-    exit_state = 0
-    consumed_stdin = False
+    yaml_editor: YAML = Parsers.get_yaml_editor()
+    merge_config: MergerConfig = MergerConfig(log, args)
+    exit_state: int = 0
+    consumed_stdin: bool = False
     mergers: List[Merger] = []
-    merge_count = 0
+    merge_count: int = 0
     for yaml_file in args.yaml_files:
         if yaml_file.strip() == '-':
             consumed_stdin = True
