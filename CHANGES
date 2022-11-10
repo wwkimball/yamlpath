@@ -1,16 +1,22 @@
 3.7.0
 Enhancements:
 * A new Search Keyword has been added, [unique([NAME])].  This operates against
-  collections to remove duplicate values within the collection.  The NAME
-  argument is required when operating against Hashes (maps/dicts) and
-  Arrays-of-Hashes (sequences/lists of maps/dicts) to identify which
-  field/property to evaluate for uniqueness.  This can be inverted to return
-  only results which are duplicated within the result.
-* Add a new Collector Math Operator:  & (intersection)
+  collections to return only values which have no duplicates within the
+  collection.  The NAME argument is required when operating against Hashes
+  (maps/dicts) and Arrays-of-Hashes (sequences/lists of maps/dicts) to identify
+  which field/property to evaluate for uniqueness.  This can be inverted to
+  return only results which are duplicated within the result.
+* A new Search Keyword has been added, [distinct([NAME])].  This operates
+  against collections to return exactly one of every value within the
+  collection, discarding duplicates.  The NAME argument is required when
+  operating against Hashes (maps/dicts) and Arrays-of-Hashes (sequences/lists
+  of maps/dicts) to identify which field/property to evaluate for uniqueness.
+  This cannot be inverted.
+* Added a new Collector Math Operator:  & (intersection)
   As in set mathematics, this yields only elements of two collections which are
   common to both collections.  Unlike set mathematics, collections allow
-  duplicate elements.  If you need to enforce uniqueness of the intersected
-  results, use the [unique([NAME])] Search Keyword against the result.
+  duplicate elements.  If you need to enforce distinctness of the intersected
+  results, use the [distinct([NAME])] Search Keyword against the result.
 
 3.6.9:
 Enhancements:
