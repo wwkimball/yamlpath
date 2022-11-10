@@ -1,3 +1,4 @@
+#pylint: disable=too-many-lines
 """
 Implement KeywordSearches.
 
@@ -949,7 +950,7 @@ class KeywordSearches:
                 ele = NodeCoords.unwrap_node_coords(wrapped_ele)
                 if ele is not None and scan_node in ele:
                     eval_val = ele[scan_node]
-                    if (eval_val in seen_values):
+                    if eval_val in seen_values:
                         seen_values[eval_val].append(wrapped_ele)
                     else:
                         seen_values[eval_val] = [wrapped_ele]
@@ -973,7 +974,7 @@ class KeywordSearches:
                             val, data, key, next_path, next_ancestry,
                             relay_segment)
                         eval_val = val[scan_node]
-                        if (eval_val in seen_values):
+                        if eval_val in seen_values:
                             seen_values[eval_val].append(wrapped_ele)
                         else:
                             seen_values[eval_val] = [wrapped_ele]
@@ -1006,7 +1007,7 @@ class KeywordSearches:
                     if isinstance(ele, NodeCoords) else NodeCoords(
                         ele, data, idx, next_path, next_ancestry,
                         relay_segment))
-                if (eval_val in seen_values):
+                if eval_val in seen_values:
                     seen_values[eval_val].append(wrapped_ele)
                 else:
                     seen_values[eval_val] = [wrapped_ele]
@@ -1084,7 +1085,7 @@ class KeywordSearches:
                 ele = NodeCoords.unwrap_node_coords(wrapped_ele)
                 if ele is not None and scan_node in ele:
                     eval_val = ele[scan_node]
-                    if (eval_val in seen_values):
+                    if eval_val in seen_values:
                         seen_values[eval_val].append(wrapped_ele)
                     else:
                         seen_values[eval_val] = [wrapped_ele]
@@ -1108,7 +1109,7 @@ class KeywordSearches:
                             val, data, key, next_path, next_ancestry,
                             relay_segment)
                         eval_val = val[scan_node]
-                        if (eval_val in seen_values):
+                        if eval_val in seen_values:
                             seen_values[eval_val].append(wrapped_ele)
                         else:
                             seen_values[eval_val] = [wrapped_ele]
@@ -1141,7 +1142,7 @@ class KeywordSearches:
                     if isinstance(ele, NodeCoords) else NodeCoords(
                         ele, data, idx, next_path, next_ancestry,
                         relay_segment))
-                if (eval_val in seen_values):
+                if eval_val in seen_values:
                     seen_values[eval_val].append(wrapped_ele)
                 else:
                     seen_values[eval_val] = [wrapped_ele]
