@@ -12,7 +12,7 @@ import json
 from os import access, R_OK, remove
 from os.path import isfile, exists
 from shutil import copy2
-from typing import Any, List, Tuple
+from typing import List, Tuple
 
 from ruamel.yaml import YAML
 
