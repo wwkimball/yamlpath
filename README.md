@@ -235,6 +235,8 @@ YAML Path understands these segment types:
   keywords are
   [deeply explored on the Wiki](https://github.com/wwkimball/yamlpath/wiki/Search-Keywords)
   and include:
+  * `[distinct(NAME)]`: Match exactly one of every value within collections,
+    discarding duplicates
   * `[has_child(NAME)]`: Match nodes having a named child key
   * `[max([NAME])]`: Match nodes having the maximum value
   * `[min([NAME])]`: Match nodes having the minimum value
@@ -242,6 +244,8 @@ YAML Path understands these segment types:
     children
   * `[parent([STEPS])]`, Step up 1-N levels in the document from the present
     node
+  * `[unique(NAME)]`: Match only values which have no duplicates within
+    collections
 * Collectors:  Placing any portion of the YAML Path within parenthesis defines a
   virtual list collector, like `(YAML Path)`; concatenation, exclusion, and
   intersection operators are supported -- `+`, `-`, and `&`, respectively --
