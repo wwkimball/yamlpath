@@ -15,6 +15,7 @@ from yamlpath.exceptions import YAMLPathException
 from yamlpath.enums import (
     PathSeperators,
     PathSegmentTypes,
+    PathSearchMethods,
     YAMLValueFormats,
 )
 from yamlpath.path import SearchTerms
@@ -1020,6 +1021,16 @@ exclude:
         ("(hash)-(hoh.two.*)", [[{"key1": "value1"}]]),
         ("(aoa)-(hoa.two)", [[["value1", "value2", "value3"], ["value3"]]]),
         ("(aoh)-(aoh[max(key1)])", [[{"key2": "value2", "key3": "value3"}, {"key3": "value3"}]]),
+        ("(hash.*)&(array[1])", [["value2"]]),
+        ("(hash.*)&(array)", [["value1", "value2", "value3"]]),
+        ("(array)&(hash.*)", [["value1", "value2", "value3"]]),
+        ("(list1)&(list2)", [[2, 3]]),
+        ("(list2)&(list3)", [[3]]),
+        ("(list1)&(list3)", [[3]]),
+        ("(list1)&(list2)&(list3)", [[3]]),
+        ("(listA)&(listB)", [["B"]]),
+        ("(listB)&(listC)", [["C", "C"]]),
+        ("(listA)&(listC)", [["A", "A"]]),
     ])
     def test_collector_math(self, quiet_logger, yamlpath, results):
         yamldata = """---
@@ -1031,7 +1042,7 @@ hash:
 array:
   - value1
   - value2
-  - vlaue3
+  - value3
 
 hoh:
   one:
@@ -1070,6 +1081,31 @@ hoa:
     - value3
   three:
     - value3
+
+# Intersections
+list1:
+  - 1
+  - 2
+  - 3
+list2:
+  - 2
+  - 3
+  - 4
+list3:
+  - 3
+  - 5
+
+listA:
+  - A
+  - A
+  - B
+listB:
+  - B
+  - C
+  - C
+listC:
+  - A
+  - C
 """
         yaml = YAML()
         processor = Processor(quiet_logger, yaml.load(yamldata))
@@ -1488,6 +1524,81 @@ aoa:
             assert unwrap_node_coords(node) == results[matchidx]
             matchidx += 1
         assert len(results) == matchidx
+
+    @pytest.mark.parametrize("yamlpath,results,yp_error", [
+        ("list[distinct()]", [1, 2, 3, 4], None),
+        ("list[unique()]", [1, 2, 4], None),
+        ("list[!unique()]", [3, 3], None),
+        ("(list[!unique()])[distinct()]", [3], None),
+
+        ("map[distinct(id)].id", [1, 2, 3, 4], None),
+        ("map[unique(id)].id", [1, 2, 4], None),
+        ("map[!unique(id)].id", [3, 3], None),
+        ("(map[!unique(id)].id)[distinct()]", [3], None),
+
+        ("aoh[distinct(id)].id", [1, 2, 3, 4], None),
+        ("aoh[unique(id)].id", [1, 2, 4], None),
+        ("aoh[!unique(id)].id", [3, 3], None),
+        ("(aoh[!unique(id)].id)[distinct()]", [3], None),
+
+        ("non_conformant[distinct()]", ["value"], None),
+        ("non_conformant[unique()]", ["value"], None),
+        ("non_conformant[!unique()]", [], "Required YAML Path does not match any nodes"),
+    ])
+    def test_unique_vs_distinct(self, quiet_logger, yamlpath, results, yp_error):
+        yamldata = """---
+# Array
+list:
+  - 1
+  - 2
+  - 3
+  - 3
+  - 4
+
+# Hash
+map:
+  entity1:
+    id: 1
+  entity2:
+    id: 2
+  entity3:
+    id: 3
+  entity4:
+    id: 3
+  entity5:
+    id: 4
+
+# Array of Hashes
+aoh:
+  - name: entity1
+    id: 1
+  - name: entity2
+    id: 2
+  - name: entity3
+    id: 3
+  - name: entity4
+    id: 3
+  - name: entity5
+    id: 4
+
+non_conformant: value
+"""
+        yaml = YAML()
+        processor = Processor(quiet_logger, yaml.load(yamldata))
+        matchidx = 0
+        try:
+            for node in processor.get_nodes(yamlpath, mustexist=True):
+                assert unwrap_node_coords(node) == results[matchidx]
+                matchidx += 1
+        except YAMLPathException as ex:
+            if yp_error is not None:
+                assert yp_error in str(ex)
+            else:
+                # Unexpected error
+                assert False
+
+        assert len(results) == matchidx
+
 
     @pytest.mark.parametrize("yamlpath,results", [
         (r"temperature[. =~ /\d{3}/]", [110, 100, 114]),

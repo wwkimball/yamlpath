@@ -10,12 +10,14 @@ class Test_enums_CollectorOperators():
 			"ADDITION",
 			"NONE",
 			"SUBTRACTION",
+			"INTERSECTION",
 		]
 
 	@pytest.mark.parametrize("input,output", [
 		(CollectorOperators.ADDITION, "+"),
 		(CollectorOperators.NONE, ""),
 		(CollectorOperators.SUBTRACTION, "-"),
+		(CollectorOperators.INTERSECTION, "&"),
 	])
 	def test_str(self, input, output):
 		assert output == str(input)
@@ -23,11 +25,14 @@ class Test_enums_CollectorOperators():
 	@pytest.mark.parametrize("input,output", [
 		("+", CollectorOperators.ADDITION),
 		("-", CollectorOperators.SUBTRACTION),
+		("&", CollectorOperators.INTERSECTION),
 		("ADDITION", CollectorOperators.ADDITION),
 		("NONE", CollectorOperators.NONE),
 		("SUBTRACTION", CollectorOperators.SUBTRACTION),
+		("INTERSECTION", CollectorOperators.INTERSECTION),
 		(CollectorOperators.ADDITION, CollectorOperators.ADDITION),
 		(CollectorOperators.SUBTRACTION, CollectorOperators.SUBTRACTION),
+		(CollectorOperators.INTERSECTION, CollectorOperators.INTERSECTION),
 		(CollectorOperators.NONE, CollectorOperators.NONE),
 	])
 	def test_from_operator(self, input, output):

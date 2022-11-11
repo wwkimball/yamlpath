@@ -2,7 +2,7 @@
 """
 YAML Path processor based on ruamel.yaml.
 
-Copyright 2018, 2019, 2020, 2021 William W. Kimball, Jr. MBA MSIS
+Copyright 2018, 2019, 2020, 2021, 2022 William W. Kimball, Jr. MBA MSIS
 """
 from collections import OrderedDict
 from typing import Any, Dict, Generator, List, Union
@@ -1506,7 +1506,7 @@ class Processor:
         return updated_coords
 
     def _collector_subtraction(
-        self, data: Any, peek_path: YAMLPath, collected_ncs: List[NodeCoords],
+        self, data: Any, peek_path: YAMLPath, lhs_ncs: List[NodeCoords],
         **kwargs
     ) -> List[NodeCoords]:
         """List nodes matching the given path of a Subtraction Collector.
@@ -1561,14 +1561,14 @@ class Processor:
             prefix="Processor::_collector_subtraction:  REMOVAL NODES->",
             data={
                 "REMOVING": rem_data,
-                "FROM": collected_ncs,
+                "FROM": lhs_ncs,
             })
 
         # If LHS in RHS, delete it
         rem_dels = []
         rem_idx = 0
         updated_coords: List[NodeCoords] = []
-        for lhs in collected_ncs:
+        for lhs in lhs_ncs:
             unwrapped_lhs = lhs.unwrapped_node
             deepest_lhs = lhs.deepest_node_coord
             append_node = True
@@ -1607,6 +1607,49 @@ class Processor:
         )
         return updated_coords
 
+    def _collector_intersection(
+        self, data: Any, peek_path: YAMLPath, lhs_ncs: List[NodeCoords],
+        **kwargs
+    ) -> List[NodeCoords]:
+        """
+        Calculate the intersection between two collections.
+
+        Helper for _get_nodes_by_collector.
+        """
+        def deeply_unwrap_nodes(
+            del_nodes: List[Any], node_coord: NodeCoords
+        ) -> None:
+            unwrapped_node = NodeCoords.unwrap_node_coords(node_coord)
+            if isinstance(unwrapped_node, (list, set)):
+                for ele in unwrapped_node:
+                    del_nodes.append(ele)
+            else:
+                del_nodes.append(unwrapped_node)
+
+
+        parent: Any = kwargs.pop("parent", None)
+        parentref: Any = kwargs.pop("parentref", None)
+        translated_path: YAMLPath = kwargs.pop("translated_path", YAMLPath(""))
+        ancestry: List[AncestryEntry] = kwargs.pop("ancestry", [])
+        relay_segment: PathSegment = kwargs.pop("relay_segment")
+        rhs_unwrapped_data: List[Any] = []
+        for node_coord in self._get_required_nodes(
+            data, peek_path, 0, parent=parent, parentref=parentref,
+            translated_path=translated_path, ancestry=ancestry,
+            relay_segment=relay_segment
+        ):
+            self.logger.debug(
+                "Extracting node(s) for intersection from collected result:"
+                , prefix="Processor::_collector_intersection:  "
+                , data=node_coord)
+            deeply_unwrap_nodes(rhs_unwrapped_data, node_coord)
+
+        updated_coords = [
+            nc for nc in lhs_ncs
+            if NodeCoords.unwrap_node_coords(nc) in rhs_unwrapped_data]
+
+        return updated_coords
+
     def _get_nodes_by_collector(
         self, data: Any, yaml_path: YAMLPath, segment_index: int,
         terms: CollectorTerms, **kwargs: Any
@@ -1638,7 +1681,7 @@ class Processor:
 
         Raises:  N/A
         """
-        if not terms.operation is CollectorOperators.NONE:
+        if terms.operation is not CollectorOperators.NONE:
             self.logger.debug((
                 "Processor::_get_nodes_by_collector:  Bailing out -- yielding"
                 " the input data -- because the operation is {}"
@@ -1693,8 +1736,8 @@ class Processor:
                         node_coord.path, node_coord.ancestry, pathseg))
             node_coords = flat_nodes
 
-        # As long as each next segment is an ADDITION or SUBTRACTION
-        # COLLECTOR, keep combining the results.
+        # As long as each next segment is an ADDITION, SUBTRACTION, or
+        # INTERSECTION COLLECTOR, keep combining the results.
         while next_segment_idx < len(segments):
             peekseg: PathSegment = segments[next_segment_idx]
             (peek_type, peek_attrs) = peekseg
@@ -1715,6 +1758,13 @@ class Processor:
                         parent=parent, parentref=parentref,
                         translated_path=translated_path, ancestry=ancestry,
                         relay_segment=peekseg)
+                elif peek_attrs.operation == CollectorOperators.INTERSECTION:
+                    node_coords = self._collector_intersection(
+                        data, peek_path, node_coords,
+                        parent=parent, parentref=parentref,
+                        translated_path=translated_path, ancestry=ancestry,
+                        relay_segment=peekseg,
+                        predecessor_segment=pathseg)
                 else:
                     raise YAMLPathException(
                         "Adjoining Collectors without an operator has no"

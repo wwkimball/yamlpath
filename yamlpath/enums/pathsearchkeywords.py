@@ -1,7 +1,7 @@
 """
 Implements the PathSearchKeywords enumeration.
 
-Copyright 2021 William W. Kimball, Jr. MBA MSIS
+Copyright 2021, 2022 William W. Kimball, Jr. MBA MSIS
 """
 from enum import Enum, auto
 from typing import List
@@ -12,6 +12,10 @@ class PathSearchKeywords(Enum):
     Supported keyword methods for searching YAML Path segments.
 
     These include:
+
+    `DISTINCT`
+        Match exactly one of every value within collections, discarding
+        duplicates.
 
     `HAS_CHILD`
         Matches when the node has a direct child with a given name.
@@ -35,18 +39,25 @@ class PathSearchKeywords(Enum):
 
     `PARENT`
         Access the parent(s) of the present node.
+
+    `UNIQUE`
+        Match only values which have no duplicates within collections.
     """
 
+    DISTINCT = auto()
     HAS_CHILD = auto()
     NAME = auto()
     MAX = auto()
     MIN = auto()
     PARENT = auto()
+    UNIQUE = auto()
 
     def __str__(self) -> str:
         """Get a String representation of an employed value of this enum."""
         keyword = ''
-        if self is PathSearchKeywords.HAS_CHILD:
+        if self is PathSearchKeywords.DISTINCT:
+            keyword = 'distinct'
+        elif self is PathSearchKeywords.HAS_CHILD:
             keyword = 'has_child'
         elif self is PathSearchKeywords.NAME:
             keyword = 'name'
@@ -56,6 +67,8 @@ class PathSearchKeywords(Enum):
             keyword = 'min'
         elif self is PathSearchKeywords.PARENT:
             keyword = 'parent'
+        elif self is PathSearchKeywords.UNIQUE:
+            keyword = 'unique'
 
         return keyword
 

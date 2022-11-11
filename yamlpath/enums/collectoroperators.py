@@ -1,7 +1,7 @@
 """
 Implements the CollectorOperators enumeration.
 
-Copyright 2019, 2020 William W. Kimball, Jr. MBA MSIS
+Copyright 2019, 2020, 2021 William W. Kimball, Jr. MBA MSIS
 """
 from enum import Enum, auto
 from typing import List
@@ -27,11 +27,15 @@ class CollectorOperators(Enum):
     `SUBTRACTION`
         The Collector's results are removed from its immediate predecessor
         Collector's results.  Only exact matches are removed.
+
+    `INTERSECTION`
+        Only those elements which are common to both Collectors are returned.
     """
 
     ADDITION = auto()
     NONE = auto()
     SUBTRACTION = auto()
+    INTERSECTION = auto()
 
     def __str__(self) -> str:
         """Get a String representation of an employed value of this enum."""
@@ -40,6 +44,8 @@ class CollectorOperators(Enum):
             operator = '+'
         elif self is CollectorOperators.SUBTRACTION:
             operator = '-'
+        elif self is CollectorOperators.INTERSECTION:
+            operator = '&'
         return operator
 
     @staticmethod
@@ -77,6 +83,8 @@ class CollectorOperators(Enum):
             check = "ADDITION"
         elif check == '-':
             check = "SUBTRACTION"
+        elif check == '&':
+            check = "INTERSECTION"
 
         if check in CollectorOperators.get_names():
             return CollectorOperators[check]
