@@ -1677,7 +1677,7 @@ class Processor:
 
         Raises:  N/A
         """
-        if not terms.operation is CollectorOperators.NONE:
+        if terms.operation is not CollectorOperators.NONE:
             self.logger.debug((
                 "Processor::_get_nodes_by_collector:  Bailing out -- yielding"
                 " the input data -- because the operation is {}"
