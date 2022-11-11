@@ -946,10 +946,17 @@ class KeywordSearches:
                     " Array-of-Hashes (sequence/list of maps/dicts) in"
                     " YAML Path", str(yaml_path))
 
-            for wrapped_ele in data:
-                ele = NodeCoords.unwrap_node_coords(wrapped_ele)
-                if ele is not None and scan_node in ele:
-                    eval_val = ele[scan_node]
+            for idx, raw_ele in enumerate(data):
+                next_path = translated_path + f"[{idx}]"
+                next_ancestry = ancestry + [(data, idx)]
+                wrapped_ele = (raw_ele
+                    if isinstance(raw_ele, NodeCoords) else NodeCoords(
+                        raw_ele, data, idx, next_path, next_ancestry,
+                        relay_segment))
+                eval_ele = (NodeCoords.unwrap_node_coords(raw_ele)
+                    if isinstance(raw_ele, NodeCoords) else raw_ele)
+                if eval_ele is not None and scan_node in eval_ele:
+                    eval_val = eval_ele[scan_node]
                     if eval_val in seen_values:
                         seen_values[eval_val].append(wrapped_ele)
                     else:
@@ -1081,10 +1088,17 @@ class KeywordSearches:
                     " Array-of-Hashes (sequence/list of maps/dicts) in"
                     " YAML Path", str(yaml_path))
 
-            for wrapped_ele in data:
-                ele = NodeCoords.unwrap_node_coords(wrapped_ele)
-                if ele is not None and scan_node in ele:
-                    eval_val = ele[scan_node]
+            for idx, raw_ele in enumerate(data):
+                next_path = translated_path + f"[{idx}]"
+                next_ancestry = ancestry + [(data, idx)]
+                wrapped_ele = (raw_ele
+                    if isinstance(raw_ele, NodeCoords) else NodeCoords(
+                        raw_ele, data, idx, next_path, next_ancestry,
+                        relay_segment))
+                eval_ele = (NodeCoords.unwrap_node_coords(raw_ele)
+                    if isinstance(raw_ele, NodeCoords) else raw_ele)
+                if eval_ele is not None and scan_node in eval_ele:
+                    eval_val = eval_ele[scan_node]
                     if eval_val in seen_values:
                         seen_values[eval_val].append(wrapped_ele)
                     else:

@@ -1525,6 +1525,81 @@ aoa:
             matchidx += 1
         assert len(results) == matchidx
 
+    @pytest.mark.parametrize("yamlpath,results,yp_error", [
+        ("list[distinct()]", [1, 2, 3, 4], None),
+        ("list[unique()]", [1, 2, 4], None),
+        ("list[!unique()]", [3, 3], None),
+        ("(list[!unique()])[distinct()]", [3], None),
+
+        ("map[distinct(id)].id", [1, 2, 3, 4], None),
+        ("map[unique(id)].id", [1, 2, 4], None),
+        ("map[!unique(id)].id", [3, 3], None),
+        ("(map[!unique(id)].id)[distinct()]", [3], None),
+
+        ("aoh[distinct(id)].id", [1, 2, 3, 4], None),
+        ("aoh[unique(id)].id", [1, 2, 4], None),
+        ("aoh[!unique(id)].id", [3, 3], None),
+        ("(aoh[!unique(id)].id)[distinct()]", [3], None),
+
+        ("non_conformant[distinct()]", ["value"], None),
+        ("non_conformant[unique()]", ["value"], None),
+        ("non_conformant[!unique()]", [], "Required YAML Path does not match any nodes"),
+    ])
+    def test_unique_vs_distinct(self, quiet_logger, yamlpath, results, yp_error):
+        yamldata = """---
+# Array
+list:
+  - 1
+  - 2
+  - 3
+  - 3
+  - 4
+
+# Hash
+map:
+  entity1:
+    id: 1
+  entity2:
+    id: 2
+  entity3:
+    id: 3
+  entity4:
+    id: 3
+  entity5:
+    id: 4
+
+# Array of Hashes
+aoh:
+  - name: entity1
+    id: 1
+  - name: entity2
+    id: 2
+  - name: entity3
+    id: 3
+  - name: entity4
+    id: 3
+  - name: entity5
+    id: 4
+
+non_conformant: value
+"""
+        yaml = YAML()
+        processor = Processor(quiet_logger, yaml.load(yamldata))
+        matchidx = 0
+        try:
+            for node in processor.get_nodes(yamlpath, mustexist=True):
+                assert unwrap_node_coords(node) == results[matchidx]
+                matchidx += 1
+        except YAMLPathException as ex:
+            if yp_error is not None:
+                assert yp_error in str(ex)
+            else:
+                # Unexpected error
+                assert False
+
+        assert len(results) == matchidx
+
+
     @pytest.mark.parametrize("yamlpath,results", [
         (r"temperature[. =~ /\d{3}/]", [110, 100, 114]),
     ])
