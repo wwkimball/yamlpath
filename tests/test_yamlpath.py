@@ -97,12 +97,25 @@ class Test_YAMLPath():
         else:
             assert not lhs != rhs
 
-    def test_separator_change(self):
+    @pytest.mark.parametrize("sep_property", ["separator", "seperator"])
+    def test_separator_change(self, sep_property):
+        """`sep_property` is parametrized to ensure backward compatibility."""
         dotted = "abc.def"
         slashed = "/abc/def"
         testpath = YAMLPath(dotted)
-        testpath.separator = PathSeparators.FSLASH
+        setattr(testpath, sep_property, PathSeparators.FSLASH)
         assert slashed == str(testpath) != dotted
+
+    @pytest.mark.parametrize("yamlpath, pathsep", [
+        ("abc.def", PathSeparators.DOT),
+        ("/abc/def", PathSeparators.FSLASH),
+    ])
+    def test_legacy_separator_access(self, yamlpath, pathsep):
+        """
+        This checks compatibility with older versions,
+        before the spelling was updated to "separator."
+        """
+        assert YAMLPath(yamlpath).seperator == pathsep
 
     def test_escaped(self):
         testpath = YAMLPath(r"abc.def\.ghi")

@@ -2,11 +2,15 @@ import pytest
 
 from yamlpath.enums import PathSeparators
 
+# Legacy spelling compatibility:
+from yamlpath.enums import PathSeperators
+
 
 class Test_enums_PathSeparators():
 	"""Tests for the PathSeparators enumeration."""
-	def test_get_names(self):
-		assert PathSeparators.get_names() == [
+	@pytest.mark.parametrize("pathsep_module", [PathSeparators, PathSeperators])
+	def test_get_names(self, pathsep_module):
+		assert pathsep_module.get_names() == [
 			"AUTO",
 			"DOT",
 			"FSLASH",
@@ -28,12 +32,14 @@ class Test_enums_PathSeparators():
 		(PathSeparators.DOT, PathSeparators.DOT),
 		(PathSeparators.FSLASH, PathSeparators.FSLASH),
 	])
-	def test_from_str(self, input, output):
-		assert output == PathSeparators.from_str(input)
+	@pytest.mark.parametrize("pathsep_module", [PathSeparators, PathSeperators])
+	def test_from_str(self, input, output, pathsep_module):
+		assert output == pathsep_module.from_str(input)
 
-	def test_from_str_nameerror(self):
+	@pytest.mark.parametrize("pathsep_module", [PathSeparators, PathSeperators])
+	def test_from_str_nameerror(self, pathsep_module):
 		with pytest.raises(NameError):
-			PathSeparators.from_str("NO SUCH NAME")
+			pathsep_module.from_str("NO SUCH NAME")
 
 	@pytest.mark.parametrize("input,output", [
 		("abc", PathSeparators.DOT),
@@ -41,5 +47,7 @@ class Test_enums_PathSeparators():
 		("/abc", PathSeparators.FSLASH),
 		("/abc/123", PathSeparators.FSLASH),
 	])
-	def test_infer_separator(self, input, output):
-		assert output == PathSeparators.infer_separator(input)
+	@pytest.mark.parametrize("pathsep_module", [PathSeparators, PathSeperators])
+	@pytest.mark.parametrize("func_name", ["infer_separator", "infer_seperator"])
+	def test_infer_separator(self, input, output, pathsep_module, func_name):
+		assert output == getattr(pathsep_module, func_name)(input)
