@@ -1,42 +1,42 @@
 import pytest
 
 from yamlpath.exceptions import YAMLPathException
-from yamlpath.enums import PathSegmentTypes, PathSeperators
+from yamlpath.enums import PathSegmentTypes, PathSeparators
 from yamlpath import YAMLPath
 
 class Test_YAMLPath():
     """Tests for the Path class."""
 
     @pytest.mark.parametrize("yamlpath,pathsep,output", [
-        (YAMLPath(""), PathSeperators.AUTO, ""),
-        (YAMLPath("abc"), PathSeperators.AUTO, "abc"),
-        ("abc", PathSeperators.AUTO, "abc"),
-        ("/abc", PathSeperators.AUTO, "/abc"),
-        ("abc.bcd", PathSeperators.AUTO, "abc.bcd"),
-        ("/abc[1]", PathSeperators.AUTO, "/abc[1]"),
-        ("&abc", PathSeperators.AUTO, "&abc"),
-        ("/abc[&def]", PathSeperators.AUTO, "/abc[&def]"),
-        ("abc[!def^ghi]", PathSeperators.AUTO, "abc[def!^ghi]"),
-        ("/(abc)[0]", PathSeperators.AUTO, "/(abc)[0]"),
-        ("abc[def =~ /ghi/]", PathSeperators.AUTO, "abc[def=~/ghi/]"),
-        ("/(abc)+(def)-(ghi)", PathSeperators.AUTO, "/(abc)+(def)-(ghi)"),
-        (r"abc.'def.g\"h\"i'", PathSeperators.AUTO, r"abc.def\.g\"h\"i"),
-        ("/abc[def>=1]", PathSeperators.AUTO, "/abc[def>=1]"),
-        ("abc[def<=10]", PathSeperators.AUTO, "abc[def<=10]"),
-        ("/abc[def==1]", PathSeperators.AUTO, "/abc[def=1]"),
-        ("abc[def$ghi]", PathSeperators.AUTO, "abc[def$ghi]"),
-        ("/abc[def%1]", PathSeperators.AUTO, "/abc[def%1]"),
-        ("abc[def%'ghi']", PathSeperators.AUTO, "abc[def%ghi]"),
-        ("abc*", PathSeperators.AUTO, "[.^abc]"),
-        ("*def", PathSeperators.AUTO, "[.$def]"),
-        ("a*f", PathSeperators.AUTO, "[.=~/^a.*f$/]"),
-        ("a*f*z", PathSeperators.AUTO, "[.=~/^a.*f.*z$/]"),
-        ("a*f*z*", PathSeperators.AUTO, "[.=~/^a.*f.*z.*$/]"),
-        ("*", PathSeperators.AUTO, "*"),
-        ("*.*", PathSeperators.AUTO, "*.*"),
-        ("**", PathSeperators.AUTO, "**"),
-        ("/**/def", PathSeperators.AUTO, "/**/def"),
-        ("abc.**.def", PathSeperators.AUTO, "abc.**.def"),
+        (YAMLPath(""), PathSeparators.AUTO, ""),
+        (YAMLPath("abc"), PathSeparators.AUTO, "abc"),
+        ("abc", PathSeparators.AUTO, "abc"),
+        ("/abc", PathSeparators.AUTO, "/abc"),
+        ("abc.bcd", PathSeparators.AUTO, "abc.bcd"),
+        ("/abc[1]", PathSeparators.AUTO, "/abc[1]"),
+        ("&abc", PathSeparators.AUTO, "&abc"),
+        ("/abc[&def]", PathSeparators.AUTO, "/abc[&def]"),
+        ("abc[!def^ghi]", PathSeparators.AUTO, "abc[def!^ghi]"),
+        ("/(abc)[0]", PathSeparators.AUTO, "/(abc)[0]"),
+        ("abc[def =~ /ghi/]", PathSeparators.AUTO, "abc[def=~/ghi/]"),
+        ("/(abc)+(def)-(ghi)", PathSeparators.AUTO, "/(abc)+(def)-(ghi)"),
+        (r"abc.'def.g\"h\"i'", PathSeparators.AUTO, r"abc.def\.g\"h\"i"),
+        ("/abc[def>=1]", PathSeparators.AUTO, "/abc[def>=1]"),
+        ("abc[def<=10]", PathSeparators.AUTO, "abc[def<=10]"),
+        ("/abc[def==1]", PathSeparators.AUTO, "/abc[def=1]"),
+        ("abc[def$ghi]", PathSeparators.AUTO, "abc[def$ghi]"),
+        ("/abc[def%1]", PathSeparators.AUTO, "/abc[def%1]"),
+        ("abc[def%'ghi']", PathSeparators.AUTO, "abc[def%ghi]"),
+        ("abc*", PathSeparators.AUTO, "[.^abc]"),
+        ("*def", PathSeparators.AUTO, "[.$def]"),
+        ("a*f", PathSeparators.AUTO, "[.=~/^a.*f$/]"),
+        ("a*f*z", PathSeparators.AUTO, "[.=~/^a.*f.*z$/]"),
+        ("a*f*z*", PathSeparators.AUTO, "[.=~/^a.*f.*z.*$/]"),
+        ("*", PathSeparators.AUTO, "*"),
+        ("*.*", PathSeparators.AUTO, "*.*"),
+        ("**", PathSeparators.AUTO, "**"),
+        ("/**/def", PathSeparators.AUTO, "/**/def"),
+        ("abc.**.def", PathSeparators.AUTO, "abc.**.def"),
     ])
     def test_str(self, yamlpath, pathsep, output):
         # Test twice to include cache hits
@@ -97,11 +97,11 @@ class Test_YAMLPath():
         else:
             assert not lhs != rhs
 
-    def test_seperator_change(self):
+    def test_separator_change(self):
         dotted = "abc.def"
         slashed = "/abc/def"
         testpath = YAMLPath(dotted)
-        testpath.seperator = PathSeperators.FSLASH
+        testpath.separator = PathSeparators.FSLASH
         assert slashed == str(testpath) != dotted
 
     def test_escaped(self):
@@ -119,7 +119,7 @@ class Test_YAMLPath():
         ]
 
     def test_append(self):
-        yp = YAMLPath("", PathSeperators.DOT)
+        yp = YAMLPath("", PathSeparators.DOT)
         yp.append("abc")
         yp.append("def")
         yp.append("ghi").append("jkl").append("mno")
