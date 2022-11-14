@@ -16,7 +16,8 @@ Enhancements:
   As in set mathematics, this yields only elements of two collections which are
   common to both collections.  Unlike set mathematics, collections allow
   duplicate elements.  If you need to enforce distinctness of the intersected
-  results, use the [distinct([NAME])] Search Keyword against the result.
+  results, use the [distinct([NAME])] Search Keyword against the collected
+  result, as in `((list1)&(list2))[distinct([NAME])]`.
 
 3.6.9:
 Enhancements:
