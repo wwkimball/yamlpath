@@ -5,7 +5,7 @@ Enhancements:
   collection.  The NAME argument is required when operating against Hashes
   (maps/dicts) and Arrays-of-Hashes (sequences/lists of maps/dicts) to identify
   which field/property to evaluate for uniqueness.  This can be inverted to
-  return only results which are duplicated within the result.
+  return only results which are duplicated within the collection.
 * A new Search Keyword has been added, [distinct([NAME])].  This operates
   against collections to return exactly one of every value within the
   collection, discarding duplicates.  The NAME argument is required when
