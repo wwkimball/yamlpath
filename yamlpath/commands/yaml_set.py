@@ -24,7 +24,7 @@ from yamlpath import __version__ as YAMLPATH_VERSION
 from yamlpath.common import Nodes, Parsers
 from yamlpath import YAMLPath
 from yamlpath.exceptions import YAMLPathException
-from yamlpath.enums import YAMLValueFormats, PathSeperators
+from yamlpath.enums import YAMLValueFormats, PathSeparators
 from yamlpath.eyaml.exceptions import EYAMLCommandException
 from yamlpath.eyaml.enums import EYAMLOutputFormats
 from yamlpath.eyaml import EYAMLProcessor
@@ -119,10 +119,10 @@ def processcli():
     parser.add_argument(
         "-t", "--pathsep",
         default="dot",
-        choices=PathSeperators,
-        metavar=PathSeperators.get_choices(),
-        type=PathSeperators.from_str,
-        help="indicate which YAML Path seperator to use when rendering\
+        choices=PathSeparators,
+        metavar=PathSeparators.get_choices(),
+        type=PathSeparators.from_str,
+        help="indicate which YAML Path separator to use when rendering\
               results; default=dot")
 
     parser.add_argument(

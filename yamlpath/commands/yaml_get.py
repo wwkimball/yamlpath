@@ -25,7 +25,7 @@ from yamlpath.common import Parsers, Nodes
 from yamlpath import YAMLPath
 from yamlpath.exceptions import YAMLPathException
 from yamlpath.eyaml.exceptions import EYAMLCommandException
-from yamlpath.enums import PathSeperators
+from yamlpath.enums import PathSeparators
 from yamlpath.wrappers import NodeCoords
 from yamlpath.eyaml import EYAMLProcessor
 
@@ -61,10 +61,10 @@ def processcli():
     parser.add_argument(
         "-t", "--pathsep",
         default="dot",
-        choices=PathSeperators,
-        metavar=PathSeperators.get_choices(),
-        type=PathSeperators.from_str,
-        help="indicate which YAML Path seperator to use when rendering\
+        choices=PathSeparators,
+        metavar=PathSeparators.get_choices(),
+        type=PathSeparators.from_str,
+        help="indicate which YAML Path separator to use when rendering\
               results; default=dot")
 
     parser.add_argument(
