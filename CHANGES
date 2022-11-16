@@ -1,5 +1,6 @@
 3.7.0
 Enhancements:
+* Support for Python 3.11 has been added.
 * A new Search Keyword has been added, [unique([NAME])].  This operates against
   collections to return only values which have no duplicates within the
   collection; i.e.:  [1, 2, 2, 3] has unique values, [1, 3].  The NAME argument
