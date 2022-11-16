@@ -14,7 +14,7 @@ from ruamel.yaml.comments import CommentedSeq, CommentedMap
 from yamlpath import YAMLPath
 from yamlpath.common import Anchors
 from yamlpath.eyaml.enums import EYAMLOutputFormats
-from yamlpath.enums import YAMLValueFormats, PathSeperators
+from yamlpath.enums import YAMLValueFormats, PathSeparators
 from yamlpath.eyaml.exceptions import EYAMLCommandException
 from yamlpath.wrappers import ConsolePrinter, NodeCoords
 from yamlpath import Processor
@@ -75,7 +75,7 @@ class EYAMLProcessor(Processor):
                 node_anchor = Anchors.get_node_anchor(ele)
                 if node_anchor is not None:
                     escaped_section = YAMLPath.escape_path_section(
-                        node_anchor, PathSeperators.DOT)
+                        node_anchor, PathSeparators.DOT)
                     tmp_path_segment = f"[&{escaped_section}]"
                 else:
                     tmp_path_segment = f"[{idx}]"
@@ -90,7 +90,7 @@ class EYAMLProcessor(Processor):
         elif isinstance(data, CommentedMap):
             for key, val in data.non_merged_items():
                 tmp_path = build_path + YAMLPath.escape_path_section(
-                    key, PathSeperators.DOT)
+                    key, PathSeparators.DOT)
                 if self.is_eyaml_value(val):
                     yield tmp_path
                 else:

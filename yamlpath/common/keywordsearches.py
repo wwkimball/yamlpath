@@ -487,7 +487,7 @@ class KeywordSearches:
             for key, val in data.items():
                 next_path = (
                     translated_path + YAMLPath.escape_path_section(
-                        key, translated_path.seperator))
+                        key, translated_path.separator))
                 next_ancestry = ancestry + [(data, key)]
                 if isinstance(val, dict):
                     if val is not None and scan_node in val:
@@ -695,7 +695,7 @@ class KeywordSearches:
                 next_ancestry = ancestry + [(data, key)]
                 next_path = (
                     translated_path + YAMLPath.escape_path_section(
-                        key, translated_path.seperator))
+                        key, translated_path.separator))
                 if isinstance(val, dict):
                     if val is not None and scan_node in val:
                         eval_val = val[scan_node]
@@ -973,7 +973,7 @@ class KeywordSearches:
             for key, val in data.items():
                 next_path = (
                     translated_path + YAMLPath.escape_path_section(
-                        key, translated_path.seperator))
+                        key, translated_path.separator))
                 next_ancestry = ancestry + [(data, key)]
                 if isinstance(val, dict):
                     if val is not None and scan_node in val:
@@ -1115,7 +1115,7 @@ class KeywordSearches:
             for key, val in data.items():
                 next_path = (
                     translated_path + YAMLPath.escape_path_section(
-                        key, translated_path.seperator))
+                        key, translated_path.separator))
                 next_ancestry = ancestry + [(data, key)]
                 if isinstance(val, dict):
                     if val is not None and scan_node in val:

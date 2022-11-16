@@ -1,22 +1,34 @@
 3.7.0
 Enhancements:
+* Support for Python 3.11 has been added.
 * A new Search Keyword has been added, [unique([NAME])].  This operates against
   collections to return only values which have no duplicates within the
-  collection.  The NAME argument is required when operating against Hashes
-  (maps/dicts) and Arrays-of-Hashes (sequences/lists of maps/dicts) to identify
-  which field/property to evaluate for uniqueness.  This can be inverted to
-  return only results which are duplicated within the result.
+  collection; i.e.:  [1, 2, 2, 3] has unique values, [1, 3].  The NAME argument
+  is required when operating against Hashes (maps/dicts) and Arrays-of-Hashes
+  (sequences/lists of maps/dicts) to identify which field/property to evaluate
+  for uniqueness.  This can be inverted to return only results which are
+  duplicated within the collection.
 * A new Search Keyword has been added, [distinct([NAME])].  This operates
   against collections to return exactly one of every value within the
-  collection, discarding duplicates.  The NAME argument is required when
-  operating against Hashes (maps/dicts) and Arrays-of-Hashes (sequences/lists
-  of maps/dicts) to identify which field/property to evaluate for uniqueness.
-  This cannot be inverted.
+  collection, discarding duplicates; i.e.:  [1, 2, 2, 3] has distinct values,
+  [1, 2, 3].  The NAME argument is required when operating against Hashes
+  (maps/dicts) and Arrays-of-Hashes (sequences/lists of maps/dicts) to identify
+  which field/property to evaluate for uniqueness. This cannot be inverted.
 * Added a new Collector Math Operator:  & (intersection)
   As in set mathematics, this yields only elements of two collections which are
   common to both collections.  Unlike set mathematics, collections allow
   duplicate elements.  If you need to enforce distinctness of the intersected
-  results, use the [distinct([NAME])] Search Keyword against the result.
+  results, use the [distinct([NAME])] Search Keyword against the collected
+  result, as in `((list1)&(list2))[distinct([NAME])]`.
+
+Bug Fixes:
+* A typographical error in yamlpath.enums has been corrected with backward-
+  compatible adapters in place to support both the correct and incorrect
+  spelling of PathSeparators (formerly PathSeperators).  If the PathSeperators
+  version appears in your own code, please update to the new spelling.  The
+  incorrectly spelled version of this enumeration is now deprecated and will be
+  removed in a future release.  Thanks go entirely to
+  https://github.com/AndydeCleyre for working so hard to submit this fix!
 
 3.6.9:
 Enhancements:
@@ -479,7 +491,7 @@ API Changes:
 * YAMLPath instances now support nonmutating addition of individual segments
   via the + operator.  Whereas the append() method mutates the YAMLPath being
   acted upon, + creates a new YAMLPath that is the original plus the new
-  segment.  In both cases, the orignal YAMLPath's seperator is retained during
+  segment.  In both cases, the orignal YAMLPath's separator is retained during
   both operations.  As with .append(), new segments added via + must also be
   properly escaped -- typically via path.escape_path_section -- before being
   added.
@@ -720,9 +732,9 @@ Enhancements:
   tool, so a comprehensive treatise will be added to the project Wiki to
   explore its capabilities.  Along with those of its component classes, its
   unit tests also provide many examples of the same.
-* YAMLPath instances now support arbitrary changes to seperator.
+* YAMLPath instances now support arbitrary changes to separator.
 * YAMLPath instances now support equality testing (against the stored path),
-  immune to differences in seperator.
+  immune to differences in separator.
 * The get_yaml_data function now supports "-" as a source file.  This is
   interpreted as a read from STDIN.
 * Due to the change to the get_yaml_data function, the yaml-get reference
@@ -878,7 +890,7 @@ Enhancements:
 * Added a new yaml-paths command-line tool.  In short, it enables searching
   YAML/Compatible files, returning YAML Paths for any matches.  As an Alpha-
   grade tool, it is being released at version 0.0.1.  Feedback welcome!
-* All command-line tools which accept --pathsep now accept symbolic seperators
+* All command-line tools which accept --pathsep now accept symbolic separators
   rather than only names; so, --pathsep=/ is idental to --pathsep=fslash, etc.
   Minor changes were also made to all command-line tools to consolidate some
   repeat code.  Each has a version bump to reflect this minor refactoring
@@ -980,7 +992,7 @@ Enhancements:
 * The separator used for identifying Hash sub-keys can now be customized.  If
   you prefer your paths to look like "/hash/sub/key" rather than "hash.sub.key",
   you can now have it your way.  For now, only . and / are allowed.  The
-  seperator can be either strictly specified or automatically inferred by
+  separator can be either strictly specified or automatically inferred by
   whether the first character of a given YAML Path is /.  Command-line tools
   like yaml-get and yaml-set have a new --pathsep argument for this; the default
   is "auto" and can be set to "fslash" (/) or "dot" (.).

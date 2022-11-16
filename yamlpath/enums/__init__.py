@@ -5,5 +5,8 @@ from .includealiases import IncludeAliases
 from .pathsearchkeywords import PathSearchKeywords
 from .pathsearchmethods import PathSearchMethods
 from .pathsegmenttypes import PathSegmentTypes
-from .pathseperators import PathSeperators
+from .pathseparators import PathSeparators
 from .yamlvalueformats import YAMLValueFormats
+
+# Legacy spelling compatibility:
+from .pathseperators import PathSeperators

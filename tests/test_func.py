@@ -362,6 +362,14 @@ class Test_func():
     # escape_path_section
     ###
     def test_escape_path_section(self):
+        from yamlpath.enums.pathseparators import PathSeparators
+        assert r"a\\b\.c\(\)\[\]\^\$\%\ \'\"" == escape_path_section("a\\b.c()[]^$% '\"", PathSeparators.DOT)
+
+    def test_escape_path_section_legacy_spelling(self):
+        """
+        This is provided for compatibility with older versions,
+        before the spelling was updated to "separator."
+        """
         from yamlpath.enums.pathseperators import PathSeperators
         assert r"a\\b\.c\(\)\[\]\^\$\%\ \'\"" == escape_path_section("a\\b.c()[]^$% '\"", PathSeperators.DOT)
 
