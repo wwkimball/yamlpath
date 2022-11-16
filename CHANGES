@@ -20,6 +20,15 @@ Enhancements:
   results, use the [distinct([NAME])] Search Keyword against the collected
   result, as in `((list1)&(list2))[distinct([NAME])]`.
 
+Bug Fixes:
+* A typographical error in yamlpath.enums has been corrected with backward-
+  compatible adapters in place to support both the correct and incorrect
+  spelling of PathSeparators (formerly PathSeperators).  If the PathSeperators
+  version appears in your own code, please update to the new spelling.  The
+  incorrectly spelled version of this enumeration is now deprecated and will be
+  removed in a future release.  Thanks go entirely to
+  https://github.com/AndydeCleyre for working so hard to submit this fix!
+
 3.6.9:
 Enhancements:
 * Partial support for updating bare Python dict and Python's native
