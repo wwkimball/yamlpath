@@ -29,6 +29,10 @@ Bug Fixes:
   incorrectly spelled version of this enumeration is now deprecated and will be
   removed in a future release.  Thanks go entirely to
   https://github.com/AndydeCleyre for working so hard to submit this fix!
+* Processor.get_nodes would emit a nonobvious error message when mustexist is
+  left at its default value (False) and yaml_path contained ** or * segments.
+  Now, these segment types are excluded from generating "missing" nodes; only
+  nodes which exist can be matched by * and **.
 
 3.6.9:
 Enhancements:
