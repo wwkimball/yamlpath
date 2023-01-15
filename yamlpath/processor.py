@@ -2412,10 +2412,14 @@ class Processor:
                 ):
                     yield node_coord
 
+            # Do not add arbitrary nodes that are based on searched or
+            # wildcards.  Such an outcome is unpredictable.
             if (
                     matched_nodes < 1
                     and segment_type is not PathSegmentTypes.SEARCH
                     and segment_type is not PathSegmentTypes.KEYWORD_SEARCH
+                    and segment_type is not PathSegmentTypes.MATCH_ALL
+                    and segment_type is not PathSegmentTypes.TRAVERSE
             ):
                 # Add the missing element
                 self.logger.debug(
