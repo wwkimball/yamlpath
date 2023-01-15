@@ -219,3 +219,121 @@ class Test_common_keywordsearches():
                 YAMLPath("/")
             ))
         assert -1 < str(ex.value).find("higher than the document root")
+
+
+    ###
+    # distinct
+    ###
+    def test_distinct_invalid_param_count(self):
+        with pytest.raises(YAMLPathException) as ex:
+            nodes = list(KeywordSearches.distinct(
+                {},
+                False,
+                ["1", "2"],
+                YAMLPath("/")
+            ))
+        assert -1 < str(ex.value).find("Invalid parameter count to ")
+
+    def test_distinct_invalid_inversion(self):
+        with pytest.raises(YAMLPathException) as ex:
+            nodes = list(KeywordSearches.distinct(
+                {},
+                True,
+                [],
+                YAMLPath("/")
+            ))
+        assert -1 < str(ex.value).find("Inversion is meaningless to ")
+
+    def test_distinct_missing_aoh_param(self):
+        with pytest.raises(YAMLPathException) as ex:
+            nodes = list(KeywordSearches.distinct(
+                [{'a': 1},{'a': 2}],
+                False,
+                [],
+                YAMLPath("/")
+            ))
+        assert -1 < str(ex.value).find("when evaluating an Array-of-Hashes")
+
+    def test_distinct_missing_hash_param(self):
+        with pytest.raises(YAMLPathException) as ex:
+            nodes = list(KeywordSearches.distinct(
+                {'a': {'b': 1}, 'c': {'d': 2}},
+                False,
+                [],
+                YAMLPath("/")
+            ))
+        assert -1 < str(ex.value).find("when evaluating Hash (map/dict) children")
+
+    def test_distinct_invalid_array_param(self):
+        with pytest.raises(YAMLPathException) as ex:
+            nodes = list(KeywordSearches.distinct(
+                [1, 2, 3],
+                False,
+                ['3'],
+                YAMLPath("/")
+            ))
+        assert -1 < str(ex.value).find("when comparing Array (sequence/list) elements to one another")
+
+    def test_distinct_incorrect_node(self):
+        with pytest.raises(YAMLPathException) as ex:
+            nodes = list(KeywordSearches.distinct(
+                {'b': 2},
+                False,
+                ['b'],
+                YAMLPath("/*[max(b)]")
+            ))
+        assert -1 < str(ex.value).find("operates against collections of data")
+
+
+    ###
+    # unique
+    ###
+    def test_unique_invalid_param_count(self):
+        with pytest.raises(YAMLPathException) as ex:
+            nodes = list(KeywordSearches.unique(
+                {},
+                False,
+                ["1", "2"],
+                YAMLPath("/")
+            ))
+        assert -1 < str(ex.value).find("Invalid parameter count to ")
+
+    def test_unique_missing_aoh_param(self):
+        with pytest.raises(YAMLPathException) as ex:
+            nodes = list(KeywordSearches.unique(
+                [{'a': 1},{'a': 2}],
+                False,
+                [],
+                YAMLPath("/")
+            ))
+        assert -1 < str(ex.value).find("when evaluating an Array-of-Hashes")
+
+    def test_unique_missing_hash_param(self):
+        with pytest.raises(YAMLPathException) as ex:
+            nodes = list(KeywordSearches.unique(
+                {'a': {'b': 1}, 'c': {'d': 2}},
+                False,
+                [],
+                YAMLPath("/")
+            ))
+        assert -1 < str(ex.value).find("when evaluating Hash (map/dict) children")
+
+    def test_unique_invalid_array_param(self):
+        with pytest.raises(YAMLPathException) as ex:
+            nodes = list(KeywordSearches.unique(
+                [1, 2, 3],
+                False,
+                ['3'],
+                YAMLPath("/")
+            ))
+        assert -1 < str(ex.value).find("when comparing Array (sequence/list) elements to one another")
+
+    def test_unique_incorrect_node(self):
+        with pytest.raises(YAMLPathException) as ex:
+            nodes = list(KeywordSearches.unique(
+                {'b': 2},
+                False,
+                ['b'],
+                YAMLPath("/*[max(b)]")
+            ))
+        assert -1 < str(ex.value).find("operates against collections of data")

@@ -22,7 +22,7 @@ from yamlpath.exceptions import YAMLPathException
 from yamlpath.enums import (
     AnchorMatches,
     IncludeAliases,
-    PathSeperators,
+    PathSeparators,
     PathSearchMethods
 )
 from yamlpath.path import SearchTerms
@@ -103,10 +103,10 @@ def processcli():
     parser.add_argument(
         "-t", "--pathsep",
         default="dot",
-        choices=PathSeperators,
-        metavar=PathSeperators.get_choices(),
-        type=PathSeperators.from_str,
-        help="indicate which YAML Path seperator to use when rendering\
+        choices=PathSeparators,
+        metavar=PathSeparators.get_choices(),
+        type=PathSeparators.from_str,
+        help="indicate which YAML Path separator to use when rendering\
               results; default=dot")
 
     keyname_group_ex = parser.add_argument_group("key name searching options")
@@ -266,7 +266,7 @@ def validateargs(args, log):
 
 # pylint: disable=locally-disabled,too-many-arguments,too-many-locals,too-many-branches
 def yield_children(logger: ConsolePrinter, data: Any,
-                   terms: SearchTerms, pathsep: PathSeperators,
+                   terms: SearchTerms, pathsep: PathSeparators,
                    build_path: str, seen_anchors: List[str],
                    **kwargs: bool) -> Generator[YAMLPath, None, None]:
     """
@@ -286,7 +286,7 @@ def yield_children(logger: ConsolePrinter, data: Any,
                               AnchorMatches.ALIAS_EXCLUDED]
 
     if isinstance(data, CommentedSeq):
-        if not build_path and pathsep is PathSeperators.FSLASH:
+        if not build_path and pathsep is PathSeparators.FSLASH:
             build_path = str(pathsep)
         build_path += "["
 
@@ -326,7 +326,7 @@ def yield_children(logger: ConsolePrinter, data: Any,
     elif isinstance(data, CommentedMap):
         if build_path:
             build_path += str(pathsep)
-        elif pathsep is PathSeperators.FSLASH:
+        elif pathsep is PathSeparators.FSLASH:
             build_path = str(pathsep)
 
         pool = data.non_merged_items()
@@ -366,14 +366,14 @@ def yield_children(logger: ConsolePrinter, data: Any,
                 yield YAMLPath(tmp_path)
 
     else:
-        if not build_path and pathsep is PathSeperators.FSLASH:
+        if not build_path and pathsep is PathSeparators.FSLASH:
             build_path = str(pathsep)
         yield YAMLPath(build_path)
 
 # pylint: disable=locally-disabled,too-many-arguments,too-many-locals,too-many-branches,too-many-statements
 def search_for_paths(logger: ConsolePrinter, processor: EYAMLProcessor,
                      data: Any, terms: SearchTerms,
-                     pathsep: PathSeperators = PathSeperators.DOT,
+                     pathsep: PathSeparators = PathSeparators.DOT,
                      build_path: str = "",
                      seen_anchors: Optional[List[str]] = None,
                      **kwargs) -> Generator[YAMLPath, None, None]:
@@ -402,7 +402,7 @@ def search_for_paths(logger: ConsolePrinter, processor: EYAMLProcessor,
 
     if isinstance(data, CommentedSeq):
         # Build the path
-        if not build_path and pathsep is PathSeperators.FSLASH:
+        if not build_path and pathsep is PathSeparators.FSLASH:
             build_path = strsep
         build_path += "["
 
@@ -490,7 +490,7 @@ def search_for_paths(logger: ConsolePrinter, processor: EYAMLProcessor,
     elif isinstance(data, CommentedMap):
         if build_path:
             build_path += strsep
-        elif pathsep is PathSeperators.FSLASH:
+        elif pathsep is PathSeparators.FSLASH:
             build_path = strsep
 
         pool = data.non_merged_items()
@@ -651,7 +651,7 @@ def search_for_paths(logger: ConsolePrinter, processor: EYAMLProcessor,
     elif isinstance(data, CommentedSet):
         if build_path:
             build_path += strsep
-        elif pathsep is PathSeperators.FSLASH:
+        elif pathsep is PathSeparators.FSLASH:
             build_path = strsep
 
         for key in data:
@@ -758,7 +758,7 @@ def print_results(
         resline += buffers[0]
         if print_yaml_path:
             if args.noescape:
-                use_flash = args.pathsep is PathSeperators.FSLASH
+                use_flash = args.pathsep is PathSeparators.FSLASH
                 seglines = []
                 join_mark = "/" if use_flash else "."
                 path_prefix = "/" if use_flash else ""
@@ -784,8 +784,9 @@ def print_results(
         print(resline)
 
 def process_yaml_file(
-    args, yaml, log, yaml_file, processor, search_values, search_keys,
-    include_key_aliases, include_value_aliases, file_tally = 0
+    args: Any, yaml: Any, log: ConsolePrinter, yaml_file: str,
+    processor: EYAMLProcessor, search_values: bool, search_keys: bool,
+    include_key_aliases: bool, include_value_aliases: bool, file_tally: int = 0
 ):
     """Process a (potentially multi-doc) YAML file."""
     # Try to open the file
@@ -807,7 +808,7 @@ def process_yaml_file(
         processor.data = yaml_data
         all_anchors: Dict[str, Any] = {}
         Anchors.scan_for_anchors(yaml_data, all_anchors)
-        yaml_paths = []
+        yaml_paths: List[Tuple[str, YAMLPath]] = []
         for expression in args.search:
             exterm = get_search_term(log, expression)
             log.debug(("yaml_paths::process_yaml_file:"

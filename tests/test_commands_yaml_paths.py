@@ -2,7 +2,7 @@ import pytest
 
 from tests.conftest import create_temp_yaml_file
 
-from yamlpath.enums import PathSeperators
+from yamlpath.enums import PathSeparators
 
 class Test_yaml_paths():
     """Tests the yaml-paths command-line interface."""
@@ -888,7 +888,7 @@ baseball_legends: !!set
         ]) + "\n" == result.stdout
 
     def test_yield_seq_children_direct(self, tmp_path_factory, quiet_logger):
-        from yamlpath.enums import PathSeperators, PathSearchMethods
+        from yamlpath.enums import PathSeparators, PathSearchMethods
         from yamlpath.path import SearchTerms
         from yamlpath.func import get_yaml_data, get_yaml_editor
         from yamlpath.commands.yaml_paths import yield_children
@@ -908,7 +908,7 @@ baseball_legends: !!set
         for assertion, path in zip_longest(assertions, yield_children(
             quiet_logger, yaml_data,
             SearchTerms(False, PathSearchMethods.EQUALS, "*", "value"),
-            PathSeperators.FSLASH, "", seen_anchors, search_anchors=True,
+            PathSeparators.FSLASH, "", seen_anchors, search_anchors=True,
             include_aliases=False
         )):
             assert assertion == str(path)
@@ -918,7 +918,7 @@ baseball_legends: !!set
         (True, ["/aliases[&aValue]", "/hash/key1", "/hash/key2", "/hash/key3"]),
     ])
     def test_yield_map_children_direct(self, tmp_path_factory, quiet_logger, include_aliases, assertions):
-        from yamlpath.enums import PathSeperators, PathSearchMethods
+        from yamlpath.enums import PathSeparators, PathSearchMethods
         from yamlpath.path import SearchTerms
         from yamlpath.func import get_yaml_data, get_yaml_editor
         from yamlpath.commands.yaml_paths import yield_children
@@ -941,13 +941,13 @@ baseball_legends: !!set
         for assertion, path in zip_longest(assertions, yield_children(
             quiet_logger, yaml_data,
             SearchTerms(False, PathSearchMethods.EQUALS, "*", "anchor"),
-            PathSeperators.FSLASH, "", seen_anchors, search_anchors=True,
+            PathSeparators.FSLASH, "", seen_anchors, search_anchors=True,
             include_value_aliases=include_aliases
         )):
             assert assertion == str(path)
 
     def test_yield_raw_children_direct(self, tmp_path_factory, quiet_logger):
-        from yamlpath.enums import PathSeperators, PathSearchMethods
+        from yamlpath.enums import PathSeparators, PathSearchMethods
         from yamlpath.path import SearchTerms
         from yamlpath.func import get_yaml_data, get_yaml_editor
         from yamlpath.commands.yaml_paths import yield_children
@@ -964,7 +964,7 @@ baseball_legends: !!set
         for assertion, path in zip_longest(assertions, yield_children(
             quiet_logger, yaml_data,
             SearchTerms(False, PathSearchMethods.STARTS_WITH, "*", "some"),
-            PathSeperators.FSLASH, "", seen_anchors, search_anchors=False,
+            PathSeparators.FSLASH, "", seen_anchors, search_anchors=False,
             include_key_aliases=False, include_value_aliases=False
         )):
             assert assertion == str(path)
@@ -1041,7 +1041,7 @@ key: value
         assert "Only one YAML_FILE may be the - pseudo-file" in result.stderr
 
     @pytest.mark.parametrize("pathsep,output", [
-        (PathSeperators.AUTO, [
+        (PathSeparators.AUTO, [
             'foo.x: 12',
             'foo.y: hello world',
             "foo.ip_range['initial']: 1.2.3.4",
@@ -1049,7 +1049,7 @@ key: value
             "foo.array['first']: Cluster1",
             'array2[]: bar',
         ]),
-        (PathSeperators.DOT, [
+        (PathSeparators.DOT, [
             'foo.x: 12',
             'foo.y: hello world',
             "foo.ip_range['initial']: 1.2.3.4",
@@ -1057,7 +1057,7 @@ key: value
             "foo.array['first']: Cluster1",
             'array2[]: bar',
         ]),
-        (PathSeperators.FSLASH, [
+        (PathSeparators.FSLASH, [
             '/foo/x: 12',
             '/foo/y: hello world',
             "/foo/ip_range['initial']: 1.2.3.4",

@@ -148,7 +148,7 @@ class Merger:
         buffer_pos = 0
         for key, val in rhs.non_merged_items():
             path_next = (path +
-                YAMLPath.escape_path_section(key, path.seperator))
+                YAMLPath.escape_path_section(key, path.separator))
             if key in lhs:
                 # Write the buffer if populated
                 for b_key, b_val in buffer:
@@ -476,7 +476,7 @@ class Merger:
         tagless_lhs = Nodes.tagless_elements(list(lhs))
         for ele in rhs:
             path_next = (path +
-                YAMLPath.escape_path_section(ele, path.seperator))
+                YAMLPath.escape_path_section(ele, path.separator))
             self.logger.debug(
                 "Processing set element {} at {}.".format(ele, path_next),
                 prefix="Merger::_merge_sets:  ", data=ele)

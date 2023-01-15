@@ -134,7 +134,7 @@ With an example like this, YAML Path enables:
   `Some decrypted value, provided you have the appropriate EYAML keys`
 * pass-through selections against arrays-of-hashes: `/users/roles` =
   `["Writers"]\n["Power Users", "Editors"]` (each user's list of roles are a
-  seperate result)
+  separate result)
 * collection of disparate results: `(/users/name)` =
   `["User One", "User Two"]` (all names appear in a single result instead of
   one per line)
@@ -144,7 +144,7 @@ For a deeper exploration of YAML Path's capabilities, please visit the
 
 ## Supported YAML Path Segments
 
-A YAML Path *segment* is the text between seperators which identifies zero or
+A YAML Path *segment* is the text between separators which identifies zero or
 more parent or leaf nodes within the data structure.  For dot-notation, a path
 like `hash.key` identifies two segments:  `hash` (a parent node) and `key` (a
 leaf node).  The same path in forward-slash notation would be:  `/hash/key`.
@@ -235,6 +235,8 @@ YAML Path understands these segment types:
   keywords are
   [deeply explored on the Wiki](https://github.com/wwkimball/yamlpath/wiki/Search-Keywords)
   and include:
+  * `[distinct(NAME)]`: Match exactly one of every value within collections,
+    discarding duplicates; i.e.:  [1, 2, 2, 3] has distinct values, [1, 2, 3]
   * `[has_child(NAME)]`: Match nodes having a named child key
   * `[max([NAME])]`: Match nodes having the maximum value
   * `[min([NAME])]`: Match nodes having the minimum value
@@ -242,10 +244,12 @@ YAML Path understands these segment types:
     children
   * `[parent([STEPS])]`, Step up 1-N levels in the document from the present
     node
+  * `[unique(NAME)]`: Match only values which have no duplicates within
+    collections; i.e.:  [1, 2, 2, 3] has unique values, [1, 3]
 * Collectors:  Placing any portion of the YAML Path within parenthesis defines a
-  virtual list collector, like `(YAML Path)`; concatenation and exclusion
-  operators are supported -- `+` and `-`, respectively -- along with nesting,
-  like `(...)-((...)+(...))`
+  virtual list collector, like `(YAML Path)`; concatenation, exclusion, and
+  intersection operators are supported -- `+`, `-`, and `&`, respectively --
+  along with nesting, like `(...)-((...)+(...))&(...)`
 * Complex combinations:
   `some::deep.hierarchy[with!=""].'any.valid'[.=~/(yaml|json)/][data%structure].or.complexity[4].2`
   or `/some::deep/hierarchy[with!=""]/any*.*valid[.=~/(yaml|json)/][data%structure]/or/compl*xity[4]/2/**`
@@ -267,7 +271,7 @@ ephemeral or longer-lasting virtual Python environments.
 ### Requirements
 
 This project requires [Python](https://www.python.org/) 3.  It is rigorously
-tested against Pythons 3.6 through 3.9.  Most operating systems and
+tested against Pythons 3.6 through 3.11.  Most operating systems and
 distributions have access to Python 3 even if only Python 2 -- or no Python, at
 all -- came pre-installed.  It is generally safe to have more than one version
 of Python on your system at the same time, especially when using
@@ -331,7 +335,7 @@ pip3.7 install --upgrade setuptools
 
 When you cannot or will not update `pip` or *setuptools*, just pre-install
 *ruamel.yaml* and *python-dateutil* before yamlpath.  Each must be installed
-seperately and in order, like this (you **cannot** combine these installations
+separately and in order, like this (you **cannot** combine these installations
 into a single command):
 
 ```shell
@@ -473,7 +477,7 @@ optional arguments:
                         that differences exist -- when they do -- with an
                         exit-state of 1
   -t ['.', '/', 'auto', 'dot', 'fslash'], --pathsep ['.', '/', 'auto', 'dot', 'fslash']
-                        indicate which YAML Path seperator to use when
+                        indicate which YAML Path separator to use when
                         rendering results; default=dot
   -d, --debug           output debugging details
   -v, --verbose         increase output verbosity
@@ -520,7 +524,7 @@ optional arguments:
   -h, --help            show this help message and exit
   -V, --version         show program's version number and exit
   -t ['.', '/', 'auto', 'dot', 'fslash'], --pathsep ['.', '/', 'auto', 'dot', 'fslash']
-                        indicate which YAML Path seperator to use when
+                        indicate which YAML Path separator to use when
                         rendering results; default=dot
   -S, --nostdin         Do not implicitly read from STDIN, even when YAML_FILE
                         is not set and the session is non-TTY
@@ -666,7 +670,7 @@ optional arguments:
                         child leaf nodes (see "reference handling options" for
                         restrictions)
   -t ['.', '/', 'auto', 'dot', 'fslash'], --pathsep ['.', '/', 'auto', 'dot', 'fslash']
-                        indicate which YAML Path seperator to use when
+                        indicate which YAML Path separator to use when
                         rendering results; default=dot
   -a, --refnames        also search the names of &anchor and *alias references
   -S, --nostdin         Do not implicitly read from STDIN, even when there are
@@ -780,7 +784,7 @@ optional arguments:
   -b, --backup          save a backup YAML_FILE with an extra .bak file-
                         extension
   -t ['.', '/', 'auto', 'dot', 'fslash'], --pathsep ['.', '/', 'auto', 'dot', 'fslash']
-                        indicate which YAML Path seperator to use when rendering
+                        indicate which YAML Path separator to use when rendering
                         results; default=dot
   -M CHARS, --random-from CHARS
                         characters from which to build a value for --random;
