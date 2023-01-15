@@ -32,7 +32,8 @@ Bug Fixes:
 * Processor.get_nodes would emit a nonobvious error message when mustexist is
   left at its default value (False) and yaml_path contained ** or * segments.
   Now, these segment types are excluded from generating "missing" nodes; only
-  nodes which exist can be matched by * and **.
+  nodes which exist can be matched by * and **.  Credit and my thanks go to
+  https://github.com/gdubicki for discovering and reporting this issue.
 
 3.6.9:
 Enhancements:
