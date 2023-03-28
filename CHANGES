@@ -15,6 +15,16 @@ Enhancements:
   Boolean (True when the path resolves; False, otherwise).  The document is not
   modified by this test.  See:  Processor.exists(yaml_path)
 
+Bug Fixes:
+* Pursuant to the addition of the intersection operator (&) added in 3.7.0, the
+  text of one of the YAMLPathExceptions has been updated:
+    Former:
+      Adjoining Collectors without an operator has no meaning; try + or -
+      between them, {yaml_path}
+    New:
+      Adjoining Collectors without an operator has no meaning; try +, -, or &
+      between them, {yaml_path}
+
 3.7.0
 Enhancements:
 * Support for Python 3.11 has been added.
