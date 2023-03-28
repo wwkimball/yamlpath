@@ -56,6 +56,46 @@ class Processor:
         self.logger: ConsolePrinter = logger
         self.data: Any = data
 
+    def exists(self, yaml_path: Union[YAMLPath, str], **kwargs: Any) -> bool:
+        """
+        Indicate whether a given YAMLPath resolves to at least one node.
+
+        Parameters:
+        1. yaml_path (Union[YAMLPath, str]) The YAML Path to evaluate
+
+        Keyword Arguments:
+        * pathsep (PathSeparators) Forced YAML Path segment separator; set
+          only when automatic inference fails;
+          default = PathSeparators.AUTO
+
+        Returns:  (bool) True when the path resolves; False, otherwise
+
+        Raises:
+            - `YAMLPathException` when YAML Path is invalid
+        """
+        pathsep: PathSeparators = kwargs.pop("pathsep", PathSeparators.AUTO)
+
+        if self.data is None:
+            return False
+
+        if isinstance(yaml_path, str):
+            yaml_path = YAMLPath(yaml_path, pathsep)
+        elif pathsep is not PathSeparators.AUTO:
+            yaml_path.separator = pathsep
+
+        self.logger.debug(
+            "Processing YAML Path:",
+            prefix="Processor::exists:  ", data={
+                'path': yaml_path,
+                'segments': yaml_path.escaped
+            })
+
+        matched_nodes: int = 0
+        for _ in self._get_required_nodes(self.data, yaml_path):
+            matched_nodes += 1
+
+        return 0 < matched_nodes
+
     def get_nodes(
         self, yaml_path: Union[YAMLPath, str], **kwargs: Any
     ) -> Generator[Any, None, None]:
