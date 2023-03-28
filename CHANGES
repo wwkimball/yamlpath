@@ -1,3 +1,30 @@
+3.8.0
+Enhancements:
+* Additional *YAMLPathExceptions have been added to increase the specificity of
+  various error conditions.  You do not need to change any of your code as a
+  result of this change; all new exceptions are subclasses of the original
+  YAMLPathException.  The new exceptions include:
+  * UnmatchedYAMLPathException:  No matching nodes
+  * DuplicateKeyYAMLPathException:  Duplicate key creation attempted
+  * TypeMismatchYAMLPathException:  Data Type mismatch
+  * BadAliasYAMLPathException:  Anchor/Alias/YMK error
+  * NoDocumentYAMLPathException:  Attempt to delete the entire document
+  * RecursionYAMLPathException:  Recursion nesting error
+* The Processor class now enables consumers to verify whether a YAMLPath would
+  resolve to at least one node in the present document.  The result is a simple
+  Boolean (True when the path resolves; False, otherwise).  The document is not
+  modified by this test.  See:  Processor.exists(yaml_path)
+
+Bug Fixes:
+* Pursuant to the addition of the intersection operator (&) added in 3.7.0, the
+  text of one of the YAMLPathExceptions has been updated:
+    Former:
+      Adjoining Collectors without an operator has no meaning; try + or -
+      between them, {yaml_path}
+    New:
+      Adjoining Collectors without an operator has no meaning; try +, -, or &
+      between them, {yaml_path}
+
 3.7.0
 Enhancements:
 * Support for Python 3.11 has been added.
