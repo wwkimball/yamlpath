@@ -1,5 +1,10 @@
 3.8.0
 Enhancements:
+* The yaml-set and yaml-merge command-line tools now support a new option:
+  --json-indent/-J.  This applies only to JSON output.  By default, JSON
+  documents are written/printed as single-line documents.  This new option
+  enables users to vertically expand JSON output with a specified indentation
+  size for nest levels.
 * Additional *YAMLPathExceptions have been added to increase the specificity of
   various error conditions.  You do not need to change any of your code as a
   result of this change; all new exceptions are subclasses of the original

@@ -162,6 +162,14 @@ https://github.com/wwkimball/yamlpath/issues.
             "known file-name extension of OUTPUT|OVERWRITE (when\n"
             "provided), or match the type of the first document;\n"
             "default=auto"))
+    parser.add_argument(
+        "-J", "--json-indent",
+        type=int,
+        default="-1",
+        help=(
+            "used only when writing JSON output; controls the\n"
+            "horizontal indentation of each nesting level;\n"
+            "default=-1 (single-line output per JSON document)"))
 
     parser.add_argument(
         "-M", "--multi-doc-mode",
@@ -268,6 +276,10 @@ def validateargs(args, log):
         has_errors = True
         log.error("The --backup|-b option applies only to OVERWRITE files.")
 
+    # When set, JSON indentation must be reasonable
+    if args.json_indent < -1:
+        args.json_indent = -1
+
     if has_errors:
         sys.exit(1)
 
@@ -299,11 +311,23 @@ def write_output_document(
             if document_is_json:
                 if len(dumps) > 1:
                     for dump in dumps:
-                        print(
-                            json.dumps(Parsers.jsonify_yaml_data(dump)),
-                            file=out_fhnd)
+                        if args.json_indent > -1:
+                            print(
+                                json.dumps(Parsers.jsonify_yaml_data(dump),
+                                           indent=args.json_indent),
+                                file=out_fhnd)
+                        else:
+                            print(
+                                json.dumps(Parsers.jsonify_yaml_data(dump)),
+                                file=out_fhnd)
                 else:
-                    json.dump(Parsers.jsonify_yaml_data(dumps[0]), out_fhnd)
+                    if args.json_indent > -1:
+                        json.dump(
+                            Parsers.jsonify_yaml_data(
+                                dumps[0]), out_fhnd, indent=args.json_indent)
+                    else:
+                        json.dump(
+                            Parsers.jsonify_yaml_data(dumps[0]), out_fhnd)
             else:
                 if len(dumps) > 1:
                     yaml_editor.explicit_end = True  # type: ignore
@@ -314,9 +338,19 @@ def write_output_document(
         if document_is_json:
             if len(dumps) > 1:
                 for dump in dumps:
-                    print(json.dumps(Parsers.jsonify_yaml_data(dump)))
+                    if args.json_indent > -1:
+                        print(
+                            json.dumps(Parsers.jsonify_yaml_data(dump),
+                                       indent=args.json_indent))
+                    else:
+                        print(json.dumps(Parsers.jsonify_yaml_data(dump)))
             else:
-                json.dump(Parsers.jsonify_yaml_data(dumps[0]), sys.stdout)
+                if args.json_indent > -1:
+                    json.dump(
+                        Parsers.jsonify_yaml_data(dumps[0]), sys.stdout,
+                        indent=args.json_indent)
+                else:
+                    json.dump(Parsers.jsonify_yaml_data(dumps[0]), sys.stdout)
         else:
             if len(dumps) > 1:
                 yaml_editor.explicit_end = True  # type: ignore

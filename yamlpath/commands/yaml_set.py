@@ -146,6 +146,15 @@ def processcli():
         help="assign a custom YAML (data-type) tag to the changed nodes; can"
              " be used without other input options to assign or change a tag")
 
+    parser.add_argument(
+        "-J", "--json-indent",
+        type=int,
+        default="-1",
+        help=(
+            "used only when writing JSON output; controls the\n"
+            "horizontal indentation of each nesting level;\n"
+            "default=-1 (single-line output per JSON document)"))
+
     eyaml_group = parser.add_argument_group(
         "EYAML options", "Left unset, the EYAML keys will default to your\
          system or user defaults.  You do not need to supply a private key\
@@ -291,14 +300,26 @@ def validateargs(args, log):
         args.verbose = False
         args.debug = False
 
+    # When set, JSON indentation must be reasonable
+    if args.json_indent < -1:
+        args.json_indent = -1
+
     if has_errors:
         sys.exit(1)
 
 def save_to_json_file(args, log, yaml_data):
     """Save to a JSON file."""
-    log.verbose("Writing changed data as JSON to {}.".format(args.yaml_file))
+    log.verbose(
+        f"Writing changed data as JSON to {args.yaml_file} with"
+        f" indent {args.json_indent}.")
     with open(args.yaml_file, 'w', encoding='utf-8') as out_fhnd:
-        json.dump(Parsers.jsonify_yaml_data(yaml_data), out_fhnd)
+        if args.json_indent > -1:
+            json.dump(
+                Parsers.jsonify_yaml_data(yaml_data), out_fhnd,
+                indent=args.json_indent)
+        else:
+            json.dump(
+                Parsers.jsonify_yaml_data(yaml_data), out_fhnd)
 
 def save_to_yaml_file(args, log, yaml_parser, yaml_data, backup_file):
     """Save to a YAML file."""
@@ -375,7 +396,13 @@ def write_output_document(args, log, yaml, yaml_data):
         if write_document_as_yaml(args.yaml_file, yaml_data):
             yaml.dump(yaml_data, sys.stdout)
         else:
-            json.dump(Parsers.jsonify_yaml_data(yaml_data), sys.stdout)
+            if args.json_indent > -1:
+                json.dump(
+                    Parsers.jsonify_yaml_data(yaml_data), sys.stdout,
+                    indent=args.json_indent)
+            else:
+                json.dump(
+                    Parsers.jsonify_yaml_data(yaml_data), sys.stdout)
     else:
         save_to_file(args, log, yaml, yaml_data, backup_file)
 
