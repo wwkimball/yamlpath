@@ -557,6 +557,64 @@ some:
             filedat = fhnd.read()
         assert filedat == result_content
 
+    def test_set_value_in_json_file_nonindented(
+        self, script_runner, tmp_path_factory
+    ):
+        yaml_file = create_temp_yaml_file(tmp_path_factory, """{
+    "people": {
+        "name": "john",
+        "age": 30,
+        "state": {"name": "up"}
+      }
+ }""")
+        result_content = """{"people": {"name": "John Doe", "age": 30, "state": {"name": "up"}}}"""
+
+        result = script_runner.run(
+            self.command
+              , "--change=people.name"
+              , "--value=John Doe"
+              , "--json-indent=-4"
+              , yaml_file
+        )
+        assert result.success, result.stderr
+
+        with open(yaml_file, 'r') as fhnd:
+            filedat = fhnd.read()
+        assert filedat == result_content
+
+    def test_set_value_in_json_file_indented(
+        self, script_runner, tmp_path_factory
+    ):
+        yaml_file = create_temp_yaml_file(tmp_path_factory, """{
+    "people": {
+        "name": "john",
+        "age": 30,
+        "state": {"name": "up"}
+      }
+ }""")
+        result_content = """{
+    "people": {
+        "name": "John Doe",
+        "age": 30,
+        "state": {
+            "name": "up"
+        }
+    }
+}"""
+
+        result = script_runner.run(
+            self.command
+              , "--change=people.name"
+              , "--value=John Doe"
+              , "--json-indent=4"
+              , yaml_file
+        )
+        assert result.success, result.stderr
+
+        with open(yaml_file, 'r') as fhnd:
+            filedat = fhnd.read()
+        assert filedat == result_content
+
     def test_stdin_to_stdout_yaml(self, script_runner):
         import subprocess
 
@@ -616,6 +674,46 @@ array:
             [self.command
             , "--change=**"
             , "--value=CHANGE EVERYTHING!"]
+            , stdout=subprocess.PIPE
+            , input=stdin_content
+            , universal_newlines=True
+        )
+
+        # DEBUG
+        # print("Expected:")
+        # print(merged_yaml_content)
+        # print("Got:")
+        # print(result.stdout)
+
+        assert 0 == result.returncode, result.stderr
+        assert stdout_content == result.stdout
+
+    def test_stdin_to_stdout_json_indented(self, script_runner):
+        import subprocess
+
+        stdin_content = """{
+    "people": {
+        "name": "john",
+        "age": 30,
+        "state": {"name": "up"}
+      }
+ }"""
+
+        stdout_content = """{
+    "people": {
+        "name": "John Doe",
+        "age": 30,
+        "state": {
+            "name": "up"
+        }
+    }
+}"""
+
+        result = subprocess.run(
+            [self.command
+            , "--change=people.name"
+            , "--value=John Doe"
+            , "--json-indent=4"]
             , stdout=subprocess.PIPE
             , input=stdin_content
             , universal_newlines=True
