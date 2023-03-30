@@ -20,7 +20,15 @@ from yamlpath.common import Anchors, KeywordSearches, Nodes, Searches
 from yamlpath import YAMLPath
 from yamlpath.path import SearchKeywordTerms, SearchTerms, CollectorTerms
 from yamlpath.wrappers import ConsolePrinter, NodeCoords
-from yamlpath.exceptions import YAMLPathException
+from yamlpath.exceptions import (
+    YAMLPathException,
+    BadAliasYAMLPathException,
+    DuplicateKeyYAMLPathException,
+    NoDocumentYAMLPathException,
+    RecursionYAMLPathException,
+    TypeMismatchYAMLPathException,
+    UnmatchedYAMLPathException,
+)
 from yamlpath.enums import (
     YAMLValueFormats,
     PathSegmentTypes,
@@ -47,6 +55,46 @@ class Processor:
         """
         self.logger: ConsolePrinter = logger
         self.data: Any = data
+
+    def exists(self, yaml_path: Union[YAMLPath, str], **kwargs: Any) -> bool:
+        """
+        Indicate whether a given YAMLPath resolves to at least one node.
+
+        Parameters:
+        1. yaml_path (Union[YAMLPath, str]) The YAML Path to evaluate
+
+        Keyword Arguments:
+        * pathsep (PathSeparators) Forced YAML Path segment separator; set
+          only when automatic inference fails;
+          default = PathSeparators.AUTO
+
+        Returns:  (bool) True when the path resolves; False, otherwise
+
+        Raises:
+            - `YAMLPathException` when YAML Path is invalid
+        """
+        pathsep: PathSeparators = kwargs.pop("pathsep", PathSeparators.AUTO)
+
+        if self.data is None:
+            return False
+
+        if isinstance(yaml_path, str):
+            yaml_path = YAMLPath(yaml_path, pathsep)
+        elif pathsep is not PathSeparators.AUTO:
+            yaml_path.separator = pathsep
+
+        self.logger.debug(
+            "Processing YAML Path:",
+            prefix="Processor::exists:  ", data={
+                'path': yaml_path,
+                'segments': yaml_path.escaped
+            })
+
+        matched_nodes: int = 0
+        for _ in self._get_required_nodes(self.data, yaml_path):
+            matched_nodes += 1
+
+        return 0 < matched_nodes
 
     def get_nodes(
         self, yaml_path: Union[YAMLPath, str], **kwargs: Any
@@ -105,7 +153,7 @@ class Processor:
                 yield node_coords
 
             if matched_nodes < 1:
-                raise YAMLPathException(
+                raise UnmatchedYAMLPathException(
                     "Required YAML Path does not match any nodes",
                     str(yaml_path)
                 )
@@ -173,7 +221,7 @@ class Processor:
                     value_format=value_format, tag=tag)
 
             if found_nodes < 1:
-                raise YAMLPathException(
+                raise UnmatchedYAMLPathException(
                     "No nodes matched required YAML Path",
                     str(yaml_path)
                 )
@@ -256,7 +304,7 @@ class Processor:
                 parentref = node_coord.parentref
                 if isinstance(parent, CommentedMap):
                     if value in parent:
-                        raise YAMLPathException((
+                        raise DuplicateKeyYAMLPathException((
                             "Key, {}, already exists at the same document"
                             " level in YAML Path"
                             ).format(value), str(yaml_path))
@@ -270,7 +318,7 @@ class Processor:
                         break
                 elif isinstance(parent, dict):
                     if value in parent:
-                        raise YAMLPathException((
+                        raise DuplicateKeyYAMLPathException((
                             "Key, {}, already exists at the same document"
                             " level in YAML Path"
                             ).format(value), str(yaml_path))
@@ -289,7 +337,7 @@ class Processor:
                 node_coord.parent, node_coord.parentref, value,
                 value_format, tag)
         except ValueError as vex:
-            raise YAMLPathException(
+            raise TypeMismatchYAMLPathException(
                 "Impossible to write '{}' as {}.  The error was:  {}"
                 .format(value, value_format, str(vex))
                 , str(yaml_path)) from vex
@@ -331,7 +379,7 @@ class Processor:
                 prefix="Processor::_get_anchor_node:  ", data=node_coords)
             anchor_node_coordinates.append(node_coords)
         if len(anchor_node_coordinates) > 1:
-            raise YAMLPathException(
+            raise BadAliasYAMLPathException(
                 "It is impossible to Alias more than one Anchor at a time!",
                 str(anchor_path))
 
@@ -349,7 +397,7 @@ class Processor:
             # Rename any pre-existing anchor or set an original anchor name;
             # the assigned name must be unique!
             if anchor_name in known_anchors:
-                raise YAMLPathException(
+                raise BadAliasYAMLPathException(
                     "Anchor names must be unique within YAML documents."
                     "  Anchor name, {}, is already used."
                     .format(anchor_name), str(anchor_path))
@@ -434,7 +482,7 @@ class Processor:
                 prefix="yaml_set::_ymk_nodes:  ")
             node = node_coord.node
             if not isinstance(node, CommentedMap):
-                raise YAMLPathException(
+                raise BadAliasYAMLPathException(
                     "Cannot add YAML Merge Keys to non-Hash nodes specified"
                     " by",
                     str(target_path))
@@ -752,7 +800,7 @@ class Processor:
                 # Edge-case:  Attempt to delete from a document which is
                 # entirely one Scalar value OR user is deleting the entire
                 # document.
-                raise YAMLPathException(
+                raise NoDocumentYAMLPathException(
                     "Refusing to delete the entire document!  Ensure the"
                     " source document is YAML, JSON, or compatible and the"
                     " target nodes do not include the document root.",
@@ -816,7 +864,7 @@ class Processor:
         if segment_index > 0 and segment_type == PathSegmentTypes.TRAVERSE:
             (prior_segment_type, _) = segments[segment_index - 1]
             if prior_segment_type == PathSegmentTypes.TRAVERSE:
-                raise YAMLPathException(
+                raise RecursionYAMLPathException(
                     "Repeating traversals are not allowed because they cause"
                     " recursion which leads to excessive CPU and RAM"
                     " consumption while yielding no additional useful data",
@@ -1056,7 +1104,7 @@ class Processor:
                     intmin: int = int(min_match)
                     intmax: int = int(max_match)
                 except ValueError as wrap_ex:
-                    raise YAMLPathException(
+                    raise TypeMismatchYAMLPathException(
                         "{} is not an integer array slice"
                         .format(str_stripped),
                         str(yaml_path),
@@ -1101,7 +1149,7 @@ class Processor:
             try:
                 idx: int = int(str_stripped)
             except ValueError as wrap_ex:
-                raise YAMLPathException(
+                raise TypeMismatchYAMLPathException(
                     "{} is not an integer array index"
                     .format(str_stripped),
                     str(yaml_path),
@@ -1764,7 +1812,7 @@ class Processor:
                 else:
                     raise YAMLPathException(
                         "Adjoining Collectors without an operator has no"
-                        + " meaning; try + or - between them",
+                        + " meaning; try +, -, or & between them",
                         str(yaml_path),
                         str(peek_path)
                     )
@@ -2466,7 +2514,7 @@ class Processor:
                             try:
                                 newidx = int(str(stripped_attrs))
                             except ValueError as wrap_ex:
-                                raise YAMLPathException(
+                                raise TypeMismatchYAMLPathException(
                                     ("Cannot add non-integer {} subreference"
                                      + " to lists")
                                     .format(str(segment_type)),
@@ -2503,7 +2551,7 @@ class Processor:
                         + " dictionary"
                     )
                     if segment_type is PathSegmentTypes.ANCHOR:
-                        raise YAMLPathException(
+                        raise BadAliasYAMLPathException(
                             "Cannot add ANCHOR keys",
                             str(yaml_path),
                             str(unstripped_attrs)

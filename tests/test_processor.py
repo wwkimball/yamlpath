@@ -1600,6 +1600,51 @@ non_conformant: value
         assert len(results) == matchidx
 
 
+    def test_exists_null_doc(self, quiet_logger):
+        yaml = YAML()
+        processor = Processor(quiet_logger, None)
+
+        try:
+            assert False == processor.exists('**')
+        except YAMLPathException as ex:
+              # Unexpected error
+              assert False
+
+    @pytest.mark.parametrize("yamlpath,pathsep,results", [
+        ("theological_deities", PathSeparators.AUTO, True),
+        (YAMLPath("does_not_exist"), PathSeparators.DOT, False),
+        ("seriously/broken path", PathSeparators.FSLASH, False),
+        ("theological_deities(roman)+(christian)", PathSeparators.AUTO, False),
+    ])
+    def test_exists(self, quiet_logger, yamlpath, pathsep, results):
+        yamldata = """---
+aliases:
+  - &td_g_g_anchor Hera
+
+theological_deities:
+  greek:
+    gods:
+      - Apollo
+      - Demeter
+      - Poseidon
+      - Zeus
+    goddesses:
+      - Aphrodite
+      - Artemis
+      - Athena
+      - *td_g_g_anchor
+"""
+        yaml = YAML()
+        processor = Processor(quiet_logger, yaml.load(yamldata))
+
+        try:
+            path_exists = processor.exists(yamlpath, pathsep=pathsep)
+            assert path_exists == results
+        except YAMLPathException as ex:
+              # Unexpected error
+              assert False
+
+
     @pytest.mark.parametrize("yamlpath,results", [
         (r"temperature[. =~ /\d{3}/]", [110, 100, 114]),
     ])

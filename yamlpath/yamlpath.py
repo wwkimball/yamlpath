@@ -8,7 +8,10 @@ from collections import deque
 from typing import Deque, List, Optional, Union
 
 from yamlpath.types import PathAttributes, PathSegment
-from yamlpath.exceptions import YAMLPathException
+from yamlpath.exceptions import (
+    YAMLPathException,
+    TypeMismatchYAMLPathException
+)
 from yamlpath.enums import (
     PathSegmentTypes,
     PathSearchKeywords,
@@ -711,7 +714,7 @@ class YAMLPath:
                     try:
                         idx = int(segment_id)
                     except ValueError as wrap_ex:
-                        raise YAMLPathException((
+                        raise TypeMismatchYAMLPathException((
                             "Not an integer index at character index {}:  {}")
                             .format(char_idx, segment_id)
                             , yaml_path
