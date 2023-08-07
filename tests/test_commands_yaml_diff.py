@@ -218,43 +218,43 @@ a0.4.0.0.4.1 three
 
 
     def test_no_options(self, script_runner):
-        result = script_runner.run(self.command)
+        result = script_runner.run([self.command])
         assert not result.success, result.stderr
         assert "the following arguments are required: YAML_FILE" in result.stderr
 
     def test_too_many_pseudo_files(self, script_runner):
-        result = script_runner.run(self.command, "-", "-")
+        result = script_runner.run([self.command, "-", "-"])
         assert not result.success, result.stderr
         assert "Only one YAML_FILE may be the - pseudo-file" in result.stderr
 
     def test_missing_first_input_file_arg(self, script_runner):
-        result = script_runner.run(self.command, "no-file.yaml", "no-file.yaml")
+        result = script_runner.run([self.command, "no-file.yaml", "no-file.yaml"])
         assert not result.success, result.stderr
         assert "File not found" in result.stderr
 
     def test_missing_second_input_file_arg(self, script_runner, tmp_path_factory):
         lhs_file = create_temp_yaml_file(tmp_path_factory, self.lhs_hash_content)
-        result = script_runner.run(self.command, lhs_file, "no-file.yaml")
+        result = script_runner.run([self.command, lhs_file, "no-file.yaml"])
         assert not result.success, result.stderr
         assert "File not found" in result.stderr
 
     def test_cannot_quiet_sameness(self, script_runner):
-        result = script_runner.run(self.command, "--quiet", "--same", "any-file.yaml", "any-other-file.json")
+        result = script_runner.run([self.command, "--quiet", "--same", "any-file.yaml", "any-other-file.json"])
         assert not result.success, result.stderr
         assert "The --quiet|-q option suppresses all output, including" in result.stderr
 
     def test_missing_config_file(self, script_runner):
-        result = script_runner.run(self.command, "--config=/does/not/exist/on/most/systems.ini", "any-file.yaml", "any-other-file.json")
+        result = script_runner.run([self.command, "--config=/does/not/exist/on/most/systems.ini", "any-file.yaml", "any-other-file.json"])
         assert not result.success, result.stderr
         assert "INI style configuration file is not readable" in result.stderr
 
     def test_missing_private_key(self, script_runner):
-        result = script_runner.run(self.command, "--privatekey=/does/not/exist/on/most/systems.key", "any-file.yaml", "any-other-file.json")
+        result = script_runner.run([self.command, "--privatekey=/does/not/exist/on/most/systems.key", "any-file.yaml", "any-other-file.json"])
         assert not result.success, result.stderr
         assert "EYAML private key is not a readable file" in result.stderr
 
     def test_missing_public_key(self, script_runner):
-        result = script_runner.run(self.command, "--publickey=/does/not/exist/on/most/systems.key", "any-file.yaml", "any-other-file.json")
+        result = script_runner.run([self.command, "--publickey=/does/not/exist/on/most/systems.key", "any-file.yaml", "any-other-file.json"])
         assert not result.success, result.stderr
         assert "EYAML public key is not a readable file" in result.stderr
 
@@ -265,21 +265,21 @@ a0.4.0.0.4.1 three
             ENC[PKCS7,MIIx...broken-on-purpose...==]
         """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             "--eyaml=/does/not/exist-on-most/systems",
             yaml_file,
             yaml_file
-        )
+        ])
         assert not result.success, result.stderr
         assert "No accessible eyaml command" in result.stderr
 
     def test_diff_yaml_parsing_error(self, script_runner, imparsible_yaml_file, badsyntax_yaml_file):
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             imparsible_yaml_file,
             badsyntax_yaml_file
-        )
+        ])
         assert not result.success, result.stderr
         assert "YAML parsing error" in result.stderr
 
@@ -293,11 +293,11 @@ second_key: second value
 """)
         rhs_file = create_temp_yaml_file(tmp_path_factory, self.lhs_hash_content)
 
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             lhs_file,
             rhs_file
-        )
+        ])
         assert not result.success, result.stderr
         assert "--left-document-index|-L must be set" in result.stderr
 
@@ -311,11 +311,11 @@ second_key: second value
 ...
 """)
 
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             lhs_file,
             rhs_file
-        )
+        ])
         assert not result.success, result.stderr
         assert "--right-document-index|-R must be set" in result.stderr
 
@@ -329,11 +329,11 @@ second_key: second value
         # print("Expected Output:")
         # print(merged_yaml_content)
 
-        result = script_runner.run(
+        result = script_runner.run([
             self.command
             , "--left-document-index=1"
             , lhs_file
-            , rhs_file)
+            , rhs_file])
         assert not result.success, result.stderr
         assert "DOCUMENT_INDEX is too high" in result.stderr
 
@@ -347,10 +347,10 @@ second_key: second value
         # print("Expected Output:")
         # print(merged_yaml_content)
 
-        result = script_runner.run(
+        result = script_runner.run([
             self.command
             , lhs_file
-            , rhs_file)
+            , rhs_file])
         assert result.success, result.stderr
         assert "" == result.stdout
 
@@ -364,10 +364,10 @@ second_key: second value
         # print("Expected Output:")
         # print(merged_yaml_content)
 
-        result = script_runner.run(
+        result = script_runner.run([
             self.command
             , lhs_file
-            , rhs_file)
+            , rhs_file])
         assert result.success, result.stderr
         assert "" == result.stdout
 
@@ -469,11 +469,11 @@ second_key: second value
         # print("Expected Output:")
         # print(merged_yaml_content)
 
-        result = script_runner.run(
+        result = script_runner.run([
             self.command
             , "--quiet"
             , lhs_file
-            , rhs_file)
+            , rhs_file])
         assert not result.success, result.stderr
         assert "" == result.stdout
 
@@ -487,10 +487,10 @@ second_key: second value
         # print("Expected Output:")
         # print(merged_yaml_content)
 
-        result = script_runner.run(
+        result = script_runner.run([
             self.command
             , lhs_file
-            , rhs_file)
+            , rhs_file])
         assert not result.success, result.stderr
         assert self.diff_hash_defaults == result.stdout
 
@@ -519,10 +519,10 @@ c [3]
         # print("Expected Output:")
         # print(merged_yaml_content)
 
-        result = script_runner.run(
+        result = script_runner.run([
             self.command
             , lhs_file
-            , rhs_file)
+            , rhs_file])
         assert not result.success, result.stderr
         assert stdout_content == result.stdout
 
@@ -551,11 +551,11 @@ c [3]
         # print("Expected Output:")
         # print(merged_yaml_content)
 
-        result = script_runner.run(
+        result = script_runner.run([
             self.command
             , "--aoh=position"
             , lhs_file
-            , rhs_file)
+            , rhs_file])
         assert not result.success, result.stderr
         assert stdout_content == result.stdout
 
@@ -579,11 +579,11 @@ c [2]
         # print("Expected Output:")
         # print(merged_yaml_content)
 
-        result = script_runner.run(
+        result = script_runner.run([
             self.command
             , "--aoh=key"
             , lhs_file
-            , rhs_file)
+            , rhs_file])
         assert not result.success, result.stderr
         assert stdout_content == result.stdout
 
@@ -634,11 +634,11 @@ a [3].args
         # print("Expected Output:")
         # print(merged_yaml_content)
 
-        result = script_runner.run(
+        result = script_runner.run([
             self.command
             , "--aoh=dpos"
             , lhs_file
-            , rhs_file)
+            , rhs_file])
         assert not result.success, result.stderr
         assert stdout_content == result.stdout
 
@@ -652,11 +652,11 @@ a [3].args
         # print("Expected Output:")
         # print(merged_yaml_content)
 
-        result = script_runner.run(
+        result = script_runner.run([
             self.command
             , "--aoh=deep"
             , lhs_file
-            , rhs_file)
+            , rhs_file])
         assert not result.success, result.stderr
         assert self.diff_aoh_deep == result.stdout
 
@@ -681,11 +681,11 @@ a [3]
         # print("Expected Output:")
         # print(merged_yaml_content)
 
-        result = script_runner.run(
+        result = script_runner.run([
             self.command
             , "--aoh=value"
             , lhs_file
-            , rhs_file)
+            , rhs_file])
         assert not result.success, result.stderr
         assert stdout_content == result.stdout
 
@@ -1004,12 +1004,12 @@ d [4]
         # print("Expected Output:")
         # print(merged_yaml_content)
 
-        result = script_runner.run(
+        result = script_runner.run([
             self.command
             , "--onlysame"
             , "--aoh=deep"
             , lhs_file
-            , rhs_file)
+            , rhs_file])
         assert not result.success, result.stderr
         assert stdout_content == result.stdout
 
@@ -1056,12 +1056,12 @@ s [4].action
         # print("Expected Output:")
         # print(merged_yaml_content)
 
-        result = script_runner.run(
+        result = script_runner.run([
             self.command
             , "--onlysame"
             , "--aoh=deep"
             , lhs_file
-            , rhs_file)
+            , rhs_file])
         assert not result.success, result.stderr
         assert stdout_content == result.stdout
 
@@ -1148,10 +1148,10 @@ c collector_hash.aliased_string
         # print("Expected Output:")
         # print(merged_yaml_content)
 
-        result = script_runner.run(
+        result = script_runner.run([
             self.command
             , lhs_file
-            , rhs_file)
+            , rhs_file])
         assert not result.success, result.stderr
         assert stdout_content == result.stdout
 
@@ -1196,12 +1196,12 @@ a /hash/including
         # print("Expected Output:")
         # print(merged_yaml_content)
 
-        result = script_runner.run(
+        result = script_runner.run([
             self.command
             , "--pathsep=/"
             , "--aoh=deep"
             , lhs_file
-            , rhs_file)
+            , rhs_file])
         assert not result.success, result.stderr
         assert stdout_content == result.stdout
 
@@ -1293,12 +1293,12 @@ different_secrets: >-
         # print("Expected Output:")
         # print(merged_yaml_content)
 
-        result = script_runner.run(
+        result = script_runner.run([
             self.command
-            , "--privatekey={}".format(old_eyaml_keys[0])
-            , "--publickey={}".format(old_eyaml_keys[1])
+            , f"--privatekey={old_eyaml_keys[0]}"
+            , f"--publickey={old_eyaml_keys[1]}"
             , lhs_file
-            , rhs_file)
+            , rhs_file])
         assert not result.success, result.stderr
         assert stdout_content == result.stdout
 
@@ -1394,11 +1394,11 @@ c different_secrets
         # print("Expected Output:")
         # print(merged_yaml_content)
 
-        result = script_runner.run(
+        result = script_runner.run([
             self.command
             , "--ignore-eyaml-values"
             , lhs_file
-            , rhs_file)
+            , rhs_file])
         assert not result.success, result.stderr
         assert stdout_content == result.stdout
 
@@ -1494,10 +1494,10 @@ c literal_string
         # print("Expected Output:")
         # print(merged_yaml_content)
 
-        result = script_runner.run(
+        result = script_runner.run([
             self.command
             , lhs_file
-            , rhs_file)
+            , rhs_file])
         assert not result.success, result.stderr
         assert stdout_content == result.stdout
 
@@ -1593,11 +1593,11 @@ c1.0.1.1.0.1 literal_string
         # print("Expected Output:")
         # print(merged_yaml_content)
 
-        result = script_runner.run(
+        result = script_runner.run([
             self.command
             , "--verbose"
             , lhs_file
-            , rhs_file)
+            , rhs_file])
         assert not result.success, result.stderr
         assert stdout_content == result.stdout
 
@@ -1611,10 +1611,10 @@ c1.0.1.1.0.1 literal_string
         # print("Expected Output:")
         # print(merged_yaml_content)
 
-        result = script_runner.run(
+        result = script_runner.run([
             self.command
             , lhs_file
-            , rhs_file)
+            , rhs_file])
         assert not result.success, result.stderr
         assert self.diff_array_defaults == result.stdout
 
@@ -1628,11 +1628,11 @@ c1.0.1.1.0.1 literal_string
         # print("Expected Output:")
         # print(merged_yaml_content)
 
-        result = script_runner.run(
+        result = script_runner.run([
             self.command
             , "--arrays=position"
             , lhs_file
-            , rhs_file)
+            , rhs_file])
         assert not result.success, result.stderr
         assert self.diff_array_defaults == result.stdout
 
@@ -1666,11 +1666,11 @@ d [9]
         # print("Expected Output:")
         # print(merged_yaml_content)
 
-        result = script_runner.run(
+        result = script_runner.run([
             self.command
             , "--arrays=value"
             , lhs_file
-            , rhs_file)
+            , rhs_file])
         assert not result.success, result.stderr
         assert stdout_content == result.stdout
 
@@ -1694,10 +1694,10 @@ d [9]
         # print("Expected Output:")
         # print(merged_yaml_content)
 
-        result = script_runner.run(
+        result = script_runner.run([
             self.command
             , lhs_file
-            , rhs_file)
+            , rhs_file])
         assert not result.success, result.stderr
         assert stdout_content == result.stdout
 
@@ -1722,10 +1722,10 @@ d [9]
         # print("Expected Output:")
         # print(merged_yaml_content)
 
-        result = script_runner.run(
+        result = script_runner.run([
             self.command
             , lhs_file
-            , rhs_file)
+            , rhs_file])
         assert not result.success, result.stderr
         assert stdout_content == result.stdout
 
@@ -1754,11 +1754,11 @@ d [9]
         # print("Expected Output:")
         # print(merged_yaml_content)
 
-        result = script_runner.run(
+        result = script_runner.run([
             self.command
             , "--aoh=key"
             , lhs_file
-            , rhs_file)
+            , rhs_file])
         assert not result.success, result.stderr
         assert stdout_content == result.stdout
 
@@ -1783,10 +1783,10 @@ d [9]
         # print("Expected Output:")
         # print(merged_yaml_content)
 
-        result = script_runner.run(
+        result = script_runner.run([
             self.command
             , lhs_file
-            , rhs_file)
+            , rhs_file])
         assert not result.success, result.stderr
         assert stdout_content == result.stdout
 
@@ -1815,11 +1815,11 @@ d [9]
         # print("Expected Output:")
         # print(merged_yaml_content)
 
-        result = script_runner.run(
+        result = script_runner.run([
             self.command
             , "--aoh=key"
             , lhs_file
-            , rhs_file)
+            , rhs_file])
         assert not result.success, result.stderr
         assert stdout_content == result.stdout
 
@@ -1851,11 +1851,11 @@ d [2]
         # print("Expected Output:")
         # print(merged_yaml_content)
 
-        result = script_runner.run(
+        result = script_runner.run([
             self.command
             , "--aoh=key"
             , lhs_file
-            , rhs_file)
+            , rhs_file])
         assert not result.success, result.stderr
         assert stdout_content == result.stdout
 
@@ -2007,11 +2007,11 @@ c products[3]
         # print("Expected Output:")
         # print(merged_yaml_content)
 
-        result = script_runner.run(
+        result = script_runner.run([
             self.command
-            , "--config={}".format(config_file)
+            , f"--config={config_file}"
             , lhs_file
-            , rhs_file)
+            , rhs_file])
         assert not result.success, result.stderr
         assert stdout_content == result.stdout
 
@@ -2119,10 +2119,10 @@ d hash_two
         # print("Expected Output:")
         # print(merged_yaml_content)
 
-        result = script_runner.run(
+        result = script_runner.run([
             self.command
             , lhs_file
-            , rhs_file)
+            , rhs_file])
         assert not result.success, result.stderr
         assert stdout_content == result.stdout
 
@@ -2137,10 +2137,10 @@ d hash_two
         # print("Expected Output:")
         # print(self.diff_set_defaults)
 
-        result = script_runner.run(
+        result = script_runner.run([
             self.command
             , lhs_file
-            , rhs_file)
+            , rhs_file])
         assert not result.success, result.stderr
         assert self.diff_set_defaults == result.stdout
 
@@ -2154,11 +2154,11 @@ d hash_two
         # print("Expected Output:")
         # print(self.diff_set_defaults)
 
-        result = script_runner.run(
+        result = script_runner.run([
             self.command
             , "--verbose"
             , lhs_file
-            , rhs_file)
+            , rhs_file])
         assert not result.success, result.stderr
         assert self.diff_set_verbose == result.stdout
 
