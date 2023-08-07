@@ -8,6 +8,7 @@ from collections import OrderedDict
 from typing import Any, Dict, Generator, List, Union
 
 from ruamel.yaml.compat import ordereddict as ryod
+from ruamel.yaml.tag import Tag
 from ruamel.yaml.comments import (
     CommentedMap,
     CommentedSeq,
@@ -668,12 +669,12 @@ class Processor:
         """
         # A YAML tag must be prefixed via at least one bang (!)
         if tag and not tag[0] == "!":
-            tag = "!{}".format(tag)
+            tag = f"!{tag}"
 
         for node_coord in gathered_nodes:
             old_node = node_coord.node
             if node_coord.parent is None:
-                node_coord.node.yaml_set_tag(tag)
+                node_coord.node.yaml_set_ctag(Tag(suffix=tag))
             else:
                 node_coord.parent[node_coord.parentref] = Nodes.apply_yaml_tag(
                     node_coord.node, tag)

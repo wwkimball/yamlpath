@@ -10,6 +10,7 @@ from typing import Any, Optional
 
 from dateutil import parser
 
+from ruamel.yaml.tag import Tag
 from ruamel.yaml.comments import CommentedSeq, CommentedMap, TaggedScalar
 from ruamel.yaml.scalarbool import ScalarBoolean
 from ruamel.yaml.scalarfloat import ScalarFloat
@@ -536,7 +537,7 @@ class Nodes:
         if Nodes.node_is_leaf(new_node):
             if isinstance(new_node, TaggedScalar):
                 if value_tag:
-                    new_node.yaml_set_tag(value_tag)
+                    new_node.yaml_set_ctag(Tag(suffix=value_tag))
                 else:
                     # Strip off the tag
                     new_node = node.value
@@ -545,7 +546,7 @@ class Nodes:
                 if hasattr(node, "anchor") and node.anchor.value:
                     new_node.yaml_set_anchor(node.anchor.value)
         else:
-            new_node.yaml_set_tag(value_tag)
+            new_node.yaml_set_ctag(Tag(suffix=value_tag))
 
         return new_node
 

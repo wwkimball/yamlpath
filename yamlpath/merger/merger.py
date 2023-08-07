@@ -10,6 +10,7 @@ import json
 from io import StringIO
 from pathlib import Path
 
+from ruamel.yaml.tag import Tag
 from ruamel.yaml.comments import (
     CommentedMap, CommentedSet, CommentedSeq, TaggedScalar
 )
@@ -203,7 +204,7 @@ class Merger:
                     self.logger.debug(
                         "Merger::_merge_dicts:  Setting LHS tag from {} to {}."
                         .format(lhs[key].tag.value, val.tag.value))
-                    lhs[key].yaml_set_tag(val.tag.value)
+                    lhs[key].yaml_set_ctag(Tag(suffix=val.tag.value))
 
                     self.logger.debug(
                         "Document BEFORE calling combine_merge_anchors:",
@@ -222,7 +223,7 @@ class Merger:
                     self.logger.debug(
                         "Merger::_merge_dicts:  Setting LHS tag from {} to {}."
                         .format(lhs[key].tag.value, val.tag.value))
-                    lhs[key].yaml_set_tag(val.tag.value)
+                    lhs[key].yaml_set_ctag(Tag(suffix=val.tag.value))
                 elif isinstance(val, CommentedSet):
                     lhs[key] = self._merge_sets(
                         lhs[key], val, path_next, node_coord)
@@ -231,7 +232,7 @@ class Merger:
                     self.logger.debug(
                         "Merger::_merge_dicts:  Setting LHS tag from {} to {}."
                         .format(lhs[key].tag.value, val.tag.value))
-                    lhs[key].yaml_set_tag(val.tag.value)
+                    lhs[key].yaml_set_ctag(Tag(suffix=val.tag.value))
                 else:
                     self.logger.debug(
                         "Merger::_merge_dicts:  Updating key, {}, at path,"
@@ -400,7 +401,7 @@ class Merger:
                     merged_hash = True
 
                     # Synchronize YAML Tags
-                    lhs_hash.yaml_set_tag(ele.tag.value)
+                    lhs_hash.yaml_set_ctag(Tag(suffix=ele.tag.value))
                     break
                 if not merged_hash:
                     Nodes.append_list_element(lhs, ele,
@@ -662,7 +663,7 @@ class Merger:
         self.logger.debug(
             "Merger::_insert_dict:  Setting LHS tag from {} to {}."
             .format(lhs.tag.value, rhs.tag.value))
-        lhs.yaml_set_tag(rhs.tag.value)
+        lhs.yaml_set_ctag(Tag(suffix=rhs.tag.value))
 
         if insert_at.is_root:
             self.data = merged_data
@@ -703,7 +704,7 @@ class Merger:
         self.logger.debug(
             "Merger::_insert_list:  Setting LHS tag from {} to {}."
             .format(lhs.tag.value, rhs.tag.value))
-        lhs.yaml_set_tag(rhs.tag.value)
+        lhs.yaml_set_ctag(Tag(suffix=rhs.tag.value))
 
         if insert_at.is_root:
             self.data = merged_data
@@ -748,7 +749,7 @@ class Merger:
         self.logger.debug(
             "Merger::_insert_set:  Setting LHS tag from {} to {}."
             .format(lhs.tag.value, rhs.tag.value))
-        lhs.yaml_set_tag(rhs.tag.value)
+        lhs.yaml_set_ctag(Tag(suffix=rhs.tag.value))
 
         if insert_at.is_root:
             self.data = merged_data
