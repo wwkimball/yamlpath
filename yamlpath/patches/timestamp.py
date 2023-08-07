@@ -2,8 +2,7 @@
 """
 Fix missing anchors from timestamp and date nodes.
 
-This must be removed once incorporated into ruamel.yaml, likely at version
-0.17.22.
+This must be removed once incorporated into ruamel.yaml.
 
 Source: https://sourceforge.net/p/ruamel-yaml/tickets/440/
 Copyright 2022 Anthon van der Neut, William W. Kimball Jr. MBA MSIS
