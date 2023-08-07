@@ -1,3 +1,7 @@
+3.8.1
+Enhancements:
+* Upgraded ruamel.yaml to latest supported version.
+
 3.8.0
 Enhancements:
 * The yaml-set and yaml-merge command-line tools now support a new option:
