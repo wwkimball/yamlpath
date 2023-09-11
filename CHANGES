@@ -1,6 +1,8 @@
 3.8.1
 Enhancements:
-* Upgraded ruamel.yaml to latest supported version.
+* Upgraded ruamel.yaml to latest supported version.  Due to major refactoring
+  being done to ruamel.yaml which makes forward- and reverse-compatibility
+  uncertain, single-version pinning will be used until further notice.
 
 3.8.0
 Enhancements:
