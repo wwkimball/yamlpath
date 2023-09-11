@@ -2,6 +2,7 @@ import pytest
 
 from types import SimpleNamespace
 
+from ruamel.yaml.tag import Tag
 from ruamel.yaml.comments import CommentedMap, CommentedSeq, CommentedSet, TaggedScalar
 from ruamel.yaml.scalarstring import PlainScalarString, FoldedScalarString
 # Temporary patch pursuant to ticket 440; see:
@@ -112,7 +113,7 @@ class Test_wrappers_ConsolePrinter():
         tagged_value = "value"
         tagged_value_node = TaggedScalar(tagged_value, tag="!tag")
         tagged_sequence = CommentedSeq(["a", "b"])
-        tagged_sequence.yaml_set_tag("!raz")
+        tagged_sequence.yaml_set_ctag(Tag(suffix="!raz"))
         selfref_value = "self_referring"
         selfref_value_node = TaggedScalar(selfref_value, tag="!self_referring")
         logger.debug(
