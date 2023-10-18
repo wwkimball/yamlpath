@@ -107,4 +107,4 @@ venv*.bak/
 .vscode/
 .vscode-env*/
 .vscode-venv*/
-
+.venv*/
