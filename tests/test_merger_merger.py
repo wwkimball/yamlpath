@@ -3329,6 +3329,89 @@ more: values
         assert -1 < str(ex.value).find(
             "Merging a Hash into a Set is destructive")
 
+    def test_merge_with_novel_mergeat_array(
+        self, quiet_logger, tmp_path, tmp_path_factory
+    ):
+        # Credit:  https://github.com/abramov-oleg
+        # Reported:  https://github.com/wwkimball/yamlpath/issues/220
+        lhs_yaml_file = create_temp_yaml_file(tmp_path_factory, """---
+key: value
+""")
+        rhs_yaml_file = create_temp_yaml_file(tmp_path_factory, """array:
+  - element
+""")
+        merged_yaml = create_temp_yaml_file(tmp_path_factory, """---
+key: value
+new_key:
+  array:
+    - element
+""")
+
+        output_dir = tmp_path / "test_merge_with_novel_mergeat_array"
+        output_dir.mkdir()
+        output_file = output_dir / "output.yaml"
+
+        lhs_yaml = get_yaml_editor()
+        rhs_yaml = get_yaml_editor()
+        (lhs_data, lhs_loaded) = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
+        (rhs_data, rhs_loaded) = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
+
+        args = SimpleNamespace(mergeat="new_key")
+        mc = MergerConfig(quiet_logger, args)
+        merger = Merger(quiet_logger, lhs_data, mc)
+        merger.merge_with(rhs_data)
+
+        with open(output_file, 'w') as yaml_dump:
+            lhs_yaml.dump(merger.data, yaml_dump)
+
+        assert (
+            (os.path.getsize(output_file) == os.path.getsize(merged_yaml))
+            and (open(output_file,'r').read() == open(merged_yaml,'r').read())
+        )
+
+    def test_merge_with_novel_mergeat_aoh(
+        self, quiet_logger, tmp_path, tmp_path_factory
+    ):
+        # Credit:  https://github.com/abramov-oleg
+        # Reported:  https://github.com/wwkimball/yamlpath/issues/220
+        lhs_yaml_file = create_temp_yaml_file(tmp_path_factory, """---
+key: value
+""")
+        rhs_yaml_file = create_temp_yaml_file(tmp_path_factory, """---
+array_of_hash:
+  - name: one
+    val: some
+""")
+        merged_yaml = create_temp_yaml_file(tmp_path_factory, """---
+key: value
+new_key:
+  array_of_hash:
+    - name: one
+      val: some
+""")
+
+        output_dir = tmp_path / "test_merge_with_novel_mergeat_array"
+        output_dir.mkdir()
+        output_file = output_dir / "output.yaml"
+
+        lhs_yaml = get_yaml_editor()
+        rhs_yaml = get_yaml_editor()
+        (lhs_data, lhs_loaded) = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
+        (rhs_data, rhs_loaded) = get_yaml_data(rhs_yaml, quiet_logger, rhs_yaml_file)
+
+        args = SimpleNamespace(mergeat="new_key")
+        mc = MergerConfig(quiet_logger, args)
+        merger = Merger(quiet_logger, lhs_data, mc)
+        merger.merge_with(rhs_data)
+
+        with open(output_file, 'w') as yaml_dump:
+            lhs_yaml.dump(merger.data, yaml_dump)
+
+        assert (
+            (os.path.getsize(output_file) == os.path.getsize(merged_yaml))
+            and (open(output_file,'r').read() == open(merged_yaml,'r').read())
+        )
+
 
     ###
     # set_flow_style

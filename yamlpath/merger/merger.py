@@ -1,3 +1,4 @@
+#pylint: disable=too-many-lines
 """
 Implement YAML document Merger.
 
@@ -860,8 +861,10 @@ class Merger:
                       if hasattr(target_node, "fa")
                       else None))
 
-            if isinstance(rhs, CommentedMap):
-                # The RHS document root is a dict
+            if target_node is rhs:
+                # _get_merge_target_nodes already inserted RHS (novel mergeat)
+                merge_performed = True
+            elif isinstance(rhs, CommentedMap):
                 merge_performed = self._insert_dict(
                     insert_at, target_node, rhs)
             elif isinstance(rhs, CommentedSeq):

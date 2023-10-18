@@ -1,3 +1,10 @@
+3.8.1
+Bug Fixes:
+* Fixed issue #220 reported by https://github.com/abramov-oleg wherein novel
+  mergeat paths given to the yaml-merge tool with Array and Array-of-Hash data
+  in the RHS document would cause an interminable loop that would max out CPU
+  and eventually exhaust RAM.
+
 3.8.0
 Enhancements:
 * The yaml-set and yaml-merge command-line tools now support a new option:
