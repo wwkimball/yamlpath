@@ -4,7 +4,7 @@ Implement MergerConfig.
 Copyright 2020, 2021 William W. Kimball, Jr. MBA MSIS
 """
 import configparser
-from typing import Any, Dict, Union
+from typing import Any, Dict, Union, MutableMapping
 from argparse import Namespace
 
 from yamlpath.exceptions import YAMLPathException
@@ -36,7 +36,7 @@ class MergerConfig:
         """
         self.log = logger
         self.args = args
-        self.config: Union[None, configparser.ConfigParser] = None
+        self.config: Union[None, MutableMapping] = None
         self.rules: Dict[NodeCoords, str] = {}
         self.keys: Dict[NodeCoords, str] = {}
 
@@ -95,7 +95,7 @@ class MergerConfig:
 
         Returns:  (ArrayMergeOpts) Applicable mode.
         """
-        # Precedence: config[rules] > CLI > config[defaults] > default
+        # Precedence: API > config[rules] > CLI > config[defaults] > default
         merge_rule = self._get_rule_for(node_coord)
         if merge_rule:
             self.log.debug(
@@ -336,6 +336,24 @@ class MergerConfig:
             config.read(config_file)
             if config.sections():
                 self.config = config
+
+        if hasattr(self.args, 'rules'):
+            if not self.config:
+                self.config = {}
+
+            self.config["rules"] = self.args.rules
+
+        if hasattr(self.args, 'keys'):
+            if not self.config:
+                self.config = {}
+
+            self.config["keys"] = self.args.keys
+
+        if hasattr(self.args, 'defaults'):
+            if not self.config:
+                self.config = {}
+
+            self.config["defaults"] = self.args.defaults
 
     def _get_config_for(self, node_coord: NodeCoords, section: dict) -> str:
         """
