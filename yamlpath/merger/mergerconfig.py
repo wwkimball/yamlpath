@@ -4,7 +4,7 @@ Implement MergerConfig.
 Copyright 2020, 2021 William W. Kimball, Jr. MBA MSIS
 """
 import configparser
-from typing import Any, Dict, Union, MutableMapping
+from typing import Any, Dict, Optional
 from argparse import Namespace
 
 from yamlpath.exceptions import YAMLPathException
@@ -24,7 +24,12 @@ from yamlpath.wrappers import ConsolePrinter, NodeCoords
 class MergerConfig:
     """Config file processor for the Merger."""
 
-    def __init__(self, logger: ConsolePrinter, args: Namespace) -> None:
+    def __init__(
+            self,
+            logger: ConsolePrinter,
+            args: Namespace,
+            **kwargs: Dict[str, Any]
+    ) -> None:
         """
         Instantiate this class into an object.
 
@@ -36,9 +41,10 @@ class MergerConfig:
         """
         self.log = logger
         self.args = args
-        self.config: Union[None, MutableMapping] = None
+        self.config: Optional[configparser.ConfigParser] = None
         self.rules: Dict[NodeCoords, str] = {}
         self.keys: Dict[NodeCoords, str] = {}
+        self.user_config: Optional[Dict[str, Any]] = kwargs
 
         self._load_config()
 
@@ -95,7 +101,7 @@ class MergerConfig:
 
         Returns:  (ArrayMergeOpts) Applicable mode.
         """
-        # Precedence: API > config[rules] > CLI > config[defaults] > default
+        # Precedence: config[rules] > CLI > config[defaults] > default
         merge_rule = self._get_rule_for(node_coord)
         if merge_rule:
             self.log.debug(
@@ -334,26 +340,19 @@ class MergerConfig:
 
         if config_file:
             config.read(config_file)
-            if config.sections():
-                self.config = config
 
-        if hasattr(self.args, 'rules'):
-            if not self.config:
-                self.config = {}
+        if self.user_config:
+            if "defaults" in self.user_config:
+                config["defaults"] = self.user_config["defaults"]
 
-            self.config["rules"] = self.args.rules
+            if "keys" in self.user_config:
+                config["keys"] = self.user_config["keys"]
 
-        if hasattr(self.args, 'keys'):
-            if not self.config:
-                self.config = {}
+            if "rules" in self.user_config:
+                config["rules"] = self.user_config["rules"]
 
-            self.config["keys"] = self.args.keys
-
-        if hasattr(self.args, 'defaults'):
-            if not self.config:
-                self.config = {}
-
-            self.config["defaults"] = self.args.defaults
+        if config.sections():
+            self.config = config
 
     def _get_config_for(self, node_coord: NodeCoords, section: dict) -> str:
         """
