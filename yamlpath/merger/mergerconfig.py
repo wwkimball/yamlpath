@@ -44,7 +44,7 @@ class MergerConfig:
         self.config: Optional[configparser.ConfigParser] = None
         self.rules: Dict[NodeCoords, str] = {}
         self.keys: Dict[NodeCoords, str] = {}
-        self.user_config: Optional[Dict[str, Any]] = kwargs
+        self.config_overrides: Optional[Dict[str, Any]] = kwargs
 
         self._load_config()
 
@@ -341,15 +341,15 @@ class MergerConfig:
         if config_file:
             config.read(config_file)
 
-        if self.user_config:
-            if "defaults" in self.user_config:
-                config["defaults"] = self.user_config["defaults"]
+        if self.config_overrides:
+            if "defaults" in self.config_overrides:
+                config["defaults"] = self.config_overrides["defaults"]
 
-            if "keys" in self.user_config:
-                config["keys"] = self.user_config["keys"]
+            if "keys" in self.config_overrides:
+                config["keys"] = self.config_overrides["keys"]
 
-            if "rules" in self.user_config:
-                config["rules"] = self.user_config["rules"]
+            if "rules" in self.config_overrides:
+                config["rules"] = self.config_overrides["rules"]
 
         if config.sections():
             self.config = config
