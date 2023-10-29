@@ -342,10 +342,6 @@ class MergerConfig:
         if config_file:
             config.read(config_file)
 
-        if self.config_overrides:
-            if "defaults" in self.config_overrides:
-                config["defaults"] = self.config_overrides["defaults"]
-
             if "keys" in self.config_overrides:
                 config["keys"] = self.config_overrides["keys"]
 
