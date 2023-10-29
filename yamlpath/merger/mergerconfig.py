@@ -28,7 +28,7 @@ class MergerConfig:
             self,
             logger: ConsolePrinter,
             args: Namespace,
-            **kwargs: Dict[str, Any]
+            **kwargs: Any,
     ) -> None:
         """
         Instantiate this class into an object.
@@ -36,6 +36,7 @@ class MergerConfig:
         Parameters:
         1. logger (ConsolePrinter) Instance of ConsoleWriter or subclass
         2. args (dict) Default options for merge rules
+        3. kwargs (dict) Overrides for config values
 
         Returns:  N/A
         """
@@ -44,7 +45,7 @@ class MergerConfig:
         self.config: Optional[configparser.ConfigParser] = None
         self.rules: Dict[NodeCoords, str] = {}
         self.keys: Dict[NodeCoords, str] = {}
-        self.config_overrides: Optional[Dict[str, Any]] = kwargs
+        self.config_overrides: Dict[str, Any] = kwargs
 
         self._load_config()
 
