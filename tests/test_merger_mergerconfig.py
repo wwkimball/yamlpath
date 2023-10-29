@@ -20,6 +20,7 @@ from tests.conftest import (
     create_temp_yaml_file
 )
 
+
 class Test_merger_MergerConfig():
     """Tests for the MergerConfig class."""
 
@@ -207,6 +208,46 @@ class Test_merger_MergerConfig():
         assert mc.hash_merge_mode(
             NodeCoords(node, parent, parentref)) == mode
 
+    @pytest.mark.parametrize("ini_rule, override_rule, mode", [
+        ("left", "right", HashMergeOpts.RIGHT),
+        ("right", "deep", HashMergeOpts.DEEP),
+        ("deep", "left", HashMergeOpts.LEFT),
+    ])
+    def test_hash_merge_mode_override_rule_overrides_ini_rule(
+        self, quiet_logger, tmp_path_factory, ini_rule, override_rule, mode
+    ):
+        config_file = create_temp_yaml_file(tmp_path_factory, """
+        [rules]
+        /hash = {}
+        """.format(ini_rule))
+        lhs_yaml_file = create_temp_yaml_file(tmp_path_factory, """---
+        hash:
+          lhs_exclusive: lhs value 1
+          merge_targets:
+            subkey: lhs value 2
+            subarray:
+              - one
+              - two
+        array_of_hashes:
+          - name: LHS Record 1
+            id: 1
+            prop: LHS value AoH 1
+          - name: LHS Record 2
+            id: 2
+            prop: LHS value AoH 2
+        """)
+        lhs_yaml = get_yaml_editor()
+        (lhs_data, lhs_loaded) = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
+
+        mc = MergerConfig(quiet_logger, SimpleNamespace(config=config_file), rules={"/hash": override_rule})
+        mc.prepare(lhs_data)
+
+        node = lhs_data["hash"]
+        parent = lhs_data
+        parentref = "hash"
+
+        assert mc.hash_merge_mode(
+            NodeCoords(node, parent, parentref)) == mode
 
     ###
     # array_merge_mode
@@ -311,6 +352,51 @@ class Test_merger_MergerConfig():
         assert mc.array_merge_mode(
             NodeCoords(node, parent, parentref)) == mode
 
+    @pytest.mark.parametrize("ini_rule, override_rule, mode", [
+        ("left", "right", ArrayMergeOpts.RIGHT),
+        ("right", "unique", ArrayMergeOpts.UNIQUE),
+        ("unique", "all", ArrayMergeOpts.ALL),
+        ("all", "left", ArrayMergeOpts.LEFT),
+    ])
+    def test_array_merge_mode_override_rule_overrides_ini_rule(
+        self, quiet_logger, tmp_path_factory, ini_rule, override_rule, mode
+    ):
+        config_file = create_temp_yaml_file(tmp_path_factory, """
+        [rules]
+        /hash/merge_targets/subarray = {}
+        """.format(ini_rule))
+        lhs_yaml_file = create_temp_yaml_file(tmp_path_factory, """---
+        hash:
+          lhs_exclusive: lhs value 1
+          merge_targets:
+            subkey: lhs value 2
+            subarray:
+              - one
+              - two
+        array_of_hashes:
+          - name: LHS Record 1
+            id: 1
+            prop: LHS value AoH 1
+          - name: LHS Record 2
+            id: 2
+            prop: LHS value AoH 2
+        """)
+        lhs_yaml = get_yaml_editor()
+        (lhs_data, lhs_loaded) = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
+
+        mc = MergerConfig(
+            quiet_logger,
+            SimpleNamespace(config=config_file),
+            rules={"/hash/merge_targets/subarray": override_rule}
+        )
+        mc.prepare(lhs_data)
+
+        node = lhs_data["hash"]["merge_targets"]["subarray"]
+        parent = lhs_data["hash"]["merge_targets"]
+        parentref = "subarray"
+
+        assert mc.array_merge_mode(
+            NodeCoords(node, parent, parentref)) == mode
 
     ###
     # aoh_merge_mode
@@ -419,6 +505,52 @@ class Test_merger_MergerConfig():
         assert mc.aoh_merge_mode(
             NodeCoords(node, parent, parentref)) == mode
 
+    @pytest.mark.parametrize("ini_rule, override_rule, mode", [
+        ("deep", "left", AoHMergeOpts.LEFT),
+        ("left", "right", AoHMergeOpts.RIGHT),
+        ("right", "unique", AoHMergeOpts.UNIQUE),
+        ("unique", "all", AoHMergeOpts.ALL),
+        ("all", "deep", AoHMergeOpts.DEEP),
+    ])
+    def test_array_merge_mode_override_rule_overrides_ini_rule(
+        self, quiet_logger, tmp_path_factory, ini_rule, override_rule, mode
+    ):
+        config_file = create_temp_yaml_file(tmp_path_factory, """
+        [rules]
+        /array_of_hashes = {}
+        """.format(ini_rule))
+        lhs_yaml_file = create_temp_yaml_file(tmp_path_factory, """---
+        hash:
+          lhs_exclusive: lhs value 1
+          merge_targets:
+            subkey: lhs value 2
+            subarray:
+              - one
+              - two
+        array_of_hashes:
+          - name: LHS Record 1
+            id: 1
+            prop: LHS value AoH 1
+          - name: LHS Record 2
+            id: 2
+            prop: LHS value AoH 2
+        """)
+        lhs_yaml = get_yaml_editor()
+        (lhs_data, lhs_loaded) = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
+
+        mc = MergerConfig(
+            quiet_logger,
+            SimpleNamespace(config=config_file),
+            rules={"/array_of_hashes": override_rule}
+        )
+        mc.prepare(lhs_data)
+
+        node = lhs_data["array_of_hashes"]
+        parent = lhs_data
+        parentref = "array_of_hashes"
+
+        assert mc.aoh_merge_mode(
+            NodeCoords(node, parent, parentref)) == mode
 
     ###
     # aoh_merge_key
@@ -526,6 +658,40 @@ class Test_merger_MergerConfig():
         assert mc.aoh_merge_key(
             NodeCoords(node, parent, parentref), record) == "prop"
 
+    def test_aoh_merge_key_override_rule_overrides_ini(self, quiet_logger, tmp_path_factory):
+        config_file = create_temp_yaml_file(tmp_path_factory, """
+        [keys]
+        /array_of_hashes = name
+        """)
+        lhs_yaml_file = create_temp_yaml_file(tmp_path_factory, """---
+        hash:
+          lhs_exclusive: lhs value 1
+          merge_targets:
+            subkey: lhs value 2
+            subarray:
+              - one
+              - two
+        array_of_hashes:
+          - name: LHS Record 1
+            id: 1
+            prop: LHS value AoH 1
+          - name: LHS Record 2
+            id: 2
+            prop: LHS value AoH 2
+        """)
+        lhs_yaml = get_yaml_editor()
+        (lhs_data, lhs_loaded) = get_yaml_data(lhs_yaml, quiet_logger, lhs_yaml_file)
+
+        mc = MergerConfig(quiet_logger, SimpleNamespace(config=config_file), keys={"/array_of_hashes": "id"})
+        mc.prepare(lhs_data)
+
+        node = lhs_data["array_of_hashes"]
+        parent = lhs_data
+        parentref = "array_of_hashes"
+        record = node[0]
+
+        assert mc.aoh_merge_key(
+            NodeCoords(node, parent, parentref), record) == "id"
 
     ###
     # set_merge_mode
