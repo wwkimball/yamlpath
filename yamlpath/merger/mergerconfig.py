@@ -45,9 +45,14 @@ class MergerConfig:
         self.config: Optional[configparser.ConfigParser] = None
         self.rules: Dict[NodeCoords, str] = {}
         self.keys: Dict[NodeCoords, str] = {}
-        self.config_overrides: Dict[str, Any] = kwargs
+        config_overrides: Dict[str, Any] = {}
 
-        self._load_config()
+        if "keys" in kwargs:
+            config_overrides["keys"] = kwargs["keys"]
+        if "rules" in kwargs:
+            config_overrides["rules"] = kwargs["rules"]
+
+        self._load_config(config_overrides)
 
     def anchor_merge_mode(self) -> AnchorConflictResolutions:
         """
@@ -329,7 +334,7 @@ class MergerConfig:
                 "... NODE:", data=node_coord,
                 prefix="MergerConfig::_prepare_user_rules:  ")
 
-    def _load_config(self) -> None:
+    def _load_config(self, config_overrides: Dict[str, Any]) -> None:
         """Load the external configuration file."""
         config = configparser.ConfigParser()
 
@@ -342,11 +347,11 @@ class MergerConfig:
         if config_file:
             config.read(config_file)
 
-            if "keys" in self.config_overrides:
-                config["keys"] = self.config_overrides["keys"]
+            if "keys" in config_overrides:
+                config["keys"] = config_overrides["keys"]
 
-            if "rules" in self.config_overrides:
-                config["rules"] = self.config_overrides["rules"]
+            if "rules" in config_overrides:
+                config["rules"] = config_overrides["rules"]
 
         if config.sections():
             self.config = config
