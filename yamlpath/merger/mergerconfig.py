@@ -48,9 +48,9 @@ class MergerConfig:
         config_overrides: Dict[str, Any] = {}
 
         if "keys" in kwargs:
-            config_overrides["keys"] = kwargs["keys"]
+            config_overrides["keys"] = kwargs.pop("keys")
         if "rules" in kwargs:
-            config_overrides["rules"] = kwargs["rules"]
+            config_overrides["rules"] = kwargs.pop("rules")
 
         self._load_config(config_overrides)
 
