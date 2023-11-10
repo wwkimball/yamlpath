@@ -347,11 +347,11 @@ class MergerConfig:
         if config_file:
             config.read(config_file)
 
-            if "keys" in config_overrides:
-                config["keys"] = config_overrides["keys"]
+        if "keys" in config_overrides:
+            config["keys"] = config_overrides["keys"]
 
-            if "rules" in config_overrides:
-                config["rules"] = config_overrides["rules"]
+        if "rules" in config_overrides:
+            config["rules"] = config_overrides["rules"]
 
         if config.sections():
             self.config = config
