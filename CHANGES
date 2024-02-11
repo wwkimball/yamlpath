@@ -1,3 +1,9 @@
+3.8.2
+Enhancements:
+* The MergerConfig class now accepts overrides for config values as "keys" and
+  "rules" keyword arguments to the constructor.
+  Credit and my thanks go to https://github.com/leviem1!
+
 3.8.1
 Bug Fixes:
 * Fixed issue #220 reported by https://github.com/abramov-oleg wherein novel
