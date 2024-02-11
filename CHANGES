@@ -10,7 +10,9 @@ BREAKING CHANGES:
   dateutil and ruamel-yaml-clib no longer support Python 3.6.  Support for
   Python 3.7 is tepid.  While pytest is still working with Python 3.7, other
   dependencies are no longer supporting Python 3.7; however, the extensive
-  tests for yamlpath show no issues with them, so far.
+  tests for yamlpath show no issues with them, so far.  For now, Python 3.12
+  support is pending, waiting for the dateutil library to resolve a
+  DeprecationWarning regarding its use of datetime.datetime.utcfromtimestamp().
 
 3.8.1
 Bug Fixes:
