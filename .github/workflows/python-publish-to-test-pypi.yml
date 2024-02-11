@@ -70,7 +70,7 @@ jobs:
         sed -i -r -e "s/(^__version__[[:space:]]*=[[:space:]]*)("'"'"[[:digit:]](\.[[:digit:]])+)"'"'"/\1\2.RC$(date "+%Y%m%d%H%M%S")"'"'"/" yamlpath/__init__.py
         python setup.py sdist bdist_wheel
     - name: Publish Artifacts
-      uses: pypa/gh-action-pypi-publish@v1
+      uses: pypa/gh-action-pypi-publish@release/v1
       with:
         user: __token__
         password: ${{ secrets.TEST_PYPI_API_TOKEN }}
