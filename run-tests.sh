@@ -8,7 +8,7 @@ if ! [ -d tests -a -d yamlpath ]; then
 fi
 
 if [ 1 -gt "$#" ]; then
-	echo "You must specify at least one Python version.  Space-delimit multiples like: $0 3.6 3.7 3.8" >&2
+	echo "You must specify at least one Python version.  Space-delimit multiples like: $0 3.7 3.8 3.9 3.10 3.11" >&2
 	exit 2
 fi
 

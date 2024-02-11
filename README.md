@@ -271,10 +271,11 @@ ephemeral or longer-lasting virtual Python environments.
 ### Requirements
 
 This project requires [Python](https://www.python.org/) 3.  It is rigorously
-tested against Pythons 3.6 through 3.11.  Most operating systems and
-distributions have access to Python 3 even if only Python 2 -- or no Python, at
-all -- came pre-installed.  It is generally safe to have more than one version
-of Python on your system at the same time, especially when using
+tested against Pythons 3.7 through 3.11 (support for Python 3.6 was dropped
+10 FEB 2024).  Most operating systems and distributions have access to Python
+3 even if only Python 2 -- or no Python, at all -- came pre-installed.  It is
+generally safe to have more than one version of Python on your system at the
+same time, especially when using
 [virtual Python environments](https://docs.python.org/3/library/venv.html).
 
 *yamlpath* depends on *ruamel.yaml* (derived from and greatly extending PyYAML)
