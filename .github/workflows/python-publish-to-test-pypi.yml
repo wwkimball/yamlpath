@@ -1,4 +1,5 @@
-# SOURCE:  https://packaging.python.org/guides/publishing-package-distribution-releases-using-github-actions-ci-cd-workflows/
+# Test publishing to PyPI.
+# @see:  https://packaging.python.org/guides/publishing-package-distribution-releases-using-github-actions-ci-cd-workflows/
 name: Upload Python TEST Package
 
 on:

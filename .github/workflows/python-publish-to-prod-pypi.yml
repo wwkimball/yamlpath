@@ -1,4 +1,5 @@
-# SOURCE:  https://packaging.python.org/guides/publishing-package-distribution-releases-using-github-actions-ci-cd-workflows/
+# Manually publish to production PyPI
+# @ssee:  https://packaging.python.org/guides/publishing-package-distribution-releases-using-github-actions-ci-cd-workflows/
 name: Upload PRODUCTION Python Package
 
 on:
