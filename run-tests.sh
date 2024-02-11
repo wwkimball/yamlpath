@@ -8,7 +8,7 @@ if ! [ -d tests -a -d yamlpath ]; then
 fi
 
 if [ 1 -gt "$#" ]; then
-	echo "You must specify at least one Python version.  Space-delimit multiples like: $0 3.6 3.7 3.8" >&2
+	echo "You must specify at least one Python version.  Space-delimit multiples like: $0 3.7 3.8 3.9 3.10 3.11" >&2
 	exit 2
 fi
 
@@ -19,7 +19,10 @@ rm -rf /tmp/yamlpath-python-coverage-data
 rm -f .coverage
 
 for pythonVersion in "${@}"; do
-	which deactivate &>/dev/null && deactivate &>/dev/null
+	if which deactivate &>/dev/null; then
+		echo "Deactivating Python $(python --version).  If this dumps you right back to the shell prompt, you were running Microsoft's VSCode-embedded Python and were just put into a sub-shell; just exit to resume tests."
+		deactivate
+	fi
 
 	pyCommand=python${pythonVersion}
 	if ! which "$pyCommand" &>/dev/null; then

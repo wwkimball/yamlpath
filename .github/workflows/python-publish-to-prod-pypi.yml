@@ -1,4 +1,5 @@
-# SOURCE:  https://packaging.python.org/guides/publishing-package-distribution-releases-using-github-actions-ci-cd-workflows/
+# Manually publish to production PyPI
+# @ssee:  https://packaging.python.org/guides/publishing-package-distribution-releases-using-github-actions-ci-cd-workflows/
 name: Upload PRODUCTION Python Package
 
 on:
@@ -7,13 +8,13 @@ on:
 jobs:
   publish:
     name: Publish to Production PyPI
-    runs-on: ubuntu-20.04 # Use ubuntu-latest when https://github.com/actions/setup-python/issues/544 is fixed
+    runs-on: ubuntu-latest
     environment: 'PyPI:  Production'
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     - name: Set up Python 3.9
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v5
       with:
         python-version: '3.9'
     - name: Install Build Tools
@@ -24,7 +25,7 @@ jobs:
       run: |
         python setup.py sdist bdist_wheel
     - name: Publish Artifacts
-      uses: pypa/gh-action-pypi-publish@v1.4.2
+      uses: pypa/gh-action-pypi-publish@release/v1
       with:
         user: __token__
         password: ${{ secrets.PYPI_API_TOKEN }}

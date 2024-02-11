@@ -14,7 +14,6 @@ from yamlpath.eyaml.exceptions import EYAMLCommandException
 from tests.conftest import requireseyaml, quiet_logger, old_eyaml_keys
 
 
-@requireseyaml
 @pytest.fixture
 def eyamldata_f():
     data = """---

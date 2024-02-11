@@ -15,7 +15,6 @@ setup(
     classifiers=[
         "Development Status :: 5 - Production/Stable",
         "License :: OSI Approved :: ISC License (ISCL)",
-        "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
@@ -43,7 +42,7 @@ setup(
             "yaml-diff = yamlpath.commands.yaml_diff:main",
         ]
     },
-    python_requires=">3.6.0",
+    python_requires=">3.7.0",
     install_requires=[
         "ruamel.yaml>0.17.5,!=0.17.18,<=0.17.21",
         "python-dateutil<=3"

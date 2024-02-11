@@ -1,3 +1,19 @@
+3.8.2
+Enhancements:
+* The MergerConfig class now accepts overrides for config values as "keys" and
+  "rules" keyword arguments to the constructor.
+  Credit and my thanks go to https://github.com/leviem1!
+
+BREAKING CHANGES:
+* Support for Python 3.6 has been dropped.  This is forced by incompatibilities
+  discovered with the latest version of pytest and because dependencies like
+  dateutil and ruamel-yaml-clib no longer support Python 3.6.  Support for
+  Python 3.7 is tepid.  While pytest is still working with Python 3.7, other
+  dependencies are no longer supporting Python 3.7; however, the extensive
+  tests for yamlpath show no issues with them, so far.  For now, Python 3.12
+  support is pending, waiting for the dateutil library to resolve a
+  DeprecationWarning regarding its use of datetime.datetime.utcfromtimestamp().
+
 3.8.1
 Bug Fixes:
 * Fixed issue #220 reported by https://github.com/abramov-oleg wherein novel

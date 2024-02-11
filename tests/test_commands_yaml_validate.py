@@ -8,15 +8,15 @@ class Test_commands_yaml_validate():
     command = "yaml-validate"
 
     def test_no_arguments(self, script_runner):
-        result = script_runner.run(self.command, "--nostdin")
+        result = script_runner.run([self.command, "--nostdin"])
         assert not result.success, result.stderr
         assert "There must be at least one YAML_FILE" in result.stderr
 
     def test_too_many_pseudofiles(self, script_runner):
-        result = script_runner.run(
+        result = script_runner.run([
             self.command
             , '-'
-            , '-')
+            , '-'])
         assert not result.success, result.stderr
         assert "Only one YAML_FILE may be the - pseudo-file" in result.stderr
 
@@ -26,18 +26,18 @@ this:
   single-document:
     is: valid
 """)
-        result = script_runner.run(
+        result = script_runner.run([
             self.command
             , "--nostdin"
-            , yaml_file)
+            , yaml_file])
         assert result.success, result.stderr
 
     def test_invalid_singledoc(self, script_runner, tmp_path_factory):
         yaml_file = create_temp_yaml_file(tmp_path_factory, "{[}")
-        result = script_runner.run(
+        result = script_runner.run([
             self.command
             , "--nostdin"
-            , yaml_file)
+            , yaml_file])
         assert not result.success, result.stderr
         assert "  * YAML parsing error in" in result.stdout
 

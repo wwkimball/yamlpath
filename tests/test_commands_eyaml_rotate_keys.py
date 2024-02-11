@@ -12,20 +12,20 @@ class Test_eyaml_rotate_keys():
     command = "eyaml-rotate-keys"
 
     def test_no_options(self, script_runner):
-        result = script_runner.run(self.command)
+        result = script_runner.run([self.command])
         assert not result.success, result.stderr
         assert "usage: {}".format(self.command) in result.stderr
 
     def test_duplicate_keys(self, script_runner):
         bunk_key = "/does/not/exist/on-most/systems"
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             "--newprivatekey={}".format(bunk_key),
             "--newpublickey={}".format(bunk_key),
             "--oldprivatekey={}".format(bunk_key),
             "--oldpublickey={}".format(bunk_key),
             bunk_key
-        )
+        ])
         assert not result.success, result.stderr
         assert "The new and old EYAML keys must be different." in result.stderr
 
@@ -33,28 +33,28 @@ class Test_eyaml_rotate_keys():
         bunk_file = "/does/not/exist/on-most/systems"
         bunk_old_key = "/does/not/exist/on-most/systems/old"
         bunk_new_key = "/does/not/exist/on-most/systems/new"
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             "--newprivatekey={}".format(bunk_new_key),
             "--newpublickey={}".format(bunk_new_key),
             "--oldprivatekey={}".format(bunk_old_key),
             "--oldpublickey={}".format(bunk_old_key),
             bunk_file
-        )
+        ])
         assert not result.success, result.stderr
         assert "EYAML key is not a readable file:" in result.stderr
 
     @requireseyaml
     def test_no_yaml_files(self, script_runner, old_eyaml_keys, new_eyaml_keys):
         bunk_file = "/does/not/exist/on-most/systems"
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             "--newprivatekey={}".format(new_eyaml_keys[0]),
             "--newpublickey={}".format(new_eyaml_keys[1]),
             "--oldprivatekey={}".format(old_eyaml_keys[0]),
             "--oldpublickey={}".format(old_eyaml_keys[1]),
             bunk_file
-        )
+        ])
         assert not result.success, result.stderr
         assert "Not a file:" in result.stderr
 
@@ -99,7 +99,7 @@ yet_another:
         simple_file = create_temp_yaml_file(tmp_path_factory, simple_content)
         anchored_file = create_temp_yaml_file(tmp_path_factory, anchored_content)
 
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             "--newprivatekey={}".format(new_eyaml_keys[0]),
             "--newpublickey={}".format(new_eyaml_keys[1]),
@@ -107,7 +107,7 @@ yet_another:
             "--oldpublickey={}".format(old_eyaml_keys[1]),
             simple_file,
             anchored_file
-        )
+        ])
         assert result.success, result.stderr
 
         with open(simple_file, 'r') as fhnd:
@@ -171,38 +171,38 @@ yet_another:
             assert unwrap_node_coords(node) == 'This is a test value.'
 
     def test_yaml_parsing_error(self, script_runner, imparsible_yaml_file, old_eyaml_keys, new_eyaml_keys):
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             "--newprivatekey={}".format(new_eyaml_keys[0]),
             "--newpublickey={}".format(new_eyaml_keys[1]),
             "--oldprivatekey={}".format(old_eyaml_keys[0]),
             "--oldpublickey={}".format(old_eyaml_keys[1]),
             imparsible_yaml_file
-        )
+        ])
         assert not result.success, result.stderr
         assert "YAML parsing error" in result.stderr
 
     def test_yaml_syntax_error(self, script_runner, badsyntax_yaml_file, old_eyaml_keys, new_eyaml_keys):
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             "--newprivatekey={}".format(new_eyaml_keys[0]),
             "--newpublickey={}".format(new_eyaml_keys[1]),
             "--oldprivatekey={}".format(old_eyaml_keys[0]),
             "--oldpublickey={}".format(old_eyaml_keys[1]),
             badsyntax_yaml_file
-        )
+        ])
         assert not result.success, result.stderr
         assert "YAML syntax error" in result.stderr
 
     def test_yaml_composition_error(self, script_runner, badcmp_yaml_file, old_eyaml_keys, new_eyaml_keys):
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             "--newprivatekey={}".format(new_eyaml_keys[0]),
             "--newpublickey={}".format(new_eyaml_keys[1]),
             "--oldprivatekey={}".format(old_eyaml_keys[0]),
             "--oldpublickey={}".format(old_eyaml_keys[1]),
             badcmp_yaml_file
-        )
+        ])
         assert not result.success, result.stderr
         assert "YAML composition error" in result.stderr
 
@@ -213,14 +213,14 @@ yet_another:
             DBAEqBBAwcy7jvcOGcMfLEtugGVWWUnWq1DJ4Q==]
         """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             "--newprivatekey={}".format(new_eyaml_keys[0]),
             "--newpublickey={}".format(new_eyaml_keys[1]),
             "--oldprivatekey={}".format(old_eyaml_keys[0]),
             "--oldpublickey={}".format(old_eyaml_keys[1]),
             yaml_file
-        )
+        ])
         assert not result.success, result.stderr
         assert "Unable to decrypt value!" in result.stderr
 
@@ -239,14 +239,14 @@ yet_another:
           NI/TSIF7M9U=]
         """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             "--newprivatekey={}".format(new_eyaml_keys[1]),
             "--newpublickey={}".format(new_eyaml_keys[0]),
             "--oldprivatekey={}".format(old_eyaml_keys[0]),
             "--oldpublickey={}".format(old_eyaml_keys[1]),
             yaml_file
-        )
+        ])
         assert not result.success, result.stderr
         assert "unable to encrypt" in result.stderr or "cannot be run due to exit code:  1" in result.stderr
 
@@ -267,7 +267,7 @@ yet_another:
         """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
         backup_file = yaml_file + ".bak"
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             "--newprivatekey={}".format(new_eyaml_keys[0]),
             "--newpublickey={}".format(new_eyaml_keys[1]),
@@ -275,7 +275,7 @@ yet_another:
             "--oldpublickey={}".format(old_eyaml_keys[1]),
             "--backup",
             yaml_file
-        )
+        ])
         assert result.success, result.stderr
         assert os.path.isfile(backup_file)
 
@@ -303,7 +303,7 @@ yet_another:
         with open(backup_file, 'w') as fhnd:
             fhnd.write(content + "\nkey2: plain scalar string value")
 
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             "--newprivatekey={}".format(new_eyaml_keys[0]),
             "--newpublickey={}".format(new_eyaml_keys[1]),
@@ -311,7 +311,7 @@ yet_another:
             "--oldpublickey={}".format(old_eyaml_keys[1]),
             "--backup",
             yaml_file
-        )
+        ])
         assert result.success, result.stderr
         assert os.path.isfile(backup_file)
 

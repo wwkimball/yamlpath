@@ -8,53 +8,53 @@ class Test_yaml_set():
     command = "yaml-set"
 
     def test_no_options(self, script_runner):
-        result = script_runner.run(self.command)
+        result = script_runner.run([self.command])
         assert not result.success, result.stderr
         assert "the following arguments are required: -g/--change" in result.stderr
 
     def test_no_input_file(self, script_runner):
-        result = script_runner.run(self.command, "--nostdin", "--change='/test'")
+        result = script_runner.run([self.command, "--nostdin", "--change='/test'"])
         assert not result.success, result.stderr
         assert "There must be a YAML_FILE or STDIN document" in result.stderr
 
     def test_no_input_param(self, script_runner):
-        result = script_runner.run(self.command, "--change='/test'", "no-such-file")
+        result = script_runner.run([self.command, "--change='/test'", "no-such-file"])
         assert not result.success, result.stderr
         assert "Exactly one of the following must be set:" in result.stderr
 
     def test_bad_yaml_file(self, script_runner):
-        result = script_runner.run(self.command, "--change='/test'", "--random=1", "no-such-file")
+        result = script_runner.run([self.command, "--change='/test'", "--random=1", "no-such-file"])
         assert not result.success, result.stderr
         assert "File not found:" in result.stderr
 
     def test_identical_saveto_change_error(self, script_runner):
-        result = script_runner.run(self.command, "--change='/test'", "--random=1", "--saveto='/test'", "no-such-file")
+        result = script_runner.run([self.command, "--change='/test'", "--random=1", "--saveto='/test'", "no-such-file"])
         assert not result.success, result.stderr
         assert "Impossible to save the old value to the same YAML Path as the new value!" in result.stderr
 
     def test_insufficient_randomness(self, script_runner):
-        result = script_runner.run(self.command, "--change='/test'", "--random=1", "--random-from=A", "no-such-file")
+        result = script_runner.run([self.command, "--change='/test'", "--random=1", "--random-from=A", "no-such-file"])
         assert not result.success, result.stderr
         assert "The pool of random CHARS must have at least 2 characters" in result.stderr
 
     def test_bad_privatekey(self, script_runner):
-        result = script_runner.run(self.command, "--change='/test'", "--random=1", "--privatekey=no-such-file", "no-such-file")
+        result = script_runner.run([self.command, "--change='/test'", "--random=1", "--privatekey=no-such-file", "no-such-file"])
         assert not result.success, result.stderr
         assert "EYAML private key is not a readable file" in result.stderr
 
     def test_bad_publickey(self, script_runner):
-        result = script_runner.run(self.command, "--change='/test'", "--random=1", "--publickey=no-such-file", "no-such-file")
+        result = script_runner.run([self.command, "--change='/test'", "--random=1", "--publickey=no-such-file", "no-such-file"])
         assert not result.success, result.stderr
         assert "EYAML public key is not a readable file" in result.stderr
 
     def test_no_dual_stdin(self, script_runner):
-        result = script_runner.run(self.command, "--change='/test'", "--stdin", "-")
+        result = script_runner.run([self.command, "--change='/test'", "--stdin", "-"])
         assert not result.success, result.stderr
         assert "Impossible to read both document and replacement value from STDIN" in result.stderr
 
     def test_no_backup_stdin(self, script_runner):
-        result = script_runner.run(
-            self.command, "--change='/test'", "--backup", "-")
+        result = script_runner.run([
+            self.command, "--change='/test'", "--backup", "-"])
         assert not result.success, result.stderr
         assert "applies only when reading from a file" in result.stderr
 
@@ -62,9 +62,9 @@ class Test_yaml_set():
         yaml_file = create_temp_yaml_file(tmp_path_factory, """---
 boolean: false
 """)
-        result = script_runner.run(
+        result = script_runner.run([
             self.command, "--change=/boolean", "--value=NOT_BOOLEAN",
-            "--format=boolean", yaml_file)
+            "--format=boolean", yaml_file])
         assert not result.success, result.stderr
         assert "Impossible to write 'NOT_BOOLEAN' as boolean." in result.stderr
 
@@ -72,9 +72,9 @@ boolean: false
         yaml_file = create_temp_yaml_file(tmp_path_factory, """---
 boolean: false
 """)
-        result = script_runner.run(
+        result = script_runner.run([
             self.command, "--change=/boolean", "--value=NOT_BOOLEAN",
-            "--format=boolean", "--mustexist", yaml_file)
+            "--format=boolean", "--mustexist", yaml_file])
         assert not result.success, result.stderr
         assert "Impossible to write 'NOT_BOOLEAN' as boolean." in result.stderr
 
@@ -85,8 +85,8 @@ boolean: false
         key: value
         """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
-        result = script_runner.run(
-            self.command, "--change=/key", "--value=abc", yaml_file)
+        result = script_runner.run([
+            self.command, "--change=/key", "--value=abc", yaml_file])
         assert result.success, result.stderr
 
         with open(yaml_file, 'r') as fhnd:
@@ -123,12 +123,12 @@ boolean: false
         """
         input_file = create_temp_yaml_file(tmp_path_factory, "abc\n")
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             "--change=/key",
             "--file={}".format(input_file),
             yaml_file
-        )
+        ])
         assert result.success, result.stderr
 
         with open(yaml_file, 'r') as fhnd:
@@ -142,12 +142,12 @@ boolean: false
         key: value
         """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             "--change=/key",
             "--random=50",
             yaml_file
-        )
+        ])
         assert result.success, result.stderr
 
         with open(yaml_file, 'r') as fhnd:
@@ -155,17 +155,17 @@ boolean: false
         assert re.findall(r"^key:\s+[A-Za-z0-9]{50}$", filedat, re.M), filedat
 
     def test_yaml_parsing_error(self, script_runner, imparsible_yaml_file):
-        result = script_runner.run(self.command, "--change=/", "--random=1", imparsible_yaml_file)
+        result = script_runner.run([self.command, "--change=/", "--random=1", imparsible_yaml_file])
         assert not result.success, result.stderr
         assert "YAML parsing error" in result.stderr
 
     def test_yaml_syntax_error(self, script_runner, badsyntax_yaml_file):
-        result = script_runner.run(self.command, "--change=/", "--random=1", badsyntax_yaml_file)
+        result = script_runner.run([self.command, "--change=/", "--random=1", badsyntax_yaml_file])
         assert not result.success, result.stderr
         assert "YAML syntax error" in result.stderr
 
     def test_yaml_composition_error(self, script_runner, badcmp_yaml_file):
-        result = script_runner.run(self.command, "--change=/", "--random=1", badcmp_yaml_file)
+        result = script_runner.run([self.command, "--change=/", "--random=1", badcmp_yaml_file])
         assert not result.success, result.stderr
         assert "YAML composition error" in result.stderr
 
@@ -176,12 +176,12 @@ boolean: false
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
 
         # Explicit --mustexist
-        result = script_runner.run(self.command, "--change=key2", "--random=1", "--mustexist", yaml_file)
+        result = script_runner.run([self.command, "--change=key2", "--random=1", "--mustexist", yaml_file])
         assert not result.success, result.stderr
         assert "Required YAML Path does not match any nodes" in result.stderr
 
         # Implicit --mustexist via --saveto
-        result = script_runner.run(self.command, "--change=key3", "--random=1", "--saveto=save_here", yaml_file)
+        result = script_runner.run([self.command, "--change=key3", "--random=1", "--saveto=save_here", yaml_file])
         assert not result.success, result.stderr
         assert "Required YAML Path does not match any nodes" in result.stderr
 
@@ -190,13 +190,13 @@ boolean: false
         key: value
         """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             "--change=/key",
             "--value=abc",
             "--check=value",
             yaml_file
-        )
+        ])
         assert result.success, result.stderr
 
     @requireseyaml
@@ -205,25 +205,25 @@ boolean: false
         encrypted: ENC[PKCS7,MIIx...blahblahblah...==]
         """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             "--change=encrypted",
             "--random=1",
             "--check=n/a",
             "--privatekey={}".format(old_eyaml_keys[0]),
             yaml_file
-        )
+        ])
         assert not result.success, result.stderr
         assert "Neither or both private and public EYAML keys must be set" in result.stderr
 
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             "--change=encrypted",
             "--random=1",
             "--check=n/a",
             "--publickey={}".format(old_eyaml_keys[1]),
             yaml_file
-        )
+        ])
         assert not result.success, result.stderr
         assert "Neither or both private and public EYAML keys must be set" in result.stderr
 
@@ -233,7 +233,7 @@ boolean: false
         encrypted: ENC[PKCS7,MIIx...broken-on-purpose...==]
         """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             "--change=encrypted",
             "--random=1",
@@ -241,7 +241,7 @@ boolean: false
             "--privatekey={}".format(old_eyaml_keys[0]),
             "--publickey={}".format(old_eyaml_keys[1]),
             yaml_file
-        )
+        ])
         assert not result.success, result.stderr
         assert "Unable to decrypt value!" in result.stderr
 
@@ -250,13 +250,13 @@ boolean: false
         key: value
         """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             "--change=key",
             "--random=1",
             "--check=abc",
             yaml_file
-        )
+        ])
         assert not result.success, result.stderr
         assert "does not match the check value" in result.stderr
 
@@ -266,13 +266,13 @@ boolean: false
         key2: value2
         """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             "--change=/[.^key]",
             "--random=1",
             "--saveto=/backup",
             yaml_file
-        )
+        ])
         assert not result.success, result.stderr
         assert "It is impossible to meaningly save more than one" in result.stderr
 
@@ -283,13 +283,13 @@ boolean: false
         key: value
         """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             "--change=key",
             "--value=new",
             "--saveto=backup",
             yaml_file
-        )
+        ])
         assert result.success, result.stderr
 
         with open(yaml_file, 'r') as fhnd:
@@ -304,13 +304,13 @@ boolean: false
           ENC[PKCS7,MIIB...]
         """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             "--change=encrypted",
             "--value=now_plaintext",
             "--saveto=backup",
             yaml_file
-        )
+        ])
         assert result.success, result.stderr
 
         with open(yaml_file, 'r') as fhnd:
@@ -322,12 +322,12 @@ boolean: false
         key: value
         """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             "--change=[0]",
             "--random=1",
             yaml_file
-        )
+        ])
         assert not result.success, result.stderr
         assert "Cannot add" in result.stderr
 
@@ -336,13 +336,13 @@ boolean: false
         key: value
         """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             "--change=key",
             "--random=1",
             "--saveto=[2]",
             yaml_file
-        )
+        ])
         assert not result.success, result.stderr
         assert "Cannot add" in result.stderr
 
@@ -357,7 +357,7 @@ boolean: false
           value
         """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             "--change=key",
             "--value=now_encrypted",
@@ -365,7 +365,7 @@ boolean: false
             "--privatekey={}".format(old_eyaml_keys[0]),
             "--publickey={}".format(old_eyaml_keys[1]),
             yaml_file
-        )
+        ])
         assert result.success, result.stderr
 
         with open(yaml_file, 'r') as fhnd:
@@ -378,7 +378,7 @@ boolean: false
         key: value
         """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             "--change=[0]",
             "--random=1",
@@ -386,7 +386,7 @@ boolean: false
             "--privatekey={}".format(old_eyaml_keys[0]),
             "--publickey={}".format(old_eyaml_keys[1]),
             yaml_file
-        )
+        ])
         assert not result.success, result.stderr
         assert "Cannot add" in result.stderr
 
@@ -395,14 +395,14 @@ boolean: false
         key: value
         """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             "--change=key",
             "--random=1",
             "--eyamlcrypt",
             "--eyaml=/does/not/exist/on-most/systems",
             yaml_file
-        )
+        ])
         assert not result.success, result.stderr
         assert "The eyaml binary is not executable" in result.stderr
 
@@ -414,13 +414,13 @@ boolean: false
         """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
         backup_file = yaml_file + ".bak"
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             "--change=key",
             "--random=1",
             "--backup",
             yaml_file
-        )
+        ])
         assert result.success, result.stderr
         assert os.path.isfile(backup_file)
 
@@ -439,13 +439,13 @@ boolean: false
         with open(backup_file, 'w') as fhnd:
             fhnd.write(content + "\nkey2: value2")
 
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             "--change=key",
             "--random=1",
             "--backup",
             yaml_file
-        )
+        ])
         assert result.success, result.stderr
         assert os.path.isfile(backup_file)
 
@@ -475,12 +475,12 @@ otherstring:
         me: set_value
 """
         yaml_file = create_temp_yaml_file(tmp_path_factory, yamlin)
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             "--change=otherstring.default.config.deploy.me",
             "--value=set_value",
             yaml_file
-        )
+        ])
         assert result.success, result.stderr
 
         with open(yaml_file, 'r') as fhnd:
@@ -506,13 +506,13 @@ aliases:
   key: new value
 """
         yaml_file = create_temp_yaml_file(tmp_path_factory, yamlin)
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             "--change=/hash/key",
             "--value=new value",
             "--backup",
             yaml_file
-        )
+        ])
         assert result.success, result.stderr
 
         with open(yaml_file, 'r') as fhnd:
@@ -529,11 +529,11 @@ some:
     to: nowhere
 """
 
-        result = script_runner.run(
+        result = script_runner.run([
             self.command
             , "--change=some.key.to"
             , "--value=nowhere"
-            , yaml_file)
+            , yaml_file])
         assert result.success, result.stderr
 
         with open(yaml_file, 'r') as fhnd:
@@ -546,11 +546,11 @@ some:
         yaml_file = create_temp_yaml_file(tmp_path_factory, '{"key": "value"}')
         result_content = '{"key": "changed"}'
 
-        result = script_runner.run(
+        result = script_runner.run([
             self.command
             , "--change=key"
             , "--value=changed"
-            , yaml_file)
+            , yaml_file])
         assert result.success, result.stderr
 
         with open(yaml_file, 'r') as fhnd:
@@ -569,13 +569,13 @@ some:
  }""")
         result_content = """{"people": {"name": "John Doe", "age": 30, "state": {"name": "up"}}}"""
 
-        result = script_runner.run(
+        result = script_runner.run([
             self.command
               , "--change=people.name"
               , "--value=John Doe"
               , "--json-indent=-4"
               , yaml_file
-        )
+        ])
         assert result.success, result.stderr
 
         with open(yaml_file, 'r') as fhnd:
@@ -602,13 +602,13 @@ some:
     }
 }"""
 
-        result = script_runner.run(
+        result = script_runner.run([
             self.command
               , "--change=people.name"
               , "--value=John Doe"
               , "--json-indent=4"
               , yaml_file
-        )
+        ])
         assert result.success, result.stderr
 
         with open(yaml_file, 'r') as fhnd:
@@ -786,12 +786,12 @@ array_of_hashes:
     name: three
 """
         yaml_file = create_temp_yaml_file(tmp_path_factory, yamlin)
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             "--change=/array",
             "--delete",
             yaml_file
-        )
+        ])
         assert result.success, result.stderr
 
         with open(yaml_file, 'r') as fhnd:
@@ -857,12 +857,12 @@ array_of_hashes:
     name: three
 """
         yaml_file = create_temp_yaml_file(tmp_path_factory, yamlin)
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             "--change=(/array[0])+(/array_of_arrays[1])+(/array_of_hashes[2])",
             "--delete",
             yaml_file
-        )
+        ])
         assert result.success, result.stderr
 
         with open(yaml_file, 'r') as fhnd:
@@ -928,12 +928,12 @@ array_of_hashes:
     name: three
 """
         yaml_file = create_temp_yaml_file(tmp_path_factory, yamlin)
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             "--change=((/array[0])+(/array_of_arrays[1])+(/array_of_hashes[2]))",
             "--delete",
             yaml_file
-        )
+        ])
         assert result.success, result.stderr
 
         with open(yaml_file, 'r') as fhnd:
@@ -999,12 +999,12 @@ array_of_hashes:
     name: three
 """
         yaml_file = create_temp_yaml_file(tmp_path_factory, yamlin)
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             "--change=(((/array[0])+(/array_of_arrays[1])+(/array_of_hashes[2])))",
             "--delete",
             yaml_file
-        )
+        ])
         assert result.success, result.stderr
 
         with open(yaml_file, 'r') as fhnd:
@@ -1016,12 +1016,12 @@ array_of_hashes:
 key: value
 """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             "--change=/",
             "--delete",
             yaml_file
-        )
+        ])
         assert not result.success, result.stderr
         assert "Refusing to delete" in result.stderr
 
@@ -1037,13 +1037,13 @@ aliases:
 key: *new_anchor
 """
         yaml_file = create_temp_yaml_file(tmp_path_factory, yamlin)
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             "--change=aliases[&old_anchor]",
             "--aliasof=aliases[&old_anchor]",
             "--anchor=new_anchor",
             yaml_file
-        )
+        ])
         assert result.success, result.stderr
 
         with open(yaml_file, 'r') as fhnd:
@@ -1062,12 +1062,12 @@ aliases:
 key: *new_anchor
 """
         yaml_file = create_temp_yaml_file(tmp_path_factory, yamlin)
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             "--change=aliases[&old_anchor]",
             "--anchor=new_anchor",
             yaml_file
-        )
+        ])
         assert not result.success, result.stderr
         assert "The --anchor|-H option may be used only when --aliasof|-A or --mergekey|-K are also set" in result.stderr
 
@@ -1083,12 +1083,12 @@ a_hash:
   a_key: *some_key
 """
         yaml_file = create_temp_yaml_file(tmp_path_factory, yamlin)
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             "--change=a_hash.a_key",
             "--aliasof=some_key",
             yaml_file
-        )
+        ])
         assert result.success, result.stderr
 
         with open(yaml_file, 'r') as fhnd:
@@ -1105,12 +1105,12 @@ hash:
   aliased_key: *valid_anchor
 """
         yaml_file = create_temp_yaml_file(tmp_path_factory, yamlin)
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             "--change=hash.new_key",
             "--aliasof=aliases.*",
             yaml_file
-        )
+        ])
         assert not result.success, result.stderr
         assert "impossible to Alias more than one Anchor at a time" in result.stderr
 
@@ -1122,13 +1122,13 @@ a_hash:
   a_key: A value
 """
         yaml_file = create_temp_yaml_file(tmp_path_factory, yamlin)
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             "--change=a_hash.a_key",
             "--aliasof=another_key",
             "--anchor=name_taken",
             yaml_file
-        )
+        ])
         assert not result.success, result.stderr
         assert "Anchor names must be unique within YAML documents" in result.stderr
 
@@ -1148,12 +1148,12 @@ a_hash:
   a_key: *some_key002
 """
         yaml_file = create_temp_yaml_file(tmp_path_factory, yamlin)
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             "--change=a_hash.a_key",
             "--aliasof=some_key",
             yaml_file
-        )
+        ])
         assert result.success, result.stderr
 
         with open(yaml_file, 'r') as fhnd:
@@ -1172,12 +1172,12 @@ a_hash:
   a_key: *has_anchor
 """
         yaml_file = create_temp_yaml_file(tmp_path_factory, yamlin)
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             "--change=a_hash.a_key",
             "--aliasof=some_key",
             yaml_file
-        )
+        ])
         assert result.success, result.stderr
 
         with open(yaml_file, 'r') as fhnd:
@@ -1192,12 +1192,12 @@ key: value
 key: value
 """
         yaml_file = create_temp_yaml_file(tmp_path_factory, yamlin)
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             "--change=/",
             "--tag=!something",
             yaml_file
-        )
+        ])
         assert result.success, result.stderr
 
         with open(yaml_file, 'r') as fhnd:
@@ -1212,12 +1212,12 @@ key: value
 key: !something value
 """
         yaml_file = create_temp_yaml_file(tmp_path_factory, yamlin)
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             "--change=key",
             "--tag=!something",
             yaml_file
-        )
+        ])
         assert result.success, result.stderr
 
         with open(yaml_file, 'r') as fhnd:
@@ -1236,12 +1236,12 @@ aliases:
 key: *anchored_scalar
 """
         yaml_file = create_temp_yaml_file(tmp_path_factory, yamlin)
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             "--change=aliases[&anchored_scalar]",
             "--tag=!some_tag",
             yaml_file
-        )
+        ])
         assert result.success, result.stderr
 
         with open(yaml_file, 'r') as fhnd:
@@ -1260,12 +1260,12 @@ aliases:
 key: *anchored_scalar
 """
         yaml_file = create_temp_yaml_file(tmp_path_factory, yamlin)
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             "--change=key",
             "--tag=some_tag",
             yaml_file
-        )
+        ])
         assert result.success, result.stderr
 
         with open(yaml_file, 'r') as fhnd:
@@ -1284,12 +1284,12 @@ concrete_key:
 egress_key: Following value
 """
         yaml_file = create_temp_yaml_file(tmp_path_factory, yamlin)
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             "--change=concrete_key",
             "--null",
             yaml_file
-        )
+        ])
         assert result.success, result.stderr
 
         with open(yaml_file, 'r') as fhnd:
@@ -1308,12 +1308,12 @@ concrete_key: Now not null
 egress_key: Following value
 """
         yaml_file = create_temp_yaml_file(tmp_path_factory, yamlin)
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             "--change=concrete_key",
             "--value=Now not null",
             yaml_file
-        )
+        ])
         assert result.success, result.stderr
 
         with open(yaml_file, 'r') as fhnd:
@@ -1368,12 +1368,12 @@ devices:
     platform: objective-c
 """
         yaml_file = create_temp_yaml_file(tmp_path_factory, yamlin)
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             "--change=/devices/*[!has_child(os)]/os",
             "--value=generic",
             yaml_file
-        )
+        ])
         assert result.success, result.stderr
 
         with open(yaml_file, 'r') as fhnd:
@@ -1442,12 +1442,12 @@ devices:
     platform: objective-c
 """
         yaml_file = create_temp_yaml_file(tmp_path_factory, yamlin)
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             "--change=/devices/*/&device_defaults",
             "--delete",
             yaml_file
-        )
+        ])
         assert result.success, result.stderr
 
         with open(yaml_file, 'r') as fhnd:
@@ -1462,12 +1462,12 @@ key:  value
 renamed_key: value
 """
         yaml_file = create_temp_yaml_file(tmp_path_factory, yamlin)
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             "--change=/key[name()]",
             "--value=renamed_key",
             yaml_file
-        )
+        ])
         assert result.success, result.stderr
 
         with open(yaml_file, 'r') as fhnd:
@@ -1482,12 +1482,12 @@ items:
 """
 
         yaml_file = create_temp_yaml_file(tmp_path_factory, yamlin)
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             "--change=/items[0][name()]",
             "--value=2",
             yaml_file
-        )
+        ])
         assert not result.success, result.stdout
         assert "Keys can be renamed only in Hash/map/dict" in result.stderr
 
@@ -1498,12 +1498,12 @@ another_key: value
 """
 
         yaml_file = create_temp_yaml_file(tmp_path_factory, yamlin)
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             "--change=another_key[name()]",
             "--value=key",
             yaml_file
-        )
+        ])
         assert not result.success, result.stdout
         assert "already exists at the same document level" in result.stderr
 
@@ -1573,12 +1573,12 @@ devices:
     platform: objective-c
 """
         yaml_file = create_temp_yaml_file(tmp_path_factory, yamlin)
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             "--change=devices.*",
             "--mergekey=&device_defaults",
             yaml_file
-        )
+        ])
         assert result.success, result.stderr
 
         with open(yaml_file, 'r') as fhnd:
@@ -1595,12 +1595,12 @@ hash:
   aliased_key: *valid_anchor
 """
         yaml_file = create_temp_yaml_file(tmp_path_factory, yamlin)
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             "--change=hash",
             "--mergekey=aliases.*",
             yaml_file
-        )
+        ])
         assert not result.success, result.stderr
         assert "impossible to Alias more than one Anchor at a time" in result.stderr
 
@@ -1614,12 +1614,12 @@ hash:
   aliased_key: *valid_anchor
 """
         yaml_file = create_temp_yaml_file(tmp_path_factory, yamlin)
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             "--change=hash.concrete_key",
             "--mergekey=&all_aliases",
             yaml_file
-        )
+        ])
         assert not result.success, result.stderr
         assert "Cannot add YAML Merge Keys to non-Hash" in result.stderr
 
@@ -1643,12 +1643,12 @@ TestService:
   <<: *base
 """
         yaml_file = create_temp_yaml_file(tmp_path_factory, yamlin)
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             "--change=common.TEST_COMMON_SETTING",
             "--value=a2",
             yaml_file
-        )
+        ])
         assert result.success, result.stderr
 
         with open(yaml_file, 'r') as fhnd:

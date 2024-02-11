@@ -8,17 +8,17 @@ class Test_yaml_get():
     command = "yaml-get"
 
     def test_no_options(self, script_runner):
-        result = script_runner.run(self.command, "--nostdin")
+        result = script_runner.run([self.command, "--nostdin"])
         assert not result.success, result.stderr
         assert "the following arguments are required: -p/--query" in result.stderr
 
     def test_no_input_file(self, script_runner):
-        result = script_runner.run(self.command, "--nostdin", "--query='/test'")
+        result = script_runner.run([self.command, "--nostdin", "--query='/test'"])
         assert not result.success, result.stderr
         assert "YAML_FILE must be set or be read from STDIN" in result.stderr
 
     def test_bad_input_file(self, script_runner):
-        result = script_runner.run(self.command, "--query='/test'", "no-such-file")
+        result = script_runner.run([self.command, "--query='/test'", "no-such-file"])
         assert not result.success, result.stderr
         assert "File not found:" in result.stderr
 
@@ -27,7 +27,7 @@ class Test_yaml_get():
         no: ''
         """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
-        result = script_runner.run(self.command, yaml_file)
+        result = script_runner.run([self.command, yaml_file])
         assert not result.success, result.stderr
         assert "the following arguments are required: -p/--query" in result.stderr
 
@@ -36,7 +36,7 @@ class Test_yaml_get():
         no: ''
         """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
-        result = script_runner.run(self.command, "--query=aliases", "--privatekey=no-such-file", yaml_file)
+        result = script_runner.run([self.command, "--query=aliases", "--privatekey=no-such-file", yaml_file])
         assert not result.success, result.stderr
         assert "EYAML private key is not a readable file" in result.stderr
 
@@ -45,22 +45,22 @@ class Test_yaml_get():
         no: ''
         """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
-        result = script_runner.run(self.command, "--query=aliases", "--publickey=no-such-file", yaml_file)
+        result = script_runner.run([self.command, "--query=aliases", "--publickey=no-such-file", yaml_file])
         assert not result.success, result.stderr
         assert "EYAML public key is not a readable file" in result.stderr
 
     def test_yaml_parsing_error(self, script_runner, imparsible_yaml_file):
-        result = script_runner.run(self.command, "--query=/", imparsible_yaml_file)
+        result = script_runner.run([self.command, "--query=/", imparsible_yaml_file])
         assert not result.success, result.stderr
         assert "YAML parsing error" in result.stderr
 
     def test_yaml_syntax_error(self, script_runner, badsyntax_yaml_file):
-        result = script_runner.run(self.command, "--query=/", badsyntax_yaml_file)
+        result = script_runner.run([self.command, "--query=/", badsyntax_yaml_file])
         assert not result.success, result.stderr
         assert "YAML syntax error" in result.stderr
 
     def test_yaml_composition_error(self, script_runner, badcmp_yaml_file):
-        result = script_runner.run(self.command, "--query=/", badcmp_yaml_file)
+        result = script_runner.run([self.command, "--query=/", badcmp_yaml_file])
         assert not result.success, result.stderr
         assert "YAML composition error" in result.stderr
 
@@ -70,7 +70,7 @@ class Test_yaml_get():
           - &plainScalar Plain scalar string
         """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
-        result = script_runner.run(self.command, "--query=aliases[1]", yaml_file)
+        result = script_runner.run([self.command, "--query=aliases[1]", yaml_file])
         assert not result.success, result.stderr
         assert "Required YAML Path does not match any nodes" in result.stderr
 
@@ -81,12 +81,12 @@ class Test_yaml_get():
             ENC[PKCS7,MIIx...broken-on-purpose...==]
         """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             "--query=aliases[&encryptedScalar]",
             "--eyaml=/does/not/exist-on-most/systems",
             yaml_file
-        )
+        ])
         assert not result.success, result.stderr
         assert "No accessible eyaml command" in result.stderr
 
@@ -96,11 +96,11 @@ hash:
   recursive_key: *recursive_this
 """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             "--query=/hash",
             yaml_file
-        )
+        ])
         assert not result.success, result.stderr
         assert "contains an infinitely recursing" in result.stderr
 
@@ -110,7 +110,7 @@ hash:
           - &plainScalar Plain scalar string
         """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
-        result = script_runner.run(self.command, "--query=aliases[&plainScalar]", yaml_file)
+        result = script_runner.run([self.command, "--query=aliases[&plainScalar]", yaml_file])
         assert result.success, result.stderr
         assert "Plain scalar string" in result.stdout
 
@@ -120,7 +120,7 @@ hash:
           - &plainScalar Plain scalar string
         """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
-        result = script_runner.run(self.command, "--query=aliases", yaml_file)
+        result = script_runner.run([self.command, "--query=aliases", yaml_file])
         assert result.success, result.stderr
         assert '["Plain scalar string"]' in result.stdout
 
@@ -169,7 +169,7 @@ timestampthing: 2022-09-24T14:13:12-7:30
         results = ["6", "6.8", "yes", "no", "True", "False", "\x00", "\x00", "", "null", "2022-09-23", "2022-09-24T14:13:12-07:30"]
 
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
-        result = script_runner.run(self.command, "--query=*", yaml_file)
+        result = script_runner.run([self.command, "--query=*", yaml_file])
         assert result.success, result.stderr
 
         match_index = 0
@@ -200,7 +200,7 @@ items:
         ]
 
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
-        result = script_runner.run(self.command, "--query=/items/*[!has_child(bravo)]*", yaml_file)
+        result = script_runner.run([self.command, "--query=/items/*[!has_child(bravo)]*", yaml_file])
         assert result.success, result.stderr
 
         match_index = 0
@@ -248,7 +248,7 @@ products:
         ]
 
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
-        result = script_runner.run(self.command, "--query=/products[has_child(recalled)]/name", yaml_file)
+        result = script_runner.run([self.command, "--query=/products[has_child(recalled)]/name", yaml_file])
         assert result.success, result.stderr
 
         match_index = 0
@@ -290,7 +290,7 @@ prices_hash:
 """
 
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
-        result = script_runner.run(self.command, "--query={}".format(query), yaml_file)
+        result = script_runner.run([self.command, "--query={}".format(query), yaml_file])
         assert result.success, result.stderr
 
         match_index = 0
@@ -322,7 +322,7 @@ indexes:
 """
 
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
-        result = script_runner.run(self.command, "--query={}".format(query), yaml_file)
+        result = script_runner.run([self.command, "--query={}".format(query), yaml_file])
         assert result.success, result.stderr
 
         match_index = 0
@@ -433,7 +433,7 @@ bad_prices_array:
 """
 
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
-        result = script_runner.run(self.command, "--query={}".format(query), yaml_file)
+        result = script_runner.run([self.command, "--query={}".format(query), yaml_file])
         assert result.success, result.stderr
 
         match_index = 0
