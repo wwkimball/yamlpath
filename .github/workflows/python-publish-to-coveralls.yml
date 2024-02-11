@@ -1,5 +1,5 @@
 # This workflow runs the full sweep of tests for the yamlpath package and publishes the coverage report to coveralls.io
-name: build
+name: Publish Coverage Report to Coveralls.IO
 
 on:
   push:
