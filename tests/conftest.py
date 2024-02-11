@@ -96,7 +96,6 @@ FktE6rH8a+8SwO+TGw==
 
     return (old_private_key_file, old_public_key_file)
 
-@requireseyaml
 @pytest.fixture(scope="session")
 def new_eyaml_keys(tmp_path_factory):
     """Creates temporary keys for encryption/decryption tests."""

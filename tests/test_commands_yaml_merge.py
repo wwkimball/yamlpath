@@ -8,26 +8,26 @@ class Test_commands_yaml_merge():
     command = "yaml-merge"
 
     def test_no_options(self, script_runner):
-        result = script_runner.run(self.command, "--nostdin")
+        result = script_runner.run([self.command, "--nostdin"])
         assert not result.success, result.stderr
         assert "There must be at least one YAML_FILE" in result.stderr
 
     def test_missing_input_file_arg(self, script_runner):
-        result = script_runner.run(self.command, "--nostdin", "no-file.yaml")
+        result = script_runner.run([self.command, "--nostdin", "no-file.yaml"])
         assert not result.success, result.stderr
         assert "Not a file" in result.stderr
 
     def test_missing_config_file(self, script_runner):
-        result = script_runner.run(
+        result = script_runner.run([
             self.command
             , "--config=no-file.ini"
             , "lhs-file.yaml"
-            , "rhs-file.yaml")
+            , "rhs-file.yaml"])
         assert not result.success, result.stderr
         assert "INI style configuration file is not readable" in result.stderr
 
     def test_nothing_to_backup(self, script_runner):
-        result = script_runner.run(self.command, "--nostdin", "--backup")
+        result = script_runner.run([self.command, "--nostdin", "--backup"])
         assert not result.success, result.stderr
         assert "applies only to OVERWRITE file" in result.stderr
 
@@ -37,19 +37,19 @@ key: value
 """)
         output_file = create_temp_yaml_file(tmp_path_factory, merged_yaml)
 
-        result = script_runner.run(
+        result = script_runner.run([
             self.command
             , "--output={}".format(output_file)
             , "lhs-file.yaml"
-            , "rhs-file.yaml")
+            , "rhs-file.yaml"])
         assert not result.success, result.stderr
         assert "Output file already exists" in result.stderr
 
     def test_missing_prime_input_file(self, script_runner):
-        result = script_runner.run(
+        result = script_runner.run([
             self.command
             , "no-file.yaml"
-            , "-")
+            , "-"])
         assert not result.success, result.stderr
         assert "Not a file" in result.stderr
 
@@ -60,10 +60,10 @@ hash:
   merge_target: LHS original value
 """)
 
-        result = script_runner.run(
+        result = script_runner.run([
             self.command
             , lhs_file
-            , "no-such-file.yaml")
+            , "no-such-file.yaml"])
         assert not result.success, result.stderr
         assert "Not a file" in result.stderr
 
@@ -75,11 +75,11 @@ hash:
 """)
         rhs_file = create_temp_yaml_file(tmp_path_factory, "")
 
-        result = script_runner.run(
+        result = script_runner.run([
             self.command
             , "--nostdin"
             , lhs_file
-            , rhs_file)
+            , rhs_file])
         assert result.success, result.stderr
 
     def test_merge_two_happy_files_to_stdout(
@@ -108,11 +108,11 @@ hash:
         # print("Expected Output:")
         # print(merged_yaml_content)
 
-        result = script_runner.run(
+        result = script_runner.run([
             self.command
             , "--nostdin"
             , lhs_file
-            , rhs_file)
+            , rhs_file])
         assert result.success, result.stderr
         assert merged_yaml_content == result.stdout
 
@@ -145,12 +145,12 @@ hash:
         # print("Expected Output:")
         # print(merged_yaml_content)
 
-        result = script_runner.run(
+        result = script_runner.run([
             self.command
             , "--nostdin"
             , "--output={}".format(output_file)
             , lhs_file
-            , rhs_file)
+            , rhs_file])
         assert result.success, result.stderr
 
         with open(output_file, 'r') as fhnd:
@@ -200,12 +200,12 @@ hash:
         # print("Expected Output:")
         # print(merged_yaml_content)
 
-        result = script_runner.run(
+        result = script_runner.run([
             self.command
             , "--nostdin"
             , "--output={}".format(output_file)
             , lhs_file
-            , rhs_file)
+            , rhs_file])
         assert result.success, result.stderr
 
         with open(output_file, 'r') as fhnd:
@@ -260,13 +260,13 @@ hash:
         # print("Expected Output:")
         # print(merged_yaml_content)
 
-        result = script_runner.run(
+        result = script_runner.run([
             self.command
             , "--nostdin"
             , "--output={}".format(output_file)
             , "--multi-doc-mode=merge_across"
             , lhs_file
-            , rhs_file)
+            , rhs_file])
         assert result.success, result.stderr
 
         with open(output_file, 'r') as fhnd:
@@ -310,13 +310,13 @@ hash:
         # print("Expected Output:")
         # print(merged_yaml_content)
 
-        result = script_runner.run(
+        result = script_runner.run([
             self.command
             , "--nostdin"
             , "--output={}".format(output_file)
             , "--multi-doc-mode=merge_across"
             , lhs_file
-            , rhs_file)
+            , rhs_file])
         assert result.success, result.stderr
 
         with open(output_file, 'r') as fhnd:
@@ -373,14 +373,14 @@ hash:
         # print("Expected Output:")
         # print(merged_yaml_content)
 
-        result = script_runner.run(
+        result = script_runner.run([
             self.command
             , "--nostdin"
             , "--output={}".format(output_file)
             , "--multi-doc-mode=merge_across"
             , "--json-indent=4"
             , lhs_file
-            , rhs_file)
+            , rhs_file])
         assert result.success, result.stderr
 
         with open(output_file, 'r') as fhnd:
@@ -424,13 +424,13 @@ hash:
         # print("Expected Output:")
         # print(merged_yaml_content)
 
-        result = script_runner.run(
+        result = script_runner.run([
             self.command
             , "--nostdin"
             , "--multi-doc-mode=merge_across"
             , "--document-format=json"
             , lhs_file
-            , rhs_file)
+            , rhs_file])
         assert result.success, result.stderr
         assert merged_yaml_content == result.stdout
 
@@ -484,14 +484,14 @@ hash:
         # print("Expected Output:")
         # print(merged_yaml_content)
 
-        result = script_runner.run(
+        result = script_runner.run([
             self.command
             , "--nostdin"
             , "--multi-doc-mode=merge_across"
             , "--document-format=json"
             , "--json-indent=4"
             , lhs_file
-            , rhs_file)
+            , rhs_file])
         assert result.success, result.stderr
         assert merged_yaml_content == result.stdout
 
@@ -532,14 +532,14 @@ hash:
         # print("Expected Output:")
         # print(merged_yaml_content)
 
-        result = script_runner.run(
+        result = script_runner.run([
             self.command
             , "--nostdin"
             , "--multi-doc-mode=merge_across"
             , "--document-format=json"
             , "--json-indent=-20"
             , lhs_file
-            , rhs_file)
+            , rhs_file])
         assert result.success, result.stderr
         assert merged_yaml_content == result.stdout
 
@@ -591,12 +591,12 @@ hash:
         # print("Expected Output:")
         # print(merged_yaml_content)
 
-        result = script_runner.run(
+        result = script_runner.run([
             self.command
             , "--nostdin"
             , "--multi-doc-mode=merge_across"
             , lhs_file
-            , rhs_file)
+            , rhs_file])
         assert result.success, result.stderr
         assert merged_yaml_content == result.stdout
 
@@ -660,12 +660,12 @@ rhs3:
         # print("Expected Output:")
         # print(merged_yaml_content)
 
-        result = script_runner.run(
+        result = script_runner.run([
             self.command
             , "--nostdin"
             , "--multi-doc-mode=merge_across"
             , lhs_file
-            , rhs_file)
+            , rhs_file])
         assert result.success, result.stderr
         assert merged_yaml_content == result.stdout
 
@@ -724,12 +724,12 @@ lhs_exclusive: true
         # print("Expected Output:")
         # print(merged_yaml_content)
 
-        result = script_runner.run(
+        result = script_runner.run([
             self.command
             , "--nostdin"
             , "--multi-doc-mode=merge_across"
             , lhs_file
-            , rhs_file)
+            , rhs_file])
         assert result.success, result.stderr
         assert merged_yaml_content == result.stdout
 
@@ -784,13 +784,13 @@ hash:
         # print("Expected Output:")
         # print(merged_yaml_content)
 
-        result = script_runner.run(
+        result = script_runner.run([
             self.command
             , "--nostdin"
             , "--output={}".format(output_file)
             , "--multi-doc-mode=matrix_merge"
             , lhs_file
-            , rhs_file)
+            , rhs_file])
         assert result.success, result.stderr
 
         with open(output_file, 'r') as fhnd:
@@ -825,13 +825,13 @@ hash:
         # print("Expected Output:")
         # print(merged_yaml_content)
 
-        result = script_runner.run(
+        result = script_runner.run([
             self.command
             , "--nostdin"
             , "--output={}".format(output_file)
             , "--document-format=json"
             , lhs_file
-            , rhs_file)
+            , rhs_file])
         assert result.success, result.stderr
 
         with open(output_file, 'r') as fhnd:
@@ -872,14 +872,14 @@ hash:
         # print("Expected Output:")
         # print(merged_yaml_content)
 
-        result = script_runner.run(
+        result = script_runner.run([
             self.command
             , "--nostdin"
             , "--output={}".format(output_file)
             , "--document-format=json"
             , "--json-indent=4"
             , lhs_file
-            , rhs_file)
+            , rhs_file])
         assert result.success, result.stderr
 
         with open(output_file, 'r') as fhnd:
@@ -904,12 +904,12 @@ hash:
         # print("Expected Output:")
         # print(merged_yaml_content)
 
-        result = script_runner.run(
+        result = script_runner.run([
             self.command
             , "--nostdin"
             , "--document-format=json"
             , "--output={}".format(output_file)
-            , lhs_file)
+            , lhs_file])
         assert result.success, result.stderr
 
         with open(output_file, 'r') as fhnd:
@@ -939,13 +939,13 @@ hash:
         # print("Expected Output:")
         # print(merged_yaml_content)
 
-        result = script_runner.run(
+        result = script_runner.run([
             self.command
             , "--nostdin"
             , "--document-format=json"
             , "--json-indent=4"
             , "--output={}".format(output_file)
-            , lhs_file)
+            , lhs_file])
         assert result.success, result.stderr
 
         with open(output_file, 'r') as fhnd:
@@ -972,12 +972,12 @@ hash:
         # print("Expected Output:")
         # print(merged_yaml_content)
 
-        result = script_runner.run(
+        result = script_runner.run([
             self.command
             , "--nostdin"
             , "--document-format=json"
             , "--output={}".format(output_file)
-            , lhs_file)
+            , lhs_file])
         assert result.success, result.stderr
 
         with open(output_file, 'r') as fhnd:
@@ -1010,13 +1010,13 @@ hash:
         # print("Expected Output:")
         # print(merged_yaml_content)
 
-        result = script_runner.run(
+        result = script_runner.run([
             self.command
             , "--nostdin"
             , "--document-format=json"
             , "--json-indent=4"
             , "--output={}".format(output_file)
-            , lhs_file)
+            , lhs_file])
         assert result.success, result.stderr
 
         with open(output_file, 'r') as fhnd:
@@ -1041,12 +1041,12 @@ hash:
         # print("Expected Output:")
         # print(merged_yaml_content)
 
-        result = script_runner.run(
+        result = script_runner.run([
             self.command
             , "--nostdin"
             , "--document-format=yaml"
             , "--output={}".format(output_file)
-            , lhs_file)
+            , lhs_file])
         assert result.success, result.stderr
 
         with open(output_file, 'r') as fhnd:
@@ -1064,10 +1064,10 @@ hash:
 - two
 """)
 
-        result = script_runner.run(
+        result = script_runner.run([
             self.command
             , lhs_file
-            , rhs_file)
+            , rhs_file])
         assert not result.success, result.stderr
 
     def test_bad_multidoc_lhs_input_file(self, script_runner, tmp_path_factory):
@@ -1086,10 +1086,10 @@ hash:
   merge_target: LHS original value
 """)
 
-        result = script_runner.run(
+        result = script_runner.run([
             self.command
             , lhs_file
-            , rhs_file)
+            , rhs_file])
         assert not result.success, result.stderr
 
     def test_bad_multidoc_rhs_input_file_condense_all(self, script_runner, tmp_path_factory):
@@ -1108,10 +1108,10 @@ hash:
 - two
 """)
 
-        result = script_runner.run(
+        result = script_runner.run([
             self.command
             , lhs_file
-            , rhs_file)
+            , rhs_file])
         assert not result.success, result.stderr
 
     def test_bad_multidoc_rhs_input_file_merge_across(self, script_runner, tmp_path_factory):
@@ -1130,11 +1130,11 @@ hash:
 - two
 """)
 
-        result = script_runner.run(
+        result = script_runner.run([
             self.command
             , "--multi-doc-mode=merge_across"
             , lhs_file
-            , rhs_file)
+            , rhs_file])
         assert not result.success, result.stderr
 
     def test_bad_multidoc_rhs_input_file_matrix_merge(self, script_runner, tmp_path_factory):
@@ -1153,11 +1153,11 @@ hash:
 - two
 """)
 
-        result = script_runner.run(
+        result = script_runner.run([
             self.command
             , "--multi-doc-mode=matrix_merge"
             , lhs_file
-            , rhs_file)
+            , rhs_file])
         assert not result.success, result.stderr
 
     def test_merge_explicit_from_stdin_to_stdout(
@@ -1322,11 +1322,11 @@ hash:
 new_key: New value
 """)
 
-        result = script_runner.run(
+        result = script_runner.run([
             self.command
             , "--mergeat=/[.~='']"
             , lhs_file
-            , rhs_file)
+            , rhs_file])
         assert not result.success, result.stderr
         assert "Unexpected use of \"~\" operator" in result.stderr
 
@@ -1340,12 +1340,12 @@ hash:
 new_key: New value
 """)
 
-        result = script_runner.run(
+        result = script_runner.run([
             self.command
             , "--mergeat=/[.~='']"
             , "--multi-doc-mode=merge_across"
             , lhs_file
-            , rhs_file)
+            , rhs_file])
         assert not result.success, result.stderr
         assert "Unexpected use of \"~\" operator" in result.stderr
 
@@ -1359,12 +1359,12 @@ hash:
 new_key: New value
 """)
 
-        result = script_runner.run(
+        result = script_runner.run([
             self.command
             , "--mergeat=/[.~='']"
             , "--multi-doc-mode=matrix_merge"
             , lhs_file
-            , rhs_file)
+            , rhs_file])
         assert not result.success, result.stderr
         assert "Unexpected use of \"~\" operator" in result.stderr
 
@@ -1381,24 +1381,24 @@ new_key: New value
 new_key: Override value
 """)
 
-        result = script_runner.run(
+        result = script_runner.run([
             self.command
             , "--mergeat=/[.~='']"
             , lhs_file
-            , rhs_file)
+            , rhs_file])
         assert not result.success, result.stderr
         assert "Unexpected use of \"~\" operator" in result.stderr
 
     def test_too_many_pseudofiles(self, script_runner):
-        result = script_runner.run(
+        result = script_runner.run([
             self.command
             , '-'
-            , '-')
+            , '-'])
         assert not result.success, result.stderr
         assert "Only one YAML_FILE may be the - pseudo-file" in result.stderr
 
     def test_yaml_syntax_error(self, script_runner, badsyntax_yaml_file, old_eyaml_keys, new_eyaml_keys):
-        result = script_runner.run(self.command, badsyntax_yaml_file)
+        result = script_runner.run([self.command, badsyntax_yaml_file])
         assert not result.success, result.stderr
         assert "YAML syntax error" in result.stderr
 
@@ -1443,12 +1443,12 @@ hash:
         # print("Expected Output:")
         # print(merged_yaml_content)
 
-        result = script_runner.run(
+        result = script_runner.run([
             self.command
             , "--nostdin"
             , "--document-format=json"
             , "--output={}".format(output_file)
-            , lhs_file)
+            , lhs_file])
         assert result.success, result.stderr
 
         with open(output_file, 'r') as fhnd:
@@ -1517,13 +1517,13 @@ hash:
         # print("Expected Output:")
         # print(merged_yaml_content)
 
-        result = script_runner.run(
+        result = script_runner.run([
             self.command
             , "--nostdin"
             , "--document-format=json"
             , "--json-indent=4"
             , "--output={}".format(output_file)
-            , lhs_file)
+            , lhs_file])
         assert result.success, result.stderr
 
         with open(output_file, 'r') as fhnd:
@@ -1593,12 +1593,12 @@ hash:
         # print("Expected Output:")
         # print(merged_yaml_content)
 
-        result = script_runner.run(
+        result = script_runner.run([
             self.command
             , "--nostdin"
             , "--output={}".format(output_file)
             , lhs_file
-            , rhs_file)
+            , rhs_file])
         assert result.success, result.stderr
 
         with open(output_file, 'r') as fhnd:
@@ -1613,13 +1613,13 @@ hash:
         """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
         backup_file = yaml_file + ".bak"
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             "--nostdin",
             "--overwrite={}".format(yaml_file),
             "--backup",
             yaml_file
-        )
+        ])
         assert result.success, result.stderr
         assert os.path.isfile(backup_file)
 
@@ -1638,13 +1638,13 @@ hash:
         with open(backup_file, 'w') as fhnd:
             fhnd.write(content + "\nkey2: value2")
 
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             "--nostdin",
             "--overwrite={}".format(yaml_file),
             "--backup",
             yaml_file
-        )
+        ])
         assert result.success, result.stderr
         assert os.path.isfile(backup_file)
 

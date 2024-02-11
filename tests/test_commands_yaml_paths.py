@@ -9,17 +9,17 @@ class Test_yaml_paths():
     command = "yaml-paths"
 
     def test_no_options(self, script_runner):
-        result = script_runner.run(self.command, "--nostdin")
+        result = script_runner.run([self.command, "--nostdin"])
         assert not result.success, result.stderr
         assert "the following arguments are required: -s/--search" in result.stderr
 
     def test_no_input_file(self, script_runner):
-        result = script_runner.run(self.command, "--nostdin", "--search=%abc")
+        result = script_runner.run([self.command, "--nostdin", "--search=%abc"])
         assert not result.success, result.stderr
         assert "There must be at least one YAML_FILE or STDIN document" in result.stderr
 
     def test_bad_input_file(self, script_runner):
-        result = script_runner.run(self.command, "--search=%abc", "no-such-file")
+        result = script_runner.run([self.command, "--search=%abc", "no-such-file"])
         assert not result.success, result.stderr
         assert "File not found:" in result.stderr
 
@@ -28,28 +28,28 @@ class Test_yaml_paths():
         no: ''
         """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
-        result = script_runner.run(self.command, yaml_file)
+        result = script_runner.run([self.command, yaml_file])
         assert not result.success, result.stderr
         assert "the following arguments are required: -s/--search" in result.stderr
 
     def test_yaml_parsing_error(self, script_runner, imparsible_yaml_file):
-        result = script_runner.run(
+        result = script_runner.run([
             self.command, "--search=%abc", imparsible_yaml_file
-        )
+        ])
         assert not result.success, result.stderr
         assert "YAML parsing error" in result.stderr
 
     def test_yaml_syntax_error(self, script_runner, badsyntax_yaml_file):
-        result = script_runner.run(
+        result = script_runner.run([
             self.command, "--search=%abc", badsyntax_yaml_file
-        )
+        ])
         assert not result.success, result.stderr
         assert "YAML syntax error" in result.stderr
 
     def test_yaml_composition_error(self, script_runner, badcmp_yaml_file):
-        result = script_runner.run(
+        result = script_runner.run([
             self.command, "--search=%abc", badcmp_yaml_file
-        )
+        ])
         assert not result.success, result.stderr
         assert "YAML composition error" in result.stderr
 
@@ -58,9 +58,9 @@ class Test_yaml_paths():
         no: ''
         """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
-        result = script_runner.run(
+        result = script_runner.run([
             self.command, "--search=%abc", "--privatekey=no-such-file", yaml_file
-        )
+        ])
         assert not result.success, result.stderr
         assert "EYAML private key is not a readable file" in result.stderr
 
@@ -69,9 +69,9 @@ class Test_yaml_paths():
         no: ''
         """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
-        result = script_runner.run(
+        result = script_runner.run([
             self.command, "--search=%abc", "--publickey=no-such-file", yaml_file
-        )
+        ])
         assert not result.success, result.stderr
         assert "EYAML public key is not a readable file" in result.stderr
 
@@ -80,11 +80,11 @@ class Test_yaml_paths():
         - element 1
         """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             "--nostdin", "--nofile",
             "--pathsep=/", "--search", "^element", yaml_file
-        )
+        ])
         assert result.success, result.stderr
         assert "\n".join([
             "/[0]",
@@ -104,11 +104,11 @@ class Test_yaml_paths():
 ? X
 """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             "--nostdin", "--nofile", "--pathsep=/",
             "--search", "$V", yaml_file
-        )
+        ])
         assert result.success, result.stderr
         assert "\n".join([
             "/IV",
@@ -127,11 +127,11 @@ baseball_legends: !!set
   ? Ken Griffy
 """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             "--nostdin", "--nofile", "--pathsep=/",
             "--refnames", "--search", "^bl", yaml_file
-        )
+        ])
         assert result.success, result.stderr
         assert "\n".join([
             "/aliases[&bl_anchor]",
@@ -147,11 +147,11 @@ baseball_legends: !!set
           - *anchor1
         """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             "--nostdin", "--nofile",
             "--pathsep=/", "--search", "^element", yaml_file
-        )
+        ])
         assert result.success, result.stderr
         assert "\n".join([
             "/aliases[&anchor1]",
@@ -166,13 +166,13 @@ baseball_legends: !!set
           - *anchor1
         """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             "--nostdin", "--nofile",
             "--pathsep=/", "--refnames",
             "--search", "^anchor",
             yaml_file
-        )
+        ])
         assert result.success, result.stderr
         assert "\n".join([
             "/aliases[&anchor1]"
@@ -185,11 +185,11 @@ baseball_legends: !!set
             - subvalue
         """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             "--nostdin", "--nofile",
             "--pathsep=/", "--search", "=subvalue", yaml_file
-        )
+        ])
         assert result.success, result.stderr
         assert "\n".join([
             "/array[0][0]",
@@ -201,11 +201,11 @@ baseball_legends: !!set
           child: value
         """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             "--nostdin", "--nofile",
             "--pathsep=/", "--search", "=value", yaml_file
-        )
+        ])
         assert result.success, result.stderr
         assert "\n".join([
             "/parent/child",
@@ -219,11 +219,11 @@ baseball_legends: !!set
           child: *anchoredValue
         """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             "--nostdin", "--nofile",
             "--pathsep=/", "--search", "$alue", yaml_file
-        )
+        ])
         assert result.success, result.stderr
         assert "\n".join([
             "/aliases[&anchoredValue]",
@@ -238,12 +238,12 @@ baseball_legends: !!set
           more: values
         """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             "--nostdin", "--nofile",
             "--pathsep=/", "--keynames", "--refnames", "--allowvaluealiases",
             "--search", "^anchored", yaml_file
-        )
+        ])
         assert result.success, result.stderr
         assert "\n".join([
             "/anchored_hash",
@@ -257,12 +257,12 @@ baseball_legends: !!set
           more: *anchoredValue
         """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             "--nostdin", "--nofile",
             "--pathsep=/", "--refnames",
             "--search", "^anchored", yaml_file
-        )
+        ])
         assert result.success, result.stderr
         assert "\n".join([
             "/hash/key",
@@ -278,12 +278,12 @@ baseball_legends: !!set
             subchild1: *anchor
         """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             "--nostdin", "--nofile",
             "--pathsep=/", "--allowaliases",
             "--search", "^element", yaml_file
-        )
+        ])
         assert result.success, result.stderr
         assert "\n".join([
             "/aliases[&anchor]",
@@ -297,13 +297,13 @@ baseball_legends: !!set
           child: value
         """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             "--nostdin", "--nofile",
             "--pathsep=/", "--refnames", "--keynames",
             "--search", "=anchored",
             yaml_file
-        )
+        ])
         assert result.success, result.stderr
         assert "\n".join([
             "/parent",
@@ -325,12 +325,12 @@ baseball_legends: !!set
             subval: 3.3
         """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             "--nostdin", "--nofile",
             "--pathsep=/", "--onlykeynames",
             "--search", "=aliasOne", yaml_file
-        )
+        ])
         assert result.success, result.stderr
         assert "\n".join([
             "/anchorKeys/aliasOne",
@@ -353,14 +353,14 @@ baseball_legends: !!set
             subval: 3.3
         """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             "--nostdin", "--nofile",
             "--pathsep=/",
             "--refnames", "--keynames",
             "--anchorsonly",
             "--search", "=recursiveAnchorKey", yaml_file
-        )
+        ])
         assert result.success, result.stderr
         assert "\n".join([
             "/anchorKeys/subjectKey",
@@ -382,12 +382,12 @@ baseball_legends: !!set
             subval: 3.3
         """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             "--nostdin", "--nofile",
             "--pathsep=/", "--refnames", "--keynames",
             "--allowaliases", "--search", "=recursiveAnchorKey", yaml_file
-        )
+        ])
         assert result.success, result.stderr
         assert "\n".join([
             "/anchorKeys/subjectKey",
@@ -399,9 +399,9 @@ baseball_legends: !!set
         no: ''
         """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
-        result = script_runner.run(
+        result = script_runner.run([
             self.command, "--search==", yaml_file
-        )
+        ])
         assert not result.success, result.stderr
         assert "An EXPRESSION with only a search operator has no effect" in result.stderr
 
@@ -410,9 +410,9 @@ baseball_legends: !!set
         no: ''
         """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
-        result = script_runner.run(
+        result = script_runner.run([
             self.command, "--search=abc", yaml_file
-        )
+        ])
         assert not result.success, result.stderr
         assert "Invalid search expression" in result.stderr
 
@@ -421,9 +421,9 @@ baseball_legends: !!set
         no: ''
         """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
-        result = script_runner.run(
+        result = script_runner.run([
             self.command, "--search", "=](.", yaml_file
-        )
+        ])
         assert not result.success, result.stderr
         assert "Invalid search expression" in result.stderr
 
@@ -438,14 +438,14 @@ baseball_legends: !!set
             - bravo
         """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             "--nostdin", "--nofile",
             "--pathsep=/", "--keynames",
             "--search", "^value",
             "--search", "=bravo",
             yaml_file
-        )
+        ])
         assert result.success, result.stderr
         assert "\n".join([
             "[^value]: /[0]/value",
@@ -464,13 +464,13 @@ baseball_legends: !!set
         """
         yaml_file1 = create_temp_yaml_file(tmp_path_factory, content1)
         yaml_file2 = create_temp_yaml_file(tmp_path_factory, content2)
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             "--nostdin",
             "--pathsep=/", "--keynames",
             "--search", "^value",
             yaml_file1, yaml_file2
-        )
+        ])
         assert result.success, result.stderr
         assert "\n".join([
             "{}/0: /[0]/value".format(yaml_file1),
@@ -491,14 +491,14 @@ baseball_legends: !!set
         """
         yaml_file1 = create_temp_yaml_file(tmp_path_factory, content1)
         yaml_file2 = create_temp_yaml_file(tmp_path_factory, content2)
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             "--nostdin",
             "--pathsep=/", "--keynames",
             "--search", "^value",
             "--search", "=bravo",
             yaml_file1, yaml_file2
-        )
+        ])
         assert result.success, result.stderr
         assert "\n".join([
             "{}/0[^value]: /[0]/value".format(yaml_file1),
@@ -520,14 +520,14 @@ baseball_legends: !!set
         """
         yaml_file1 = create_temp_yaml_file(tmp_path_factory, content1)
         yaml_file2 = create_temp_yaml_file(tmp_path_factory, content2)
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             "--nostdin",
             "--pathsep=/", "--keynames", "--noexpression",
             "--search", "^value",
             "--search", "=bravo",
             yaml_file1, yaml_file2
-        )
+        ])
         assert result.success, result.stderr
         assert "\n".join([
             "{}/0: /[0]/value".format(yaml_file1),
@@ -558,7 +558,7 @@ baseball_legends: !!set
             display_name:  What a pass!
         """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             "--nostdin", "--nofile",
             "--pathsep=/", "--onlykeynames",
@@ -566,7 +566,7 @@ baseball_legends: !!set
             "--except", "%passthrough",
             "--except", "%display",
             yaml_file
-        )
+        ])
         assert result.success, result.stderr
         assert "\n".join([
             "/accounts[0]/password",
@@ -580,13 +580,13 @@ baseball_legends: !!set
         key: value
         """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             "--pathsep=/",
             "--search==value",
             "--except==",
             yaml_file
-        )
+        ])
         assert not result.success, result.stderr
         assert "An EXPRESSION with only a search operator has no effect" in result.stderr
         assert "\n".join([
@@ -628,7 +628,7 @@ baseball_legends: !!set
           8OvCgBDvP5ZkrDJjHj6N5T8wSl/0]
         """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             "--nostdin", "--nofile",
             "--pathsep=/",
@@ -637,7 +637,7 @@ baseball_legends: !!set
             "--privatekey={}".format(old_eyaml_keys[0]),
             "--publickey={}".format(old_eyaml_keys[1]),
             yaml_file
-        )
+        ])
         assert result.success, result.stderr
         assert "\n".join([
             "/aliases[&doesMatch]",
@@ -649,14 +649,14 @@ baseball_legends: !!set
         key: value
         """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             "--nostdin", "--nofile",
             "--pathsep=/", "--keynames", "--noexpression",
             "--search", "=key",
             "--search", "=value",
             yaml_file
-        )
+        ])
         assert result.success, result.stderr
         assert "\n".join([
             "/key",
@@ -673,14 +673,14 @@ baseball_legends: !!set
               child2.1.1.1: value2.1.1.1
         """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             "--nostdin", "--nofile",
             "--pathsep=/",
             "--expand", "--keynames",
             "--search", "^parent",
             yaml_file
-        )
+        ])
         assert result.success, result.stderr
         assert "\n".join([
             "/parent1/child1.1",
@@ -810,7 +810,7 @@ baseball_legends: !!set
                 PATH: /usr/local/sbin:/usr/sbin:/sbin:/usr/local/bin:/usr/bin:/bin
         """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             "--nostdin", "--nofile",
             "--pathsep=/",
@@ -818,7 +818,7 @@ baseball_legends: !!set
             aliasmode,
             "--search", "=config",
             yaml_file
-        )
+        ])
         assert result.success, result.stderr
         assert "\n".join(assertions) + "\n" == result.stdout
 
@@ -831,7 +831,7 @@ baseball_legends: !!set
           includeChild: static
         """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             "--nostdin", "--nofile",
             "--pathsep=/",
@@ -839,7 +839,7 @@ baseball_legends: !!set
             "--refnames", "--allowkeyaliases",
             "--search", "=keyAnchor",
             yaml_file
-        )
+        ])
         assert result.success, result.stderr
         assert "\n".join([
             "/anchors/key",
@@ -852,7 +852,7 @@ baseball_legends: !!set
           key: value
         """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             "--nostdin", "--nofile",
             "--pathsep=/",
@@ -860,7 +860,7 @@ baseball_legends: !!set
             "--refnames",
             "--search", "=thisHash",
             yaml_file
-        )
+        ])
         assert result.success, result.stderr
         assert "\n".join([
             "/copy/key",
@@ -874,14 +874,14 @@ baseball_legends: !!set
               - value
         """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             "--nostdin", "--nofile",
             "--pathsep=/",
             "--expand", "--refnames",
             "--search", "=list",
             yaml_file
-        )
+        ])
         assert result.success, result.stderr
         assert "\n".join([
             "/&list[0][0][0]",
@@ -978,14 +978,14 @@ baseball_legends: !!set
             - elements
         """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             "--nostdin", "--nofile",
             "--pathsep=/",
             "--keynames", "--values",
             "--search", "^sample",
             yaml_file
-        )
+        ])
         assert result.success, result.stderr
         assert "\n".join([
             "/sample_scalar: value",
@@ -1036,7 +1036,7 @@ key: value
         assert stdout == result.stdout
 
     def test_too_many_stdins(self, script_runner):
-        result = script_runner.run(self.command, "--search", "=nothing", "-", "-")
+        result = script_runner.run([self.command, "--search", "=nothing", "-", "-"])
         assert not result.success, result.stderr
         assert "Only one YAML_FILE may be the - pseudo-file" in result.stderr
 
@@ -1080,7 +1080,7 @@ foo:
 array2[]: bar
 """
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
-        result = script_runner.run(
+        result = script_runner.run([
             self.command,
             "--nostdin", "--nofile",
             "--expand", "--noescape",
@@ -1088,6 +1088,6 @@ array2[]: bar
             "--search", "=~/.*/",
             "--pathsep", str(pathsep),
             yaml_file
-        )
+        ])
         assert result.success, result.stderr
         assert "\n".join(output) + "\n" == result.stdout

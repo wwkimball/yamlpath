@@ -19,7 +19,10 @@ rm -rf /tmp/yamlpath-python-coverage-data
 rm -f .coverage
 
 for pythonVersion in "${@}"; do
-	which deactivate &>/dev/null && deactivate &>/dev/null
+	if which deactivate &>/dev/null; then
+		echo "Deactivating Python $(python --version).  If this dumps you right back to the shell prompt, you were running Microsoft's VSCode-embedded Python and were just put into a sub-shell; just exit to resume tests."
+		deactivate
+	fi
 
 	pyCommand=python${pythonVersion}
 	if ! which "$pyCommand" &>/dev/null; then
