@@ -1,4 +1,5 @@
-# SOURCE:  https://packaging.python.org/guides/publishing-package-distribution-releases-using-github-actions-ci-cd-workflows/
+# Test publishing to PyPI.
+# @see:  https://packaging.python.org/guides/publishing-package-distribution-releases-using-github-actions-ci-cd-workflows/
 name: Upload Python TEST Package
 
 on:
@@ -13,23 +14,23 @@ on:
 jobs:
   validate:
     name: Code Quality Assessment
-    runs-on: ubuntu-20.04 # Use ubuntu-latest when https://github.com/actions/setup-python/issues/544 is fixed
+    runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.6', '3.7', '3.8', '3.9', '3.10', '3.11']
+        python-version: ['3.7', '3.8', '3.9', '3.10', '3.11']
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
     - name: Set Environment Variables
       run: |
-        echo "${HOME}/.gem/ruby/2.7.0/bin" >> $GITHUB_PATH
+        echo "${HOME}/.local/share/gem/ruby/3.0.0/bin" >> $GITHUB_PATH
     - name: Install dependencies
       run: |
-        gem install --user-install hiera-eyaml -v 2.1.0
+        gem install --user-install hiera-eyaml
         python -m pip install --upgrade pip
         python -m pip install --upgrade setuptools
         python -m pip install --upgrade wheel
@@ -56,9 +57,9 @@ jobs:
     needs: validate
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     - name: Set up Python 3.9
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v5
       with:
         python-version: '3.9'
     - name: Install Build Tools
@@ -70,7 +71,7 @@ jobs:
         sed -i -r -e "s/(^__version__[[:space:]]*=[[:space:]]*)("'"'"[[:digit:]](\.[[:digit:]])+)"'"'"/\1\2.RC$(date "+%Y%m%d%H%M%S")"'"'"/" yamlpath/__init__.py
         python setup.py sdist bdist_wheel
     - name: Publish Artifacts
-      uses: pypa/gh-action-pypi-publish@v1.4.2
+      uses: pypa/gh-action-pypi-publish@release/v1
       with:
         user: __token__
         password: ${{ secrets.TEST_PYPI_API_TOKEN }}

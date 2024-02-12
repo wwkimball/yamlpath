@@ -1,0 +1,34 @@
+# This workflow runs the full sweep of tests for the yamlpath package and publishes the coverage report to coveralls.io
+name: Publish Coverage Report to Coveralls.IO
+
+on:
+  push:
+    branches: [ master, development ]
+  pull_request:
+    branches: [ master, development ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+      - name: Set Environment Variables
+        run: |
+          echo "${HOME}/.local/share/gem/ruby/3.0.0/bin" >> $GITHUB_PATH
+      - name: Install dependencies
+        run: |
+          gem install --user-install hiera-eyaml
+          python -m pip install --upgrade pip
+          python -m pip install --upgrade setuptools
+          python -m pip install --upgrade pytest pytest-cov pytest-console-scripts coveralls
+          python -m pip install --editable .
+      - name: Unit Test with pytest
+        run: |
+          pytest --verbose --cov=yamlpath --cov-report=term-missing --cov-fail-under=100 --script-launch-mode=subprocess tests
+      - name: Publish coveralls Report
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          coveralls --service=github

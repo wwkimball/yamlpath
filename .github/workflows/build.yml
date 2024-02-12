@@ -1,5 +1,6 @@
-# This workflow will install Python dependencies, run tests and lint with a variety of Python versions
-# For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
+# This workflow will install dependencies, EYAML (from Ruby), and run all tests
+# and linting tools with every supported version of Python.
+# @see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
 
 name: build
 
@@ -12,23 +13,23 @@ on:
 jobs:
   build:
 
-    runs-on: ubuntu-20.04 # Use ubuntu-latest when https://github.com/actions/setup-python/issues/544 is fixed
+    runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.6', '3.7', '3.8', '3.9', '3.10', '3.11']
+        python-version: ['3.7', '3.8', '3.9', '3.10', '3.11']
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
     - name: Set Environment Variables
       run: |
-        echo "${HOME}/.gem/ruby/2.7.0/bin" >> $GITHUB_PATH
+        echo "${HOME}/.local/share/gem/ruby/3.0.0/bin" >> $GITHUB_PATH
     - name: Install dependencies
       run: |
-        gem install --user-install hiera-eyaml -v 2.1.0
+        gem install --user-install hiera-eyaml
         python -m pip install --upgrade pip
         python -m pip install --upgrade setuptools
         python -m pip install --upgrade wheel
@@ -46,8 +47,3 @@ jobs:
     - name: Unit Test with pytest
       run: |
         pytest --verbose --cov=yamlpath --cov-report=term-missing --cov-fail-under=100 --script-launch-mode=subprocess tests
-    - name: Publish coveralls Report
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: |
-        coveralls --service=github

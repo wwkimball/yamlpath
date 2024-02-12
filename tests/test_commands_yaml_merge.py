@@ -908,7 +908,7 @@ hash:
             self.command
             , "--nostdin"
             , "--document-format=json"
-            , f"--output={output_file}"
+            , "--output={}".format(output_file)
             , lhs_file])
         assert result.success, result.stderr
 
@@ -944,7 +944,7 @@ hash:
             , "--nostdin"
             , "--document-format=json"
             , "--json-indent=4"
-            , f"--output={output_file}"
+            , "--output={}".format(output_file)
             , lhs_file])
         assert result.success, result.stderr
 
@@ -976,7 +976,7 @@ hash:
             self.command
             , "--nostdin"
             , "--document-format=json"
-            , f"--output={output_file}"
+            , "--output={}".format(output_file)
             , lhs_file])
         assert result.success, result.stderr
 
@@ -1015,7 +1015,7 @@ hash:
             , "--nostdin"
             , "--document-format=json"
             , "--json-indent=4"
-            , f"--output={output_file}"
+            , "--output={}".format(output_file)
             , lhs_file])
         assert result.success, result.stderr
 
@@ -1045,7 +1045,7 @@ hash:
             self.command
             , "--nostdin"
             , "--document-format=yaml"
-            , f"--output={output_file}"
+            , "--output={}".format(output_file)
             , lhs_file])
         assert result.success, result.stderr
 
@@ -1447,7 +1447,7 @@ hash:
             self.command
             , "--nostdin"
             , "--document-format=json"
-            , f"--output={output_file}"
+            , "--output={}".format(output_file)
             , lhs_file])
         assert result.success, result.stderr
 
@@ -1522,7 +1522,7 @@ hash:
             , "--nostdin"
             , "--document-format=json"
             , "--json-indent=4"
-            , f"--output={output_file}"
+            , "--output={}".format(output_file)
             , lhs_file])
         assert result.success, result.stderr
 

@@ -4,7 +4,7 @@ Implement MergerConfig.
 Copyright 2020, 2021 William W. Kimball, Jr. MBA MSIS
 """
 import configparser
-from typing import Any, Dict, Union
+from typing import Any, Dict, Optional
 from argparse import Namespace
 
 from yamlpath.exceptions import YAMLPathException
@@ -24,23 +24,35 @@ from yamlpath.wrappers import ConsolePrinter, NodeCoords
 class MergerConfig:
     """Config file processor for the Merger."""
 
-    def __init__(self, logger: ConsolePrinter, args: Namespace) -> None:
+    def __init__(
+            self,
+            logger: ConsolePrinter,
+            args: Namespace,
+            **kwargs: Any,
+    ) -> None:
         """
         Instantiate this class into an object.
 
         Parameters:
         1. logger (ConsolePrinter) Instance of ConsoleWriter or subclass
         2. args (dict) Default options for merge rules
+        3. kwargs (dict) Overrides for config values
 
         Returns:  N/A
         """
         self.log = logger
         self.args = args
-        self.config: Union[None, configparser.ConfigParser] = None
+        self.config: Optional[configparser.ConfigParser] = None
         self.rules: Dict[NodeCoords, str] = {}
         self.keys: Dict[NodeCoords, str] = {}
+        config_overrides: Dict[str, Any] = {}
 
-        self._load_config()
+        if "keys" in kwargs:
+            config_overrides["keys"] = kwargs.pop("keys")
+        if "rules" in kwargs:
+            config_overrides["rules"] = kwargs.pop("rules")
+
+        self._load_config(config_overrides)
 
     def anchor_merge_mode(self) -> AnchorConflictResolutions:
         """
@@ -322,7 +334,7 @@ class MergerConfig:
                 "... NODE:", data=node_coord,
                 prefix="MergerConfig::_prepare_user_rules:  ")
 
-    def _load_config(self) -> None:
+    def _load_config(self, config_overrides: Dict[str, Any]) -> None:
         """Load the external configuration file."""
         config = configparser.ConfigParser()
 
@@ -334,8 +346,15 @@ class MergerConfig:
 
         if config_file:
             config.read(config_file)
-            if config.sections():
-                self.config = config
+
+        if "keys" in config_overrides:
+            config["keys"] = config_overrides["keys"]
+
+        if "rules" in config_overrides:
+            config["rules"] = config_overrides["rules"]
+
+        if config.sections():
+            self.config = config
 
     def _get_config_for(self, node_coord: NodeCoords, section: dict) -> str:
         """

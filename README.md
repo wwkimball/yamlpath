@@ -271,10 +271,11 @@ ephemeral or longer-lasting virtual Python environments.
 ### Requirements
 
 This project requires [Python](https://www.python.org/) 3.  It is rigorously
-tested against Pythons 3.6 through 3.11.  Most operating systems and
-distributions have access to Python 3 even if only Python 2 -- or no Python, at
-all -- came pre-installed.  It is generally safe to have more than one version
-of Python on your system at the same time, especially when using
+tested against Pythons 3.7 through 3.11 (support for Python 3.6 was dropped
+10 FEB 2024).  Most operating systems and distributions have access to Python
+3 even if only Python 2 -- or no Python, at all -- came pre-installed.  It is
+generally safe to have more than one version of Python on your system at the
+same time, especially when using
 [virtual Python environments](https://docs.python.org/3/library/venv.html).
 
 *yamlpath* depends on *ruamel.yaml* (derived from and greatly extending PyYAML)
@@ -913,19 +914,6 @@ eyaml-rotate-keys \
 
 You could combine this with `find` and `xargs` if your E/YAML file are
 dispersed through a directory hierarchy, as with Hiera data.
-
-##### EYAML Compatibility Alert
-
-The maintainers of the hiera-eyaml project have released version 3.x and it is
-*not backward compatible* with encryption certificates generated for
-hiera-eyaml version 2.x.  This has nothing to do with YAML Path and is alerted
-here only as a courtesy to YAML Path users.  **If you upgrade your
-installation of hiera-eyaml without first updating your encryption
-certificates and using a tool like eyaml-rotate-keys (provided here) to
-re-encrypt your data with the replacement certificates, hiera-eyaml 3.x will
-fail to decrypt your data!**  This is *not* a problem with YAML Path.
-hiera-eyaml certificate compatibility is well outside the purview of YAML Path
-and its tools.
 
 #### Get the Differences Between Two Documents
 

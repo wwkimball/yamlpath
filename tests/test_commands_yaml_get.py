@@ -290,7 +290,7 @@ prices_hash:
 """
 
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
-        result = script_runner.run([self.command, f"--query={query}", yaml_file])
+        result = script_runner.run([self.command, "--query={}".format(query), yaml_file])
         assert result.success, result.stderr
 
         match_index = 0
@@ -322,7 +322,7 @@ indexes:
 """
 
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
-        result = script_runner.run([self.command, f"--query={query}", yaml_file])
+        result = script_runner.run([self.command, "--query={}".format(query), yaml_file])
         assert result.success, result.stderr
 
         match_index = 0
@@ -433,7 +433,7 @@ bad_prices_array:
 """
 
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
-        result = script_runner.run([self.command, f"--query={query}", yaml_file])
+        result = script_runner.run([self.command, "--query={}".format(query), yaml_file])
         assert result.success, result.stderr
 
         match_index = 0
