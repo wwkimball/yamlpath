@@ -76,6 +76,7 @@ confidence=
 disable=R0401,
       R0801,
       C0209,
+      R0917,
       R1731,
       R1737,
       E0606

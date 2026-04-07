@@ -5,4 +5,4 @@ pytest-cov==6.1.1
 pytest-console-scripts==1.4.1
 pylint==3.3.6
 pydocstyle==6.3.0
-coveralls==4.0.1
+coveralls==4.1.0
