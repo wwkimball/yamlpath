@@ -17,6 +17,23 @@ function New-TemporaryDirectory {
     return $Item
 }
 
+function Get-TestToolsRequirementsFile {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [string]$PyVersion
+    )
+
+    $VersionDigits = $PyVersion -replace "\."
+    $RequirementsFile = "requirements/test-tools/py$VersionDigits.txt"
+    if (-Not (Test-Path -Path $RequirementsFile -PathType Leaf)) {
+        Write-Warning "`nWARNING:  Python $PyVersion is not supported because required test-tool constraints are missing: $RequirementsFile"
+        return $null
+    }
+
+    return $RequirementsFile
+}
+
 $EnvDirs = Get-ChildItem -Directory -Filter "venv*"
 ForEach ($EnvDir in $EnvDirs) {
     & "$($EnvDir.FullName)\Scripts\Activate.ps1"
@@ -26,6 +43,19 @@ ForEach ($EnvDir in $EnvDirs) {
     }
 
     $PythonVersion = $(python --version)
+    $PyVersionMatch = [regex]::Match($PythonVersion, "([0-9]+\.[0-9]+)\.[0-9]+")
+    if (-Not $PyVersionMatch.Success) {
+        & deactivate
+        Write-Error "`nERROR:  Unable to parse Python version from: $PythonVersion"
+        continue
+    }
+
+    $PyMajorMinor = $PyVersionMatch.Groups[1].Value
+    $RequirementsFile = Get-TestToolsRequirementsFile -PyVersion $PyMajorMinor
+    if ([string]::IsNullOrEmpty($RequirementsFile)) {
+        & deactivate
+        continue
+    }
     Write-Output @"
 
         =========================================================================
@@ -65,8 +95,14 @@ ForEach ($EnvDir in $EnvDirs) {
         exit 124
     }
 
-    Write-Output "...upgrading testing tools"
-    pip install --upgrade mypy pytest pytest-cov pytest-console-scripts pylint coveralls pydocstyle
+    Write-Output "...installing pinned testing tools from $RequirementsFile"
+    pip install -r $RequirementsFile
+    if (!$?) {
+        & deactivate
+        Remove-Item -Recurse -Force $TmpVEnv
+        Write-Error "`nERROR:  Unable to install pinned testing tools from $RequirementsFile!"
+        exit 122
+    }
 
     Write-Output "`nPYDOCSTYLE..."
     pydocstyle yamlpath | Out-String

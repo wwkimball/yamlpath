@@ -1,0 +1,8 @@
+# Pinned test tooling for Python 3.12 baseline recovery
+mypy==1.10.1
+pytest==8.2.2
+pytest-cov==5.0.0
+pytest-console-scripts==1.4.1
+pylint==3.2.7
+pydocstyle==6.3.0
+coveralls==4.0.1

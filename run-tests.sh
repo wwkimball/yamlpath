@@ -1,16 +1,27 @@
 #!/usr/bin/env bash
-##########################################################################
+################################################################################
 # Run Python code quality tests against this project.
-##########################################################################
+################################################################################
 if ! [ -d tests -a -d yamlpath ]; then
 	echo "Please start this script only from within the top directory of the YAML Path project." >&2
 	exit 2
 fi
 
 if [ 1 -gt "$#" ]; then
-	echo "You must specify at least one Python version.  Space-delimit multiples like: $0 3.7 3.8 3.9 3.10 3.11" >&2
+	echo "You must specify at least one Python version.  Space-delimit multiples like: $0 3.10 3.11 3.12 3.13 3.14" >&2
 	exit 2
 fi
+
+function resolveRequirementsFile {
+	local python_version="$1"
+	local requirements_file="requirements/test-tools/py${python_version//./}.txt"
+	if ! [ -f "$requirements_file" ]; then
+		echo -e "\nWARNING:  Python ${python_version} is not supported because required test-tool constraints are missing: ${requirements_file}" >&2
+		return 1
+	fi
+
+	echo "$requirements_file"
+}
 
 # Delete all cached data
 find ./ -name '__pycache__' -type d -print0 | xargs -0 rm -rf || exit $?
@@ -30,6 +41,9 @@ for pythonVersion in "${@}"; do
 		continue
 	fi
 	pyVersion=$("$pyCommand" --version)
+	if ! requirementsFile=$(resolveRequirementsFile "$pythonVersion"); then
+		continue
+	fi
 
 	cat <<-EOF
 
@@ -68,9 +82,13 @@ EOF
 		exit 124
 	fi
 
-	echo "...upgrading testing tools"
-	pip install --upgrade mypy pytest pytest-cov pytest-console-scripts \
-		pylint coveralls pydocstyle >/dev/null
+	echo "...installing pinned testing tools from ${requirementsFile}"
+	if ! pip install -r "${requirementsFile}" >/dev/null; then
+		deactivate
+		rm -rf "$tmpVEnv"
+		echo -e "\nERROR:  Unable to install pinned testing tools from ${requirementsFile}!" >&2
+		exit 123
+	fi
 
 	echo -e "\nPYDOCSTYLE..."
 	if ! pydocstyle yamlpath; then

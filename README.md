@@ -271,8 +271,9 @@ ephemeral or longer-lasting virtual Python environments.
 ### Requirements
 
 This project requires [Python](https://www.python.org/) 3.  It is rigorously
-tested against Pythons 3.7 through 3.11 (support for Python 3.6 was dropped
-10 FEB 2024).  Most operating systems and distributions have access to Python
+tested against Pythons 3.10 through 3.14 (support for Python 3.6 was dropped
+10 FEB 2024 and support for Python 3.7 through 3.9 was dropped 7 APR 2026).
+Most operating systems and distributions have access to Python
 3 even if only Python 2 -- or no Python, at all -- came pre-installed.  It is
 generally safe to have more than one version of Python on your system at the
 same time, especially when using
@@ -288,7 +289,7 @@ circumstances like using very old versions of `pip` or its own dependency,
 
 Like most others, this Python project is published to [PyPI](https://pypi.org/)
 so that it can be easily installed via Python's `pip` command (or its
-version-specific `pip3`, `pip3.7`, and such depending on how your Python was
+version-specific `pip3`, `pip3.10`, and such depending on how your Python was
 installed).
 
 Python's `pip` command is ever-changing.  It is updated very frequently.  This
@@ -296,18 +297,18 @@ command further depends on other libraries to do its job, namely *setuptools*.
 It so happens that *setuptools* is also updated very frequently.  Both of these
 are separate from Python itself, despite versions of them being pre-installed
 with Python.  It is your responsibility to keep `pip` and *setuptools*
-up-to-date.  When `pip` or *setuptools* become outdated, _you will experience
-errors_ when trying to install newer Python packages like *yamlpath* **unless
+up-to-date.  When `pip` or *setuptools* become outdated, *you will experience
+errors* when trying to install newer Python packages like *yamlpath* **unless
 you preinstall such packages' dependencies**.  In the case of *yamlpath*, this
 means you'd need to preinstall *ruamel.yaml* and *python-dateutil* if you
 cannot or choose not to upgrade `pip` and/or *setuptools*.
 
 As long as your `pip` and *setuptools* are up-to-date, installing *yamlpath* is
-as simple as a single command (the "3.7" suffix to the `pip` command is
+as simple as a single command (the "3.10" suffix to the `pip` command is
 optional, depending on how your Python 3 was installed):
 
 ```shell
-pip3.7 install yamlpath
+pip3.10 install yamlpath
 ```
 
 #### Very Old Versions of pip or its setuptools Dependency
@@ -324,14 +325,14 @@ update `pip` and/or *setuptools* to at least the minimum required versions so
 Upgrading `pip` and *setuptools* is trivially simple as long as you have
 sufficient access rights to do so on your local machine.  Depending on your
 situation, you may need to prefix these with `sudo` and/or you may need to
-substitute `python3` and `pip3` for `python` and `pip`, or even `python3.7` and
-`pip3.7` (or another specific version of Python 3), respectively.  To reiterate
+substitute `python3` and `pip3` for `python` and `pip`, or even `python3.10` and
+`pip3.10` (or another specific version of Python 3), respectively.  To reiterate
 that this project requires Python 3, these sample commands will be
 demonstrated using such prefixes:
 
 ```shell
-python3.7 -m pip install --upgrade pip
-pip3.7 install --upgrade setuptools
+python3.10 -m pip install --upgrade pip
+pip3.10 install --upgrade setuptools
 ```
 
 When you cannot or will not update `pip` or *setuptools*, just pre-install
@@ -340,8 +341,8 @@ separately and in order, like this (you **cannot** combine these installations
 into a single command):
 
 ```shell
-pip3.7 install ruamel.yaml python-dateutil
-pip3.7 install yamlpath
+pip3.10 install ruamel.yaml python-dateutil
+pip3.10 install yamlpath
 ```
 
 The downside to choosing this manual installation path is that you may end up
@@ -1162,7 +1163,7 @@ handling for `yamlpath.eyaml.EYAMLCommandException`.
 
 Note also that these examples use `ConsolePrinter` to handle STDOUT and STDERR
 messaging.  You don't have to.  However, some kind of logger must be passed to
-these libraries so they can write messages _somewhere_.  Your custom message
+these libraries so they can write messages *somewhere*.  Your custom message
 handler or logger must provide the same API as `ConsolePrinter`; review the
 header documentation in [consoleprinter.py](yamlpath/wrappers/consoleprinter.py)
 for details.  Generally speaking, it would be trivial to write your own custom
