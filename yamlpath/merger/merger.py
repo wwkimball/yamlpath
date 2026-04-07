@@ -856,10 +856,12 @@ class Merger:
             insert_at, lhs_proc, rhs
         ):
             target_node = node_coord.node
-            Parsers.set_flow_style(
-                rhs, (target_node.fa.flow_style()
-                      if hasattr(target_node, "fa")
-                      else None))
+            target_flow_style = (
+                bool(target_node.fa.flow_style())
+                if hasattr(target_node, "fa")
+                else False
+            )
+            Parsers.set_flow_style(rhs, target_flow_style)
 
             if target_node is rhs:
                 # _get_merge_target_nodes already inserted RHS (novel mergeat)
