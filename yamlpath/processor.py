@@ -17,6 +17,12 @@ from ruamel.yaml.comments import (
 
 from yamlpath.types import AncestryEntry, PathAttributes, PathSegment
 from yamlpath.common import Anchors, KeywordSearches, Nodes, Searches
+from yamlpath.common.ruamelcompat import (
+    add_merge_node,
+    iter_merge_nodes,
+    remove_merge_node,
+    set_yaml_tag,
+)
 from yamlpath import YAMLPath
 from yamlpath.path import SearchKeywordTerms, SearchTerms, CollectorTerms
 from yamlpath.wrappers import ConsolePrinter, NodeCoords
@@ -487,16 +493,16 @@ class Processor:
                     " by",
                     str(target_path))
 
-            refs = node.merge if hasattr(node, "merge") else []
+            refs = [merge_node for _, merge_node in iter_merge_nodes(node)]
             already_refed = False
-            for (_, ref_node) in refs:
+            for ref_node in refs:
                 if ref_node == anchor_node:
                     already_refed = True
                     break
             if already_refed:
                 continue
 
-            node_coord.node.add_yaml_merge([(len(refs), anchor_node)])
+            add_merge_node(node_coord.node, anchor_node, materialize_keys=True)
 
     def alias_nodes(
         self, yaml_path: Union[YAMLPath, str],
@@ -673,7 +679,7 @@ class Processor:
         for node_coord in gathered_nodes:
             old_node = node_coord.node
             if node_coord.parent is None:
-                node_coord.node.yaml_set_tag(tag)
+                set_yaml_tag(node_coord.node, tag)
             else:
                 node_coord.parent[node_coord.parentref] = Nodes.apply_yaml_tag(
                     node_coord.node, tag)
@@ -782,12 +788,12 @@ class Processor:
                     and hasattr(parent, "merge")
                     and len(parent.merge) > 0
                 ):
-                    for (midx, merge_node) in parent.merge:
+                    for (midx, merge_node) in iter_merge_nodes(parent):
                         if merge_node == compare_node:
                             for (key, val) in merge_node.items():
                                 if key in parent and parent[key] == val:
                                     del parent[key]
-                            del parent.merge[midx]
+                            remove_merge_node(parent, midx)
                             break
                 elif parentref in parent:
                     del parent[parentref]
@@ -1226,8 +1232,7 @@ class Processor:
                                 if stripped_attrs in all_anchors
                                 else None)
                 if compare_node:
-                    for merge_tuple in data.merge:
-                        merge_node = merge_tuple[1]
+                    for _, merge_node in iter_merge_nodes(data):
                         self.logger.debug((
                             "Comparing YAML Merge Key against ANCHOR node {}:"
                             ).format(stripped_attrs),

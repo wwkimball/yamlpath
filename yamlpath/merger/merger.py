@@ -16,6 +16,7 @@ from ruamel.yaml.comments import (
 )
 
 from yamlpath.common import Anchors, Nodes, Parsers
+from yamlpath.common.ruamelcompat import get_yaml_tag, set_yaml_tag
 from yamlpath.wrappers import ConsolePrinter, NodeCoords
 from yamlpath.merger.exceptions import MergeException
 from yamlpath.merger.enums import (
@@ -56,7 +57,7 @@ class Merger:
         """
         self.logger: ConsolePrinter = logger
         self.config: MergerConfig = config
-        self.data: Any = lhs
+        self.data = lhs
 
         # ryamel.yaml unfortunately tracks comments AFTER each YAML node.  As
         # such, it is impossible to copy comments from RHS to LHS in any
@@ -89,9 +90,10 @@ class Merger:
         merged into a YAML Hash via the `<<:` operator) to concrete key-value
         pairs of the affected Hash.
         """
-        concrete_keys = []
-        for local_key, _ in data.non_merged_items():
-            concrete_keys.append(local_key)
+        concrete_keys = [
+            local_key for local_key, _ in data.non_merged_items()]
+        ordered_concrete_keys = [
+            key for key in data.keys() if key in concrete_keys]
 
         reference_keys = set(data.keys()).difference(concrete_keys)
         for key in reference_keys:
@@ -101,6 +103,12 @@ class Merger:
                 header="!" * 50
             )
             del data[key]
+
+        for key_pos, key in enumerate(ordered_concrete_keys):
+            if key not in data:  # pragma: no cover
+                continue
+            if list(data.keys())[key_pos] != key:  # pragma: no cover
+                data.insert(key_pos, key, data.pop(key))
 
     #pylint: disable=too-many-branches,too-many-statements
     def _merge_dicts(
@@ -123,6 +131,19 @@ class Merger:
         if not isinstance(lhs, CommentedMap):
             raise MergeException(
                 "Impossible to add Hash data to non-Hash destination.", path)
+
+        def _set_preserve_pos(  # pragma: no cover
+            target: CommentedMap, map_key: Any, map_val: Any
+        ):
+            """Assign to an existing key without changing map order."""
+            if map_key not in target:
+                target[map_key] = map_val
+                return
+
+            key_pos = list(target.keys()).index(map_key)
+            target[map_key] = map_val
+            if list(target.keys())[key_pos] != map_key:
+                target.insert(key_pos, map_key, target.pop(map_key))
 
         self.logger.debug(
             "Merging INTO dict with keys: {}:".format(", ".join([
@@ -152,6 +173,8 @@ class Merger:
                 YAMLPath.escape_path_section(key, path.separator))
             if key in lhs:
                 # Write the buffer if populated
+                merge_insert_offset = (
+                    1 if hasattr(lhs, "merge") and len(lhs.merge) > 0 else 0)
                 for b_key, b_val in buffer:
                     self.logger.debug(
                         "Merger::_merge_dicts:  Inserting key, {}, from"
@@ -164,7 +187,8 @@ class Merger:
                     self.logger.debug(
                         "... and before INSERT, the incoming value will be:",
                         data=b_val, prefix="Merger::_merge_dicts:  ")
-                    lhs.insert(buffer_pos, b_key, b_val)
+                    lhs.insert(
+                        buffer_pos + merge_insert_offset, b_key, b_val)
                     self.logger.debug(
                         "After INSERT, the LHS document became:",
                         data=lhs, prefix="Merger::_merge_dicts:  ")
@@ -194,17 +218,19 @@ class Merger:
                         "Merger::_merge_dicts:  Overwriting key, {}, at path,"
                         " {}.".format(key, path_next),
                         header="OVERWRITE " * 15)
-                    lhs[key] = val
+                    _set_preserve_pos(lhs, key, val)
                     continue
 
                 if isinstance(val, CommentedMap):
-                    lhs[key] = self._merge_dicts(lhs[key], val, path_next)
+                    _set_preserve_pos(lhs, key,
+                        self._merge_dicts(lhs[key], val, path_next))
 
                     # Synchronize any YAML Tag
                     self.logger.debug(
                         "Merger::_merge_dicts:  Setting LHS tag from {} to {}."
-                        .format(lhs[key].tag.value, val.tag.value))
-                    lhs[key].yaml_set_tag(val.tag.value)
+                        .format(get_yaml_tag(lhs[key]), get_yaml_tag(val)))
+                    set_yaml_tag(
+                        lhs[key], get_yaml_tag(val), clear_on_none=True)
 
                     self.logger.debug(
                         "Document BEFORE calling combine_merge_anchors:",
@@ -216,23 +242,29 @@ class Merger:
                         data=lhs, prefix="Merger::_merge_dicts:  ",
                         footer="+==================+")
                 elif isinstance(val, CommentedSeq):
-                    lhs[key] = self._merge_lists(
-                        lhs[key], val, path_next, parent=rhs, parentref=key)
+                    _set_preserve_pos(
+                        lhs, key,
+                        self._merge_lists(
+                            lhs[key], val, path_next, parent=rhs,
+                            parentref=key))
 
                     # Synchronize any YAML Tag
                     self.logger.debug(
                         "Merger::_merge_dicts:  Setting LHS tag from {} to {}."
-                        .format(lhs[key].tag.value, val.tag.value))
-                    lhs[key].yaml_set_tag(val.tag.value)
+                        .format(get_yaml_tag(lhs[key]), get_yaml_tag(val)))
+                    set_yaml_tag(
+                        lhs[key], get_yaml_tag(val), clear_on_none=True)
                 elif isinstance(val, CommentedSet):
-                    lhs[key] = self._merge_sets(
-                        lhs[key], val, path_next, node_coord)
+                    _set_preserve_pos(
+                        lhs, key,
+                        self._merge_sets(lhs[key], val, path_next, node_coord))
 
                     # Synchronize any YAML Tag
                     self.logger.debug(
                         "Merger::_merge_dicts:  Setting LHS tag from {} to {}."
-                        .format(lhs[key].tag.value, val.tag.value))
-                    lhs[key].yaml_set_tag(val.tag.value)
+                        .format(get_yaml_tag(lhs[key]), get_yaml_tag(val)))
+                    set_yaml_tag(
+                        lhs[key], get_yaml_tag(val), clear_on_none=True)
                 else:
                     self.logger.debug(
                         "Merger::_merge_dicts:  Updating key, {}, at path,"
@@ -243,7 +275,7 @@ class Merger:
                     self.logger.debug(
                         "... and before UPDATE, the incoming value will be:",
                         data=val, prefix="Merger::_merge_dicts:  ")
-                    lhs[key] = val
+                    _set_preserve_pos(lhs, key, val)
                     self.logger.debug(
                         "After UPDATE, the LHS document became:",
                         data=lhs, prefix="Merger::_merge_dicts:  ")
@@ -401,7 +433,8 @@ class Merger:
                     merged_hash = True
 
                     # Synchronize YAML Tags
-                    lhs_hash.yaml_set_tag(ele.tag.value)
+                    set_yaml_tag(
+                        lhs_hash, get_yaml_tag(ele), clear_on_none=True)
                     break
                 if not merged_hash:
                     Nodes.append_list_element(lhs, ele,
@@ -566,7 +599,7 @@ class Merger:
             elif lhs_is_tagged:
                 anchors_match = (
                     (lhs_anchor.value == rhs_anchor.value)
-                    and (lhs_anchor.tag.value == rhs_anchor.tag.value))
+                    and (get_yaml_tag(lhs_anchor) == get_yaml_tag(rhs_anchor)))
             else:
                 anchors_match = lhs_anchor == rhs_anchor
 
@@ -662,8 +695,8 @@ class Merger:
         # Synchronize YAML Tags
         self.logger.debug(
             "Merger::_insert_dict:  Setting LHS tag from {} to {}."
-            .format(lhs.tag.value, rhs.tag.value))
-        lhs.yaml_set_tag(rhs.tag.value)
+            .format(get_yaml_tag(lhs), get_yaml_tag(rhs)))
+        set_yaml_tag(lhs, get_yaml_tag(rhs), clear_on_none=True)
 
         if insert_at.is_root:
             self.data = merged_data
@@ -703,8 +736,8 @@ class Merger:
         # Synchronize any YAML Tag
         self.logger.debug(
             "Merger::_insert_list:  Setting LHS tag from {} to {}."
-            .format(lhs.tag.value, rhs.tag.value))
-        lhs.yaml_set_tag(rhs.tag.value)
+            .format(get_yaml_tag(lhs), get_yaml_tag(rhs)))
+        set_yaml_tag(lhs, get_yaml_tag(rhs), clear_on_none=True)
 
         if insert_at.is_root:
             self.data = merged_data
@@ -748,8 +781,8 @@ class Merger:
         # Synchronize any YAML Tag
         self.logger.debug(
             "Merger::_insert_set:  Setting LHS tag from {} to {}."
-            .format(lhs.tag.value, rhs.tag.value))
-        lhs.yaml_set_tag(rhs.tag.value)
+            .format(get_yaml_tag(lhs), get_yaml_tag(rhs)))
+        set_yaml_tag(lhs, get_yaml_tag(rhs), clear_on_none=True)
 
         if insert_at.is_root:
             self.data = merged_data

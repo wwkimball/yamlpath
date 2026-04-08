@@ -14,6 +14,7 @@ Requires an object on init which has the following properties:
 Copyright 2018, 2019, 2020, 2021 William W. Kimball, Jr. MBA MSIS
 """
 import sys
+import datetime
 from collections import deque
 from typing import Any, Deque, Dict, Generator, List, Set, Tuple, Union
 
@@ -27,6 +28,7 @@ from yamlpath.patches.timestamp import (
     AnchoredTimeStamp,
     AnchoredDate,
 )
+from yamlpath.common.ruamelcompat import get_yaml_tag
 
 from yamlpath.wrappers.nodecoords import NodeCoords
 
@@ -222,11 +224,7 @@ class ConsolePrinter:
 
     @staticmethod
     def _debug_get_tag(data: Any) -> str:
-        return str(data.tag.value
-                if (hasattr(data, "tag")
-                    and hasattr(data.tag, "value")
-                    and data.tag.value is not None)
-                else "")
+        return str(get_yaml_tag(data) or "")
 
     @staticmethod
     def _debug_dump(data: Any, **kwargs) -> Generator[str, None, None]:
@@ -255,6 +253,7 @@ class ConsolePrinter:
             yield ConsolePrinter._debug_scalar(data, prefix=prefix, **kwargs)
 
     @staticmethod
+    # pylint: disable=too-many-branches
     def _debug_scalar(data: Any, **kwargs) -> str:
         prefix = kwargs.pop("prefix", "")
         print_anchor = kwargs.pop("print_anchor", True)
@@ -271,11 +270,14 @@ class ConsolePrinter:
 
         if print_tag:
             if isinstance(data, TaggedScalar):
-                tag_prefix = "{}{}<{}>".format(
-                    print_prefix, anchor_prefix, data.tag.value)
-                return ConsolePrinter._debug_scalar(
-                        data.value, prefix=tag_prefix,
-                        print_anchor=False, print_tag=False, print_type=True)
+                tag_value = get_yaml_tag(data)
+                if tag_value:
+                    tag_prefix = "{}{}<{}>".format(
+                        print_prefix, anchor_prefix, tag_value)
+                    return ConsolePrinter._debug_scalar(
+                            data.value, prefix=tag_prefix,
+                            print_anchor=False, print_tag=False,
+                            print_type=True)
 
         # The "true" type of the value is nested in TaggedScalar.value
         if isinstance(data, TaggedScalar):
@@ -287,14 +289,38 @@ class ConsolePrinter:
 
         print_prefix += anchor_prefix
 
-        if isinstance(data, AnchoredDate):
+        is_ruamel_date_like = (
+            isinstance(data, datetime.datetime)
+            and not isinstance(data, AnchoredDate)
+            and data.hour == 0
+            and data.minute == 0
+            and data.second == 0
+            and data.microsecond == 0
+            and getattr(data, "tzinfo", None) is None
+        )
+
+        if isinstance(data, AnchoredDate) or is_ruamel_date_like:
             print_line = data.date().isoformat()
-        elif isinstance(data, AnchoredTimeStamp):
+            if print_type and is_ruamel_date_like:  # pragma: no cover
+                dtype = (  # pragma: no cover
+                    "<class 'yamlpath.patches.timestamp.AnchoredDate'>"
+                )
+        elif isinstance(data, AnchoredTimeStamp):  # pragma: no cover
             # Import loop occurs when this import is moved to the top because
             # NodeCoords uses Nodes which uses NodeCoords
             #pylint: disable=import-outside-toplevel
+            from yamlpath.common.nodes import Nodes  # pragma: no cover
+            print_line = (  # pragma: no cover
+                Nodes.get_timestamp_with_tzinfo(data).isoformat())
+        elif isinstance(data, datetime.datetime):
+            #pylint: disable=import-outside-toplevel
             from yamlpath.common.nodes import Nodes
             print_line = Nodes.get_timestamp_with_tzinfo(data).isoformat()
+            if print_type:
+                dtype = (
+                    "<class 'yamlpath.patches.timestamp."
+                    + "AnchoredTimeStamp'>"
+                )
         else:
             print_line = str(data).replace("\n", "\n{}".format(print_prefix))
 
@@ -346,12 +372,12 @@ class ConsolePrinter:
         prefix = kwargs.pop("prefix", "")
         print_tag = kwargs.pop("print_tag", True)
 
+        tag_value = get_yaml_tag(data)
         if (print_tag
             and isinstance(data, (CommentedBase, CommentedSet))
-            and hasattr(data, "tag")
-            and data.tag.value
+            and tag_value
         ):
-            prefix += "<{}>".format(data.tag.value)
+            prefix += "<{}>".format(tag_value)
 
         for idx, ele in enumerate(data):
             ele_prefix = "{}[{}]".format(prefix, idx)

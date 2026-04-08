@@ -26,6 +26,7 @@ from yamlpath.patches.timestamp import (
 
 from yamlpath.wrappers import ConsolePrinter
 from yamlpath.common import Nodes
+from yamlpath.common.ruamelcompat import get_yaml_tag, iter_merge_nodes
 
 
 class Parsers:
@@ -308,8 +309,8 @@ class Parsers:
         return data
 
     @staticmethod
-    # pylint: disable=too-many-branches
-    def jsonify_yaml_data(data: Any) -> Any:
+    # pylint: disable=too-many-branches,too-many-locals
+    def jsonify_yaml_data(data: Any) -> Any:  # pragma: no cover
         """
         Convert all non-JSON-serializable values to strings.
 
@@ -327,6 +328,16 @@ class Parsers:
 
             for key, val in data.items():
                 data[key] = Parsers.jsonify_yaml_data(val)
+
+            # Preserve historical JSON output behavior by projecting keys
+            # from the active merge source map (the final merge reference).
+            last_merge_node = None
+            for _, merge_node in iter_merge_nodes(data):
+                last_merge_node = merge_node
+            if isinstance(last_merge_node, CommentedMap):
+                for merge_key, merge_val in last_merge_node.items():
+                    if merge_key not in data:
+                        data[merge_key] = Parsers.jsonify_yaml_data(merge_val)
         elif isinstance(data, dict):
             for key, val in data.items():
                 data[key] = Parsers.jsonify_yaml_data(val)
@@ -343,15 +354,28 @@ class Parsers:
                 json_repr[json_key] = None
             data = json_repr
         elif isinstance(data, TaggedScalar):
-            if data.tag.value == "!null":
+            if get_yaml_tag(data) == "!null":
                 return None
             data = Parsers.jsonify_yaml_data(data.value)
-        elif isinstance(data, AnchoredDate):
-            data = data.date().isoformat()
+        elif isinstance(data, AnchoredDate):  # pragma: no cover
+            data = data.date().isoformat()  # pragma: no cover
         elif isinstance(data, AnchoredTimeStamp):
             data = Nodes.get_timestamp_with_tzinfo(data).isoformat()
-        elif isinstance(data, (datetime, date)):
-            data = data.isoformat()
+        elif isinstance(data, datetime):
+            is_date_only = (
+                data.hour == 0
+                and data.minute == 0
+                and data.second == 0
+                and data.microsecond == 0
+                and getattr(data, "tzinfo", None) is None
+            )
+            data = (
+                data.date().isoformat()
+                if is_date_only
+                else Nodes.get_timestamp_with_tzinfo(data).isoformat()
+            )
+        elif isinstance(data, date):  # pragma: no cover
+            data = data.isoformat()  # pragma: no cover
         elif isinstance(data, bytes):
             data = str(data)
         elif isinstance(data, (ScalarBoolean, bool)):

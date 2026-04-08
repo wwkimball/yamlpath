@@ -151,9 +151,15 @@ class YAMLValueFormats(Enum):
             best_type = YAMLValueFormats.FLOAT
         elif node_type is ScalarInt:
             best_type = YAMLValueFormats.INT
-        elif node_type is AnchoredDate or node_type is datetime.date:
+        elif (
+            isinstance(node, AnchoredDate)
+            or (
+                isinstance(node, datetime.date)
+                and not isinstance(node, datetime.datetime)
+            )
+        ):
             best_type = YAMLValueFormats.DATE
-        elif node_type is AnchoredTimeStamp or node_type is datetime.datetime:
+        elif isinstance(node, (AnchoredTimeStamp, datetime.datetime)):
             best_type = YAMLValueFormats.TIMESTAMP
 
         return best_type

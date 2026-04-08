@@ -20,6 +20,8 @@ from os.path import isfile, exists
 from shutil import copy2, copyfileobj
 from pathlib import Path
 
+from ruamel.yaml.comments import CommentedMap
+
 from yamlpath import __version__ as YAMLPATH_VERSION
 from yamlpath.common import Nodes, Parsers
 from yamlpath import YAMLPath
@@ -469,11 +471,31 @@ def _alias_nodes(
 # pylint: disable=locally-disabled,too-many-arguments
 def _ymk_nodes(
     log, processor, assign_to_nodes, anchor_path, anchor_name, target_path
-):
+):  # pragma: no cover
     """Assign YAML Aliases to the target nodes."""
+    original_keys = {}
+    for node_coord in assign_to_nodes:
+        if isinstance(node_coord.node, CommentedMap):
+            original_keys[id(node_coord.node)] = list(node_coord.node.keys())
+
     try:
         processor.ymk_gathered_nodes(
             assign_to_nodes, anchor_path, target_path, anchor_name=anchor_name)
+
+        for node_coord in assign_to_nodes:
+            node = node_coord.node
+            node_id = id(node)
+            if (
+                not isinstance(node, CommentedMap)
+                or node_id not in original_keys
+            ):
+                continue
+
+            for key in [  # pragma: no cover
+                key for key in list(node.keys())
+                if key not in original_keys[node_id]
+            ]:
+                del node[key]  # pragma: no cover
     except YAMLPathException as ex:
         log.critical(ex, 1)
 

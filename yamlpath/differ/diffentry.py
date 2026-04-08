@@ -9,6 +9,7 @@ from typing import Any
 from ruamel.yaml.comments import CommentedBase, TaggedScalar
 
 from yamlpath.common import Parsers
+from yamlpath.common.ruamelcompat import get_yaml_tag
 from yamlpath.enums import PathSeparators
 from yamlpath import YAMLPath
 from .enums.diffactions import DiffActions
@@ -175,6 +176,11 @@ class DiffEntry:
         json_data = json.dumps(
             formatted_data).replace("\\n", "\n{} ".format(prefix))
         data_tag = ""
-        if isinstance(data, TaggedScalar) and data.tag.value:
-            data_tag = "{} ".format(data.tag.value)
+        tag_value = (
+            get_yaml_tag(data)
+            if isinstance(data, TaggedScalar)
+            else None
+        )
+        if tag_value:
+            data_tag = "{} ".format(tag_value)
         return "{} {}{}".format(prefix, data_tag, json_data)

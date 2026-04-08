@@ -25,6 +25,7 @@ from yamlpath.patches.timestamp import (
     AnchoredTimeStamp,
     AnchoredDate,
 )
+from yamlpath.common.ruamelcompat import set_yaml_tag
 
 from yamlpath.enums import (
     PathSegmentTypes,
@@ -536,7 +537,7 @@ class Nodes:
         if Nodes.node_is_leaf(new_node):
             if isinstance(new_node, TaggedScalar):
                 if value_tag:
-                    new_node.yaml_set_tag(value_tag)
+                    set_yaml_tag(new_node, value_tag)
                 else:
                     # Strip off the tag
                     new_node = node.value
@@ -545,7 +546,7 @@ class Nodes:
                 if hasattr(node, "anchor") and node.anchor.value:
                     new_node.yaml_set_anchor(node.anchor.value)
         else:
-            new_node.yaml_set_tag(value_tag)
+            set_yaml_tag(new_node, value_tag)
 
         return new_node
 
@@ -652,7 +653,7 @@ class Nodes:
         return typed_value
 
     @staticmethod
-    def get_timestamp_with_tzinfo(data: AnchoredTimeStamp) -> Any:
+    def get_timestamp_with_tzinfo(data: Any) -> Any:
         """
         Get an AnchoredTimeStamp with time-zone info correctly applied.
 
@@ -671,6 +672,13 @@ class Nodes:
           * (datetime) time-zone aware non-pre-calculated value
           * (AnchoredTimeStamp) original value when it had no time-zone data
         """
+        # If ruamel.yaml has already applied tzinfo, no compensation is
+        # required (and applying one will skew the value).
+        if (
+            hasattr(data, "tzinfo") and data.tzinfo is not None
+        ):  # pragma: no cover
+            return data
+
         # As stated in the method comments, ruamel.yaml hides the time-zone
         # details in a private dict after forcibly normalizing the datetime;
         # there is no public accessor for this.  Also ignoring the mypy type
@@ -691,6 +699,5 @@ class Nodes:
                 sign = -1 if sign_mark == '-' else 1
                 tdelta = timedelta(hours=int(hours), minutes=int(minutes))
                 tzinfo = timezone(sign * tdelta)
-                return ((data + tdelta * sign).replace(
-                    tzinfo=tzinfo))
+                return data.replace(tzinfo=tzinfo)
         return data
