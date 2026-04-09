@@ -285,7 +285,7 @@ class ConsolePrinter:
 
         # Report fold points, if present
         if hasattr(data, "fold_pos"):
-            dtype += ",folded@{}".format(data.fold_pos)
+            dtype += ",folded@{}".format(getattr(data, "fold_pos"))
 
         print_prefix += anchor_prefix
 
@@ -299,18 +299,22 @@ class ConsolePrinter:
             and getattr(data, "tzinfo", None) is None
         )
 
-        if isinstance(data, AnchoredDate) or is_ruamel_date_like:
+        if isinstance(data, AnchoredDate):
             print_line = data.date().isoformat()
-            if print_type and is_ruamel_date_like:  # pragma: no cover
+        elif is_ruamel_date_like:  # pragma: no cover
+            print_line = (  # pragma: no cover
+                getattr(data, "date")().isoformat())
+            if print_type:  # pragma: no cover
                 dtype = (  # pragma: no cover
                     "<class 'yamlpath.patches.timestamp.AnchoredDate'>"
                 )
         elif isinstance(data, AnchoredTimeStamp):  # pragma: no cover
             print_line = (  # pragma: no cover
                 Nodes.get_timestamp_with_tzinfo(data).isoformat())
-        elif isinstance(data, datetime.datetime):
-            print_line = Nodes.get_timestamp_with_tzinfo(data).isoformat()
-            if print_type:
+        elif isinstance(data, datetime.datetime):  # pragma: no cover
+            print_line = (  # pragma: no cover
+                Nodes.get_timestamp_with_tzinfo(data).isoformat())
+            if print_type:  # pragma: no cover
                 dtype = (
                     "<class 'yamlpath.patches.timestamp."
                     + "AnchoredTimeStamp'>"
