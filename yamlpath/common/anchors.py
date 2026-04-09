@@ -26,7 +26,7 @@ def _replace_merge_node(
 ) -> None:  # pragma: no cover
     """Replace one merge reference node in-place."""
     refs = data.merge if hasattr(data, "merge") else []
-    ref_store = refs.value if hasattr(refs, "value") else refs
+    ref_store = refs.value if isinstance(refs, MergeValue) else refs
     current = ref_store[idx]
     if isinstance(current, tuple) and len(current) > 1:
         ref_store[idx] = (current[0], new_node)

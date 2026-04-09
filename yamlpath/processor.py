@@ -94,7 +94,7 @@ def _add_merge_node(
 def _remove_merge_node(data: Any, idx: int) -> None:  # pragma: no cover
     """Delete one merge reference by index."""
     refs = data.merge if hasattr(data, "merge") else []
-    ref_store = refs.value if hasattr(refs, "value") else refs
+    ref_store = refs.value if isinstance(refs, MergeValue) else refs
     del ref_store[idx]
 
 

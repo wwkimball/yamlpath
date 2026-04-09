@@ -8,16 +8,16 @@ from sys import maxsize, stdin
 from datetime import date, datetime
 from typing import Any, Dict, Generator, Tuple
 
-import ruamel.yaml # type: ignore
 from ruamel.yaml import YAML
 from ruamel.yaml.parser import ParserError
-from ruamel.yaml.composer import ComposerError, ReusedAnchorWarning
+from ruamel.yaml.composer import ComposerError
+from ruamel.yaml.error import ReusedAnchorWarning
 from ruamel.yaml.constructor import ConstructorError, DuplicateKeyError
 from ruamel.yaml.scanner import ScannerError
 from ruamel.yaml.scalarbool import ScalarBoolean
 from ruamel.yaml.scalarstring import ScalarString
 from ruamel.yaml.comments import (
-    CommentedMap, CommentedSet, CommentedSeq, TaggedScalar
+    CommentedMap, CommentedSet, CommentedSeq, TaggedScalar, comment_attrib
 )
 from yamlpath.patches.timestamp import (
     AnchoredTimeStamp,
@@ -411,7 +411,7 @@ class Parsers:
         try:
             # literal scalarstring might have comment associated with them
             attr = "comment" if isinstance(dom, ScalarString) \
-                else ruamel.yaml.comments.Comment.attrib
+                else comment_attrib
             delattr(dom, attr)
         except AttributeError:
             pass
