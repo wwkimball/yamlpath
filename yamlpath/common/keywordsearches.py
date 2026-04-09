@@ -14,7 +14,6 @@ from ruamel.yaml.comments import CommentedMap
 from yamlpath.types import AncestryEntry, PathSegment
 from yamlpath.enums import PathSearchKeywords, PathSearchMethods
 from yamlpath.common import Anchors, Nodes, Searches
-from yamlpath.common.ruamelcompat import iter_merge_nodes
 from yamlpath.path import SearchKeywordTerms
 from yamlpath.exceptions import YAMLPathException
 from yamlpath.wrappers import NodeCoords
@@ -264,7 +263,13 @@ class KeywordSearches:
                 child_present = False
                 if hasattr(data, "merge") and len(data.merge) > 0:
                     # Ignore comparision if there is no source
-                    for _, merge_node in iter_merge_nodes(data):
+                    for merge_item in data.merge:
+                        merge_node = (
+                            merge_item[1]
+                            if isinstance(merge_item, tuple)
+                            and len(merge_item) > 1
+                            else merge_item
+                        )
                         if merge_node == compare_node:
                             child_present = True
                             break

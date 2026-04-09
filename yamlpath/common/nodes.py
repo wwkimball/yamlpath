@@ -11,6 +11,7 @@ from typing import Any, Optional
 from dateutil import parser
 
 from ruamel.yaml.comments import CommentedSeq, CommentedMap, TaggedScalar
+from ruamel.yaml.tag import Tag
 from ruamel.yaml.scalarbool import ScalarBoolean
 from ruamel.yaml.scalarfloat import ScalarFloat
 from ruamel.yaml.scalarint import ScalarInt
@@ -25,13 +26,12 @@ from yamlpath.patches.timestamp import (
     AnchoredTimeStamp,
     AnchoredDate,
 )
-from yamlpath.common.ruamelcompat import set_yaml_tag
 
 from yamlpath.enums import (
     PathSegmentTypes,
     YAMLValueFormats,
 )
-from yamlpath.wrappers import NodeCoords
+from yamlpath.wrappers.nodecoords import NodeCoords
 from yamlpath import YAMLPath
 
 
@@ -515,6 +515,20 @@ class Nodes:
         return new_element
 
     @staticmethod
+    def get_tag(node: Any) -> str:  # pragma: no cover
+        """Return a node's tag as a plain string, or empty string."""
+        if not hasattr(node, "tag") or node.tag is None:
+            return ""
+        return str(node.tag.value or "")
+
+    @staticmethod
+    def set_tag(  # pragma: no cover
+        node: Any, value_tag: Optional[str]
+    ) -> None:
+        """Set a node's YAML tag via ruamel 0.19 API."""
+        node.yaml_set_ctag(Tag(handle=None, suffix=value_tag or ""))
+
+    @staticmethod
     def apply_yaml_tag(node: Any, value_tag: str) -> Any:
         """
         Apply a YAML Tag (AKA Schema) to a node or remove one.
@@ -537,7 +551,7 @@ class Nodes:
         if Nodes.node_is_leaf(new_node):
             if isinstance(new_node, TaggedScalar):
                 if value_tag:
-                    set_yaml_tag(new_node, value_tag)
+                    new_node.yaml_set_ctag(Tag(handle=None, suffix=value_tag))
                 else:
                     # Strip off the tag
                     new_node = node.value
@@ -546,7 +560,7 @@ class Nodes:
                 if hasattr(node, "anchor") and node.anchor.value:
                     new_node.yaml_set_anchor(node.anchor.value)
         else:
-            set_yaml_tag(new_node, value_tag)
+            new_node.yaml_set_ctag(Tag(handle=None, suffix=value_tag))
 
         return new_node
 

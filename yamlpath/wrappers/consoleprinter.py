@@ -28,9 +28,9 @@ from yamlpath.patches.timestamp import (
     AnchoredTimeStamp,
     AnchoredDate,
 )
-from yamlpath.common.ruamelcompat import get_yaml_tag
 
 from yamlpath.wrappers.nodecoords import NodeCoords
+from yamlpath.common.nodes import Nodes
 
 
 class ConsolePrinter:
@@ -224,7 +224,7 @@ class ConsolePrinter:
 
     @staticmethod
     def _debug_get_tag(data: Any) -> str:
-        return str(get_yaml_tag(data) or "")
+        return Nodes.get_tag(data)
 
     @staticmethod
     def _debug_dump(data: Any, **kwargs) -> Generator[str, None, None]:
@@ -270,7 +270,7 @@ class ConsolePrinter:
 
         if print_tag:
             if isinstance(data, TaggedScalar):
-                tag_value = get_yaml_tag(data)
+                tag_value = Nodes.get_tag(data)
                 if tag_value:
                     tag_prefix = "{}{}<{}>".format(
                         print_prefix, anchor_prefix, tag_value)
@@ -306,15 +306,9 @@ class ConsolePrinter:
                     "<class 'yamlpath.patches.timestamp.AnchoredDate'>"
                 )
         elif isinstance(data, AnchoredTimeStamp):  # pragma: no cover
-            # Import loop occurs when this import is moved to the top because
-            # NodeCoords uses Nodes which uses NodeCoords
-            #pylint: disable=import-outside-toplevel
-            from yamlpath.common.nodes import Nodes  # pragma: no cover
             print_line = (  # pragma: no cover
                 Nodes.get_timestamp_with_tzinfo(data).isoformat())
         elif isinstance(data, datetime.datetime):
-            #pylint: disable=import-outside-toplevel
-            from yamlpath.common.nodes import Nodes
             print_line = Nodes.get_timestamp_with_tzinfo(data).isoformat()
             if print_type:
                 dtype = (
@@ -372,7 +366,7 @@ class ConsolePrinter:
         prefix = kwargs.pop("prefix", "")
         print_tag = kwargs.pop("print_tag", True)
 
-        tag_value = get_yaml_tag(data)
+        tag_value = Nodes.get_tag(data)
         if (print_tag
             and isinstance(data, (CommentedBase, CommentedSet))
             and tag_value

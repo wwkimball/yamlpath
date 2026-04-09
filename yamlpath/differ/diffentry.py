@@ -8,8 +8,7 @@ from typing import Any
 
 from ruamel.yaml.comments import CommentedBase, TaggedScalar
 
-from yamlpath.common import Parsers
-from yamlpath.common.ruamelcompat import get_yaml_tag
+from yamlpath.common import Nodes, Parsers
 from yamlpath.enums import PathSeparators
 from yamlpath import YAMLPath
 from .enums.diffactions import DiffActions
@@ -177,7 +176,7 @@ class DiffEntry:
             formatted_data).replace("\\n", "\n{} ".format(prefix))
         data_tag = ""
         tag_value = (
-            get_yaml_tag(data)
+            Nodes.get_tag(data)
             if isinstance(data, TaggedScalar)
             else None
         )

@@ -26,7 +26,6 @@ from yamlpath.patches.timestamp import (
 
 from yamlpath.wrappers import ConsolePrinter
 from yamlpath.common import Nodes
-from yamlpath.common.ruamelcompat import get_yaml_tag, iter_merge_nodes
 
 
 class Parsers:
@@ -332,8 +331,12 @@ class Parsers:
             # Preserve historical JSON output behavior by projecting keys
             # from the active merge source map (the final merge reference).
             last_merge_node = None
-            for _, merge_node in iter_merge_nodes(data):
-                last_merge_node = merge_node
+            if hasattr(data, "merge") and len(data.merge) > 0:
+                for merge_item in data.merge:
+                    if isinstance(merge_item, tuple) and len(merge_item) > 1:
+                        last_merge_node = merge_item[1]
+                    else:
+                        last_merge_node = merge_item
             if isinstance(last_merge_node, CommentedMap):
                 for merge_key, merge_val in last_merge_node.items():
                     if merge_key not in data:
@@ -354,7 +357,7 @@ class Parsers:
                 json_repr[json_key] = None
             data = json_repr
         elif isinstance(data, TaggedScalar):
-            if get_yaml_tag(data) == "!null":
+            if Nodes.get_tag(data) == "!null":
                 return None
             data = Parsers.jsonify_yaml_data(data.value)
         elif isinstance(data, AnchoredDate):  # pragma: no cover

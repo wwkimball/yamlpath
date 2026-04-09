@@ -18,7 +18,6 @@ from ruamel.yaml.comments import CommentedSeq, CommentedMap, CommentedSet
 
 from yamlpath import __version__ as YAMLPATH_VERSION
 from yamlpath.common import Anchors, Parsers, Searches
-from yamlpath.common.ruamelcompat import iter_merge_nodes
 from yamlpath.exceptions import YAMLPathException
 from yamlpath.enums import (
     AnchorMatches,
@@ -630,7 +629,13 @@ def search_for_paths(logger: ConsolePrinter, processor: EYAMLProcessor,
 
         # Include YAML Merge Keys when include_value_aliases is enabled
         if include_value_aliases:
-            for _, ref_node in iter_merge_nodes(data):
+            for merge_item in data.merge:
+                ref_node = (
+                    merge_item[1]
+                    if isinstance(merge_item, tuple)
+                    and len(merge_item) > 1
+                    else merge_item
+                )
                 for anchor_name, anchor_node in all_anchors.items():
                     if anchor_node == ref_node:
                         tmp_path = (build_path + "[&{}]".format(

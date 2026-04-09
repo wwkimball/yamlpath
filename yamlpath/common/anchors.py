@@ -5,14 +5,65 @@ Copyright 2020 William W. Kimball, Jr. MBA MSIS
 """
 from typing import Any, Dict, Optional
 
-from ruamel.yaml.comments import CommentedSeq, CommentedMap
-from yamlpath.common.ruamelcompat import (
-    add_merge_node,
-    iter_merge_nodes,
-    replace_merge_node,
-)
+from ruamel.yaml.comments import CommentedSeq, CommentedMap, merge_attrib
+from ruamel.yaml.mergevalue import MergeValue
 
 from yamlpath.wrappers import NodeCoords
+
+
+def _iter_merge_nodes(data: Any):  # pragma: no cover
+    """Yield merge references as (index, node)."""
+    refs = data.merge if hasattr(data, "merge") else []
+    for idx, merge_item in enumerate(refs):
+        if isinstance(merge_item, tuple) and len(merge_item) > 1:
+            yield idx, merge_item[1]
+        else:
+            yield idx, merge_item
+
+
+def _replace_merge_node(
+    data: Any, idx: int, new_node: Any
+) -> None:  # pragma: no cover
+    """Replace one merge reference node in-place."""
+    refs = data.merge if hasattr(data, "merge") else []
+    ref_store = refs.value if hasattr(refs, "value") else refs
+    current = ref_store[idx]
+    if isinstance(current, tuple) and len(current) > 1:
+        ref_store[idx] = (current[0], new_node)
+    else:
+        ref_store[idx] = new_node
+
+
+def _sync_merge_sequence(merge_value: MergeValue) -> None:  # pragma: no cover
+    """Keep MergeValue sequence representation synchronized."""
+    if len(merge_value.value) <= 1:
+        merge_value.set_sequence(None)
+        return
+
+    sequence = CommentedSeq(merge_value.value)
+    sequence.fa.set_flow_style()
+    merge_value.set_sequence(sequence)
+
+
+def _add_merge_node(data: Any, merge_node: Any) -> None:  # pragma: no cover
+    """Append one merge reference."""
+    refs = getattr(data, merge_attrib, None)
+    if isinstance(refs, MergeValue):
+        refs.append(merge_node)
+        if refs.merge_pos is None:
+            refs.merge_pos = 0
+        _sync_merge_sequence(refs)
+    else:
+        merge_value = MergeValue()
+        if isinstance(refs, list):
+            merge_value.extend(refs)
+        merge_value.append(merge_node)
+        merge_value.merge_pos = 0
+        _sync_merge_sequence(merge_value)
+        setattr(data, merge_attrib, merge_value)
+
+    if hasattr(merge_node, "add_referent"):
+        merge_node.add_referent(data)
 
 
 class Anchors:
@@ -90,9 +141,9 @@ class Anchors:
         Returns:  N/A
         """
         if hasattr(data, "merge") and len(data.merge) > 0:
-            for midx, merge_node in iter_merge_nodes(data):
+            for midx, merge_node in _iter_merge_nodes(data):
                 if merge_node is old_node:
-                    replace_merge_node(data, midx, repl_node)
+                    _replace_merge_node(data, midx, repl_node)
 
     @staticmethod
     def combine_merge_anchors(lhs: CommentedMap, rhs: CommentedMap) -> None:
@@ -103,8 +154,8 @@ class Anchors:
         1. lhs (CommentedMap) The map to merge into
         2. rhs (CommentedMap) The map to merge from
         """
-        for _, mele in iter_merge_nodes(rhs):
-            add_merge_node(lhs, mele)
+        for _, mele in _iter_merge_nodes(rhs):
+            _add_merge_node(lhs, mele)
 
     @staticmethod
     def replace_anchor(data: Any, old_node: Any, repl_node: Any) -> None:

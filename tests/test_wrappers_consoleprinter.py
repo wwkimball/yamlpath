@@ -4,6 +4,7 @@ from types import SimpleNamespace
 
 from ruamel.yaml.comments import CommentedMap, CommentedSeq, CommentedSet, TaggedScalar
 from ruamel.yaml.scalarstring import PlainScalarString, FoldedScalarString
+from ruamel.yaml.tag import Tag
 from ruamel.yaml import version_info as ryversion
 if ryversion < (0, 17, 22):                   # pragma: no cover
     from yamlpath.patches.timestamp import (
@@ -118,7 +119,7 @@ class Test_wrappers_ConsolePrinter():
         tagged_value = "value"
         tagged_value_node = TaggedScalar(tagged_value, tag="!tag")
         tagged_sequence = CommentedSeq(["a", "b"])
-        tagged_sequence.yaml_set_tag("!raz")
+        tagged_sequence.yaml_set_ctag(Tag(handle=None, suffix="!raz"))
         selfref_value = "self_referring"
         selfref_value_node = TaggedScalar(selfref_value, tag="!self_referring")
         logger.debug(

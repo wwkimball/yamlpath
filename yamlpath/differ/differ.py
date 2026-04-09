@@ -8,8 +8,8 @@ from typing import Any, Dict, Generator, List, Optional, Tuple, Union
 
 from ruamel.yaml.comments import CommentedMap, CommentedSeq, CommentedSet
 
-from yamlpath.common.ruamelcompat import get_yaml_tag
 from yamlpath import YAMLPath
+from yamlpath.common import Nodes
 from yamlpath.wrappers import ConsolePrinter, NodeCoords
 from yamlpath.eyaml import EYAMLProcessor
 from .enums import ArrayDiffOpts, AoHDiffOpts, DiffActions
@@ -224,8 +224,8 @@ class Differ:
             data=rhs)
 
         # Check first for a difference in YAML Tag
-        lhs_tag = get_yaml_tag(lhs)
-        rhs_tag = get_yaml_tag(rhs)
+        lhs_tag = Nodes.get_tag(lhs)
+        rhs_tag = Nodes.get_tag(rhs)
         if lhs_tag != rhs_tag:
             self.logger.debug(
                 "Dictionaries have different YAML Tags; {} != {}:".format(
@@ -275,7 +275,7 @@ class Differ:
                     DiffActions.DELETE, next_path, lhs[key], None,
                     lhs_parent=lhs, lhs_iteration=lhs_key_indicies[key],
                     rhs_parent=rhs,
-                    key_tag=get_yaml_tag(key)))
+                    key_tag=Nodes.get_tag(key)))
 
         # Look for new keys
         for key in rhs_keys - lhs_keys:
@@ -286,7 +286,7 @@ class Differ:
                     DiffActions.ADD, next_path, None, rhs[key],
                     lhs_parent=lhs,
                     rhs_parent=rhs, rhs_iteration=rhs_key_indicies[key],
-                    key_tag=get_yaml_tag(key)))
+                    key_tag=Nodes.get_tag(key)))
 
     def _diff_synced_lists(
         self, path: YAMLPath, lhs: CommentedSeq, rhs: CommentedSeq
@@ -647,7 +647,7 @@ class Differ:
                     DiffActions.DELETE, next_path, key, None,
                     lhs_parent=lhs, lhs_iteration=lhs_key_indicies[key],
                     rhs_parent=rhs,
-                    key_tag=get_yaml_tag(key)))
+                    key_tag=Nodes.get_tag(key)))
 
         # Look for new keys
         for key in rhs_keys - lhs_keys:
@@ -658,7 +658,7 @@ class Differ:
                     DiffActions.ADD, next_path, None, key,
                     lhs_parent=lhs,
                     rhs_parent=rhs, rhs_iteration=rhs_key_indicies[key],
-                    key_tag=get_yaml_tag(key)))
+                    key_tag=Nodes.get_tag(key)))
 
     def _diff_between(
         self, path: YAMLPath, lhs: Any, rhs: Any, **kwargs
