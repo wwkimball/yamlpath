@@ -24,8 +24,8 @@ from yamlpath.patches.timestamp import (
     AnchoredDate,
 )
 
-from yamlpath.wrappers import ConsolePrinter
 from yamlpath.common import Nodes
+from yamlpath.types import ParsersLogger
 
 
 class Parsers:
@@ -75,7 +75,7 @@ class Parsers:
     @staticmethod
     # pylint: disable=too-many-branches,too-many-statements,too-many-locals
     def get_yaml_data(
-        parser: Any, logger: ConsolePrinter, source: str, **kwargs
+        parser: Any, logger: ParsersLogger, source: str, **kwargs
     ) -> Tuple[Any, bool]:
         """
         Parse YAML/Compatible data and return the ruamel.yaml object result.
@@ -84,7 +84,7 @@ class Parsers:
 
         Parameters:
         1. parser (ruamel.yaml.YAML) The YAML data parser
-        2. logger (ConsolePrinter) The logging facility
+        2. logger (ParsersLogger) The logging facility
         3. source (str) The source file or serialized literal to load; can be -
            for reading from STDIN (implies literal=True)
 
@@ -173,7 +173,7 @@ class Parsers:
     @staticmethod
     # pylint: disable=too-many-branches,too-many-statements,too-many-locals
     def get_yaml_multidoc_data(
-        parser: Any, logger: ConsolePrinter, source: str, **kwargs
+        parser: Any, logger: ParsersLogger, source: str, **kwargs
     ) -> Generator[Tuple[Any, bool], None, None]:
         """
         Parse YAML/Compatible multi-docs and yield each ruamel.yaml object.
@@ -182,7 +182,7 @@ class Parsers:
 
         Parameters:
         1. parser (ruamel.yaml.YAML) The YAML data parser
-        2. logger (ConsolePrinter) The logging facility
+        2. logger (ParsersLogger) The logging facility
         3. source (str) The source file to load; can be - for reading from
            STDIN
 

@@ -1,6 +1,7 @@
 import pytest
 import json
 import datetime as dt
+from typing import Any, List
 
 import ruamel.yaml as ry
 
@@ -10,6 +11,23 @@ from yamlpath.patches.timestamp import AnchoredTimeStamp, AnchoredDate
 
 from yamlpath.enums import YAMLValueFormats
 from yamlpath.common import Parsers
+
+
+class TrackingParserLogger:
+    """Minimal logger implementation for parser helper tests."""
+
+    def __init__(self) -> None:
+        """Initialize this class instance."""
+        self.debug_messages: List[str] = []
+        self.error_messages: List[str] = []
+
+    def debug(self, message: str, **kwargs: Any) -> None:
+        """Record DEBUG messages."""
+        self.debug_messages.append(message)
+
+    def error(self, message: str, exit_code: Any = None) -> None:
+        """Record ERROR messages."""
+        self.error_messages.append(message)
 
 class Test_common_parsers():
     """Tests for the Parsers helper class."""
@@ -65,6 +83,41 @@ has: different data
 
             assert data["document"] == document
             assert data["has"] == has
+
+    def test_get_yaml_data_accepts_logger_protocol(self):
+        serialized_yaml = """---
+hash:
+  key: value
+"""
+        yaml = Parsers.get_yaml_editor()
+        logger = TrackingParserLogger()
+
+        (data, loaded) = Parsers.get_yaml_data(
+            yaml, logger, serialized_yaml,
+            literal=True)
+
+        assert loaded is True
+        assert data["hash"]["key"] == "value"
+        assert logger.error_messages == []
+
+    def test_get_yaml_multidoc_data_accepts_logger_protocol(self):
+        serialized_yaml = """---
+document: 1st
+...
+---
+document: 2nd
+"""
+        yaml = Parsers.get_yaml_editor()
+        logger = TrackingParserLogger()
+
+        docs = list(Parsers.get_yaml_multidoc_data(
+            yaml, logger, serialized_yaml,
+            literal=True))
+
+        assert len(docs) == 2
+        assert docs[0] == ({"document": "1st"}, True)
+        assert docs[1] == ({"document": "2nd"}, True)
+        assert logger.error_messages == []
 
     ###
     # stringify_dates

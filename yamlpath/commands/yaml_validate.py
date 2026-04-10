@@ -11,7 +11,7 @@ from yamlpath.common import Parsers
 from yamlpath.wrappers import ConsolePrinter
 
 class LogErrorCap:
-    """Capture only ERROR messages as a fake ConsolePrinter."""
+    """Capture only ERROR messages as a parser-compatible logger."""
 
     def __init__(self):
         """Initialize this class instance."""
@@ -23,7 +23,7 @@ class LogErrorCap:
     def warning(self, message):
         """Discard WARNING messages."""
     # pylint: disable=unused-argument
-    def error(self, message, *args):
+    def error(self, message, exit_code=None):
         """Capture ERROR messages."""
         self.lines.append(message)
     # pylint: disable=unused-argument
@@ -108,8 +108,7 @@ def process_file(log, yaml, yaml_file):
     exit_state = 0
     file_name = "STDIN" if yaml_file.strip() == "-" else yaml_file
     doc_gen = Parsers.get_yaml_multidoc_data(
-        yaml, logcap,  # type: ignore[arg-type]
-        yaml_file)
+        yaml, logcap, yaml_file)
     for (_, doc_loaded) in doc_gen:
         if doc_loaded:
             log.verbose("{}/{} is valid.".format(file_name, subdoc_index))
