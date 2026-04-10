@@ -1,2 +1,6 @@
 include README.md
 include LICENSE
+include run-tests.sh
+include run-tests.ps1
+recursive-include requirements/test-tools *.txt
+recursive-include tests *.py

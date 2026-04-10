@@ -37,10 +37,8 @@ echo "Building Windows ZIP file..."
 pushd dist || exit 2
 relname=$(basename $(ls -1 ./*.tar.gz) .tar.gz)
 mkdir win \
-	&& cp "${relname}.tar.gz" win/ \
+	&& python -m wheel unpack "${relname}-py3-none-any.whl" --dest win/ \
 	&& pushd win/ \
-	&& tar xvzf ./*.tar.gz \
-	&& rm -f ./*.gz \
 	&& zip --recurse-paths --test --verbose "${relname}.zip" "${relname}"/ \
 	&& mv ./*.zip .. \
 	&& popd \

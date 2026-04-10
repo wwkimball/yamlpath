@@ -47,11 +47,6 @@ setup(
         "ruamel.yaml==0.19.1",
         "python-dateutil<=3"
     ],
-    tests_require=[
-        "pytest",
-        "pytest-cov",
-        "pytest-console-scripts",
-    ],
     include_package_data=True,
     zip_safe=False
 )
