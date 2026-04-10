@@ -21,6 +21,8 @@ Enhancements:
 * Build artifacts are now produced using python -m build (PEP 517), replacing
   the legacy `python setup.py sdist bdist_wheel` invocation.  A minimal
   pyproject.toml declaring the setuptools build backend has been added.
+* The yaml-paths command now supports a new --line option, enabling lookup of
+  YAML Path(s) by 1-based source line number in parsed YAML documents.
 * The source distribution (sdist / .tar.gz) now includes the test suite, test
   runner scripts (run-tests.sh and run-tests.ps1), and per-version test-tool
   requirement files so that consumers can run tests from the sdist.
