@@ -1,3 +1,56 @@
+3.9.0
+Enhancements:
+* Python 3.12, 3.13, and 3.14 are now formally tested and supported.
+* A new class, yamlpath.common.MergeRefs, has been added as a static helper
+  library for YAML Merge Key (<<:) operations.  It provides iter_nodes(),
+  replace_node(), and remove_node() methods to iterate, update, and delete
+  merge reference nodes in a ruamel.yaml CommentedMap-like node.
+* A new structural type Protocol, yamlpath.types.ParsersLogger, has been added.
+  It defines the minimal logging interface (debug() and error()) required by
+  Parsers.get_yaml_data() and related helper methods.  This allows consumers to
+  supply any logger-compatible object to those methods without needing to
+  subclass ConsolePrinter.
+* Two new static methods have been added to the Nodes class to provide a stable,
+  version-neutral interface for reading and writing YAML node tags:
+  Nodes.get_tag(node) and Nodes.set_tag(node, value_tag).
+* Pyright is now included in the test suite to enforce strict static type
+  checking across the codebase at each build.
+* Per-Python-version pinned test-tool requirement files have been added under
+  requirements/test-tools/ to ensure reproducible test runs on every supported
+  Python version.
+* Build artifacts are now produced using python -m build (PEP 517), replacing
+  the legacy `python setup.py sdist bdist_wheel` invocation.  A minimal
+  pyproject.toml declaring the setuptools build backend has been added.
+* The source distribution (sdist / .tar.gz) now includes the test suite, test
+  runner scripts (run-tests.sh and run-tests.ps1), and per-version test-tool
+  requirement files so that consumers can run tests from the sdist.
+* The Merger now preserves the original insertion order of keys in a
+  CommentedMap when merging with YAML Merge Keys (<<:), preventing keys from
+  being silently reordered after a merge operation; this counters a breaking
+  change in ruamel.yaml 0.19.
+
+Bug Fixes:
+* Updated all YAML tag access and assignment to use the ruamel.yaml 0.19 API
+  (yaml_set_ctag() with a Tag object), replacing calls to the removed
+  yaml_set_tag() method.
+* Fixed the import path for ReusedAnchorWarning which moved from
+  ruamel.yaml.composer to ruamel.yaml.error in ruamel.yaml 0.19.
+* Fixed yaml-paths --values iteration over YAML merge references to be
+  compatible with the tuple representation used by ruamel.yaml 0.19.
+* Fixed Nodes.get_timestamp_with_tzinfo() to skip the timezone-compensation
+  calculation when ruamel.yaml has already applied tzinfo to an
+  AnchoredTimeStamp, preventing the value from being incorrectly skewed.
+* Fixed yaml-set's _ymk_nodes() helper to remove keys that were spuriously
+  added to a CommentedMap as a side-effect of the YAML Merge Key assignment,
+  restoring the pre-assignment key set on the target node.
+
+BREAKING CHANGES:
+* Support for Python 3.7, 3.8, and 3.9 has been dropped due to end-of-life
+  status.  The minimum supported Python version is now 3.10, in alignment with
+  the versions still receiving security updates per python.org.
+* ruamel.yaml has been upgraded to 0.19.  This is not backward compatible, so
+  support for 0.18 has been dropped.
+
 3.8.2
 Enhancements:
 * The MergerConfig class now accepts overrides for config values as "keys" and
