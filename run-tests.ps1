@@ -122,6 +122,15 @@ ForEach ($EnvDir in $EnvDirs) {
         exit 10
     }
 
+    Write-Output "`nPYRIGHT..."
+    pyright | Out-String
+    if (!$?) {
+        & deactivate
+        Remove-Item -Recurse -Force $TmpVEnv
+        Write-Error "PYRIGHT Error: $?"
+        exit 13
+    }
+
     Write-Output "`nPYLINT..."
     pylint yamlpath | Out-String
     if (!$?) {

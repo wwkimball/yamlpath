@@ -106,6 +106,14 @@ EOF
 		exit 10
 	fi
 
+	echo -e "\nPYRIGHT..."
+	if ! pyright; then
+		deactivate
+		rm -rf "$tmpVEnv"
+		echo "PYRIGHT Error: $?"
+		exit 13
+	fi
+
 	echo -e "\nPYLINT..."
 	if ! pylint yamlpath; then
 		deactivate

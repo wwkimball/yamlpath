@@ -1,0 +1,11 @@
+{
+    "include": [
+        "yamlpath",
+        "tests"
+    ],
+    "exclude": [
+        "setup.py", "**/node_modules", "**/__pycache__", "**/.*", ".vscode-*", ".venv*"
+    ],
+    "typeCheckingMode": "standard",
+    "reportMissingTypeStubs": "none"
+}
