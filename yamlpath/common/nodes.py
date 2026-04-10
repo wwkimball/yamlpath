@@ -516,7 +516,16 @@ class Nodes:
 
     @staticmethod
     def get_tag(node: Any) -> str:  # pragma: no cover
-        """Return a node's tag as a plain string, or empty string."""
+        """
+        Get the YAML tag from a node.
+
+        Parameters:
+        1. node (Any) The node from which to read the YAML tag.
+
+        Returns:  (str) The tag value or an empty-string when unset.
+
+        Raises:  N/A
+        """
         if not hasattr(node, "tag") or node.tag is None:
             return ""
         return str(node.tag.value or "")
@@ -525,7 +534,17 @@ class Nodes:
     def set_tag(  # pragma: no cover
         node: Any, value_tag: Optional[str]
     ) -> None:
-        """Set a node's YAML tag via ruamel 0.19 API."""
+        """
+        Set the YAML tag on a node.
+
+        Parameters:
+        1. node (Any) The node on which to set the YAML tag.
+        2. value_tag (Optional[str]) The tag to set; None clears the tag.
+
+        Returns:  N/A
+
+        Raises:  N/A
+        """
         node.yaml_set_ctag(Tag(handle=None, suffix=value_tag or ""))
 
     @staticmethod

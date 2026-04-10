@@ -13,12 +13,16 @@ from ruamel.yaml.comments import (
     CommentedSeq,
     CommentedSet,
     TaggedScalar,
-    merge_attrib,
 )
-from ruamel.yaml.mergevalue import MergeValue
 
 from yamlpath.types import AncestryEntry, PathAttributes, PathSegment
-from yamlpath.common import Anchors, KeywordSearches, Nodes, Searches
+from yamlpath.common import (
+    Anchors,
+    KeywordSearches,
+    MergeRefs,
+    Nodes,
+    Searches,
+)
 from yamlpath import YAMLPath
 from yamlpath.path import SearchKeywordTerms, SearchTerms, CollectorTerms
 from yamlpath.wrappers import ConsolePrinter, NodeCoords
@@ -38,65 +42,6 @@ from yamlpath.enums import (
     CollectorOperators,
     PathSeparators,
 )
-
-
-def _iter_merge_nodes(
-    data: Any,
-) -> Generator[Any, None, None]:  # pragma: no cover
-    """Yield merge references as (index, node) for ruamel 0.19+."""
-    refs = data.merge if hasattr(data, "merge") else []
-    for idx, merge_item in enumerate(refs):
-        if isinstance(merge_item, tuple) and len(merge_item) > 1:
-            yield idx, merge_item[1]
-        else:
-            yield idx, merge_item
-
-
-def _sync_merge_sequence(merge_value: MergeValue) -> None:  # pragma: no cover
-    """Keep MergeValue sequence representation synchronized."""
-    if len(merge_value.value) <= 1:
-        merge_value.set_sequence(None)
-        return
-
-    sequence = CommentedSeq(merge_value.value)
-    sequence.fa.set_flow_style()
-    merge_value.set_sequence(sequence)
-
-
-def _add_merge_node(
-    data: Any, merge_node: Any, materialize_keys: bool = False
-) -> None:  # pragma: no cover
-    """Append one YAML merge reference using ruamel 0.19 internals."""
-    refs = getattr(data, merge_attrib, None)
-    if isinstance(refs, MergeValue):
-        refs.append(merge_node)
-        if refs.merge_pos is None:
-            refs.merge_pos = 0
-        _sync_merge_sequence(refs)
-    else:
-        merge_value = MergeValue()
-        if isinstance(refs, list):
-            merge_value.extend(refs)
-        merge_value.append(merge_node)
-        merge_value.merge_pos = 0
-        _sync_merge_sequence(merge_value)
-        setattr(data, merge_attrib, merge_value)
-
-    if hasattr(merge_node, "add_referent"):
-        merge_node.add_referent(data)
-
-    if materialize_keys:
-        for key, val in merge_node.items():
-            if key not in data:
-                data[key] = val
-
-
-def _remove_merge_node(data: Any, idx: int) -> None:  # pragma: no cover
-    """Delete one merge reference by index."""
-    refs = data.merge if hasattr(data, "merge") else []
-    ref_store = refs.value if isinstance(refs, MergeValue) else refs
-    del ref_store[idx]
-
 
 class Processor:
     """Query and update YAML data via robust YAML Paths."""
@@ -547,7 +492,7 @@ class Processor:
                     " by",
                     str(target_path))
 
-            refs = [merge_node for _, merge_node in _iter_merge_nodes(node)]
+            refs = [merge_node for _, merge_node in MergeRefs.iter_nodes(node)]
             already_refed = False
             for ref_node in refs:
                 if ref_node == anchor_node:
@@ -556,7 +501,7 @@ class Processor:
             if already_refed:
                 continue
 
-            _add_merge_node(
+            MergeRefs.add_node(
                 node_coord.node, anchor_node, materialize_keys=True)
 
     def alias_nodes(
@@ -843,12 +788,12 @@ class Processor:
                     and hasattr(parent, "merge")
                     and len(parent.merge) > 0
                 ):
-                    for (midx, merge_node) in _iter_merge_nodes(parent):
+                    for (midx, merge_node) in MergeRefs.iter_nodes(parent):
                         if merge_node == compare_node:
                             for (key, val) in merge_node.items():
                                 if key in parent and parent[key] == val:
                                     del parent[key]
-                            _remove_merge_node(parent, midx)
+                            MergeRefs.remove_node(parent, midx)
                             break
                 elif parentref in parent:
                     del parent[parentref]
@@ -1287,7 +1232,7 @@ class Processor:
                                 if stripped_attrs in all_anchors
                                 else None)
                 if compare_node:
-                    for _, merge_node in _iter_merge_nodes(data):
+                    for _, merge_node in MergeRefs.iter_nodes(data):
                         self.logger.debug((
                             "Comparing YAML Merge Key against ANCHOR node {}:"
                             ).format(stripped_attrs),
