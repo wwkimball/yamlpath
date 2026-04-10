@@ -43,6 +43,10 @@ Bug Fixes:
 * Fixed yaml-set's _ymk_nodes() helper to remove keys that were spuriously
   added to a CommentedMap as a side-effect of the YAML Merge Key assignment,
   restoring the pre-assignment key set on the target node.
+* Worked around a ruamel.yaml issue whereby deleting a key from a CommentedMap
+  would drop the successor key comment, replacing it with the deleted key's
+  comment.  This is a temporary patch until the issue is properly resolved by
+  the ruamel.yaml project.
 
 BREAKING CHANGES:
 * Support for Python 3.7, 3.8, and 3.9 has been dropped due to end-of-life
