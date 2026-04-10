@@ -122,7 +122,7 @@ def processcli():
         "-t", "--pathsep",
         default="dot",
         choices=PathSeparators,
-        metavar=PathSeparators.get_choices(),  # type: ignore[arg-type]
+        metavar="|".join(PathSeparators.get_choices()),
         type=PathSeparators.from_str,
         help="indicate which YAML Path separator to use when rendering\
               results; default=dot")
@@ -667,11 +667,12 @@ def main():
         output_type = EYAMLOutputFormats.STRING
         if format_type in [YAMLValueFormats.FOLDED, YAMLValueFormats.LITERAL]:
             output_type = EYAMLOutputFormats.BLOCK
+        eyaml_new_value = "" if new_value is None else str(new_value)
 
         try:
             processor.set_eyaml_value(
                 change_path,
-                new_value,  # type: ignore[arg-type]
+                eyaml_new_value,
                 output=output_type, mustexist=False)
         except EYAMLCommandException as ex:
             log.critical(ex, 2)

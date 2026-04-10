@@ -171,6 +171,8 @@ def main():
                 if not isinstance(node, FoldedScalarString):
                     output = EYAMLOutputFormats.STRING
 
+                plain_text = txtval if isinstance(txtval, str) else str(txtval)
+
                 # Re-encrypt the value with new EYAML keys
                 processor.publickey = args.newpublickey
                 processor.privatekey = args.newprivatekey
@@ -178,7 +180,7 @@ def main():
                 try:
                     processor.set_eyaml_value(
                         yaml_path,
-                        txtval,  # type: ignore[arg-type]
+                        plain_text,
                         output=output)
                 except EYAMLCommandException as ex:
                     log.error(ex)
