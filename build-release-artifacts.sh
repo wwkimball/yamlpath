@@ -26,11 +26,11 @@ source "$envName"/bin/activate || exit 87
 
 # Update pip and install release tools
 echo "Installing release tools..."
-pip3 install ruamel.yaml wheel || exit $?
+pip3 install build setuptools ruamel.yaml wheel || exit $?
 
 # Build release artifacts
 echo "Building release artifacts..."
-python3 setup.py sdist bdist_wheel || exit $?
+python -m build || exit $?
 
 # Generate a ZIP file for Windows users
 echo "Building Windows ZIP file..."
