@@ -12,12 +12,13 @@ import argparse
 import json
 from os import access, R_OK
 from os.path import isfile
-from typing import Any, Dict, Generator, List, Optional, Set, Tuple
+from typing import Any, Dict, Generator, List, Optional, Tuple
 
 from ruamel.yaml.comments import CommentedSeq, CommentedMap, CommentedSet
 
 from yamlpath import __version__ as YAMLPATH_VERSION
 from yamlpath.common import Anchors, Parsers, Searches
+from yamlpath.common.linepathsearch import LinePathSearch
 from yamlpath.exceptions import YAMLPathException
 from yamlpath.enums import (
     AnchorMatches,
@@ -754,122 +755,6 @@ def get_search_term(logger: ConsolePrinter,
     return exterm
 
 
-def _line_is_match(line_data: Any, line_number: int) -> bool:
-    """Indicate whether ruamel line metadata matches a requested line."""
-    if line_data is None:
-        return False
-
-    # ruamel.yaml line data are zero-based; CLI line numbers are one-based.
-    return len(line_data) > 0 and line_data[0] == line_number - 1
-
-
-def _join_map_key_path(base_path: str, key: Any, pathsep: PathSeparators) -> str:
-    """Create a child map/set path for a key from a parent path."""
-    path_key = YAMLPath.escape_path_section(key, pathsep)
-    join_mark = "/" if pathsep is PathSeparators.FSLASH else "."
-
-    if base_path:
-        return "{}{}{}".format(base_path, join_mark, path_key)
-
-    if pathsep is PathSeparators.FSLASH:
-        return "/{}".format(path_key)
-
-    return "{}".format(path_key)
-
-
-def _join_sequence_index_path(base_path: str, idx: int, pathsep: PathSeparators) -> str:
-    """Create a child sequence path for an index from a parent path."""
-    if base_path:
-        return "{}[{}]".format(base_path, idx)
-
-    if pathsep is PathSeparators.FSLASH:
-        return "/[{}]".format(idx)
-
-    return "[{}]".format(idx)
-
-
-def _collect_line_paths(
-    data: Any, pathsep: PathSeparators, line_number: int,
-    build_path: str = "", matched_paths: Optional[Set[str]] = None
-) -> Set[str]:
-    """Recursively collect YAML Paths associated with a source line number."""
-    if matched_paths is None:
-        matched_paths = set()
-
-    if isinstance(data, CommentedMap):
-        for key, val in data.items():
-            key_path = _join_map_key_path(build_path, key, pathsep)
-            key_line = data.lc.key(key)
-            val_line = data.lc.value(key)
-            if _line_is_match(key_line, line_number):
-                matched_paths.add(key_path)
-            if _line_is_match(val_line, line_number):
-                matched_paths.add(key_path)
-
-            _collect_line_paths(
-                val, pathsep, line_number, build_path=key_path,
-                matched_paths=matched_paths)
-
-    elif isinstance(data, CommentedSeq):
-        for idx, ele in enumerate(data):
-            ele_path = _join_sequence_index_path(build_path, idx, pathsep)
-            ele_line = data.lc.item(idx)
-            if _line_is_match(ele_line, line_number):
-                matched_paths.add(ele_path)
-
-            _collect_line_paths(
-                ele, pathsep, line_number, build_path=ele_path,
-                matched_paths=matched_paths)
-
-    elif isinstance(data, CommentedSet):
-        for key in data:
-            key_path = _join_map_key_path(build_path, key, pathsep)
-            key_line = data.lc.key(key)
-            if _line_is_match(key_line, line_number):
-                matched_paths.add(key_path)
-
-    return matched_paths
-
-
-def _path_is_ancestor(
-    ancestor: str, descendant: str, pathsep: PathSeparators
-) -> bool:
-    """Indicate whether one rendered YAML Path is an ancestor of another."""
-    if ancestor == descendant or not descendant.startswith(ancestor):
-        return False
-
-    boundary = descendant[len(ancestor):len(ancestor) + 1]
-    join_mark = "/" if pathsep is PathSeparators.FSLASH else "."
-    return boundary in ["[", join_mark]
-
-
-def _prune_to_deepest_paths(
-    paths: Set[str], pathsep: PathSeparators
-) -> List[str]:
-    """Remove ancestor paths when a deeper descendent path also matches."""
-    keep_paths: List[str] = []
-    for check_path in sorted(paths, key=len, reverse=True):
-        is_ancestor = False
-        for keep_path in keep_paths:
-            if _path_is_ancestor(check_path, keep_path, pathsep):
-                is_ancestor = True
-                break
-
-        if not is_ancestor:
-            keep_paths.append(check_path)
-
-    return sorted(keep_paths)
-
-
-def search_for_paths_by_line(
-    data: Any, pathsep: PathSeparators, line_number: int
-) -> Generator[YAMLPath, None, None]:
-    """Yield YAML Paths whose defining key/value/index metadata matches a line."""
-    raw_paths = _collect_line_paths(data, pathsep, line_number)
-    paths = _prune_to_deepest_paths(raw_paths, pathsep)
-    for path in paths:
-        yield YAMLPath(path)
-
 def print_results(
     args: Any, processor: EYAMLProcessor, yaml_file: str,
     yaml_paths: List[Tuple[str, YAMLPath]], document_index: int
@@ -984,7 +869,7 @@ def process_yaml_file(
 
         if args.line:
             for line_number in args.line:
-                for result in search_for_paths_by_line(
+                for result in LinePathSearch.search_for_paths_by_line(
                     yaml_data, args.pathsep, line_number
                 ):
                     yaml_paths.append(("line {}".format(line_number), result))
