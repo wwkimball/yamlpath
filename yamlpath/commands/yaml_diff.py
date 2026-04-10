@@ -107,7 +107,7 @@ https://github.com/wwkimball/yamlpath/issues.
         "-t", "--pathsep",
         default="dot",
         choices=PathSeparators,
-        metavar=PathSeparators.get_choices(),
+        metavar=PathSeparators.get_choices(),  # type: ignore[arg-type]
         type=PathSeparators.from_str,
         help="indicate which YAML Path separator to use when\nrendering"
              " results; default=dot")

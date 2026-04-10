@@ -107,9 +107,10 @@ def process_file(log, yaml, yaml_file):
     subdoc_index = 0
     exit_state = 0
     file_name = "STDIN" if yaml_file.strip() == "-" else yaml_file
-    for (_, doc_loaded) in Parsers.get_yaml_multidoc_data(
-        yaml, logcap, yaml_file
-    ):
+    doc_gen = Parsers.get_yaml_multidoc_data(
+        yaml, logcap,  # type: ignore[arg-type]
+        yaml_file)
+    for (_, doc_loaded) in doc_gen:
         if doc_loaded:
             log.verbose("{}/{} is valid.".format(file_name, subdoc_index))
         else:

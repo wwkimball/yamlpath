@@ -176,7 +176,10 @@ def main():
                 processor.privatekey = args.newprivatekey
 
                 try:
-                    processor.set_eyaml_value(yaml_path, txtval, output=output)
+                    processor.set_eyaml_value(
+                        yaml_path,
+                        txtval,  # type: ignore[arg-type]
+                        output=output)
                 except EYAMLCommandException as ex:
                     log.error(ex)
                     exit_state = 3

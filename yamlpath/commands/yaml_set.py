@@ -122,7 +122,7 @@ def processcli():
         "-t", "--pathsep",
         default="dot",
         choices=PathSeparators,
-        metavar=PathSeparators.get_choices(),
+        metavar=PathSeparators.get_choices(),  # type: ignore[arg-type]
         type=PathSeparators.from_str,
         help="indicate which YAML Path separator to use when rendering\
               results; default=dot")
@@ -539,6 +539,7 @@ def main():
     yaml = Parsers.get_yaml_editor()
 
     # Attempt to open the YAML file; check for parsing errors
+    yaml_data = None
     if args.yaml_file:
         yaml_data = _try_load_input_file(
             args, log, yaml, change_path, new_value)
@@ -669,7 +670,9 @@ def main():
 
         try:
             processor.set_eyaml_value(
-                change_path, new_value, output=output_type, mustexist=False)
+                change_path,
+                new_value,  # type: ignore[arg-type]
+                output=output_type, mustexist=False)
         except EYAMLCommandException as ex:
             log.critical(ex, 2)
     elif has_new_value:

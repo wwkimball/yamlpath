@@ -426,7 +426,8 @@ class ConsolePrinter:
 
         local_keys = []
         if isinstance(data, CommentedMap):
-            for local_key, _ in data.non_merged_items():
+            local_items = data.non_merged_items()  # type: ignore[attr-defined]
+            for local_key, _ in local_items:
                 local_keys.append(local_key)
         else:
             for key in data.keys():

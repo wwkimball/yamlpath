@@ -338,7 +338,8 @@ class Parsers:
                     else:
                         last_merge_node = merge_item
             if isinstance(last_merge_node, CommentedMap):
-                for merge_key, merge_val in last_merge_node.items():
+                node_items = last_merge_node.items()  # type: ignore
+                for merge_key, merge_val in node_items:
                     if merge_key not in data:
                         data[merge_key] = Parsers.jsonify_yaml_data(merge_val)
         elif isinstance(data, dict):

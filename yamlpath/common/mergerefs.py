@@ -3,7 +3,7 @@ Implement MergeRefs, a static library for YAML Merge Key operations.
 
 Copyright 2026 William W. Kimball, Jr. MBA MSIS
 """
-from typing import Any, Generator
+from typing import Any, Generator, List, Union
 
 from ruamel.yaml.comments import CommentedSeq, merge_attrib
 from ruamel.yaml.mergevalue import MergeValue
@@ -15,7 +15,7 @@ class MergeRefs:
     @staticmethod
     def iter_nodes(
         data: Any,
-    ) -> Generator[Any, None, None]:  # pragma: no cover
+    ) -> Generator[Any, None, None]:
         """
         Generate merge-reference nodes from a CommentedMap-like node.
 
@@ -38,7 +38,7 @@ class MergeRefs:
     @staticmethod
     def replace_node(
         data: Any, idx: int, new_node: Any
-    ) -> None:  # pragma: no cover
+    ) -> None:
         """
         Replace one YAML merge reference node in-place.
 
@@ -52,7 +52,10 @@ class MergeRefs:
         Raises:  N/A
         """
         refs = data.merge if hasattr(data, "merge") else []
-        ref_store = refs.value if isinstance(refs, MergeValue) else refs
+        if isinstance(refs, MergeValue):
+            ref_store = refs.value  # type: ignore[attr-defined]
+        else:
+            ref_store = refs
         current = ref_store[idx]
         if isinstance(current, tuple) and len(current) > 1:
             ref_store[idx] = (current[0], new_node)
@@ -60,7 +63,7 @@ class MergeRefs:
             ref_store[idx] = new_node
 
     @staticmethod
-    def remove_node(data: Any, idx: int) -> None:  # pragma: no cover
+    def remove_node(data: Any, idx: int) -> None:
         """
         Delete one YAML merge reference by index.
 
@@ -73,13 +76,16 @@ class MergeRefs:
         Raises:  N/A
         """
         refs = data.merge if hasattr(data, "merge") else []
-        ref_store = refs.value if isinstance(refs, MergeValue) else refs
+        if isinstance(refs, MergeValue):
+            ref_store = refs.value  # type: ignore[attr-defined]
+        else:
+            ref_store = refs
         del ref_store[idx]
 
     @staticmethod
     def add_node(
         data: Any, merge_node: Any, materialize_keys: bool = False
-    ) -> None:  # pragma: no cover
+    ) -> None:
         """
         Append one YAML merge reference to a node.
 
@@ -93,11 +99,12 @@ class MergeRefs:
 
         Raises:  N/A
         """
+        refs: Union[MergeValue, List[Any], None]
         refs = getattr(data, merge_attrib, None)
         if isinstance(refs, MergeValue):
-            refs.append(merge_node)
-            if refs.merge_pos is None:
-                refs.merge_pos = 0
+            refs.append(merge_node)  # type: ignore[union-attr]
+            if refs.merge_pos is None:  # type: ignore[union-attr]
+                refs.merge_pos = 0  # type: ignore[union-attr]
             MergeRefs._sync_sequence(refs)
         else:
             merge_value = MergeValue()
@@ -117,7 +124,7 @@ class MergeRefs:
                     data[key] = val
 
     @staticmethod
-    def _sync_sequence(merge_value: MergeValue) -> None:  # pragma: no cover
+    def _sync_sequence(merge_value: MergeValue) -> None:
         """Synchronize MergeValue.sequence with MergeValue.value."""
         if len(merge_value.value) <= 1:
             merge_value.set_sequence(None)

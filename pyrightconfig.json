@@ -1,11 +1,18 @@
 {
     "include": [
-        "yamlpath",
-        "tests"
+        "yamlpath"
     ],
     "exclude": [
-        "setup.py", "**/node_modules", "**/__pycache__", "**/.*", ".vscode-*", ".venv*"
+        "setup.py",
+        "yamlpath/patches",
+        "**/node_modules",
+        "**/__pycache__",
+        "**/.*",
+        ".vscode-*",
+        ".venv*"
     ],
     "typeCheckingMode": "standard",
-    "reportMissingTypeStubs": "none"
+    "reportMissingImports": "none",
+    "reportMissingTypeStubs": "none",
+    "reportMissingModuleSource": "none"
 }
