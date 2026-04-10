@@ -1025,7 +1025,100 @@ key: value
         assert not result.success, result.stderr
         assert "Refusing to delete" in result.stderr
 
-    def test_rename_anchor_explicit(self, script_runner, tmp_path_factory):
+    def test_delete_preserves_successor_comment(self, script_runner, tmp_path_factory):
+        """Regression test for https://github.com/wwkimball/yamlpath/issues/170.
+
+        When a key that has a pre-comment and whose successor key has its own
+        pre-comment is deleted, the successor key's pre-comment must be
+        preserved and the deleted key's pre-comment must be dropped.
+        """
+        yamlin = """---
+# test.yaml
+key1: value1
+
+# Pre-comment
+remove_this: key
+
+# Post-comment
+keep_this: other key
+"""
+        yamlout = """---
+# test.yaml
+key1: value1
+
+# Post-comment
+keep_this: other key
+"""
+        yaml_file = create_temp_yaml_file(tmp_path_factory, yamlin)
+        result = script_runner.run([
+            self.command,
+            "--change=/remove_this",
+            "--delete",
+            yaml_file
+        ])
+        assert result.success, result.stderr
+
+        with open(yaml_file, 'r') as fhnd:
+            filedat = fhnd.read()
+        assert filedat == yamlout
+
+    def test_delete_first_key_promotes_successor_comment(self, script_runner, tmp_path_factory):
+        """Regression test for https://github.com/wwkimball/yamlpath/issues/170.
+
+        When the first key is deleted, its successor comment should be
+        promoted to the document-level pre-comment (replacing the now-orphaned
+        comment that belonged to the deleted first key).
+        """
+        yamlin = """---
+# First pre-comment
+first_key: value1
+
+# Second pre-comment
+second_key: value2
+"""
+        yaml_file = create_temp_yaml_file(tmp_path_factory, yamlin)
+        result = script_runner.run([
+            self.command,
+            "--change=/first_key",
+            "--delete",
+            yaml_file
+        ])
+        assert result.success, result.stderr
+
+        with open(yaml_file, 'r') as fhnd:
+            filedat = fhnd.read()
+        assert "# Second pre-comment" in filedat
+        assert "# First pre-comment" not in filedat
+        assert "second_key: value2" in filedat
+
+    def test_delete_last_key_drops_orphaned_comment(self, script_runner, tmp_path_factory):
+        """Regression test for https://github.com/wwkimball/yamlpath/issues/170.
+
+        When the last key is deleted, any comment that was stored as its
+        pre-comment (on the preceding key) should not appear as a dangling
+        comment in the output.
+        """
+        yamlin = """---
+key1: value1
+
+# Pre-comment
+last_key: value2
+"""
+        yaml_file = create_temp_yaml_file(tmp_path_factory, yamlin)
+        result = script_runner.run([
+            self.command,
+            "--change=/last_key",
+            "--delete",
+            yaml_file
+        ])
+        assert result.success, result.stderr
+
+        with open(yaml_file, 'r') as fhnd:
+            filedat = fhnd.read()
+        assert "# Pre-comment" not in filedat
+        assert "key1: value1" in filedat
+
+
         yamlin = """---
 aliases:
   - &old_anchor Some string

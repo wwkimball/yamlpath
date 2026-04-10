@@ -15,6 +15,7 @@ from ruamel.yaml.comments import (
     TaggedScalar,
 )
 
+from yamlpath.patches.commentedmap import fix_comment_for_deleted_key
 from yamlpath.types import AncestryEntry, PathAttributes, PathSegment
 from yamlpath.common import (
     Anchors,
@@ -796,6 +797,7 @@ class Processor:
                             MergeRefs.remove_node(parent, midx)
                             break
                 elif parentref in parent:
+                    fix_comment_for_deleted_key(parent, parentref)
                     del parent[parentref]
             elif isinstance(parent, (CommentedSeq, list)):
                 if len(parent) > parentref:
