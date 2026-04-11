@@ -156,9 +156,85 @@ name: another
         docs = list(Parsers.get_yaml_multidoc_data(
             yaml, quiet_logger, markdown_file))
 
-        assert len(docs) == 2
+        # Frontmatter applies only to the starting metadata block.
+        assert len(docs) == 1
         assert docs[0] == ({"title": "Example"}, True)
-        assert docs[1] == ({"name": "another"}, True)
+
+    def test_get_yaml_data_markdown_frontmatter_json_semicolon(
+        self, tmp_path_factory, quiet_logger
+    ):
+        from tests.conftest import create_temp_markdown_file
+
+        markdown = """;;;
+{
+  "title": "JSON Title",
+  "published": true
+}
+;;;
+
+# Heading
+"""
+        markdown_file = create_temp_markdown_file(tmp_path_factory, markdown)
+        yaml = Parsers.get_yaml_editor()
+
+        (data, loaded) = Parsers.get_yaml_data(yaml, quiet_logger, markdown_file)
+
+        assert loaded is True
+        assert data["title"] == "JSON Title"
+        assert data["published"] is True
+
+    def test_get_yaml_data_markdown_frontmatter_rejects_toml(
+        self, tmp_path_factory
+    ):
+        from tests.conftest import create_temp_markdown_file
+
+        markdown = """+++
+title = \"Nope\"
++++
+"""
+        markdown_file = create_temp_markdown_file(tmp_path_factory, markdown)
+        yaml = Parsers.get_yaml_editor()
+        logger = TrackingParserLogger()
+
+        (_, loaded) = Parsers.get_yaml_data(yaml, logger, markdown_file)
+
+        assert loaded is False
+        assert any("TOML frontmatter" in msg for msg in logger.error_messages)
+
+    def test_get_yaml_data_markdown_frontmatter_rejects_missing_closer(
+        self, tmp_path_factory
+    ):
+        from tests.conftest import create_temp_markdown_file
+
+        markdown = """---
+title: Missing End
+"""
+        markdown_file = create_temp_markdown_file(tmp_path_factory, markdown)
+        yaml = Parsers.get_yaml_editor()
+        logger = TrackingParserLogger()
+
+        (_, loaded) = Parsers.get_yaml_data(yaml, logger, markdown_file)
+
+        assert loaded is False
+        assert any("missing closing delimiter" in msg for msg in logger.error_messages)
+
+    def test_get_yaml_multidoc_data_markdown_frontmatter_rejects_toml(
+        self, tmp_path_factory
+    ):
+        from tests.conftest import create_temp_markdown_file
+
+        markdown = """+++
+title = \"Nope\"
++++
+"""
+        markdown_file = create_temp_markdown_file(tmp_path_factory, markdown)
+        yaml = Parsers.get_yaml_editor()
+        logger = TrackingParserLogger()
+
+        docs = list(Parsers.get_yaml_multidoc_data(yaml, logger, markdown_file))
+
+        assert docs == [(None, False)]
+        assert any("TOML frontmatter" in msg for msg in logger.error_messages)
 
     ###
     # stringify_dates

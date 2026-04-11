@@ -26,6 +26,7 @@ from yamlpath.patches.timestamp import (
 
 from yamlpath.common import Nodes
 from yamlpath.common.frontmatterparser import FrontmatterParser
+from yamlpath.exceptions import FrontmatterException
 from yamlpath.types import ParsersLogger
 
 
@@ -41,7 +42,7 @@ class Parsers:
         if isinstance(parser, FrontmatterParser):
             return parser
         if frontmatter:
-            return FrontmatterParser(parser)
+            return FrontmatterParser(parser, require_frontmatter=True)
         if literal or source == "-" or not isinstance(source, str):
             return parser
         if FrontmatterParser.is_markdown_file(source):
@@ -187,6 +188,9 @@ class Parsers:
                             .replace("occurrence   ", "occurrence ")
                             .replace("\n", "\n   ")))
             data_available = False
+        except FrontmatterException as fmex:
+            logger.error(str(fmex))
+            data_available = False
 
         return (yaml_data, data_available)
 
@@ -304,6 +308,9 @@ class Parsers:
                             str(raw)
                             .replace("occurrence   ", "occurrence ")
                             .replace("\n", "\n   ")))
+        except FrontmatterException as fmex:
+            has_error = True
+            logger.error(str(fmex))
 
         if has_error:
             yield (None, False)

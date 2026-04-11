@@ -1,6 +1,6 @@
 import pytest
 
-from tests.conftest import create_temp_yaml_file
+from tests.conftest import create_temp_markdown_file, create_temp_yaml_file
 
 
 class Test_commands_yaml_validate():
@@ -40,6 +40,48 @@ this:
             , yaml_file])
         assert not result.success, result.stderr
         assert "  * YAML parsing error in" in result.stdout
+
+    def test_valid_markdown_frontmatter(self, script_runner, tmp_path_factory):
+        markdown_file = create_temp_markdown_file(
+            tmp_path_factory,
+            "---\ntitle: okay\n---\n# Body\n")
+        result = script_runner.run([
+            self.command,
+            "--nostdin",
+            markdown_file,
+        ])
+        assert result.success, result.stderr
+
+    def test_invalid_markdown_frontmatter_reports_spec_violation(
+        self, script_runner, tmp_path_factory
+    ):
+        markdown_file = create_temp_markdown_file(
+            tmp_path_factory,
+            "+++\ntitle = 'bad'\n+++\n# Body\n")
+        result = script_runner.run([
+            self.command,
+            "--nostdin",
+            markdown_file,
+        ])
+        assert not result.success, result.stderr
+        assert "is invalid due to:" in result.stdout
+        assert "TOML frontmatter ('+++') is not supported" in result.stdout
+
+    def test_frontmatter_flag_missing_opener_reports_violation(
+        self, script_runner, tmp_path_factory
+    ):
+        markdown_file = create_temp_markdown_file(
+            tmp_path_factory,
+            "# Missing metadata\n")
+        result = script_runner.run([
+            self.command,
+            "--nostdin",
+            "--frontmatter",
+            markdown_file,
+        ])
+        assert not result.success, result.stderr
+        assert "is invalid due to:" in result.stdout
+        assert "expected a frontmatter opener" in result.stdout
 
     def test_valid_stdin_explicit(self, script_runner, tmp_path_factory):
         import subprocess

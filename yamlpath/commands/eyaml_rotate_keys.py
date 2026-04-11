@@ -55,7 +55,9 @@ def processcli():
                         + " PATH")
     parser.add_argument(
         "--frontmatter", action="store_true",
-        help="force Markdown frontmatter parsing for YAML_FILE")
+        help=(
+            "force Markdown frontmatter parsing for YAML_FILE; this flag is "
+            "required when Markdown content is read from - / STDIN"))
 
     key_group = parser.add_argument_group(
         "EYAML_KEYS", "All key arguments are required"

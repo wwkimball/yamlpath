@@ -143,6 +143,38 @@ Body text.
         assert result.success, result.stderr
         assert "My Post" in result.stdout
 
+    def test_query_markdown_frontmatter_rejects_toml(self, script_runner, tmp_path_factory):
+        markdown = """+++
+title = \"My Post\"
+++
+# Body
+"""
+        markdown_file = create_temp_markdown_file(tmp_path_factory, markdown)
+
+        result = script_runner.run([
+            self.command,
+            "--query=/title",
+            markdown_file
+        ])
+        assert not result.success, result.stderr
+        assert "TOML frontmatter" in result.stderr
+
+    def test_query_frontmatter_flag_rejects_missing_opener(self, script_runner, tmp_path_factory):
+        markdown = """# Heading
+
+Body text.
+"""
+        markdown_file = create_temp_markdown_file(tmp_path_factory, markdown)
+
+        result = script_runner.run([
+            self.command,
+            "--query=/title",
+            "--frontmatter",
+            markdown_file
+        ])
+        assert not result.success, result.stderr
+        assert "expected a frontmatter opener" in result.stderr
+
     def test_query_doc_from_stdin(
         self, script_runner, tmp_path_factory
     ):

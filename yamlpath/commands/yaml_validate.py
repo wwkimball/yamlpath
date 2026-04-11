@@ -35,7 +35,9 @@ class LogErrorCap:
 def processcli():
     """Process command-line arguments."""
     parser = argparse.ArgumentParser(
-        description="Validate YAML, JSON, and compatible files.",
+        description=(
+            "Validate YAML, JSON, compatible files, and Markdown"
+            " frontmatter metadata blocks."),
         epilog=(
             "Except when suppressing all report output with --quiet|-q,"
             " validation issues are printed to STDOUT (not STDERR).  Further,"
@@ -51,8 +53,8 @@ def processcli():
     parser.add_argument(
         "--frontmatter", action="store_true",
         help=(
-            "force Markdown frontmatter parsing for YAML_FILE, including - "
-            "from STDIN"))
+            "force Markdown frontmatter parsing for YAML_FILE; this flag is "
+            "required when Markdown content is read from - / STDIN"))
 
     parser.add_argument(
         "-S", "--nostdin", action="store_true",
@@ -76,8 +78,9 @@ def processcli():
 
     parser.add_argument("yaml_files", metavar="YAML_FILE", nargs="*",
                         help="one or more single- or multi-document"
-                        " YAML/JSON/compatible files to validate; omit or use"
-                        " - to read from STDIN")
+                        " YAML/JSON/compatible files (including Markdown"
+                        " frontmatter) to validate; omit or use - to read"
+                        " from STDIN")
 
     return parser.parse_args()
 

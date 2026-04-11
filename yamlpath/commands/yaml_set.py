@@ -173,8 +173,8 @@ def processcli():
     parser.add_argument(
         "--frontmatter", action="store_true",
         help=(
-            "force Markdown frontmatter parsing for YAML_FILE, including - "
-            "from STDIN"))
+            "force Markdown frontmatter parsing for YAML_FILE; this flag is "
+            "required when Markdown content is read from - / STDIN"))
 
     parser.add_argument(
         "-S", "--nostdin", action="store_true",
