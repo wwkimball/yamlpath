@@ -24,14 +24,37 @@ function Get-TestToolsRequirementsFile {
         [string]$PyVersion
     )
 
-    $VersionDigits = $PyVersion -replace "\."
-    $RequirementsFile = "requirements/test-tools/py$VersionDigits.txt"
+    $RequirementsFile = "requirements/test-tools/python-$PyVersion.txt"
     if (-Not (Test-Path -Path $RequirementsFile -PathType Leaf)) {
+        $SupportedPythons = Get-SupportedLanguageVersions -LanguagePrefix "python"
         Write-Warning "`nWARNING:  Python $PyVersion is not supported because required test-tool constraints are missing: $RequirementsFile"
+        Write-Warning "HINT:  Supported Python branches for this test runner are: $SupportedPythons."
         return $null
     }
 
     return $RequirementsFile
+}
+
+function Get-SupportedLanguageVersions {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [string]$LanguagePrefix
+    )
+
+    $Supported = Get-ChildItem -Path "requirements/test-tools" -Filter "$LanguagePrefix-*.txt" -File |
+        ForEach-Object {
+            if ($_.BaseName -match "^$LanguagePrefix-([0-9]+\.[0-9]+)$") {
+                $Matches[1]
+            }
+        } |
+        Sort-Object -Unique
+
+    if (-Not $Supported) {
+        return "none"
+    }
+
+    return ($Supported -join ", ")
 }
 
 function Get-RubyEyamlConstraintsFile {
@@ -41,10 +64,16 @@ function Get-RubyEyamlConstraintsFile {
         [string]$RubyVersion
     )
 
-    $VersionDigits = $RubyVersion -replace "\."
-    $ConstraintsFile = "requirements/test-tools/ruby$VersionDigits.txt"
+    $ConstraintsFile = "requirements/test-tools/ruby-$RubyVersion.txt"
     if (-Not (Test-Path -Path $ConstraintsFile -PathType Leaf)) {
+        $SupportedRubies = Get-SupportedLanguageVersions -LanguagePrefix "ruby"
         Write-Warning "`nWARNING:  Ruby $RubyVersion is not supported because EYAML constraints are missing: $ConstraintsFile"
+        if ($RubyVersion -eq "2.6") {
+            Write-Warning "HINT:  Ruby 2.6 is commonly the macOS system Ruby on Apple workstations."
+            Write-Warning "HINT:  For tests, install and prioritize a supported Ruby ($SupportedRubies) using tools like Homebrew, rbenv, or asdf."
+        } else {
+            Write-Warning "HINT:  Supported Ruby branches for this test runner are: $SupportedRubies."
+        }
         return $null
     }
 

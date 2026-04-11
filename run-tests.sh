@@ -14,20 +14,68 @@ fi
 
 function resolveRequirementsFile {
 	local python_version="$1"
-	local requirements_file="requirements/test-tools/py${python_version//./}.txt"
+	local requirements_file="requirements/test-tools/python-${python_version}.txt"
+	local supported_pythons=""
 	if ! [ -f "$requirements_file" ]; then
+		supported_pythons=$(getSupportedVersions "python")
 		echo -e "\nWARNING:  Python ${python_version} is not supported because required test-tool constraints are missing: ${requirements_file}" >&2
+		echo "HINT:  Supported Python branches for this test runner are: ${supported_pythons}." >&2
 		return 1
 	fi
 
 	echo "$requirements_file"
 }
 
+function getSupportedVersions {
+	local language_prefix="$1"
+	local requirement_file=""
+	local joined=""
+	local version=""
+	local supported=()
+	local sorted_supported=()
+
+	for requirement_file in requirements/test-tools/${language_prefix}-*.txt; do
+		if ! [ -f "$requirement_file" ]; then
+			continue
+		fi
+
+		if [[ "${requirement_file##*/}" =~ ^${language_prefix}-([0-9]+\.[0-9]+)\.txt$ ]]; then
+			supported+=("${BASH_REMATCH[1]}")
+		fi
+	done
+
+	if [ 0 -eq "${#supported[@]}" ]; then
+		echo "none"
+		return 0
+	fi
+
+	while IFS= read -r version; do
+		sorted_supported+=("$version")
+	done < <(printf '%s\n' "${supported[@]}" | sort -uV)
+
+	for version in "${sorted_supported[@]}"; do
+		if [ -n "$joined" ]; then
+			joined="${joined}, "
+		fi
+		joined="${joined}${version}"
+	done
+
+	echo "$joined"
+}
+
 function resolveRubyConstraintsFile {
 	local ruby_version="$1"
-	local constraints_file="requirements/test-tools/ruby${ruby_version//./}.txt"
+	local constraints_file="requirements/test-tools/ruby-${ruby_version}.txt"
+	local supported_rubies=""
 	if ! [ -f "$constraints_file" ]; then
+		supported_rubies=$(getSupportedVersions "ruby")
 		echo -e "\nWARNING:  Ruby ${ruby_version} is not supported because EYAML constraints are missing: ${constraints_file}" >&2
+		if [ "$ruby_version" = "2.6" ]; then
+			echo "HINT:  Ruby 2.6 is commonly the macOS system Ruby on Apple workstations." >&2
+			echo "HINT:  For tests, install and prioritize a supported Ruby (${supported_rubies}) using tools like Homebrew, rbenv, or asdf." >&2
+		else
+			echo "HINT:  Supported Ruby branches for this test runner are: ${supported_rubies}." >&2
+		fi
 		return 1
 	fi
 
