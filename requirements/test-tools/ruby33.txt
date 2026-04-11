@@ -1,0 +1,2 @@
+# hiera-eyaml RubyGem version constraint for Ruby 3.3 test environments
+>= 5, < 6

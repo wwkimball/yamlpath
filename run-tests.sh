@@ -23,6 +23,56 @@ function resolveRequirementsFile {
 	echo "$requirements_file"
 }
 
+function resolveRubyConstraintsFile {
+	local ruby_version="$1"
+	local constraints_file="requirements/test-tools/ruby${ruby_version//./}.txt"
+	if ! [ -f "$constraints_file" ]; then
+		echo -e "\nWARNING:  Ruby ${ruby_version} is not supported because EYAML constraints are missing: ${constraints_file}" >&2
+		return 1
+	fi
+
+	echo "$constraints_file"
+}
+
+function loadRubyGemVersionConstraint {
+	local constraints_file="$1"
+	local constraint=""
+	while IFS= read -r line; do
+		if [ -n "$line" ] && [[ ! "$line" =~ ^[[:space:]]*# ]]; then
+			constraint="$line"
+			break
+		fi
+	done < "$constraints_file"
+
+	if [ -z "$constraint" ]; then
+		echo -e "\nERROR:  No EYAML gem version constraint was found in ${constraints_file}!" >&2
+		return 1
+	fi
+
+	echo "$constraint"
+}
+
+function cleanupTestEnvironment {
+	local venv_dir="$1"
+	local gem_home="$2"
+	local original_path="$3"
+
+	if which deactivate &>/dev/null; then
+		deactivate
+	fi
+
+	if [ -n "$venv_dir" ]; then
+		rm -rf "$venv_dir"
+	fi
+
+	if [ -n "$gem_home" ]; then
+		rm -rf "$gem_home"
+	fi
+
+	unset GEM_HOME GEM_PATH
+	PATH="$original_path"
+}
+
 # Delete all cached data
 find ./ -name '__pycache__' -type d -print0 | xargs -0 rm -rf || exit $?
 rm -rf yamlpath.egg-info
@@ -30,6 +80,9 @@ rm -rf /tmp/yamlpath-python-coverage-data
 rm -f .coverage
 
 for pythonVersion in "${@}"; do
+	originalPath="$PATH"
+	tmpGemHome=""
+
 	if which deactivate &>/dev/null; then
 		echo "Deactivating Python $(python --version).  If this dumps you right back to the shell prompt, you were running Microsoft's VSCode-embedded Python and were just put into a sub-shell; just exit to resume tests."
 		deactivate
@@ -42,6 +95,21 @@ for pythonVersion in "${@}"; do
 	fi
 	pyVersion=$("$pyCommand" --version)
 	if ! requirementsFile=$(resolveRequirementsFile "$pythonVersion"); then
+		continue
+	fi
+	if ! which ruby &>/dev/null; then
+		echo -e "\nWARNING:  Unable to find a Ruby binary named, ruby!" >&2
+		continue
+	fi
+	rubyVersion=$(ruby --version | sed -E 's/.* ([0-9]+\.[0-9]+)\..*/\1/')
+	if [ -z "$rubyVersion" ]; then
+		echo -e "\nWARNING:  Unable to determine the Ruby major.minor version from: $(ruby --version)!" >&2
+		continue
+	fi
+	if ! rubyConstraintsFile=$(resolveRubyConstraintsFile "$rubyVersion"); then
+		continue
+	fi
+	if ! eyamlGemConstraint=$(loadRubyGemVersionConstraint "$rubyConstraintsFile"); then
 		continue
 	fi
 
@@ -84,40 +152,56 @@ EOF
 
 	echo "...installing pinned testing tools from ${requirementsFile}"
 	if ! pip install -r "${requirementsFile}" >/dev/null; then
-		deactivate
-		rm -rf "$tmpVEnv"
+		cleanupTestEnvironment "$tmpVEnv" "$tmpGemHome" "$originalPath"
 		echo -e "\nERROR:  Unable to install pinned testing tools from ${requirementsFile}!" >&2
 		exit 123
 	fi
 
+	echo "...installing isolated EYAML Ruby Gem constrained by ${rubyConstraintsFile}"
+	if ! which gem &>/dev/null; then
+		cleanupTestEnvironment "$tmpVEnv" "$tmpGemHome" "$originalPath"
+		echo -e "\nERROR:  Unable to find the Ruby Gem tool, 'gem'!" >&2
+		exit 121
+	fi
+	tmpGemHome=$(mktemp -d -t yamlpath-eyaml-gems-$(date +%Y%m%dT%H%M%S)-XXXXXXXXXX)
+	export GEM_HOME="$tmpGemHome"
+	export GEM_PATH="$GEM_HOME"
+	export PATH="${GEM_HOME}/bin:${PATH}"
+	if ! gem install --no-document hiera-eyaml -v "$eyamlGemConstraint" >/dev/null; then
+		cleanupTestEnvironment "$tmpVEnv" "$tmpGemHome" "$originalPath"
+		echo -e "\nERROR:  Unable to install hiera-eyaml ${eyamlGemConstraint} into ${tmpGemHome}!" >&2
+		exit 122
+	fi
+	if ! which eyaml &>/dev/null; then
+		cleanupTestEnvironment "$tmpVEnv" "$tmpGemHome" "$originalPath"
+		echo -e "\nERROR:  The isolated EYAML binary was not found on PATH after installation!" >&2
+		exit 120
+	fi
+
 	echo -e "\nPYDOCSTYLE..."
 	if ! pydocstyle yamlpath; then
-		deactivate
-		rm -rf "$tmpVEnv"
+		cleanupTestEnvironment "$tmpVEnv" "$tmpGemHome" "$originalPath"
 		echo "PYDOCSTYLE Error: $?"
 		exit 9
 	fi
 
 	echo -e "\nMYPY..."
 	if ! mypy yamlpath; then
-		deactivate
-		rm -rf "$tmpVEnv"
+		cleanupTestEnvironment "$tmpVEnv" "$tmpGemHome" "$originalPath"
 		echo "MYPY Error: $?"
 		exit 10
 	fi
 
 	echo -e "\nPYRIGHT..."
 	if ! pyright; then
-		deactivate
-		rm -rf "$tmpVEnv"
+		cleanupTestEnvironment "$tmpVEnv" "$tmpGemHome" "$originalPath"
 		echo "PYRIGHT Error: $?"
 		exit 13
 	fi
 
 	echo -e "\nPYLINT..."
 	if ! pylint yamlpath; then
-		deactivate
-		rm -rf "$tmpVEnv"
+		cleanupTestEnvironment "$tmpVEnv" "$tmpGemHome" "$originalPath"
 		echo "PYLINT Error: $?"
 		exit 11
 	fi
@@ -131,12 +215,10 @@ EOF
 		--script-launch-mode=subprocess \
 		tests
 	then
-		deactivate
-		rm -rf "$tmpVEnv"
+		cleanupTestEnvironment "$tmpVEnv" "$tmpGemHome" "$originalPath"
 		echo "PYTEST Error: $?"
 		exit 12
 	fi
 
-	deactivate
-	rm -rf "$tmpVEnv"
+	cleanupTestEnvironment "$tmpVEnv" "$tmpGemHome" "$originalPath"
 done
