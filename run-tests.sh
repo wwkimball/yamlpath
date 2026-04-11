@@ -69,7 +69,7 @@ function resolveRubyConstraintsFile {
 	local supported_rubies=""
 	if ! [ -f "$constraints_file" ]; then
 		supported_rubies=$(getSupportedVersions "ruby")
-		echo -e "\nWARNING:  Ruby ${ruby_version} is not supported because EYAML constraints are missing: ${constraints_file}" >&2
+		echo -e "\nWARNING:  Ruby ${ruby_version} is not supported because its dependency file is missing: ${constraints_file}" >&2
 		if [ "$ruby_version" = "2.6" ]; then
 			echo "HINT:  Ruby 2.6 is commonly the macOS system Ruby on Apple workstations." >&2
 			echo "HINT:  For tests, install and prioritize a supported Ruby (${supported_rubies}) using tools like Homebrew, rbenv, or asdf." >&2
@@ -80,24 +80,6 @@ function resolveRubyConstraintsFile {
 	fi
 
 	echo "$constraints_file"
-}
-
-function loadRubyGemVersionConstraint {
-	local constraints_file="$1"
-	local constraint=""
-	while IFS= read -r line; do
-		if [ -n "$line" ] && [[ ! "$line" =~ ^[[:space:]]*# ]]; then
-			constraint="$line"
-			break
-		fi
-	done < "$constraints_file"
-
-	if [ -z "$constraint" ]; then
-		echo -e "\nERROR:  No EYAML gem version constraint was found in ${constraints_file}!" >&2
-		return 1
-	fi
-
-	echo "$constraint"
 }
 
 function cleanupTestEnvironment {
@@ -155,9 +137,6 @@ for pythonVersion in "${@}"; do
 		continue
 	fi
 	if ! rubyConstraintsFile=$(resolveRubyConstraintsFile "$rubyVersion"); then
-		continue
-	fi
-	if ! eyamlGemConstraint=$(loadRubyGemVersionConstraint "$rubyConstraintsFile"); then
 		continue
 	fi
 
@@ -219,11 +198,11 @@ EOF
 		--no-document \
 		--install-dir "$GEM_HOME" \
 		--bindir "${GEM_HOME}/bin" \
-		hiera-eyaml \
-		-v "$eyamlGemConstraint" \
+		-g "$rubyConstraintsFile" \
+		--no-lock \
 	>/dev/null; then
 		cleanupTestEnvironment "$tmpVEnv" "$tmpGemHome" "$originalPath"
-		echo -e "\nERROR:  Unable to install hiera-eyaml ${eyamlGemConstraint} into ${tmpGemHome}!" >&2
+		echo -e "\nERROR:  Unable to install EYAML via Ruby dependency file ${rubyConstraintsFile} into ${tmpGemHome}!" >&2
 		exit 122
 	fi
 	if ! [ -x "${GEM_HOME}/bin/eyaml" ]; then

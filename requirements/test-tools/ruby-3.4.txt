@@ -1,2 +1,2 @@
-# hiera-eyaml RubyGem version constraint for Ruby 3.4 test environments
->= 5, < 6
+# RubyGems dependency file for Ruby 3.4 test environments
+gem 'hiera-eyaml', '>= 5', '< 6'

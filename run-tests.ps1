@@ -67,7 +67,7 @@ function Get-RubyEyamlConstraintsFile {
     $ConstraintsFile = "requirements/test-tools/ruby-$RubyVersion.txt"
     if (-Not (Test-Path -Path $ConstraintsFile -PathType Leaf)) {
         $SupportedRubies = Get-SupportedLanguageVersions -LanguagePrefix "ruby"
-        Write-Warning "`nWARNING:  Ruby $RubyVersion is not supported because EYAML constraints are missing: $ConstraintsFile"
+        Write-Warning "`nWARNING:  Ruby $RubyVersion is not supported because its dependency file is missing: $ConstraintsFile"
         if ($RubyVersion -eq "2.6") {
             Write-Warning "HINT:  Ruby 2.6 is commonly the macOS system Ruby on Apple workstations."
             Write-Warning "HINT:  For tests, install and prioritize a supported Ruby ($SupportedRubies) using tools like Homebrew, rbenv, or asdf."
@@ -78,24 +78,6 @@ function Get-RubyEyamlConstraintsFile {
     }
 
     return $ConstraintsFile
-}
-
-function Get-RubyEyamlGemVersionConstraint {
-    [CmdletBinding()]
-    param(
-        [Parameter(Mandatory=$true)]
-        [string]$ConstraintsFile
-    )
-
-    $Constraint = Get-Content -Path $ConstraintsFile |
-        Where-Object { -Not [string]::IsNullOrWhiteSpace($_) -And -Not $_.TrimStart().StartsWith("#") } |
-        Select-Object -First 1
-    if ([string]::IsNullOrWhiteSpace($Constraint)) {
-        Write-Error "`nERROR:  No EYAML gem version constraint was found in $ConstraintsFile!"
-        return $null
-    }
-
-    return $Constraint.Trim()
 }
 
 function Invoke-CleanupTestEnvironment {
@@ -171,11 +153,6 @@ ForEach ($EnvDir in $EnvDirs) {
         & deactivate
         continue
     }
-    $EyamlGemConstraint = Get-RubyEyamlGemVersionConstraint -ConstraintsFile $RubyConstraintsFile
-    if ([string]::IsNullOrWhiteSpace($EyamlGemConstraint)) {
-        & deactivate
-        continue
-    }
 
     Write-Output @"
 
@@ -234,10 +211,10 @@ ForEach ($EnvDir in $EnvDirs) {
     $env:GEM_HOME = $TmpGemHome.FullName
     $env:GEM_PATH = $TmpGemHome.FullName
     $env:PATH = "$($TmpGemHome.FullName)$([System.IO.Path]::PathSeparator)$($env:PATH)"
-    gem install --no-document --install-dir $env:GEM_HOME --bindir "$($env:GEM_HOME)$([System.IO.Path]::DirectorySeparatorChar)bin" hiera-eyaml -v $EyamlGemConstraint | Out-String
+    gem install --no-document --install-dir $env:GEM_HOME --bindir "$($env:GEM_HOME)$([System.IO.Path]::DirectorySeparatorChar)bin" -g $RubyConstraintsFile --no-lock | Out-String
     if (!$?) {
         Invoke-CleanupTestEnvironment -TmpVEnvPath $TmpVEnv.FullName -TmpGemHomePath $TmpGemHome.FullName -OriginalPath $OriginalPath
-        Write-Error "`nERROR:  Unable to install hiera-eyaml $EyamlGemConstraint into $($TmpGemHome.FullName)!"
+        Write-Error "`nERROR:  Unable to install EYAML via Ruby dependency file $RubyConstraintsFile into $($TmpGemHome.FullName)!"
         exit 123
     }
     if (-Not (Test-Path -Path "$($env:GEM_HOME)$([System.IO.Path]::DirectorySeparatorChar)bin$([System.IO.Path]::DirectorySeparatorChar)eyaml" -PathType Leaf)) {
