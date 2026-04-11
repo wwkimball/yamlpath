@@ -40,12 +40,16 @@ class Parsers:
     ) -> Any:
         """Select parser implementation based on source document type."""
         if isinstance(parser, FrontmatterParser):
+            # The caller has already decided that FrontmatterParser is required
             return parser
         if frontmatter:
+            # The caller has explicitly requested frontmatter parsing
             return FrontmatterParser(parser, require_frontmatter=True)
         if literal or source == "-" or not isinstance(source, str):
+            # The input stream is a literal string or raw STDIN
             return parser
         if FrontmatterParser.is_markdown_file(source):
+            # The source appears to be a Markdown file based on its extension
             return FrontmatterParser(parser)
         return parser
 
