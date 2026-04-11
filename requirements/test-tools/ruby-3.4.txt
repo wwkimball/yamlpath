@@ -1,0 +1,2 @@
+# RubyGems dependency file for Ruby 3.4 test environments
+gem 'hiera-eyaml', '>= 5', '< 6'
