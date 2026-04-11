@@ -19,6 +19,7 @@ function New-TemporaryDirectory {
 
 function Get-TestToolsRequirementsFile {
     [CmdletBinding()]
+    [OutputType([System.String])]
     param(
         [Parameter(Mandatory=$true)]
         [string]$PyVersion
@@ -37,6 +38,7 @@ function Get-TestToolsRequirementsFile {
 
 function Get-SupportedLanguageVersions {
     [CmdletBinding()]
+    [OutputType([System.String])]
     param(
         [Parameter(Mandatory=$true)]
         [string]$LanguagePrefix
@@ -59,6 +61,7 @@ function Get-SupportedLanguageVersions {
 
 function Get-RubyEyamlConstraintsFile {
     [CmdletBinding()]
+    [OutputType([System.String])]
     param(
         [Parameter(Mandatory=$true)]
         [string]$RubyVersion

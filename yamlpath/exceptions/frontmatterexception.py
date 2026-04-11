@@ -1,5 +1,4 @@
-"""
-Implement FrontmatterException.
+"""Implement FrontmatterException.
 
 Copyright 2026 William W. Kimball, Jr. MBA MSIS
 """

@@ -306,3 +306,42 @@ title = \"Nope\"
 
         jstr = json.dumps(jdata)
         assert jstr == """{"dates": ["2020-10-31", "2020-11-03"], "bytes": "b'abc'", "t_bool": true, "f_bool": false}"""
+
+    def test_jsonify_datetime_value(self):
+        cdata = dt.datetime(2021, 1, 13, 1, 2, 3)
+        jdata = Parsers.jsonify_yaml_data(cdata)
+        assert jdata == "2021-01-13T01:02:03"
+
+    def test_jsonify_commented_map_with_merge_tuple(self):
+        yaml = Parsers.get_yaml_editor()
+        cdata = yaml.load("""
+defaults: &defaults
+    inherited: 7
+
+data:
+    <<: *defaults
+    explicit: 8
+""")
+
+        jdata = Parsers.jsonify_yaml_data(cdata["data"])
+        assert jdata["explicit"] == 8
+        assert jdata["inherited"] == 7
+
+    def test_jsonify_commented_map_with_legacy_merge_tuple(self):
+        class MergeableMap(dict):
+            """Test-double map with writable merge metadata."""
+
+            def insert(self, index, key, value):
+                items = list(self.items())
+                if key in self:
+                    self.pop(key)
+                items.insert(index, (key, value))
+                self.clear()
+                self.update(items)
+
+        cdata = MergeableMap({"explicit": 8})
+        cdata.merge = [(0, ry.comments.CommentedMap({"inherited": 7}))]
+
+        jdata = Parsers._jsonify_commented_map(cdata)
+        assert jdata["explicit"] == 8
+        assert jdata["inherited"] == 7

@@ -342,8 +342,76 @@ class Parsers:
         return data
 
     @staticmethod
-    # pylint: disable=too-many-branches,too-many-locals
-    def jsonify_yaml_data(data: Any) -> Any:  # pragma: no cover
+    def _jsonify_commented_map(
+        data: CommentedMap,
+    ) -> CommentedMap:
+        """Recursively jsonify a CommentedMap with its YAML merge keys."""
+        for i, k in [
+            (idx, key) for idx, key in enumerate(data.keys())
+            if isinstance(key, TaggedScalar)
+        ]:
+            unwrapped_key = Parsers.jsonify_yaml_data(k)
+            data.insert(i, unwrapped_key, data.pop(k))
+
+        for key, val in data.items():
+            data[key] = Parsers.jsonify_yaml_data(val)
+
+        # Preserve historical JSON output behavior by projecting keys
+        # from the active merge source map (the final merge reference).
+        last_merge_node = None
+        if hasattr(data, "merge") and len(data.merge) > 0:
+            for merge_item in data.merge:
+                if isinstance(merge_item, tuple) and len(merge_item) > 1:
+                    last_merge_node = merge_item[1]
+                else:
+                    last_merge_node = merge_item
+        if isinstance(last_merge_node, CommentedMap):
+            node_items = last_merge_node.items()  # type: ignore
+            for merge_key, merge_val in node_items:
+                if merge_key not in data:
+                    data[merge_key] = Parsers.jsonify_yaml_data(merge_val)
+        return data
+
+    @staticmethod
+    def _jsonify_set(data: Any) -> Dict[str, None]:
+        """Convert a set or CommentedSet to a JSON-serializable dict."""
+        json_repr: Dict[str, None] = {}
+        for set_val in data:
+            json_key_proto = Parsers.jsonify_yaml_data(set_val)
+            json_key = (str(json_key_proto)
+                        if isinstance(json_key_proto, tuple)
+                        else json_key_proto)
+            json_repr[json_key] = None
+        return json_repr
+
+    @staticmethod
+    def _jsonify_datetime_value(
+        data: datetime,
+    ) -> str:
+        """Convert a datetime to an ISO string, date-only when applicable."""
+        is_date_only = (
+            data.hour == 0
+            and data.minute == 0
+            and data.second == 0
+            and data.microsecond == 0
+            and getattr(data, "tzinfo", None) is None
+        )
+        return (
+            data.date().isoformat()
+            if is_date_only
+            else Nodes.get_timestamp_with_tzinfo(data).isoformat()
+        )
+
+    @staticmethod
+    def _jsonify_seq_values(data: Any) -> Any:
+        """Recursively jsonify all values in a dict or sequence."""
+        keys = data.keys() if isinstance(data, dict) else range(len(data))
+        for key in keys:
+            data[key] = Parsers.jsonify_yaml_data(data[key])
+        return data
+
+    @staticmethod
+    def jsonify_yaml_data(data: Any) -> Any:
         """
         Convert all non-JSON-serializable values to strings.
 
@@ -352,68 +420,23 @@ class Parsers:
         native data-types, like dates.
         """
         if isinstance(data, CommentedMap):
-            for i, k in [
-                (idx, key) for idx, key in enumerate(data.keys())
-                if isinstance(key, TaggedScalar)
-            ]:
-                unwrapped_key = Parsers.jsonify_yaml_data(k)
-                data.insert(i, unwrapped_key, data.pop(k))
-
-            for key, val in data.items():
-                data[key] = Parsers.jsonify_yaml_data(val)
-
-            # Preserve historical JSON output behavior by projecting keys
-            # from the active merge source map (the final merge reference).
-            last_merge_node = None
-            if hasattr(data, "merge") and len(data.merge) > 0:
-                for merge_item in data.merge:
-                    if isinstance(merge_item, tuple) and len(merge_item) > 1:
-                        last_merge_node = merge_item[1]
-                    else:
-                        last_merge_node = merge_item
-            if isinstance(last_merge_node, CommentedMap):
-                node_items = last_merge_node.items()  # type: ignore
-                for merge_key, merge_val in node_items:
-                    if merge_key not in data:
-                        data[merge_key] = Parsers.jsonify_yaml_data(merge_val)
-        elif isinstance(data, dict):
-            for key, val in data.items():
-                data[key] = Parsers.jsonify_yaml_data(val)
-        elif isinstance(data, (list, CommentedSeq)):
-            for idx, ele in enumerate(data):
-                data[idx] = Parsers.jsonify_yaml_data(ele)
+            data = Parsers._jsonify_commented_map(data)
+        elif isinstance(data, (dict, list, CommentedSeq)):
+            data = Parsers._jsonify_seq_values(data)
         elif isinstance(data, (set, CommentedSet)):
-            json_repr: Dict[str, None] = {}
-            for set_val in data:
-                json_key_proto = Parsers.jsonify_yaml_data(set_val)
-                json_key = (str(json_key_proto)
-                            if isinstance(json_key_proto, tuple)
-                            else json_key_proto)
-                json_repr[json_key] = None
-            data = json_repr
+            data = Parsers._jsonify_set(data)
         elif isinstance(data, TaggedScalar):
             if Nodes.get_tag(data) == "!null":
                 return None
             data = Parsers.jsonify_yaml_data(data.value)
-        elif isinstance(data, AnchoredDate):  # pragma: no cover
-            data = data.date().isoformat()  # pragma: no cover
+        elif isinstance(data, AnchoredDate):
+            data = data.date().isoformat()
         elif isinstance(data, AnchoredTimeStamp):
             data = Nodes.get_timestamp_with_tzinfo(data).isoformat()
         elif isinstance(data, datetime):
-            is_date_only = (
-                data.hour == 0
-                and data.minute == 0
-                and data.second == 0
-                and data.microsecond == 0
-                and getattr(data, "tzinfo", None) is None
-            )
-            data = (
-                data.date().isoformat()
-                if is_date_only
-                else Nodes.get_timestamp_with_tzinfo(data).isoformat()
-            )
-        elif isinstance(data, date):  # pragma: no cover
-            data = data.isoformat()  # pragma: no cover
+            data = Parsers._jsonify_datetime_value(data)
+        elif isinstance(data, date):
+            data = data.isoformat()
         elif isinstance(data, bytes):
             data = str(data)
         elif isinstance(data, (ScalarBoolean, bool)):
