@@ -107,7 +107,7 @@ https://github.com/wwkimball/yamlpath/issues.
         "--frontmatter", action="store_true",
         help=(
             "force Markdown frontmatter parsing for YAML_FILE; this flag is "
-            "required when Markdown content is read from - / STDIN"))
+            "required when Markdown content is read from STDIN"))
 
     parser.add_argument(
         "-t", "--pathsep",
