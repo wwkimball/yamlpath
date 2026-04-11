@@ -53,6 +53,9 @@ def processcli():
     parser.add_argument("-x", "--eyaml", default="eyaml",
                         help="the eyaml binary to use when it isn't on the"
                         + " PATH")
+    parser.add_argument(
+        "--frontmatter", action="store_true",
+        help="force Markdown frontmatter parsing for YAML_FILE")
 
     key_group = parser.add_argument_group(
         "EYAML_KEYS", "All key arguments are required"
@@ -130,7 +133,10 @@ def main():
             log.info("Processing {}...".format(yaml_file))
 
         # Try to open the file
-        (yaml_data, doc_loaded) = Parsers.get_yaml_data(yaml, log, yaml_file)
+        source_yaml = Parsers.get_parser_for_source(
+            yaml, yaml_file, frontmatter=args.frontmatter)
+        (yaml_data, doc_loaded) = Parsers.get_yaml_data(
+            source_yaml, log, yaml_file, frontmatter=args.frontmatter)
         if not doc_loaded:
             # An error message has already been logged
             exit_state = 3
@@ -200,7 +206,7 @@ def main():
 
             log.verbose("Writing changed data to {}.".format(yaml_file))
             with open(yaml_file, 'w', encoding='utf-8') as yaml_dump:
-                yaml.dump(yaml_data, yaml_dump)
+                source_yaml.dump(yaml_data, yaml_dump)
 
     sys.exit(exit_state)
 

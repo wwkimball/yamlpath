@@ -190,6 +190,12 @@ def processcli():
     eyaml_group.add_argument("-u", "--publickey", help="EYAML public key")
 
     parser.add_argument(
+        "--frontmatter", action="store_true",
+        help=(
+            "force Markdown frontmatter parsing for YAML_FILE, including - "
+            "from STDIN"))
+
+    parser.add_argument(
         "-S", "--nostdin", action="store_true",
         help=(
             "Do not implicitly read from STDIN, even when there are\n"
@@ -825,7 +831,7 @@ def process_yaml_file(
 
     # pylint: disable=too-many-nested-blocks
     for (yaml_data, doc_loaded) in Parsers.get_yaml_multidoc_data(
-        yaml, log, yaml_file
+        yaml, log, yaml_file, frontmatter=args.frontmatter
     ):
         file_tally += 1
         subdoc_index += 1

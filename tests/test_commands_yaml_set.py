@@ -1,6 +1,11 @@
 import pytest
 
-from tests.conftest import create_temp_yaml_file, requireseyaml, old_eyaml_keys
+from tests.conftest import (
+    create_temp_yaml_file,
+    create_temp_markdown_file,
+    requireseyaml,
+    old_eyaml_keys,
+)
 
 
 class Test_yaml_set():
@@ -93,6 +98,30 @@ boolean: false
             filedat = fhnd.read()
         assert re.findall(r"^key:\s+abc$", filedat, re.M), filedat
 
+    def test_input_by_value_markdown_frontmatter(self, script_runner, tmp_path_factory):
+        markdown = """---
+title: Old Title
+---
+# Heading
+
+Body text stays the same.
+"""
+        markdown_file = create_temp_markdown_file(tmp_path_factory, markdown)
+
+        result = script_runner.run([
+            self.command,
+            "--change=/title",
+            "--value=New Title",
+            markdown_file,
+        ])
+        assert result.success, result.stderr
+
+        with open(markdown_file, 'r', encoding='utf-8') as fhnd:
+            filedat = fhnd.read()
+        assert "title: New Title" in filedat
+        assert "# Heading" in filedat
+        assert "Body text stays the same." in filedat
+
     def test_input_by_stdin(self, tmp_path_factory):
         import re
         import subprocess
@@ -114,6 +143,35 @@ boolean: false
         with open(yaml_file, 'r') as fhnd:
             filedat = fhnd.read()
         assert re.findall(r"^key:\s+abc$", filedat, re.M), filedat
+
+    def test_input_by_value_markdown_frontmatter_from_stdin(self):
+        import sys
+        import subprocess
+
+        markdown = """---
+title: Old Title
+---
+# Heading
+
+Body text stays the same.
+"""
+
+        result = subprocess.run(
+            [sys.executable,
+             "-m",
+             "yamlpath.commands.yaml_set",
+             "--change=/title",
+             "--value=New Title",
+             "--frontmatter",
+             "-"],
+            stdout=subprocess.PIPE,
+            input=markdown,
+            universal_newlines=True,
+        )
+        assert 0 == result.returncode, result.stderr
+        assert "title: New Title" in result.stdout
+        assert "# Heading" in result.stdout
+        assert "Body text stays the same." in result.stdout
 
     def test_input_by_file(self, script_runner, tmp_path_factory):
         import re

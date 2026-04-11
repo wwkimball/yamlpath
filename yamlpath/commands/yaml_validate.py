@@ -49,6 +49,12 @@ def processcli():
                         version="%(prog)s " + YAMLPATH_VERSION)
 
     parser.add_argument(
+        "--frontmatter", action="store_true",
+        help=(
+            "force Markdown frontmatter parsing for YAML_FILE, including - "
+            "from STDIN"))
+
+    parser.add_argument(
         "-S", "--nostdin", action="store_true",
         help=(
             "Do not implicitly read from STDIN, even when there are\n"
@@ -101,14 +107,15 @@ def validateargs(args, log):
     if has_errors:
         sys.exit(1)
 
-def process_file(log, yaml, yaml_file):
+def process_file(log, yaml, yaml_file, **kwargs):
     """Process a (potentially multi-doc) YAML file."""
+    frontmatter = kwargs.pop("frontmatter", False)
     logcap = LogErrorCap()
     subdoc_index = 0
     exit_state = 0
     file_name = "STDIN" if yaml_file.strip() == "-" else yaml_file
     doc_gen = Parsers.get_yaml_multidoc_data(
-        yaml, logcap, yaml_file)
+        yaml, logcap, yaml_file, frontmatter=frontmatter)
     for (_, doc_loaded) in doc_gen:
         if doc_loaded:
             log.verbose("{}/{} is valid.".format(file_name, subdoc_index))
@@ -145,7 +152,8 @@ def main():
             "yaml_merge::main:  Processing file, {}".format(
                 "STDIN" if yaml_file.strip() == "-" else yaml_file))
 
-        proc_state = process_file(log, yaml, yaml_file)
+        proc_state = process_file(
+            log, yaml, yaml_file, frontmatter=args.frontmatter)
 
         if proc_state != 0:
             exit_state = proc_state
@@ -156,7 +164,7 @@ def main():
         and not args.nostdin
         and not sys.stdin.isatty()
     ):
-        exit_state = process_file(log, yaml, "-")
+        exit_state = process_file(log, yaml, "-", frontmatter=args.frontmatter)
 
     sys.exit(exit_state)
 

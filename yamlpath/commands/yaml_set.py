@@ -171,6 +171,12 @@ def processcli():
     eyaml_group.add_argument("-u", "--publickey", help="EYAML public key")
 
     parser.add_argument(
+        "--frontmatter", action="store_true",
+        help=(
+            "force Markdown frontmatter parsing for YAML_FILE, including - "
+            "from STDIN"))
+
+    parser.add_argument(
         "-S", "--nostdin", action="store_true",
         help=(
             "Do not implicitly read from STDIN, even when there is no"
@@ -410,7 +416,8 @@ def write_output_document(args, log, yaml, yaml_data):
 
 def _try_load_input_file(args, log, yaml, change_path, new_value):
     """Attempt to load the input data file or abend on error."""
-    (yaml_data, doc_loaded) = Parsers.get_yaml_data(yaml, log, args.yaml_file)
+    (yaml_data, doc_loaded) = Parsers.get_yaml_data(
+        yaml, log, args.yaml_file, frontmatter=args.frontmatter)
     if not doc_loaded:
         # An error message has already been logged
         sys.exit(1)
@@ -537,6 +544,9 @@ def main():
 
     # Prep the YAML parser
     yaml = Parsers.get_yaml_editor()
+    if args.yaml_file:
+        yaml = Parsers.get_parser_for_source(
+            yaml, args.yaml_file, frontmatter=args.frontmatter)
 
     # Attempt to open the YAML file; check for parsing errors
     yaml_data = None
@@ -553,6 +563,8 @@ def main():
         and not sys.stdin.isatty()
     ):
         args.yaml_file = "-"
+        yaml = Parsers.get_parser_for_source(
+            yaml, args.yaml_file, frontmatter=args.frontmatter)
         yaml_data = _try_load_input_file(
             args, log, yaml, change_path, new_value)
 

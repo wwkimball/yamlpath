@@ -25,11 +25,28 @@ from yamlpath.patches.timestamp import (
 )
 
 from yamlpath.common import Nodes
+from yamlpath.common.frontmatterparser import FrontmatterParser
 from yamlpath.types import ParsersLogger
 
 
 class Parsers:
     """Helper methods for common YAML/JSON/Compatible parser operations."""
+
+    @staticmethod
+    def get_parser_for_source(
+        parser: Any, source: str, literal: bool = False,
+        frontmatter: bool = False
+    ) -> Any:
+        """Select parser implementation based on source document type."""
+        if isinstance(parser, FrontmatterParser):
+            return parser
+        if frontmatter:
+            return FrontmatterParser(parser)
+        if literal or source == "-" or not isinstance(source, str):
+            return parser
+        if FrontmatterParser.is_markdown_file(source):
+            return FrontmatterParser(parser)
+        return parser
 
     @staticmethod
     def get_yaml_editor(**kwargs: Any) -> YAML:
@@ -99,6 +116,9 @@ class Parsers:
         and False, otherwise.
         """
         literal = kwargs.pop("literal", False)
+        frontmatter = kwargs.pop("frontmatter", False)
+        parser = Parsers.get_parser_for_source(
+            parser, source, literal, frontmatter)
         yaml_data = None
         data_available = True
 
@@ -197,6 +217,9 @@ class Parsers:
         and False, otherwise.
         """
         literal = kwargs.pop("literal", False)
+        frontmatter = kwargs.pop("frontmatter", False)
+        parser = Parsers.get_parser_for_source(
+            parser, source, literal, frontmatter)
 
         # This code traps errors and warnings from ruamel.yaml, substituting
         # lengthy stack-dumps with specific, meaningful feedback.  Further,

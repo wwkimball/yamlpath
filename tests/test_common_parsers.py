@@ -100,6 +100,26 @@ hash:
         assert data["hash"]["key"] == "value"
         assert logger.error_messages == []
 
+    def test_get_yaml_data_markdown_frontmatter(self, tmp_path_factory, quiet_logger):
+        from tests.conftest import create_temp_markdown_file
+
+        markdown = """---
+title: Example
+enabled: true
+---
+# Heading
+
+Body text.
+"""
+        markdown_file = create_temp_markdown_file(tmp_path_factory, markdown)
+        yaml = Parsers.get_yaml_editor()
+
+        (data, loaded) = Parsers.get_yaml_data(yaml, quiet_logger, markdown_file)
+
+        assert loaded is True
+        assert data["title"] == "Example"
+        assert data["enabled"] is True
+
     def test_get_yaml_multidoc_data_accepts_logger_protocol(self):
         serialized_yaml = """---
 document: 1st
@@ -118,6 +138,27 @@ document: 2nd
         assert docs[0] == ({"document": "1st"}, True)
         assert docs[1] == ({"document": "2nd"}, True)
         assert logger.error_messages == []
+
+    def test_get_yaml_multidoc_data_markdown_frontmatter(self, tmp_path_factory, quiet_logger):
+        from tests.conftest import create_temp_markdown_file
+
+        markdown = """---
+title: Example
+---
+Body.
+---
+name: another
+---
+"""
+        markdown_file = create_temp_markdown_file(tmp_path_factory, markdown)
+        yaml = Parsers.get_yaml_editor()
+
+        docs = list(Parsers.get_yaml_multidoc_data(
+            yaml, quiet_logger, markdown_file))
+
+        assert len(docs) == 2
+        assert docs[0] == ({"title": "Example"}, True)
+        assert docs[1] == ({"name": "another"}, True)
 
     ###
     # stringify_dates

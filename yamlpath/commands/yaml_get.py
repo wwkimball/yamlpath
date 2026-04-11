@@ -68,6 +68,12 @@ def processcli():
               results; default=dot")
 
     parser.add_argument(
+        "--frontmatter", action="store_true",
+        help=(
+            "force Markdown frontmatter parsing for YAML_FILE, including - "
+            "from STDIN"))
+
+    parser.add_argument(
         "-S", "--nostdin", action="store_true",
         help=(
             "Do not implicitly read from STDIN, even when YAML_FILE is not set"
@@ -169,11 +175,15 @@ def main():
 
     # Prep the YAML parser
     yaml = Parsers.get_yaml_editor()
+    yaml = Parsers.get_parser_for_source(
+        yaml, args.yaml_file if args.yaml_file else "-",
+        frontmatter=args.frontmatter)
 
     # Attempt to open the YAML file; check for parsing errors
     (yaml_data, doc_loaded) = Parsers.get_yaml_data(
         yaml, log,
-        args.yaml_file if args.yaml_file else "-")
+        args.yaml_file if args.yaml_file else "-",
+        frontmatter=args.frontmatter)
     if not doc_loaded:
         # An error message has already been logged
         sys.exit(1)
