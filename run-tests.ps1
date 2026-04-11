@@ -234,11 +234,16 @@ ForEach ($EnvDir in $EnvDirs) {
     $env:GEM_HOME = $TmpGemHome.FullName
     $env:GEM_PATH = $TmpGemHome.FullName
     $env:PATH = "$($TmpGemHome.FullName)$([System.IO.Path]::PathSeparator)$($env:PATH)"
-    gem install --no-document hiera-eyaml -v $EyamlGemConstraint | Out-String
+    gem install --no-document --install-dir $env:GEM_HOME --bindir "$($env:GEM_HOME)$([System.IO.Path]::DirectorySeparatorChar)bin" hiera-eyaml -v $EyamlGemConstraint | Out-String
     if (!$?) {
         Invoke-CleanupTestEnvironment -TmpVEnvPath $TmpVEnv.FullName -TmpGemHomePath $TmpGemHome.FullName -OriginalPath $OriginalPath
         Write-Error "`nERROR:  Unable to install hiera-eyaml $EyamlGemConstraint into $($TmpGemHome.FullName)!"
         exit 123
+    }
+    if (-Not (Test-Path -Path "$($env:GEM_HOME)$([System.IO.Path]::DirectorySeparatorChar)bin$([System.IO.Path]::DirectorySeparatorChar)eyaml" -PathType Leaf)) {
+        Invoke-CleanupTestEnvironment -TmpVEnvPath $TmpVEnv.FullName -TmpGemHomePath $TmpGemHome.FullName -OriginalPath $OriginalPath
+        Write-Error "`nERROR:  Isolated EYAML executable was not installed to $($env:GEM_HOME)\bin\eyaml!"
+        exit 120
     }
     if (-Not (Get-Command eyaml -ErrorAction SilentlyContinue)) {
         Invoke-CleanupTestEnvironment -TmpVEnvPath $TmpVEnv.FullName -TmpGemHomePath $TmpGemHome.FullName -OriginalPath $OriginalPath
@@ -282,7 +287,7 @@ ForEach ($EnvDir in $EnvDirs) {
     pytest -vv --cov=yamlpath --cov-report=term-missing --cov-fail-under=100 --script-launch-mode=subprocess tests
     if (!$?) {
         Invoke-CleanupTestEnvironment -TmpVEnvPath $TmpVEnv.FullName -TmpGemHomePath $TmpGemHome.FullName -OriginalPath $OriginalPath
-        Write-Error "PYTEST Error: $?"
+        Write-Error "PYTEST Error: $LASTEXITCODE"
         exit 12
     }
 

@@ -215,10 +215,21 @@ EOF
 	export GEM_HOME="$tmpGemHome"
 	export GEM_PATH="$GEM_HOME"
 	export PATH="${GEM_HOME}/bin:${PATH}"
-	if ! gem install --no-document hiera-eyaml -v "$eyamlGemConstraint" >/dev/null; then
+	if ! gem install \
+		--no-document \
+		--install-dir "$GEM_HOME" \
+		--bindir "${GEM_HOME}/bin" \
+		hiera-eyaml \
+		-v "$eyamlGemConstraint" \
+	>/dev/null; then
 		cleanupTestEnvironment "$tmpVEnv" "$tmpGemHome" "$originalPath"
 		echo -e "\nERROR:  Unable to install hiera-eyaml ${eyamlGemConstraint} into ${tmpGemHome}!" >&2
 		exit 122
+	fi
+	if ! [ -x "${GEM_HOME}/bin/eyaml" ]; then
+		cleanupTestEnvironment "$tmpVEnv" "$tmpGemHome" "$originalPath"
+		echo -e "\nERROR:  Isolated EYAML executable was not installed to ${GEM_HOME}/bin/eyaml!" >&2
+		exit 120
 	fi
 	if ! which eyaml &>/dev/null; then
 		cleanupTestEnvironment "$tmpVEnv" "$tmpGemHome" "$originalPath"
@@ -255,16 +266,17 @@ EOF
 	fi
 
 	echo -e "\nPYTEST..."
-	if ! pytest \
+	pytest \
 		--verbose \
 		--cov=yamlpath \
 		--cov-report=term-missing \
 		--cov-fail-under=100 \
 		--script-launch-mode=subprocess \
 		tests
-	then
+	pytestErrorCode=$?
+	if [ 0 -ne "$pytestErrorCode" ]; then
 		cleanupTestEnvironment "$tmpVEnv" "$tmpGemHome" "$originalPath"
-		echo "PYTEST Error: $?"
+		echo "PYTEST Error: ${pytestErrorCode}"
 		exit 12
 	fi
 
