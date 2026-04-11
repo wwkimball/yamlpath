@@ -396,11 +396,11 @@ class Parsers:
             and data.microsecond == 0
             and getattr(data, "tzinfo", None) is None
         )
-        return (
-            data.date().isoformat()
-            if is_date_only
-            else Nodes.get_timestamp_with_tzinfo(data).isoformat()
-        )
+        if is_date_only:
+            return data.date().isoformat()
+
+        tsdata = Nodes.get_timestamp_with_tzinfo(data)
+        return str(tsdata.isoformat())
 
     @staticmethod
     def _jsonify_seq_values(data: Any) -> Any:

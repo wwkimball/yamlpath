@@ -312,6 +312,11 @@ title = \"Nope\"
         jdata = Parsers.jsonify_yaml_data(cdata)
         assert jdata == "2021-01-13T01:02:03"
 
+    def test_jsonify_datetime_value_date_only(self):
+        cdata = dt.datetime(2021, 1, 13, 0, 0, 0)
+        jdata = Parsers.jsonify_yaml_data(cdata)
+        assert jdata == "2021-01-13"
+
     def test_jsonify_commented_map_with_merge_tuple(self):
         yaml = Parsers.get_yaml_editor()
         cdata = yaml.load("""
