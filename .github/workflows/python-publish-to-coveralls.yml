@@ -14,15 +14,26 @@ jobs:
       - uses: actions/checkout@v4
       - name: Set up Python
         uses: actions/setup-python@v5
-      - name: Set Environment Variables
-        run: |
-          echo "${HOME}/.local/share/gem/ruby/3.0.0/bin" >> $GITHUB_PATH
+        with:
+          python-version: '3.12'
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.4'
       - name: Install dependencies
         run: |
-          gem install --user-install hiera-eyaml
+          ruby_constraints_file="requirements/test-tools/ruby-3.4.txt"
+          if ! [ -f "$ruby_constraints_file" ]; then
+            echo "ERROR: Expected Ruby dependency file not found: $ruby_constraints_file" >&2
+            exit 1
+          fi
+          gem install --user-install --no-document -g "$ruby_constraints_file" --no-lock
+          ruby_gem_user_bin="$(ruby -r rubygems -e 'puts Gem.user_dir')/bin"
+          echo "$ruby_gem_user_bin" >> "$GITHUB_PATH"
+          "$ruby_gem_user_bin/eyaml" --version
           python -m pip install --upgrade pip
           python -m pip install --upgrade setuptools
-          python -m pip install --upgrade pytest pytest-cov pytest-console-scripts coveralls
+          python -m pip install -r requirements/test-tools/python-3.12.txt
           python -m pip install --editable .
       - name: Unit Test with pytest
         run: |

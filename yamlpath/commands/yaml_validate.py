@@ -11,7 +11,7 @@ from yamlpath.common import Parsers
 from yamlpath.wrappers import ConsolePrinter
 
 class LogErrorCap:
-    """Capture only ERROR messages as a fake ConsolePrinter."""
+    """Capture only ERROR messages as a parser-compatible logger."""
 
     def __init__(self):
         """Initialize this class instance."""
@@ -23,7 +23,7 @@ class LogErrorCap:
     def warning(self, message):
         """Discard WARNING messages."""
     # pylint: disable=unused-argument
-    def error(self, message, *args):
+    def error(self, message, exit_code=None):
         """Capture ERROR messages."""
         self.lines.append(message)
     # pylint: disable=unused-argument
@@ -35,7 +35,9 @@ class LogErrorCap:
 def processcli():
     """Process command-line arguments."""
     parser = argparse.ArgumentParser(
-        description="Validate YAML, JSON, and compatible files.",
+        description=(
+            "Validate YAML, JSON, compatible files, and Markdown"
+            " frontmatter metadata blocks."),
         epilog=(
             "Except when suppressing all report output with --quiet|-q,"
             " validation issues are printed to STDOUT (not STDERR).  Further,"
@@ -47,6 +49,12 @@ def processcli():
     )
     parser.add_argument("-V", "--version", action="version",
                         version="%(prog)s " + YAMLPATH_VERSION)
+
+    parser.add_argument(
+        "--frontmatter", action="store_true",
+        help=(
+            "force Markdown frontmatter parsing for YAML_FILE; this flag is "
+            "required when Markdown content is read from STDIN"))
 
     parser.add_argument(
         "-S", "--nostdin", action="store_true",
@@ -70,8 +78,9 @@ def processcli():
 
     parser.add_argument("yaml_files", metavar="YAML_FILE", nargs="*",
                         help="one or more single- or multi-document"
-                        " YAML/JSON/compatible files to validate; omit or use"
-                        " - to read from STDIN")
+                        " YAML/JSON/compatible files (including Markdown"
+                        " frontmatter) to validate; omit or use - to read"
+                        " from STDIN")
 
     return parser.parse_args()
 
@@ -101,15 +110,16 @@ def validateargs(args, log):
     if has_errors:
         sys.exit(1)
 
-def process_file(log, yaml, yaml_file):
+def process_file(log, yaml, yaml_file, **kwargs):
     """Process a (potentially multi-doc) YAML file."""
+    frontmatter = kwargs.pop("frontmatter", False)
     logcap = LogErrorCap()
     subdoc_index = 0
     exit_state = 0
     file_name = "STDIN" if yaml_file.strip() == "-" else yaml_file
-    for (_, doc_loaded) in Parsers.get_yaml_multidoc_data(
-        yaml, logcap, yaml_file
-    ):
+    doc_gen = Parsers.get_yaml_multidoc_data(
+        yaml, logcap, yaml_file, frontmatter=frontmatter)
+    for (_, doc_loaded) in doc_gen:
         if doc_loaded:
             log.verbose("{}/{} is valid.".format(file_name, subdoc_index))
         else:
@@ -145,7 +155,8 @@ def main():
             "yaml_merge::main:  Processing file, {}".format(
                 "STDIN" if yaml_file.strip() == "-" else yaml_file))
 
-        proc_state = process_file(log, yaml, yaml_file)
+        proc_state = process_file(
+            log, yaml, yaml_file, frontmatter=args.frontmatter)
 
         if proc_state != 0:
             exit_state = proc_state
@@ -156,7 +167,7 @@ def main():
         and not args.nostdin
         and not sys.stdin.isatty()
     ):
-        exit_state = process_file(log, yaml, "-")
+        exit_state = process_file(log, yaml, "-", frontmatter=args.frontmatter)
 
     sys.exit(exit_state)
 

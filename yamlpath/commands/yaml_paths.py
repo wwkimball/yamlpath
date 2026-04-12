@@ -18,6 +18,7 @@ from ruamel.yaml.comments import CommentedSeq, CommentedMap, CommentedSet
 
 from yamlpath import __version__ as YAMLPATH_VERSION
 from yamlpath.common import Anchors, Parsers, Searches
+from yamlpath.common.linepathsearch import LinePathSearch
 from yamlpath.exceptions import YAMLPathException
 from yamlpath.enums import (
     AnchorMatches,
@@ -54,9 +55,15 @@ def processcli():
     required_group = parser.add_argument_group("required settings")
     required_group.add_argument(
         "-s", "--search",
-        required=True,
         metavar="EXPRESSION", action="append",
         help="the search expression; can be set more than once")
+    required_group.add_argument(
+        "--line",
+        metavar="LINE", action="append", type=int,
+        help=(
+            "print the YAML Path(s) associated with this 1-based source"
+            " line number; can be set more than once"
+        ))
 
     parser.add_argument(
         "-c", "--except",
@@ -104,7 +111,7 @@ def processcli():
         "-t", "--pathsep",
         default="dot",
         choices=PathSeparators,
-        metavar=PathSeparators.get_choices(),
+        metavar="|".join(PathSeparators.get_choices()),
         type=PathSeparators.from_str,
         help="indicate which YAML Path separator to use when rendering\
               results; default=dot")
@@ -183,6 +190,12 @@ def processcli():
     eyaml_group.add_argument("-u", "--publickey", help="EYAML public key")
 
     parser.add_argument(
+        "--frontmatter", action="store_true",
+        help=(
+            "force Markdown frontmatter parsing for YAML_FILE; this flag is "
+            "required when Markdown content is read from STDIN"))
+
+    parser.add_argument(
         "-S", "--nostdin", action="store_true",
         help=(
             "Do not implicitly read from STDIN, even when there are\n"
@@ -224,6 +237,13 @@ def validateargs(args, log):
         log.error(
             "There must be at least one YAML_FILE or STDIN document.")
 
+    if not args.search and not args.line:
+        has_errors = True
+        log.error(
+            "There must be at least one --search EXPRESSION or --line LINE"
+            " query."
+        )
+
     # There can be only one -
     pseudofile_count = 0
     for infile in args.yaml_files:
@@ -232,6 +252,15 @@ def validateargs(args, log):
     if pseudofile_count > 1:
         has_errors = True
         log.error("Only one YAML_FILE may be the - pseudo-file.")
+
+    if args.line:
+        for line_no in args.line:
+            if line_no < 1:
+                has_errors = True
+                log.error(
+                    "All --line LINE values must be positive integers"
+                    " greater than zero."
+                )
 
     # * When set, --privatekey must be a readable file
     if args.privatekey and not (
@@ -629,8 +658,13 @@ def search_for_paths(logger: ConsolePrinter, processor: EYAMLProcessor,
 
         # Include YAML Merge Keys when include_value_aliases is enabled
         if include_value_aliases:
-            refs = data.merge if hasattr(data, "merge") else []
-            for (_, ref_node) in refs:
+            for merge_item in data.merge:
+                ref_node = (
+                    merge_item[1]
+                    if isinstance(merge_item, tuple)
+                    and len(merge_item) > 1
+                    else merge_item
+                )
                 for anchor_name, anchor_node in all_anchors.items():
                     if anchor_node == ref_node:
                         tmp_path = (build_path + "[&{}]".format(
@@ -726,12 +760,14 @@ def get_search_term(logger: ConsolePrinter,
 
     return exterm
 
+
 def print_results(
     args: Any, processor: EYAMLProcessor, yaml_file: str,
     yaml_paths: List[Tuple[str, YAMLPath]], document_index: int
 ) -> None:
     """Dump search results to STDOUT with optional and dynamic formatting."""
-    in_expressions = len(args.search)
+    in_expressions = len(args.search) if args.search else 0
+    in_expressions += len(args.line) if args.line else 0
     print_file_path = not args.nofile
     print_expression = in_expressions > 1 and not args.noexpression
     print_yaml_path = not args.noyamlpath
@@ -795,7 +831,7 @@ def process_yaml_file(
 
     # pylint: disable=too-many-nested-blocks
     for (yaml_data, doc_loaded) in Parsers.get_yaml_multidoc_data(
-        yaml, log, yaml_file
+        yaml, log, yaml_file, frontmatter=args.frontmatter
     ):
         file_tally += 1
         subdoc_index += 1
@@ -809,38 +845,46 @@ def process_yaml_file(
         all_anchors: Dict[str, Any] = {}
         Anchors.scan_for_anchors(yaml_data, all_anchors)
         yaml_paths: List[Tuple[str, YAMLPath]] = []
-        for expression in args.search:
-            exterm = get_search_term(log, expression)
-            log.debug(("yaml_paths::process_yaml_file:"
-                    + "converting search expression '{}' into '{}'"
-                    ).format(expression, exterm))
-            if exterm is None:
-                exit_state = 1
-                continue
+        if args.search:
+            for expression in args.search:
+                exterm = get_search_term(log, expression)
+                log.debug(("yaml_paths::process_yaml_file:"
+                        + "converting search expression '{}' into '{}'"
+                        ).format(expression, exterm))
+                if exterm is None:
+                    exit_state = 1
+                    continue
 
-            for result in search_for_paths(
-                    log, processor, yaml_data, exterm, args.pathsep,
-                    search_values=search_values, search_keys=search_keys,
-                    search_anchors=args.refnames,
-                    include_key_aliases=include_key_aliases,
-                    include_value_aliases=include_value_aliases,
-                    decrypt_eyaml=args.decrypt,
-                    expand_children=args.expand,
-                    all_anchors=all_anchors):
-                # Record only unique results
-                add_entry = True
-                for entry in yaml_paths:
-                    if str(result) == str(entry[1]):
-                        add_entry = False
-                        break
-                if add_entry:
-                    yaml_paths.append((expression, result))
+                for result in search_for_paths(
+                        log, processor, yaml_data, exterm, args.pathsep,
+                        search_values=search_values, search_keys=search_keys,
+                        search_anchors=args.refnames,
+                        include_key_aliases=include_key_aliases,
+                        include_value_aliases=include_value_aliases,
+                        decrypt_eyaml=args.decrypt,
+                        expand_children=args.expand,
+                        all_anchors=all_anchors):
+                    # Record only unique results
+                    add_entry = True
+                    for entry in yaml_paths:
+                        if str(result) == str(entry[1]):
+                            add_entry = False
+                            break
+                    if add_entry:
+                        yaml_paths.append((expression, result))
+
+        if args.line:
+            for line_number in args.line:
+                for result in LinePathSearch.search_for_paths_by_line(
+                    yaml_data, args.pathsep, line_number
+                ):
+                    yaml_paths.append(("line {}".format(line_number), result))
 
         if not yaml_paths:
             # Nothing further to do when there are no results
             continue
 
-        if args.except_expression:
+        if args.search and args.except_expression:
             for expression in args.except_expression:
                 exterm = get_search_term(log, expression)
                 log.debug(("yaml_paths::process_yaml_file:"

@@ -1,5 +1,7 @@
 import pytest
 
+from yamlpath import YAMLPath
+
 from tests.conftest import (
     create_temp_yaml_file,
     requireseyaml,
@@ -157,7 +159,7 @@ yet_another:
             privatekey=old_eyaml_keys[0],
             publickey=old_eyaml_keys[1])
         for node in source_processor.get_eyaml_values(
-            '/block', True
+            YAMLPath('/block'), True
         ):
             assert unwrap_node_coords(node) == 'This is a test value.'
 
@@ -166,7 +168,7 @@ yet_another:
             privatekey=new_eyaml_keys[0],
             publickey=new_eyaml_keys[1])
         for node in rotated_processor.get_eyaml_values(
-            '/block', True
+            YAMLPath('/block'), True
         ):
             assert unwrap_node_coords(node) == 'This is a test value.'
 

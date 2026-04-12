@@ -1,6 +1,6 @@
 import pytest
 
-from tests.conftest import create_temp_yaml_file
+from tests.conftest import create_temp_yaml_file, create_temp_markdown_file
 
 
 class Test_yaml_get():
@@ -124,6 +124,57 @@ hash:
         assert result.success, result.stderr
         assert '["Plain scalar string"]' in result.stdout
 
+    def test_query_markdown_frontmatter(self, script_runner, tmp_path_factory):
+        markdown = """---
+title: My Post
+views: 42
+---
+# Heading
+
+Body text.
+"""
+        markdown_file = create_temp_markdown_file(tmp_path_factory, markdown)
+
+        result = script_runner.run([
+            self.command,
+            "--query=/title",
+            markdown_file
+        ])
+        assert result.success, result.stderr
+        assert "My Post" in result.stdout
+
+    def test_query_markdown_frontmatter_rejects_toml(self, script_runner, tmp_path_factory):
+        markdown = """+++
+title = \"My Post\"
+++
+# Body
+"""
+        markdown_file = create_temp_markdown_file(tmp_path_factory, markdown)
+
+        result = script_runner.run([
+            self.command,
+            "--query=/title",
+            markdown_file
+        ])
+        assert not result.success, result.stderr
+        assert "TOML frontmatter" in result.stderr
+
+    def test_query_frontmatter_flag_rejects_missing_opener(self, script_runner, tmp_path_factory):
+        markdown = """# Heading
+
+Body text.
+"""
+        markdown_file = create_temp_markdown_file(tmp_path_factory, markdown)
+
+        result = script_runner.run([
+            self.command,
+            "--query=/title",
+            "--frontmatter",
+            markdown_file
+        ])
+        assert not result.success, result.stderr
+        assert "expected a frontmatter opener" in result.stderr
+
     def test_query_doc_from_stdin(
         self, script_runner, tmp_path_factory
     ):
@@ -146,6 +197,33 @@ hash:
 
         assert 0 == result.returncode, result.stderr
         assert "LHS exclusive\n" == result.stdout
+
+    def test_query_markdown_frontmatter_from_stdin(self):
+        import sys
+        import subprocess
+
+        markdown = """---
+title: Front Matter
+---
+# Heading
+
+Body text.
+"""
+
+        result = subprocess.run(
+            [sys.executable,
+             "-m",
+             "yamlpath.commands.yaml_get",
+             "--query=/title",
+             "--frontmatter",
+             "-"],
+            stdout=subprocess.PIPE,
+            input=markdown,
+            universal_newlines=True,
+        )
+
+        assert 0 == result.returncode, result.stderr
+        assert "Front Matter\n" == result.stdout
 
     def test_get_every_data_type(self, script_runner, tmp_path_factory):
         # Contributed by https://github.com/AndydeCleyre

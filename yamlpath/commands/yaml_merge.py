@@ -126,6 +126,12 @@ https://github.com/wwkimball/yamlpath/issues.
             "default=all"))
 
     parser.add_argument(
+        "--frontmatter", action="store_true",
+        help=(
+            "force Markdown frontmatter parsing for YAML_FILE; this flag is "
+            "required when Markdown content is read from STDIN"))
+
+    parser.add_argument(
         "-m", "--mergeat",
         metavar="YAML_PATH",
         default="/",
@@ -360,9 +366,10 @@ def write_output_document(
 
 def get_doc_mergers(
     log: ConsolePrinter, yaml_editor: YAML, config: MergerConfig,
-    yaml_file: str
+    yaml_file: str, **kwargs
 ) -> Tuple[List[Merger], bool]:
     """Create a list of Mergers, one for each source document."""
+    frontmatter: bool = kwargs.pop("frontmatter", False)
     docs_loaded = True
     if yaml_file != "-" and not isfile(yaml_file):
         log.error("Not a file:  {}".format(yaml_file))
@@ -370,7 +377,7 @@ def get_doc_mergers(
 
     doc_mergers: List[Merger] = []
     for (yaml_data, doc_loaded) in Parsers.get_yaml_multidoc_data(
-        yaml_editor, log, yaml_file
+        yaml_editor, log, yaml_file, frontmatter=frontmatter
     ):
         if not doc_loaded:
             # An error message has already been logged
@@ -467,13 +474,14 @@ def merge_matrix(
 
 def merge_docs(
     log: ConsolePrinter, yaml_editor: YAML, config: MergerConfig,
-    lhs_docs: List[Merger], rhs_file: str
+    lhs_docs: List[Merger], rhs_file: str, **kwargs
 ) -> int:
     """Merge RHS into LHS."""
+    frontmatter: bool = kwargs.pop("frontmatter", False)
     return_state = 0
     merge_mode = config.get_multidoc_mode()
     (rhs_docs, rhs_loaded) = get_doc_mergers(
-        log, yaml_editor, config, rhs_file)
+        log, yaml_editor, config, rhs_file, frontmatter=frontmatter)
     if not rhs_loaded:
         # Failed to load any RHS documents
         return 3
@@ -519,14 +527,16 @@ def main() -> None:
 
         if len(mergers) < 1:
             (mergers, mergers_loaded) = get_doc_mergers(
-                log, yaml_editor, merge_config, yaml_file)
+                log, yaml_editor, merge_config, yaml_file,
+                frontmatter=args.frontmatter)
             if not mergers_loaded:
                 exit_state = 4
                 break
         else:
             # Merge RHS into LHS
             exit_state = merge_docs(
-                log, yaml_editor, merge_config, mergers, yaml_file)
+                log, yaml_editor, merge_config, mergers, yaml_file,
+                frontmatter=args.frontmatter)
             if not exit_state == 0:
                 break
             merge_count += 1
@@ -537,7 +547,9 @@ def main() -> None:
         and not args.nostdin
         and not sys.stdin.isatty()
     ):
-        exit_state = merge_docs(log, yaml_editor, merge_config, mergers, "-")
+        exit_state = merge_docs(
+            log, yaml_editor, merge_config, mergers, "-",
+            frontmatter=args.frontmatter)
         merge_count += 1
 
     # When no merges have occurred, check for a single-doc merge request

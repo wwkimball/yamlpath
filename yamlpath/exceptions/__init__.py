@@ -12,3 +12,4 @@ from yamlpath.exceptions.typemismatchyamlpathexception import (
     TypeMismatchYAMLPathException)
 from yamlpath.exceptions.unmatchedyamlpathexception import (
     UnmatchedYAMLPathException)
+from yamlpath.exceptions.frontmatterexception import FrontmatterException

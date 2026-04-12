@@ -15,11 +15,11 @@ setup(
     classifiers=[
         "Development Status :: 5 - Production/Stable",
         "License :: OSI Approved :: ISC License (ISCL)",
-        "Programming Language :: Python :: 3.7",
-        "Programming Language :: Python :: 3.8",
-        "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
+        "Programming Language :: Python :: 3.12",
+        "Programming Language :: Python :: 3.13",
+        "Programming Language :: Python :: 3.14",
         "Operating System :: OS Independent",
         "Environment :: Console",
         "Topic :: Utilities",
@@ -42,15 +42,10 @@ setup(
             "yaml-diff = yamlpath.commands.yaml_diff:main",
         ]
     },
-    python_requires=">3.7.0",
+    python_requires=">=3.10",
     install_requires=[
-        "ruamel.yaml>0.17.5,!=0.17.18,<=0.17.21",
+        "ruamel.yaml==0.19.1",
         "python-dateutil<=3"
-    ],
-    tests_require=[
-        "pytest",
-        "pytest-cov",
-        "pytest-console-scripts",
     ],
     include_package_data=True,
     zip_safe=False

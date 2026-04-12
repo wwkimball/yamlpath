@@ -127,6 +127,15 @@ def create_temp_yaml_file(tmp_path_factory, content):
     fhnd.write(content)
     return fhnd.name
 
+def create_temp_markdown_file(tmp_path_factory, content):
+    """Creates a test Markdown input file."""
+    fhnd = tempfile.NamedTemporaryFile(mode='w',
+                                       dir=tmp_path_factory.getbasetemp(),
+                                       suffix='.md',
+                                       delete=False)
+    fhnd.write(content)
+    return fhnd.name
+
 @pytest.fixture(scope="session")
 def imparsible_yaml_file(tmp_path_factory):
     """

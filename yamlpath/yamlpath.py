@@ -352,6 +352,7 @@ class YAMLPath:
         segment_id: str = ""
         segment_type: Optional[PathSegmentTypes] = None
         demarc_stack: List[str] = []
+        demarc_count: int = 0
         escape_next: bool = False
         search_inverted: bool = False
         search_method: Optional[PathSearchMethods] = None

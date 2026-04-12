@@ -11,6 +11,7 @@ from typing import Any, Optional
 from dateutil import parser
 
 from ruamel.yaml.comments import CommentedSeq, CommentedMap, TaggedScalar
+from ruamel.yaml.tag import Tag
 from ruamel.yaml.scalarbool import ScalarBoolean
 from ruamel.yaml.scalarfloat import ScalarFloat
 from ruamel.yaml.scalarint import ScalarInt
@@ -30,7 +31,7 @@ from yamlpath.enums import (
     PathSegmentTypes,
     YAMLValueFormats,
 )
-from yamlpath.wrappers import NodeCoords
+from yamlpath.wrappers.nodecoords import NodeCoords
 from yamlpath import YAMLPath
 
 
@@ -514,6 +515,39 @@ class Nodes:
         return new_element
 
     @staticmethod
+    def get_tag(node: Any) -> str:  # pragma: no cover
+        """
+        Get the YAML tag from a node.
+
+        Parameters:
+        1. node (Any) The node from which to read the YAML tag.
+
+        Returns:  (str) The tag value or an empty-string when unset.
+
+        Raises:  N/A
+        """
+        if not hasattr(node, "tag") or node.tag is None:
+            return ""
+        return str(node.tag.value or "")
+
+    @staticmethod
+    def set_tag(  # pragma: no cover
+        node: Any, value_tag: Optional[str]
+    ) -> None:
+        """
+        Set the YAML tag on a node.
+
+        Parameters:
+        1. node (Any) The node on which to set the YAML tag.
+        2. value_tag (Optional[str]) The tag to set; None clears the tag.
+
+        Returns:  N/A
+
+        Raises:  N/A
+        """
+        node.yaml_set_ctag(Tag(handle=None, suffix=value_tag or ""))
+
+    @staticmethod
     def apply_yaml_tag(node: Any, value_tag: str) -> Any:
         """
         Apply a YAML Tag (AKA Schema) to a node or remove one.
@@ -536,7 +570,7 @@ class Nodes:
         if Nodes.node_is_leaf(new_node):
             if isinstance(new_node, TaggedScalar):
                 if value_tag:
-                    new_node.yaml_set_tag(value_tag)
+                    new_node.yaml_set_ctag(Tag(handle=None, suffix=value_tag))
                 else:
                     # Strip off the tag
                     new_node = node.value
@@ -545,7 +579,7 @@ class Nodes:
                 if hasattr(node, "anchor") and node.anchor.value:
                     new_node.yaml_set_anchor(node.anchor.value)
         else:
-            new_node.yaml_set_tag(value_tag)
+            new_node.yaml_set_ctag(Tag(handle=None, suffix=value_tag))
 
         return new_node
 
@@ -652,7 +686,7 @@ class Nodes:
         return typed_value
 
     @staticmethod
-    def get_timestamp_with_tzinfo(data: AnchoredTimeStamp) -> Any:
+    def get_timestamp_with_tzinfo(data: Any) -> Any:
         """
         Get an AnchoredTimeStamp with time-zone info correctly applied.
 
@@ -671,6 +705,13 @@ class Nodes:
           * (datetime) time-zone aware non-pre-calculated value
           * (AnchoredTimeStamp) original value when it had no time-zone data
         """
+        # If ruamel.yaml has already applied tzinfo, no compensation is
+        # required (and applying one will skew the value).
+        if (
+            hasattr(data, "tzinfo") and data.tzinfo is not None
+        ):  # pragma: no cover
+            return data
+
         # As stated in the method comments, ruamel.yaml hides the time-zone
         # details in a private dict after forcibly normalizing the datetime;
         # there is no public accessor for this.  Also ignoring the mypy type
@@ -691,6 +732,5 @@ class Nodes:
                 sign = -1 if sign_mark == '-' else 1
                 tdelta = timedelta(hours=int(hours), minutes=int(minutes))
                 tzinfo = timezone(sign * tdelta)
-                return ((data + tdelta * sign).replace(
-                    tzinfo=tzinfo))
+                return data.replace(tzinfo=tzinfo)
         return data

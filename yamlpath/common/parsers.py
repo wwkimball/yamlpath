@@ -8,28 +8,50 @@ from sys import maxsize, stdin
 from datetime import date, datetime
 from typing import Any, Dict, Generator, Tuple
 
-import ruamel.yaml # type: ignore
 from ruamel.yaml import YAML
 from ruamel.yaml.parser import ParserError
-from ruamel.yaml.composer import ComposerError, ReusedAnchorWarning
+from ruamel.yaml.composer import ComposerError
+from ruamel.yaml.error import ReusedAnchorWarning
 from ruamel.yaml.constructor import ConstructorError, DuplicateKeyError
 from ruamel.yaml.scanner import ScannerError
 from ruamel.yaml.scalarbool import ScalarBoolean
 from ruamel.yaml.scalarstring import ScalarString
 from ruamel.yaml.comments import (
-    CommentedMap, CommentedSet, CommentedSeq, TaggedScalar
+    CommentedMap, CommentedSet, CommentedSeq, TaggedScalar, comment_attrib
 )
 from yamlpath.patches.timestamp import (
     AnchoredTimeStamp,
     AnchoredDate,
 )
 
-from yamlpath.wrappers import ConsolePrinter
 from yamlpath.common import Nodes
+from yamlpath.common.frontmatterparser import FrontmatterParser
+from yamlpath.exceptions import FrontmatterException
+from yamlpath.types import ParsersLogger
 
 
 class Parsers:
     """Helper methods for common YAML/JSON/Compatible parser operations."""
+
+    @staticmethod
+    def get_parser_for_source(
+        parser: Any, source: str, literal: bool = False,
+        frontmatter: bool = False
+    ) -> Any:
+        """Select parser implementation based on source document type."""
+        if isinstance(parser, FrontmatterParser):
+            # The caller has already decided that FrontmatterParser is required
+            return parser
+        if frontmatter:
+            # The caller has explicitly requested frontmatter parsing
+            return FrontmatterParser(parser, require_frontmatter=True)
+        if literal or source == "-" or not isinstance(source, str):
+            # The input stream is a literal string or raw STDIN
+            return parser
+        if FrontmatterParser.is_markdown_file(source):
+            # The source appears to be a Markdown file based on its extension
+            return FrontmatterParser(parser)
+        return parser
 
     @staticmethod
     def get_yaml_editor(**kwargs: Any) -> YAML:
@@ -75,7 +97,7 @@ class Parsers:
     @staticmethod
     # pylint: disable=too-many-branches,too-many-statements,too-many-locals
     def get_yaml_data(
-        parser: Any, logger: ConsolePrinter, source: str, **kwargs
+        parser: Any, logger: ParsersLogger, source: str, **kwargs
     ) -> Tuple[Any, bool]:
         """
         Parse YAML/Compatible data and return the ruamel.yaml object result.
@@ -84,7 +106,7 @@ class Parsers:
 
         Parameters:
         1. parser (ruamel.yaml.YAML) The YAML data parser
-        2. logger (ConsolePrinter) The logging facility
+        2. logger (ParsersLogger) The logging facility
         3. source (str) The source file or serialized literal to load; can be -
            for reading from STDIN (implies literal=True)
 
@@ -99,6 +121,9 @@ class Parsers:
         and False, otherwise.
         """
         literal = kwargs.pop("literal", False)
+        frontmatter = kwargs.pop("frontmatter", False)
+        parser = Parsers.get_parser_for_source(
+            parser, source, literal, frontmatter)
         yaml_data = None
         data_available = True
 
@@ -167,13 +192,16 @@ class Parsers:
                             .replace("occurrence   ", "occurrence ")
                             .replace("\n", "\n   ")))
             data_available = False
+        except FrontmatterException as fmex:
+            logger.error(str(fmex))
+            data_available = False
 
         return (yaml_data, data_available)
 
     @staticmethod
     # pylint: disable=too-many-branches,too-many-statements,too-many-locals
     def get_yaml_multidoc_data(
-        parser: Any, logger: ConsolePrinter, source: str, **kwargs
+        parser: Any, logger: ParsersLogger, source: str, **kwargs
     ) -> Generator[Tuple[Any, bool], None, None]:
         """
         Parse YAML/Compatible multi-docs and yield each ruamel.yaml object.
@@ -182,7 +210,7 @@ class Parsers:
 
         Parameters:
         1. parser (ruamel.yaml.YAML) The YAML data parser
-        2. logger (ConsolePrinter) The logging facility
+        2. logger (ParsersLogger) The logging facility
         3. source (str) The source file to load; can be - for reading from
            STDIN
 
@@ -197,6 +225,9 @@ class Parsers:
         and False, otherwise.
         """
         literal = kwargs.pop("literal", False)
+        frontmatter = kwargs.pop("frontmatter", False)
+        parser = Parsers.get_parser_for_source(
+            parser, source, literal, frontmatter)
 
         # This code traps errors and warnings from ruamel.yaml, substituting
         # lengthy stack-dumps with specific, meaningful feedback.  Further,
@@ -281,6 +312,9 @@ class Parsers:
                             str(raw)
                             .replace("occurrence   ", "occurrence ")
                             .replace("\n", "\n   ")))
+        except FrontmatterException as fmex:
+            has_error = True
+            logger.error(str(fmex))
 
         if has_error:
             yield (None, False)
@@ -308,7 +342,75 @@ class Parsers:
         return data
 
     @staticmethod
-    # pylint: disable=too-many-branches
+    def _jsonify_commented_map(
+        data: CommentedMap,
+    ) -> CommentedMap:
+        """Recursively jsonify a CommentedMap with its YAML merge keys."""
+        for i, k in [
+            (idx, key) for idx, key in enumerate(data.keys())
+            if isinstance(key, TaggedScalar)
+        ]:
+            unwrapped_key = Parsers.jsonify_yaml_data(k)
+            data.insert(i, unwrapped_key, data.pop(k))
+
+        for key, val in data.items():
+            data[key] = Parsers.jsonify_yaml_data(val)
+
+        # Preserve historical JSON output behavior by projecting keys
+        # from the active merge source map (the final merge reference).
+        last_merge_node = None
+        if hasattr(data, "merge") and len(data.merge) > 0:
+            for merge_item in data.merge:
+                if isinstance(merge_item, tuple) and len(merge_item) > 1:
+                    last_merge_node = merge_item[1]
+                else:
+                    last_merge_node = merge_item
+        if isinstance(last_merge_node, CommentedMap):
+            node_items = last_merge_node.items()  # type: ignore
+            for merge_key, merge_val in node_items:
+                if merge_key not in data:
+                    data[merge_key] = Parsers.jsonify_yaml_data(merge_val)
+        return data
+
+    @staticmethod
+    def _jsonify_set(data: Any) -> Dict[str, None]:
+        """Convert a set or CommentedSet to a JSON-serializable dict."""
+        json_repr: Dict[str, None] = {}
+        for set_val in data:
+            json_key_proto = Parsers.jsonify_yaml_data(set_val)
+            json_key = (str(json_key_proto)
+                        if isinstance(json_key_proto, tuple)
+                        else json_key_proto)
+            json_repr[json_key] = None
+        return json_repr
+
+    @staticmethod
+    def _jsonify_datetime_value(
+        data: datetime,
+    ) -> str:
+        """Convert a datetime to an ISO string, date-only when applicable."""
+        is_date_only = (
+            data.hour == 0
+            and data.minute == 0
+            and data.second == 0
+            and data.microsecond == 0
+            and getattr(data, "tzinfo", None) is None
+        )
+        if is_date_only:
+            return data.date().isoformat()
+
+        tsdata = Nodes.get_timestamp_with_tzinfo(data)
+        return str(tsdata.isoformat())
+
+    @staticmethod
+    def _jsonify_seq_values(data: Any) -> Any:
+        """Recursively jsonify all values in a dict or sequence."""
+        keys = data.keys() if isinstance(data, dict) else range(len(data))
+        for key in keys:
+            data[key] = Parsers.jsonify_yaml_data(data[key])
+        return data
+
+    @staticmethod
     def jsonify_yaml_data(data: Any) -> Any:
         """
         Convert all non-JSON-serializable values to strings.
@@ -318,39 +420,22 @@ class Parsers:
         native data-types, like dates.
         """
         if isinstance(data, CommentedMap):
-            for i, k in [
-                (idx, key) for idx, key in enumerate(data.keys())
-                if isinstance(key, TaggedScalar)
-            ]:
-                unwrapped_key = Parsers.jsonify_yaml_data(k)
-                data.insert(i, unwrapped_key, data.pop(k))
-
-            for key, val in data.items():
-                data[key] = Parsers.jsonify_yaml_data(val)
-        elif isinstance(data, dict):
-            for key, val in data.items():
-                data[key] = Parsers.jsonify_yaml_data(val)
-        elif isinstance(data, (list, CommentedSeq)):
-            for idx, ele in enumerate(data):
-                data[idx] = Parsers.jsonify_yaml_data(ele)
+            data = Parsers._jsonify_commented_map(data)
+        elif isinstance(data, (dict, list, CommentedSeq)):
+            data = Parsers._jsonify_seq_values(data)
         elif isinstance(data, (set, CommentedSet)):
-            json_repr: Dict[str, None] = {}
-            for set_val in data:
-                json_key_proto = Parsers.jsonify_yaml_data(set_val)
-                json_key = (str(json_key_proto)
-                            if isinstance(json_key_proto, tuple)
-                            else json_key_proto)
-                json_repr[json_key] = None
-            data = json_repr
+            data = Parsers._jsonify_set(data)
         elif isinstance(data, TaggedScalar):
-            if data.tag.value == "!null":
+            if Nodes.get_tag(data) == "!null":
                 return None
             data = Parsers.jsonify_yaml_data(data.value)
         elif isinstance(data, AnchoredDate):
             data = data.date().isoformat()
         elif isinstance(data, AnchoredTimeStamp):
             data = Nodes.get_timestamp_with_tzinfo(data).isoformat()
-        elif isinstance(data, (datetime, date)):
+        elif isinstance(data, datetime):
+            data = Parsers._jsonify_datetime_value(data)
+        elif isinstance(data, date):
             data = data.isoformat()
         elif isinstance(data, bytes):
             data = str(data)
@@ -384,7 +469,7 @@ class Parsers:
         try:
             # literal scalarstring might have comment associated with them
             attr = "comment" if isinstance(dom, ScalarString) \
-                else ruamel.yaml.comments.Comment.attrib
+                else comment_attrib
             delattr(dom, attr)
         except AttributeError:
             pass

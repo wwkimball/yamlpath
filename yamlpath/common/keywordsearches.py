@@ -263,7 +263,13 @@ class KeywordSearches:
                 child_present = False
                 if hasattr(data, "merge") and len(data.merge) > 0:
                     # Ignore comparision if there is no source
-                    for (idx, merge_node) in data.merge:
+                    for merge_item in data.merge:
+                        merge_node = (
+                            merge_item[1]
+                            if isinstance(merge_item, tuple)
+                            and len(merge_item) > 1
+                            else merge_item
+                        )
                         if merge_node == compare_node:
                             child_present = True
                             break

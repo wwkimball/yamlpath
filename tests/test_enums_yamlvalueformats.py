@@ -11,15 +11,8 @@ from ruamel.yaml.scalarstring import (
 from ruamel.yaml.scalarbool import ScalarBoolean
 from ruamel.yaml.scalarfloat import ScalarFloat
 from ruamel.yaml.scalarint import ScalarInt
-from ruamel.yaml import version_info as ryversion
-if ryversion < (0, 17, 22):                   # pragma: no cover
-    from yamlpath.patches.timestamp import (
-        AnchoredTimeStamp,
-    )  # type: ignore
-else:
-    # Temporarily fool MYPY into resolving the future-case imports
-    from ruamel.yaml.timestamp import TimeStamp as AnchoredTimeStamp
-    #from ruamel.yaml.timestamp import AnchoredTimeStamp
+
+from yamlpath.patches.timestamp import AnchoredTimeStamp
 
 from yamlpath.enums import YAMLValueFormats
 

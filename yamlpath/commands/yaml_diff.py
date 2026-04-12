@@ -104,10 +104,16 @@ https://github.com/wwkimball/yamlpath/issues.
         help="zero-based document index of the RHS multi-document source")
 
     parser.add_argument(
+        "--frontmatter", action="store_true",
+        help=(
+            "force Markdown frontmatter parsing for YAML_FILE; this flag is "
+            "required when Markdown content is read from STDIN"))
+
+    parser.add_argument(
         "-t", "--pathsep",
         default="dot",
         choices=PathSeparators,
-        metavar=PathSeparators.get_choices(),
+        metavar="|".join(PathSeparators.get_choices()),
         type=PathSeparators.from_str,
         help="indicate which YAML Path separator to use when\nrendering"
              " results; default=dot")
@@ -228,8 +234,9 @@ def print_report(log, args, diff):
 
     return changes_found
 
-def get_docs(log, yaml_editor, yaml_file):
+def get_docs(log, yaml_editor, yaml_file, **kwargs):
     """Get all documents from a YAML/JSON/Compatible file."""
+    frontmatter = kwargs.pop("frontmatter", False)
     docs_loaded = True
     docs = []
     if yaml_file != "-" and not isfile(yaml_file):
@@ -237,7 +244,7 @@ def get_docs(log, yaml_editor, yaml_file):
         return ([], False)
 
     for (yaml_data, doc_loaded) in Parsers.get_yaml_multidoc_data(
-        yaml_editor, log, yaml_file
+        yaml_editor, log, yaml_file, frontmatter=frontmatter
     ):
         if not doc_loaded:
             # An error message has already been logged
@@ -279,8 +286,10 @@ def main():
     rhs_file = args.yaml_files[1]
     lhs_yaml = Parsers.get_yaml_editor()
     rhs_yaml = Parsers.get_yaml_editor()
-    (lhs_docs, lhs_loaded) = get_docs(log, lhs_yaml, lhs_file)
-    (rhs_docs, rhs_loaded) = get_docs(log, rhs_yaml, rhs_file)
+    (lhs_docs, lhs_loaded) = get_docs(
+        log, lhs_yaml, lhs_file, frontmatter=args.frontmatter)
+    (rhs_docs, rhs_loaded) = get_docs(
+        log, rhs_yaml, rhs_file, frontmatter=args.frontmatter)
     lhs_doc_count = len(lhs_docs) if lhs_loaded else 0
     rhs_doc_count = len(rhs_docs) if rhs_loaded else 0
     lhs_idx_set = (hasattr(args, "left_document_index")

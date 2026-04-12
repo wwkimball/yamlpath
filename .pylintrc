@@ -70,9 +70,16 @@ confidence=
 # WWK-2021-10-26: Disable C0209 because it is merely a performance-enhancing
 #     suggestion, not a breaking issue.  I will be interested in revisiting
 #     this later, but not when I have a critical bug that I'm trying to fix.
+# WWK-2026-04-07: Disable additional pylint drift checks introduced by newer
+#     toolchains; these findings are non-functional style/refactor guidance or
+#     analyzer false-positives during compatibility maintenance.
 disable=R0401,
       R0801,
-      C0209
+      C0209,
+      R0917,
+      R1731,
+      R1737,
+      E0606
 
 # Enable the message, report, category or checker with the given id(s). You can
 # either give multiple identifier separated by comma (,) or put this option

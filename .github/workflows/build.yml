@@ -16,7 +16,8 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.7', '3.8', '3.9', '3.10', '3.11']
+        python-version: ['3.10', '3.11', '3.12', '3.13', '3.14']
+        ruby-version: ['3.4']
 
     steps:
     - uses: actions/checkout@v4
@@ -24,16 +25,32 @@ jobs:
       uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
-    - name: Set Environment Variables
+    - name: Set up Ruby ${{ matrix.ruby-version }}
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: ${{ matrix.ruby-version }}
+    - name: Install Ruby dependencies (EYAML Support)
       run: |
-        echo "${HOME}/.local/share/gem/ruby/3.0.0/bin" >> $GITHUB_PATH
-    - name: Install dependencies
+        ruby --version
+        gem --version
+
+        ruby_constraints_file="requirements/test-tools/ruby-${{ matrix.ruby-version }}.txt"
+        if ! [ -f "$ruby_constraints_file" ]; then
+          echo "ERROR: Unsupported Ruby branch for CI: ${{ matrix.ruby-version }}" >&2
+          echo "Expected constraints file not found: $ruby_constraints_file" >&2
+          exit 1
+        fi
+
+        gem install --user-install --no-document -g "$ruby_constraints_file" --no-lock
+        ruby_gem_user_bin="$(ruby -r rubygems -e 'puts Gem.user_dir')/bin"
+        echo "$ruby_gem_user_bin" >> "$GITHUB_PATH"
+        "$ruby_gem_user_bin/eyaml" --version
+    - name: Install Python dependencies
       run: |
-        gem install --user-install hiera-eyaml
         python -m pip install --upgrade pip
         python -m pip install --upgrade setuptools
         python -m pip install --upgrade wheel
-        python -m pip install --upgrade mypy pytest pytest-cov pytest-console-scripts pylint coveralls pydocstyle
+        python -m pip install -r requirements/test-tools/python-${{ matrix.python-version }}.txt
         python -m pip install --editable .
     - name: Validate Compliance with pydocstyle
       run: |

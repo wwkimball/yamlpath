@@ -11,7 +11,10 @@ class Test_yaml_paths():
     def test_no_options(self, script_runner):
         result = script_runner.run([self.command, "--nostdin"])
         assert not result.success, result.stderr
-        assert "the following arguments are required: -s/--search" in result.stderr
+        assert (
+            "There must be at least one --search EXPRESSION or --line LINE"
+            " query." in result.stderr
+        )
 
     def test_no_input_file(self, script_runner):
         result = script_runner.run([self.command, "--nostdin", "--search=%abc"])
@@ -30,7 +33,75 @@ class Test_yaml_paths():
         yaml_file = create_temp_yaml_file(tmp_path_factory, content)
         result = script_runner.run([self.command, yaml_file])
         assert not result.success, result.stderr
-        assert "the following arguments are required: -s/--search" in result.stderr
+        assert (
+            "There must be at least one --search EXPRESSION or --line LINE"
+            " query." in result.stderr
+        )
+
+    def test_bad_line_query(self, script_runner, tmp_path_factory):
+        content = """---
+key: value
+"""
+        yaml_file = create_temp_yaml_file(tmp_path_factory, content)
+        result = script_runner.run([
+            self.command, "--line=0", yaml_file
+        ])
+        assert not result.success, result.stderr
+        assert "All --line LINE values must be positive integers" in result.stderr
+
+    def test_line_query_hash_result(self, script_runner, tmp_path_factory):
+        content = """---
+parent:
+  child: value
+"""
+        yaml_file = create_temp_yaml_file(tmp_path_factory, content)
+        result = script_runner.run([
+            self.command,
+            "--nostdin", "--nofile",
+            "--pathsep=/", "--line", "3", yaml_file
+        ])
+        assert result.success, result.stderr
+        assert "\n".join([
+            "/parent/child",
+        ]) + "\n" == result.stdout
+
+    def test_line_query_array_result(self, script_runner, tmp_path_factory):
+        content = """---
+items:
+  - alpha
+  - bravo
+"""
+        yaml_file = create_temp_yaml_file(tmp_path_factory, content)
+        result = script_runner.run([
+            self.command,
+            "--nostdin", "--nofile",
+            "--pathsep=/", "--line", "4", yaml_file
+        ])
+        assert result.success, result.stderr
+        assert "\n".join([
+            "/items[1]",
+        ]) + "\n" == result.stdout
+
+    def test_multi_line_queries_print_labels(self, script_runner, tmp_path_factory):
+        content = """---
+items:
+  - alpha
+  - bravo
+"""
+        yaml_file = create_temp_yaml_file(tmp_path_factory, content)
+        result = script_runner.run([
+            self.command,
+            "--nostdin", "--nofile",
+            "--pathsep=/",
+            "--line", "3",
+            "--line", "4",
+            yaml_file
+        ])
+        assert result.success, result.stderr
+        assert "\n".join([
+            "[line 3]: /items[0]",
+            "[line 4]: /items[1]",
+        ]) + "\n" == result.stdout
 
     def test_yaml_parsing_error(self, script_runner, imparsible_yaml_file):
         result = script_runner.run([

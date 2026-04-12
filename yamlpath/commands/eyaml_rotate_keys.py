@@ -53,6 +53,11 @@ def processcli():
     parser.add_argument("-x", "--eyaml", default="eyaml",
                         help="the eyaml binary to use when it isn't on the"
                         + " PATH")
+    parser.add_argument(
+        "--frontmatter", action="store_true",
+        help=(
+            "force Markdown frontmatter parsing for YAML_FILE; this flag is "
+            "required when Markdown content is read from STDIN"))
 
     key_group = parser.add_argument_group(
         "EYAML_KEYS", "All key arguments are required"
@@ -130,7 +135,10 @@ def main():
             log.info("Processing {}...".format(yaml_file))
 
         # Try to open the file
-        (yaml_data, doc_loaded) = Parsers.get_yaml_data(yaml, log, yaml_file)
+        source_yaml = Parsers.get_parser_for_source(
+            yaml, yaml_file, frontmatter=args.frontmatter)
+        (yaml_data, doc_loaded) = Parsers.get_yaml_data(
+            source_yaml, log, yaml_file, frontmatter=args.frontmatter)
         if not doc_loaded:
             # An error message has already been logged
             exit_state = 3
@@ -171,12 +179,17 @@ def main():
                 if not isinstance(node, FoldedScalarString):
                     output = EYAMLOutputFormats.STRING
 
+                plain_text = txtval if isinstance(txtval, str) else str(txtval)
+
                 # Re-encrypt the value with new EYAML keys
                 processor.publickey = args.newpublickey
                 processor.privatekey = args.newprivatekey
 
                 try:
-                    processor.set_eyaml_value(yaml_path, txtval, output=output)
+                    processor.set_eyaml_value(
+                        yaml_path,
+                        plain_text,
+                        output=output)
                 except EYAMLCommandException as ex:
                     log.error(ex)
                     exit_state = 3
@@ -195,7 +208,7 @@ def main():
 
             log.verbose("Writing changed data to {}.".format(yaml_file))
             with open(yaml_file, 'w', encoding='utf-8') as yaml_dump:
-                yaml.dump(yaml_data, yaml_dump)
+                source_yaml.dump(yaml_data, yaml_dump)
 
     sys.exit(exit_state)
 

@@ -26,21 +26,19 @@ source "$envName"/bin/activate || exit 87
 
 # Update pip and install release tools
 echo "Installing release tools..."
-pip3 install ruamel.yaml wheel || exit $?
+pip3 install build setuptools ruamel.yaml wheel || exit $?
 
 # Build release artifacts
 echo "Building release artifacts..."
-python3 setup.py sdist bdist_wheel || exit $?
+python -m build || exit $?
 
 # Generate a ZIP file for Windows users
 echo "Building Windows ZIP file..."
 pushd dist || exit 2
 relname=$(basename $(ls -1 ./*.tar.gz) .tar.gz)
 mkdir win \
-	&& cp "${relname}.tar.gz" win/ \
+	&& python -m wheel unpack "${relname}-py3-none-any.whl" --dest win/ \
 	&& pushd win/ \
-	&& tar xvzf ./*.tar.gz \
-	&& rm -f ./*.gz \
 	&& zip --recurse-paths --test --verbose "${relname}.zip" "${relname}"/ \
 	&& mv ./*.zip .. \
 	&& popd \

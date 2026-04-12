@@ -7,6 +7,8 @@ from typing import Any, Dict, Optional
 
 from ruamel.yaml.comments import CommentedSeq, CommentedMap
 
+from yamlpath.common.mergerefs import MergeRefs
+
 from yamlpath.wrappers import NodeCoords
 
 
@@ -85,9 +87,9 @@ class Anchors:
         Returns:  N/A
         """
         if hasattr(data, "merge") and len(data.merge) > 0:
-            for midx, merge_node in enumerate(data.merge):
-                if merge_node[1] is old_node:
-                    data.merge[midx] = (data.merge[midx][0], repl_node)
+            for midx, merge_node in MergeRefs.iter_nodes(data):
+                if merge_node is old_node:
+                    MergeRefs.replace_node(data, midx, repl_node)
 
     @staticmethod
     def combine_merge_anchors(lhs: CommentedMap, rhs: CommentedMap) -> None:
@@ -98,8 +100,8 @@ class Anchors:
         1. lhs (CommentedMap) The map to merge into
         2. rhs (CommentedMap) The map to merge from
         """
-        for mele in rhs.merge:
-            lhs.add_yaml_merge([mele])
+        for _, mele in MergeRefs.iter_nodes(rhs):
+            MergeRefs.add_node(lhs, mele)
 
     @staticmethod
     def replace_anchor(data: Any, old_node: Any, repl_node: Any) -> None:

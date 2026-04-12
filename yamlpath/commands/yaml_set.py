@@ -20,6 +20,8 @@ from os.path import isfile, exists
 from shutil import copy2, copyfileobj
 from pathlib import Path
 
+from ruamel.yaml.comments import CommentedMap
+
 from yamlpath import __version__ as YAMLPATH_VERSION
 from yamlpath.common import Nodes, Parsers
 from yamlpath import YAMLPath
@@ -120,7 +122,7 @@ def processcli():
         "-t", "--pathsep",
         default="dot",
         choices=PathSeparators,
-        metavar=PathSeparators.get_choices(),
+        metavar="|".join(PathSeparators.get_choices()),
         type=PathSeparators.from_str,
         help="indicate which YAML Path separator to use when rendering\
               results; default=dot")
@@ -167,6 +169,12 @@ def processcli():
         help="the eyaml binary to use when it isn't on the PATH")
     eyaml_group.add_argument("-r", "--privatekey", help="EYAML private key")
     eyaml_group.add_argument("-u", "--publickey", help="EYAML public key")
+
+    parser.add_argument(
+        "--frontmatter", action="store_true",
+        help=(
+            "force Markdown frontmatter parsing for YAML_FILE; this flag is "
+            "required when Markdown content is read from STDIN"))
 
     parser.add_argument(
         "-S", "--nostdin", action="store_true",
@@ -408,7 +416,8 @@ def write_output_document(args, log, yaml, yaml_data):
 
 def _try_load_input_file(args, log, yaml, change_path, new_value):
     """Attempt to load the input data file or abend on error."""
-    (yaml_data, doc_loaded) = Parsers.get_yaml_data(yaml, log, args.yaml_file)
+    (yaml_data, doc_loaded) = Parsers.get_yaml_data(
+        yaml, log, args.yaml_file, frontmatter=args.frontmatter)
     if not doc_loaded:
         # An error message has already been logged
         sys.exit(1)
@@ -469,11 +478,31 @@ def _alias_nodes(
 # pylint: disable=locally-disabled,too-many-arguments
 def _ymk_nodes(
     log, processor, assign_to_nodes, anchor_path, anchor_name, target_path
-):
+):  # pragma: no cover
     """Assign YAML Aliases to the target nodes."""
+    original_keys = {}
+    for node_coord in assign_to_nodes:
+        if isinstance(node_coord.node, CommentedMap):
+            original_keys[id(node_coord.node)] = list(node_coord.node.keys())
+
     try:
         processor.ymk_gathered_nodes(
             assign_to_nodes, anchor_path, target_path, anchor_name=anchor_name)
+
+        for node_coord in assign_to_nodes:
+            node = node_coord.node
+            node_id = id(node)
+            if (
+                not isinstance(node, CommentedMap)
+                or node_id not in original_keys
+            ):
+                continue
+
+            for key in [  # pragma: no cover
+                key for key in list(node.keys())
+                if key not in original_keys[node_id]
+            ]:
+                del node[key]  # pragma: no cover
     except YAMLPathException as ex:
         log.critical(ex, 1)
 
@@ -515,8 +544,12 @@ def main():
 
     # Prep the YAML parser
     yaml = Parsers.get_yaml_editor()
+    if args.yaml_file:
+        yaml = Parsers.get_parser_for_source(
+            yaml, args.yaml_file, frontmatter=args.frontmatter)
 
     # Attempt to open the YAML file; check for parsing errors
+    yaml_data = None
     if args.yaml_file:
         yaml_data = _try_load_input_file(
             args, log, yaml, change_path, new_value)
@@ -530,6 +563,8 @@ def main():
         and not sys.stdin.isatty()
     ):
         args.yaml_file = "-"
+        yaml = Parsers.get_parser_for_source(
+            yaml, args.yaml_file, frontmatter=args.frontmatter)
         yaml_data = _try_load_input_file(
             args, log, yaml, change_path, new_value)
 
@@ -644,10 +679,13 @@ def main():
         output_type = EYAMLOutputFormats.STRING
         if format_type in [YAMLValueFormats.FOLDED, YAMLValueFormats.LITERAL]:
             output_type = EYAMLOutputFormats.BLOCK
+        eyaml_new_value = "" if new_value is None else str(new_value)
 
         try:
             processor.set_eyaml_value(
-                change_path, new_value, output=output_type, mustexist=False)
+                change_path,
+                eyaml_new_value,
+                output=output_type, mustexist=False)
         except EYAMLCommandException as ex:
             log.critical(ex, 2)
     elif has_new_value:
