@@ -30,6 +30,9 @@ from yamlpath.merger.enums import (
 from yamlpath.merger.exceptions import MergeException
 from yamlpath.merger import Merger, MergerConfig
 from yamlpath.exceptions import YAMLPathException
+from yamlpath.patches.commentedaliasedparenthash import (
+    CommentedAliasedParentHashPatch as CAPHP,
+)
 
 from yamlpath.wrappers import ConsolePrinter
 
@@ -335,6 +338,8 @@ def write_output_document(
                         json.dump(
                             Parsers.jsonify_yaml_data(dumps[0]), out_fhnd)
             else:
+                for dump in dumps:
+                    CAPHP.restore_dropped_alias_key_spacing(dump)
                 if len(dumps) > 1:
                     yaml_editor.explicit_end = True  # type: ignore
                     yaml_editor.dump_all(dumps, out_fhnd)
@@ -358,6 +363,8 @@ def write_output_document(
                 else:
                     json.dump(Parsers.jsonify_yaml_data(dumps[0]), sys.stdout)
         else:
+            for dump in dumps:
+                CAPHP.restore_dropped_alias_key_spacing(dump)
             if len(dumps) > 1:
                 yaml_editor.explicit_end = True  # type: ignore
                 yaml_editor.dump_all(dumps, sys.stdout)
