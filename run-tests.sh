@@ -238,7 +238,16 @@ EOF
 	fi
 
 	echo -e "\nPYLINT..."
-	if ! pylint yamlpath; then
+	pylintRCFile="requirements/test-tools/pylintrc-python-${pythonVersion}.ini"
+	if ! [ -f "$pylintRCFile" ]; then
+		cleanupTestEnvironment "$tmpVEnv" "$tmpGemHome" "$originalPath"
+		echo -e "\nERROR:  Pylint RC file not found:  ${pylintRCFile}" >&2
+		exit 119
+	fi
+	if ! pylint \
+			--rcfile="$pylintRCFile" \
+			yamlpath
+	then
 		cleanupTestEnvironment "$tmpVEnv" "$tmpGemHome" "$originalPath"
 		echo "PYLINT Error: $?"
 		exit 11

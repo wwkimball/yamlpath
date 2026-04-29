@@ -256,7 +256,7 @@ ForEach ($EnvDir in $EnvDirs) {
     }
 
     Write-Output "`nPYLINT..."
-    pylint yamlpath | Out-String
+    pylint --rcfile "requirements/test-tools/pylintrc-python-$PyMajorMinor.ini" yamlpath | Out-String
     if (!$?) {
         Invoke-CleanupTestEnvironment -TmpVEnvPath $TmpVEnv.FullName -TmpGemHomePath $TmpGemHome.FullName -OriginalPath $OriginalPath
         Write-Error "PYLINT Error: $?"

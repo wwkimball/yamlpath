@@ -4,6 +4,6 @@ pyright==1.1.408
 pytest==8.3.5
 pytest-cov==6.1.1
 pytest-console-scripts==1.4.1
-pylint==3.3.6
+pylint==4.0.5
 pydocstyle==6.3.0
 coveralls==4.1.0
