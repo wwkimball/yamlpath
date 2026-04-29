@@ -161,16 +161,16 @@ EOF
 	fi
 
 	echo "...upgrading pip"
-	python -m pip install --upgrade pip >/dev/null
+	python -m pip install --no-cache-dir --upgrade pip >/dev/null
 
 	echo "...upgrading setuptools"
-	pip install --upgrade setuptools >/dev/null
+	pip install --no-cache-dir --upgrade setuptools >/dev/null
 
 	echo "...upgrading wheel"
-	pip install --upgrade wheel >/dev/null
+	pip install --no-cache-dir --upgrade wheel >/dev/null
 
 	echo "...installing self (editable because without it, pytest-cov cannot trace code execution!)"
-	if ! pip install --editable . >/dev/null; then
+	if ! pip install --no-cache-dir --editable . >/dev/null; then
 		deactivate
 		rm -rf "$tmpVEnv"
 		echo -e "\nERROR:  Unable to install self!" >&2
@@ -178,7 +178,7 @@ EOF
 	fi
 
 	echo "...installing pinned testing tools from ${requirementsFile}"
-	if ! pip install -r "${requirementsFile}" >/dev/null; then
+	if ! pip install --no-cache-dir -r "${requirementsFile}" >/dev/null; then
 		cleanupTestEnvironment "$tmpVEnv" "$tmpGemHome" "$originalPath"
 		echo -e "\nERROR:  Unable to install pinned testing tools from ${requirementsFile}!" >&2
 		exit 123
