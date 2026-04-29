@@ -179,16 +179,16 @@ ForEach ($EnvDir in $EnvDirs) {
     }
 
     Write-Output "...upgrading pip"
-    python -m pip install --upgrade pip
+    python -m pip install --no-cache-dir --upgrade pip
 
     Write-Output "...upgrading setuptools"
-    pip install --upgrade setuptools
+    pip install --no-cache-dir --upgrade setuptools
 
     Write-Output "...upgrading wheel"
-    pip install --upgrade wheel
+    pip install --no-cache-dir --upgrade wheel
 
     Write-Output "...installing self"
-    pip install --editable .
+    pip install --no-cache-dir --editable .
     if (!$?) {
         & deactivate
         Remove-Item -Recurse -Force $TmpVEnv
@@ -197,7 +197,7 @@ ForEach ($EnvDir in $EnvDirs) {
     }
 
     Write-Output "...installing pinned testing tools from $RequirementsFile"
-    pip install -r $RequirementsFile
+    pip install --no-cache-dir -r $RequirementsFile
     if (!$?) {
         Invoke-CleanupTestEnvironment -TmpVEnvPath $TmpVEnv.FullName -TmpGemHomePath $null -OriginalPath $OriginalPath
         Write-Error "`nERROR:  Unable to install pinned testing tools from $RequirementsFile!"
@@ -256,7 +256,7 @@ ForEach ($EnvDir in $EnvDirs) {
     }
 
     Write-Output "`nPYLINT..."
-    pylint yamlpath | Out-String
+    pylint --rcfile "requirements/test-tools/pylintrc-python-$PyMajorMinor.ini" yamlpath | Out-String
     if (!$?) {
         Invoke-CleanupTestEnvironment -TmpVEnvPath $TmpVEnv.FullName -TmpGemHomePath $TmpGemHome.FullName -OriginalPath $OriginalPath
         Write-Error "PYLINT Error: $?"
