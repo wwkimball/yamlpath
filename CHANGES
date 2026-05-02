@@ -11,6 +11,13 @@ Enhancements:
   to https://github.com/deepakbshetty for requesting this enhancement via
   https://github.com/wwkimball/yamlpath/issues/239.
 
+Bug Fixes:
+* Mitigate ruamel.yaml issue 351 via workaround until the upstream bug is fixed.
+  The workaround results in the expected round-trip edit, preserving the
+  comments and new-lines which previously caused ruamel.yaml to stack-dump when
+  those comments or new-lines within YAML files were near aliased hash keys.
+  See https://sourceforge.net/p/ruamel-yaml/tickets/351/ for details.
+
 3.9.0
 Enhancements:
 * Python 3.12, 3.13, and 3.14 are now formally tested and supported.  For
