@@ -120,7 +120,9 @@ class Parsers:
                 serialized, ex.pos)
             logger.error(
                 "JSON parsing error in \"<unicode string>\", line {},"
-                " column {}:  {}".format(line, column, ex.msg))
+                " column {}:  {}.  If the input is YAML rather than JSON,"
+                " remove the -j|--json-multi-doc flag.".format(
+                    line, column, ex.msg))
 
         if has_error:
             yield (None, False)
