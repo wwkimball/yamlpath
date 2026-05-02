@@ -110,6 +110,13 @@ https://github.com/wwkimball/yamlpath/issues.
             "required when Markdown content is read from STDIN"))
 
     parser.add_argument(
+        "-j", "--json-multi-doc",
+        dest="json_multi_doc", action="store_true",
+        help=(
+            "parse YAML_FILE as one or more adjacent JSON documents instead "
+            "of YAML; intended for NDJSON/JSONL and concatenated JSON"))
+
+    parser.add_argument(
         "-t", "--pathsep",
         default="dot",
         choices=PathSeparators,
@@ -159,6 +166,12 @@ https://github.com/wwkimball/yamlpath/issues.
 def validateargs(args, log):
     """Validate command-line arguments."""
     has_errors = False
+
+    if args.frontmatter and args.json_multi_doc:
+        has_errors = True
+        log.error(
+            "The --frontmatter and --json-multi-doc options cannot be used"
+            " together.")
 
     # There can be only one -
     pseudofile_count = 0
@@ -237,14 +250,16 @@ def print_report(log, args, diff):
 def get_docs(log, yaml_editor, yaml_file, **kwargs):
     """Get all documents from a YAML/JSON/Compatible file."""
     frontmatter = kwargs.pop("frontmatter", False)
+    json_multi_doc = kwargs.pop("json_multi_doc", False)
     docs_loaded = True
     docs = []
     if yaml_file != "-" and not isfile(yaml_file):
         log.error("File not found:  {}".format(yaml_file))
         return ([], False)
 
-    for (yaml_data, doc_loaded) in Parsers.get_yaml_multidoc_data(
-        yaml_editor, log, yaml_file, frontmatter=frontmatter
+    for (yaml_data, doc_loaded) in Parsers.get_multidoc_data(
+        yaml_editor, log, yaml_file, frontmatter=frontmatter,
+        json_multi_doc=json_multi_doc
     ):
         if not doc_loaded:
             # An error message has already been logged
@@ -287,9 +302,11 @@ def main():
     lhs_yaml = Parsers.get_yaml_editor()
     rhs_yaml = Parsers.get_yaml_editor()
     (lhs_docs, lhs_loaded) = get_docs(
-        log, lhs_yaml, lhs_file, frontmatter=args.frontmatter)
+        log, lhs_yaml, lhs_file, frontmatter=args.frontmatter,
+        json_multi_doc=args.json_multi_doc)
     (rhs_docs, rhs_loaded) = get_docs(
-        log, rhs_yaml, rhs_file, frontmatter=args.frontmatter)
+        log, rhs_yaml, rhs_file, frontmatter=args.frontmatter,
+        json_multi_doc=args.json_multi_doc)
     lhs_doc_count = len(lhs_docs) if lhs_loaded else 0
     rhs_doc_count = len(rhs_docs) if rhs_loaded else 0
     lhs_idx_set = (hasattr(args, "left_document_index")

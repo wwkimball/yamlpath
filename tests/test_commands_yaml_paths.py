@@ -26,6 +26,18 @@ class Test_yaml_paths():
         assert not result.success, result.stderr
         assert "File not found:" in result.stderr
 
+    def test_frontmatter_and_json_multi_doc_are_mutually_exclusive(self, script_runner, tmp_path_factory):
+        yaml_file = create_temp_yaml_file(tmp_path_factory, "---\nkey: value\n")
+        result = script_runner.run([
+            self.command,
+            "--frontmatter",
+            "--json-multi-doc",
+            "--search=%val",
+            yaml_file,
+        ])
+        assert not result.success, result.stderr
+        assert "cannot be used together" in result.stderr
+
     def test_no_query(self, script_runner, tmp_path_factory):
         content = """---
         no: ''
@@ -123,6 +135,50 @@ items:
         ])
         assert not result.success, result.stderr
         assert "YAML composition error" in result.stderr
+
+    def test_json_multi_doc_search(self, tmp_path_factory):
+        import subprocess
+        import sys
+
+        json_file = create_temp_yaml_file(
+            tmp_path_factory,
+            '{"name":"alpha"}\n{"name":"beta"}\n')
+        result = subprocess.run(
+            [sys.executable, "-m", "yamlpath.commands.yaml_paths",
+             "--nostdin", "--json-multi-doc", "--nofile",
+             "--pathsep=/", "--search", "=beta", json_file],
+            capture_output=True, text=True
+        )
+        assert 0 == result.returncode, result.stderr
+        assert "/name\n" == result.stdout
+
+    def test_json_multi_doc_flag_is_harmless_for_single_doc_json(
+        self, tmp_path_factory
+    ):
+        import subprocess
+        import sys
+
+        json_file = create_temp_yaml_file(
+            tmp_path_factory,
+            '{"name":"solo"}\n')
+
+        base_result = subprocess.run(
+            [sys.executable, "-m", "yamlpath.commands.yaml_paths",
+             "--nostdin", "--nofile", "--pathsep=/", "--search", "=solo",
+             json_file],
+            capture_output=True, text=True
+        )
+        flag_result = subprocess.run(
+            [sys.executable, "-m", "yamlpath.commands.yaml_paths",
+             "--nostdin", "--json-multi-doc", "--nofile", "--pathsep=/",
+             "--search", "=solo", json_file],
+            capture_output=True, text=True
+        )
+
+        assert 0 == base_result.returncode, base_result.stderr
+        assert 0 == flag_result.returncode, flag_result.stderr
+        assert base_result.stdout == flag_result.stdout
+        assert base_result.stderr == flag_result.stderr
 
     def test_bad_privatekey(self, script_runner, tmp_path_factory):
         content = """---

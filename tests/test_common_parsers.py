@@ -139,6 +139,61 @@ document: 2nd
         assert docs[1] == ({"document": "2nd"}, True)
         assert logger.error_messages == []
 
+    def test_get_json_multidoc_data_literally(self):
+        serialized_json = '{"document": "1st"}\n{"document": "2nd"}\n'
+        logger = TrackingParserLogger()
+
+        docs = list(Parsers.get_json_multidoc_data(
+            logger, serialized_json, literal=True))
+
+        assert len(docs) == 2
+        assert docs[0] == ({"document": "1st"}, True)
+        assert docs[1] == ({"document": "2nd"}, True)
+        assert logger.error_messages == []
+
+    def test_get_json_multidoc_data_invalid_second_document(self):
+        serialized_json = '{"document": "1st"}\n{"document": oops}\n'
+        logger = TrackingParserLogger()
+
+        docs = list(Parsers.get_json_multidoc_data(
+            logger, serialized_json, literal=True))
+
+        assert docs[-1] == (None, False)
+        assert any("JSON parsing error" in msg for msg in logger.error_messages)
+
+    def test_get_json_multidoc_data_empty_literal(self):
+        logger = TrackingParserLogger()
+
+        docs = list(Parsers.get_json_multidoc_data(
+            logger, "", literal=True))
+
+        assert docs == [('', True)]
+        assert logger.error_messages == []
+
+    def test_get_json_multidoc_data_file_not_found(self):
+        logger = TrackingParserLogger()
+
+        docs = list(Parsers.get_json_multidoc_data(
+            logger, "/this/path/does/not/exist.json"))
+
+        assert docs == [(None, False)]
+        assert any("File not found" in msg for msg in logger.error_messages)
+
+    def test_get_json_multidoc_data_keyboard_interrupt(self, monkeypatch):
+        logger = TrackingParserLogger()
+
+        def raise_interrupt(source, literal=False):
+            raise KeyboardInterrupt()
+
+        monkeypatch.setattr(
+            Parsers, "_get_json_multidoc_data_parser", raise_interrupt)
+
+        docs = list(Parsers.get_json_multidoc_data(
+            logger, "-", literal=True))
+
+        assert docs == [(None, False)]
+        assert any("keyboard interrupt" in msg for msg in logger.error_messages)
+
     def test_get_yaml_multidoc_data_markdown_frontmatter(self, tmp_path_factory, quiet_logger):
         from tests.conftest import create_temp_markdown_file
 

@@ -1,3 +1,23 @@
+3.9.1
+Enhancements:
+* The yaml-validate, yaml-paths, yaml-diff, and yaml-merge command-line tools
+  now accept `-j|--json-multi-doc` to parse adjacent JSON documents (including
+  NDJSON/JSONL and concatenated JSON roots) as multi-document inputs.  This was
+  previously supported automatically by happenstance before adding light input
+  validation to support frontmatter YAML parsing in Markdown documents for
+  version 3.9.0.  You do NOT need to use this new option for single-document
+  JSON input; it is only necessary for multi-document JSON input.  That said, it
+  is harmless to use this new option universally for all JSON input.  Thanks go
+  to https://github.com/deepakbshetty for requesting this enhancement via
+  https://github.com/wwkimball/yamlpath/issues/239.
+
+Bug Fixes:
+* Mitigate ruamel.yaml issue 351 via workaround until the upstream bug is fixed.
+  The workaround results in the expected round-trip edit, preserving the
+  comments and new-lines which previously caused ruamel.yaml to stack-dump when
+  those comments or new-lines within YAML files were near aliased hash keys.
+  See https://sourceforge.net/p/ruamel-yaml/tickets/351/ for details.
+
 3.9.0
 Enhancements:
 * Python 3.12, 3.13, and 3.14 are now formally tested and supported.  For

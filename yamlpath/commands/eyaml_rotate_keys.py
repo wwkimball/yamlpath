@@ -19,6 +19,9 @@ from yamlpath.common import Anchors, Parsers
 from yamlpath.eyaml.exceptions import EYAMLCommandException
 from yamlpath.eyaml.enums import EYAMLOutputFormats
 from yamlpath.eyaml import EYAMLProcessor
+from yamlpath.patches.commentedaliasedparenthash import (
+    CommentedAliasedParentHashPatch as CAPHP,
+)
 from yamlpath.wrappers import ConsolePrinter
 
 def processcli():
@@ -208,6 +211,7 @@ def main():
 
             log.verbose("Writing changed data to {}.".format(yaml_file))
             with open(yaml_file, 'w', encoding='utf-8') as yaml_dump:
+                CAPHP.restore_dropped_alias_key_spacing(yaml_data)
                 source_yaml.dump(yaml_data, yaml_dump)
 
     sys.exit(exit_state)

@@ -3,6 +3,7 @@ Implement Parsers, a static library of generally-useful code for data parsers.
 
 Copyright 2020, 2021 William W. Kimball, Jr. MBA MSIS
 """
+import json
 import warnings
 from sys import maxsize, stdin
 from datetime import date, datetime
@@ -32,6 +33,111 @@ from yamlpath.types import ParsersLogger
 
 class Parsers:
     """Helper methods for common YAML/JSON/Compatible parser operations."""
+
+    @staticmethod
+    def _get_json_multidoc_data_parser(
+        source: str, literal: bool = False
+    ) -> str:
+        """Read a JSON stream source into a serialized string."""
+        if source == "-":
+            return stdin.read()
+        if literal:
+            return source
+        with open(source, 'r', encoding='utf-8') as fhnd:
+            return fhnd.read()
+
+    @staticmethod
+    def _translate_json_position(serialized: str, pos: int) -> Tuple[int, int]:
+        """Convert a character offset into 1-based line and column numbers."""
+        line = serialized.count("\n", 0, pos) + 1
+        line_start = serialized.rfind("\n", 0, pos)
+        column = pos + 1 if line_start == -1 else pos - line_start
+        return (line, column)
+
+    @staticmethod
+    # pylint: disable=too-many-locals
+    def get_json_multidoc_data(
+        logger: ParsersLogger, source: str, **kwargs
+    ) -> Generator[Tuple[Any, bool], None, None]:
+        """
+        Parse one or more adjacent JSON documents and yield each object.
+
+        Parameters:
+        1. logger (ParsersLogger) The logging facility
+        2. source (str) The source file to load; can be - for reading from
+           STDIN
+
+        Keyword Arguments:
+        * literal (bool) `source` is literal serialized JSON data rather than a
+          file-spec, so load it directly
+
+        Returns:  Generator[Tuple[Any, bool], None, None] A tuple for each
+        document as it is parsed.  The first field is the parsed document; will
+        be None for documents which could not be read.  The second field will
+        be True when there were no errors during parsing and False, otherwise.
+        """
+        literal = kwargs.pop("literal", False)
+        parser = kwargs.pop("parser", None)
+        has_error = False
+        serialized = ""
+        decoder = json.JSONDecoder()
+
+        try:
+            serialized = Parsers._get_json_multidoc_data_parser(
+                source, literal=literal)
+            position = 0
+            length = len(serialized)
+            doc_yielded = False
+
+            while position < length:
+                while position < length and serialized[position].isspace():
+                    position += 1
+
+                if position >= length:
+                    break
+
+                doc_start = position
+                document, position = decoder.raw_decode(serialized, position)
+                if parser is not None:
+                    document = parser.load(serialized[doc_start:position])
+                doc_yielded = True
+                logger.debug(
+                    "Yielding JSON document from {}:".format(source),
+                    prefix="get_json_multidoc_data: ", data=document)
+                yield (document, True)
+
+            if not doc_yielded:
+                yield ("", True)
+        except KeyboardInterrupt:
+            has_error = True
+            logger.error("Aborting data load due to keyboard interrupt!")
+        except FileNotFoundError:
+            has_error = True
+            logger.error("File not found:  {}".format(source))
+        except json.JSONDecodeError as ex:
+            has_error = True
+            (line, column) = Parsers._translate_json_position(
+                serialized, ex.pos)
+            logger.error(
+                "JSON parsing error in \"<unicode string>\", line {},"
+                " column {}:  {}.  If the input is YAML rather than JSON,"
+                " remove the -j|--json-multi-doc flag.".format(
+                    line, column, ex.msg))
+
+        if has_error:
+            yield (None, False)
+
+    @staticmethod
+    def get_multidoc_data(
+        parser: Any, logger: ParsersLogger, source: str, **kwargs
+    ) -> Generator[Tuple[Any, bool], None, None]:
+        """Select YAML or adjacent-JSON multi-document parsing."""
+        json_multi_doc = kwargs.pop("json_multi_doc", False)
+        if json_multi_doc:
+            return Parsers.get_json_multidoc_data(
+                logger, source, parser=parser, **kwargs)
+        return Parsers.get_yaml_multidoc_data(
+            parser, logger, source, **kwargs)
 
     @staticmethod
     def get_parser_for_source(

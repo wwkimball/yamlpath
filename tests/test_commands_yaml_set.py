@@ -545,7 +545,6 @@ otherstring:
             filedat = fhnd.read()
         assert filedat == yamlout
 
-    @pytest.mark.xfail(strict=True, reason="https://sourceforge.net/p/ruamel-yaml/tickets/351/")
     def test_commented_aliased_parent_hash(self, script_runner, tmp_path_factory):
         yamlin = """---
 aliases:

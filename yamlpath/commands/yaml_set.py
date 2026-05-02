@@ -24,6 +24,9 @@ from ruamel.yaml.comments import CommentedMap
 
 from yamlpath import __version__ as YAMLPATH_VERSION
 from yamlpath.common import Nodes, Parsers
+from yamlpath.patches.commentedaliasedparenthash import (
+    CommentedAliasedParentHashPatch as CAPHP,
+)
 from yamlpath import YAMLPath
 from yamlpath.exceptions import YAMLPathException
 from yamlpath.enums import YAMLValueFormats, PathSeparators
@@ -332,6 +335,7 @@ def save_to_json_file(args, log, yaml_data):
 def save_to_yaml_file(args, log, yaml_parser, yaml_data, backup_file):
     """Save to a YAML file."""
     log.verbose("Writing changed data as YAML to {}.".format(args.yaml_file))
+    CAPHP.restore_dropped_alias_key_spacing(yaml_data)
     with tempfile.TemporaryFile() as tmphnd:
         with open(args.yaml_file, 'rb') as inhnd:
             copyfileobj(inhnd, tmphnd)
@@ -402,6 +406,7 @@ def write_output_document(args, log, yaml, yaml_data):
     # Save the changed file
     if args.yaml_file.strip() == "-":
         if write_document_as_yaml(args.yaml_file, yaml_data):
+            CAPHP.restore_dropped_alias_key_spacing(yaml_data)
             yaml.dump(yaml_data, sys.stdout)
         else:
             if args.json_indent > -1:
