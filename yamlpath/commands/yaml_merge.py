@@ -135,6 +135,13 @@ https://github.com/wwkimball/yamlpath/issues.
             "required when Markdown content is read from STDIN"))
 
     parser.add_argument(
+        "-j", "--json-multi-doc",
+        dest="json_multi_doc", action="store_true",
+        help=(
+            "parse YAML_FILE as one or more adjacent JSON documents instead "
+            "of YAML; intended for NDJSON/JSONL and concatenated JSON"))
+
+    parser.add_argument(
         "-m", "--mergeat",
         metavar="YAML_PATH",
         default="/",
@@ -230,6 +237,12 @@ https://github.com/wwkimball/yamlpath/issues.
 def validateargs(args, log):
     """Validate command-line arguments."""
     has_errors = False
+
+    if args.frontmatter and args.json_multi_doc:
+        has_errors = True
+        log.error(
+            "The --frontmatter and --json-multi-doc options cannot be used"
+            " together.")
 
     # There must be at least one input file or stream
     input_file_count = len(args.yaml_files)
@@ -377,14 +390,16 @@ def get_doc_mergers(
 ) -> Tuple[List[Merger], bool]:
     """Create a list of Mergers, one for each source document."""
     frontmatter: bool = kwargs.pop("frontmatter", False)
+    json_multi_doc: bool = kwargs.pop("json_multi_doc", False)
     docs_loaded = True
     if yaml_file != "-" and not isfile(yaml_file):
         log.error("Not a file:  {}".format(yaml_file))
         return ([], False)
 
     doc_mergers: List[Merger] = []
-    for (yaml_data, doc_loaded) in Parsers.get_yaml_multidoc_data(
-        yaml_editor, log, yaml_file, frontmatter=frontmatter
+    for (yaml_data, doc_loaded) in Parsers.get_multidoc_data(
+        yaml_editor, log, yaml_file, frontmatter=frontmatter,
+        json_multi_doc=json_multi_doc
     ):
         if not doc_loaded:
             # An error message has already been logged
@@ -485,10 +500,12 @@ def merge_docs(
 ) -> int:
     """Merge RHS into LHS."""
     frontmatter: bool = kwargs.pop("frontmatter", False)
+    json_multi_doc: bool = kwargs.pop("json_multi_doc", False)
     return_state = 0
     merge_mode = config.get_multidoc_mode()
     (rhs_docs, rhs_loaded) = get_doc_mergers(
-        log, yaml_editor, config, rhs_file, frontmatter=frontmatter)
+        log, yaml_editor, config, rhs_file, frontmatter=frontmatter,
+        json_multi_doc=json_multi_doc)
     if not rhs_loaded:
         # Failed to load any RHS documents
         return 3
@@ -535,7 +552,8 @@ def main() -> None:
         if len(mergers) < 1:
             (mergers, mergers_loaded) = get_doc_mergers(
                 log, yaml_editor, merge_config, yaml_file,
-                frontmatter=args.frontmatter)
+                frontmatter=args.frontmatter,
+                json_multi_doc=args.json_multi_doc)
             if not mergers_loaded:
                 exit_state = 4
                 break
@@ -543,7 +561,8 @@ def main() -> None:
             # Merge RHS into LHS
             exit_state = merge_docs(
                 log, yaml_editor, merge_config, mergers, yaml_file,
-                frontmatter=args.frontmatter)
+                frontmatter=args.frontmatter,
+                json_multi_doc=args.json_multi_doc)
             if not exit_state == 0:
                 break
             merge_count += 1
@@ -556,7 +575,8 @@ def main() -> None:
     ):
         exit_state = merge_docs(
             log, yaml_editor, merge_config, mergers, "-",
-            frontmatter=args.frontmatter)
+            frontmatter=args.frontmatter,
+            json_multi_doc=args.json_multi_doc)
         merge_count += 1
 
     # When no merges have occurred, check for a single-doc merge request

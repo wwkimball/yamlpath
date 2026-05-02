@@ -57,6 +57,13 @@ def processcli():
             "required when Markdown content is read from STDIN"))
 
     parser.add_argument(
+        "-j", "--json-multi-doc",
+        dest="json_multi_doc", action="store_true",
+        help=(
+            "parse YAML_FILE as one or more adjacent JSON documents instead "
+            "of YAML; intended for NDJSON/JSONL and concatenated JSON"))
+
+    parser.add_argument(
         "-S", "--nostdin", action="store_true",
         help=(
             "Do not implicitly read from STDIN, even when there are\n"
@@ -88,6 +95,12 @@ def validateargs(args, log):
     """Validate command-line arguments."""
     has_errors = False
 
+    if args.frontmatter and args.json_multi_doc:
+        has_errors = True
+        log.error(
+            "The --frontmatter and --json-multi-doc options cannot be used"
+            " together.")
+
     # There must be at least one input file or stream
     input_file_count = len(args.yaml_files)
     if (input_file_count == 0 and (
@@ -113,12 +126,14 @@ def validateargs(args, log):
 def process_file(log, yaml, yaml_file, **kwargs):
     """Process a (potentially multi-doc) YAML file."""
     frontmatter = kwargs.pop("frontmatter", False)
+    json_multi_doc = kwargs.pop("json_multi_doc", False)
     logcap = LogErrorCap()
     subdoc_index = 0
     exit_state = 0
     file_name = "STDIN" if yaml_file.strip() == "-" else yaml_file
-    doc_gen = Parsers.get_yaml_multidoc_data(
-        yaml, logcap, yaml_file, frontmatter=frontmatter)
+    doc_gen = Parsers.get_multidoc_data(
+        yaml, logcap, yaml_file, frontmatter=frontmatter,
+        json_multi_doc=json_multi_doc)
     for (_, doc_loaded) in doc_gen:
         if doc_loaded:
             log.verbose("{}/{} is valid.".format(file_name, subdoc_index))
@@ -156,7 +171,8 @@ def main():
                 "STDIN" if yaml_file.strip() == "-" else yaml_file))
 
         proc_state = process_file(
-            log, yaml, yaml_file, frontmatter=args.frontmatter)
+            log, yaml, yaml_file, frontmatter=args.frontmatter,
+            json_multi_doc=args.json_multi_doc)
 
         if proc_state != 0:
             exit_state = proc_state
@@ -167,7 +183,9 @@ def main():
         and not args.nostdin
         and not sys.stdin.isatty()
     ):
-        exit_state = process_file(log, yaml, "-", frontmatter=args.frontmatter)
+        exit_state = process_file(
+            log, yaml, "-", frontmatter=args.frontmatter,
+            json_multi_doc=args.json_multi_doc)
 
     sys.exit(exit_state)
 

@@ -31,6 +31,8 @@ from yamlpath import YAMLPath
 from yamlpath.wrappers import ConsolePrinter
 from yamlpath.eyaml import EYAMLProcessor
 
+# pylint: disable=too-many-lines
+
 def processcli():
     """Process command-line arguments."""
     search_ops = ", ".join(PathSearchMethods.get_operators()) + ", or !"
@@ -196,6 +198,13 @@ def processcli():
             "required when Markdown content is read from STDIN"))
 
     parser.add_argument(
+        "-j", "--json-multi-doc",
+        dest="json_multi_doc", action="store_true",
+        help=(
+            "parse YAML_FILE as one or more adjacent JSON documents instead "
+            "of YAML; intended for NDJSON/JSONL and concatenated JSON"))
+
+    parser.add_argument(
         "-S", "--nostdin", action="store_true",
         help=(
             "Do not implicitly read from STDIN, even when there are\n"
@@ -223,9 +232,16 @@ def processcli():
 
     return parser.parse_args()
 
+# pylint: disable=too-many-branches
 def validateargs(args, log):
     """Validate command-line arguments."""
     has_errors = False
+
+    if args.frontmatter and args.json_multi_doc:
+        has_errors = True
+        log.error(
+            "The --frontmatter and --json-multi-doc options cannot be used"
+            " together.")
 
     # There must be at least one input file or stream
     input_file_count = len(args.yaml_files)
@@ -830,8 +846,9 @@ def process_yaml_file(
     subdoc_index = -1
 
     # pylint: disable=too-many-nested-blocks
-    for (yaml_data, doc_loaded) in Parsers.get_yaml_multidoc_data(
-        yaml, log, yaml_file, frontmatter=args.frontmatter
+    for (yaml_data, doc_loaded) in Parsers.get_multidoc_data(
+        yaml, log, yaml_file, frontmatter=args.frontmatter,
+        json_multi_doc=args.json_multi_doc
     ):
         file_tally += 1
         subdoc_index += 1

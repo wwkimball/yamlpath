@@ -26,6 +26,18 @@ class Test_commands_yaml_merge():
         assert not result.success, result.stderr
         assert "INI style configuration file is not readable" in result.stderr
 
+    def test_frontmatter_and_json_multi_doc_are_mutually_exclusive(self, script_runner, tmp_path_factory):
+      yaml_file = create_temp_yaml_file(tmp_path_factory, "---\nkey: value\n")
+      result = script_runner.run([
+        self.command,
+        "--nostdin",
+        "--frontmatter",
+        "--json-multi-doc",
+        yaml_file,
+      ])
+      assert not result.success, result.stderr
+      assert "cannot be used together" in result.stderr
+
     def test_nothing_to_backup(self, script_runner):
         result = script_runner.run([self.command, "--nostdin", "--backup"])
         assert not result.success, result.stderr
@@ -272,6 +284,56 @@ hash:
         with open(output_file, 'r') as fhnd:
             filedat = fhnd.read()
         assert merged_yaml_content == filedat
+
+    def test_merge_two_across_json_multi_doc_files(self, tmp_path_factory):
+        import subprocess
+        import sys
+
+        lhs_file = create_temp_yaml_file(
+            tmp_path_factory,
+            '{"hash":{"lhs":"one"}}\n{"hash":{"lhs":"two"}}\n')
+        rhs_file = create_temp_yaml_file(
+            tmp_path_factory,
+            '{"hash":{"rhs":"alpha"}}\n{"hash":{"rhs":"beta"}}\n')
+
+        result = subprocess.run(
+            [sys.executable, "-m", "yamlpath.commands.yaml_merge",
+             "--nostdin", "--json-multi-doc",
+             "--multi-doc-mode=merge_across", lhs_file, rhs_file],
+            capture_output=True, text=True
+        )
+        assert 0 == result.returncode, result.stderr
+        assert '"lhs": "one", "rhs": "alpha"' in result.stdout
+        assert '"lhs": "two", "rhs": "beta"' in result.stdout
+
+    def test_json_multi_doc_flag_is_harmless_for_single_doc_json(
+        self, tmp_path_factory
+    ):
+        import subprocess
+        import sys
+
+        lhs_file = create_temp_yaml_file(
+            tmp_path_factory,
+            '{"hash":{"lhs":"one","same":1}}\n')
+        rhs_file = create_temp_yaml_file(
+            tmp_path_factory,
+            '{"hash":{"rhs":"alpha","same":1}}\n')
+
+        base_result = subprocess.run(
+            [sys.executable, "-m", "yamlpath.commands.yaml_merge",
+             "--nostdin", lhs_file, rhs_file],
+            capture_output=True, text=True
+        )
+        flag_result = subprocess.run(
+            [sys.executable, "-m", "yamlpath.commands.yaml_merge",
+             "--nostdin", "--json-multi-doc", lhs_file, rhs_file],
+            capture_output=True, text=True
+        )
+
+        assert 0 == base_result.returncode, base_result.stderr
+        assert 0 == flag_result.returncode, flag_result.stderr
+        assert base_result.stdout == flag_result.stdout
+        assert base_result.stderr == flag_result.stderr
 
     def test_merge_two_across_multidoc_yaml_files_to_file_json(self, script_runner, tmp_path, tmp_path_factory):
         lhs_file = create_temp_yaml_file(tmp_path_factory, """---
