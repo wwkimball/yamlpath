@@ -179,6 +179,28 @@ document: 2nd
         assert docs == [(None, False)]
         assert any("File not found" in msg for msg in logger.error_messages)
 
+    def test_get_yaml_data_directory(self, tmp_path):
+        logger = TrackingParserLogger()
+        yaml = Parsers.get_yaml_editor()
+
+        (data, loaded) = Parsers.get_yaml_data(
+            yaml, logger, str(tmp_path))
+
+        assert (data, loaded) == (None, False)
+        assert len(logger.error_messages) == 1
+        assert "Traceback" not in logger.error_messages[0]
+
+    def test_get_yaml_multidoc_data_directory(self, tmp_path):
+        logger = TrackingParserLogger()
+        yaml = Parsers.get_yaml_editor()
+
+        docs = list(Parsers.get_yaml_multidoc_data(
+            yaml, logger, str(tmp_path)))
+
+        assert docs == [(None, False)]
+        assert len(logger.error_messages) == 1
+        assert "Traceback" not in logger.error_messages[0]
+
     def test_get_json_multidoc_data_keyboard_interrupt(self, monkeypatch):
         logger = TrackingParserLogger()
 

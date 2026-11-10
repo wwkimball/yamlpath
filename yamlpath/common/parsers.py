@@ -254,6 +254,12 @@ class Parsers:
         except FileNotFoundError:
             logger.error("File not found:  {}".format(source))
             data_available = False
+        except IsADirectoryError:
+            logger.error("Path is a directory, not a file:  {}".format(source))
+            data_available = False
+        except PermissionError:
+            logger.error("Permission denied:  {}".format(source))
+            data_available = False
         except ParserError as ex:
             logger.error("YAML parsing error {}:  {}"
                         .format(str(ex.problem_mark).lstrip(), ex.problem))
@@ -374,6 +380,12 @@ class Parsers:
         except FileNotFoundError:
             has_error = True
             logger.error("File not found:  {}".format(source))
+        except IsADirectoryError:
+            has_error = True
+            logger.error("Path is a directory, not a file:  {}".format(source))
+        except PermissionError:
+            has_error = True
+            logger.error("Permission denied:  {}".format(source))
         except ParserError as ex:
             has_error = True
             logger.error("YAML parsing error {}:  {}"
