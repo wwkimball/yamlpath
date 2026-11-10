@@ -22,6 +22,14 @@ class Test_yaml_get():
         assert not result.success, result.stderr
         assert "File not found:" in result.stderr
 
+    def test_directory_input_file(self, script_runner, tmp_path_factory):
+        yaml_dir = tmp_path_factory.mktemp("yamldir")
+        result = script_runner.run([self.command, "--query='/'", str(yaml_dir)])
+        assert not result.success, result.stderr
+        assert "Traceback" not in result.stderr
+        assert ("directory" in result.stderr.lower()
+                or "Permission denied" in result.stderr)
+
     def test_no_query(self, script_runner, tmp_path_factory):
         content = """---
         no: ''
